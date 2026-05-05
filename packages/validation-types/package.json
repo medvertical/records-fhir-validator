@@ -1,0 +1,48 @@
+{
+  "name": "@records-fhir/validation-types",
+  "version": "0.1.0",
+  "description": "Validation-domain TypeScript types for the Records FHIR validator: ValidationIssue, ValidationSettings, ValidationResult, advisor rules, fix suggestions. No runtime code, no DB coupling.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/medvertical/records-fhir-validator.git",
+    "directory": "packages/validation-types"
+  },
+  "homepage": "https://github.com/medvertical/records-fhir-validator/tree/main/packages/validation-types#readme",
+  "keywords": [
+    "fhir",
+    "validation",
+    "types",
+    "typescript"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsx ../../scripts/fix-esm-specifiers.ts dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  }
+}

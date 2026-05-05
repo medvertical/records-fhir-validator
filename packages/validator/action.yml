@@ -1,0 +1,89 @@
+name: 'FHIR Validator'
+description: 'Validate FHIR R4/R4B/R5/R6 JSON resources with the Records TypeScript validator.'
+author: 'medvertical'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  paths:
+    description: >-
+      Glob pattern(s) of FHIR JSON files to validate. Newline- or
+      comma-separated. Example: `examples/**/*.json,test/fixtures/*.json`.
+    required: true
+  profile-url:
+    description: >-
+      Canonical profile URL to validate every resource against. When
+      omitted, each resource is validated against the base SD for its
+      resourceType (`http://hl7.org/fhir/StructureDefinition/<type>`).
+    required: false
+    default: ''
+  fhir-version:
+    description: 'FHIR version: R4, R4B, R5, or R6.'
+    required: false
+    default: 'R4'
+  fail-on:
+    description: >-
+      Severity level that fails the build. One of: `error` (default),
+      `warning`, `none`. With `none` the action never fails — useful for
+      reporting-only runs.
+    required: false
+    default: 'error'
+  output-file:
+    description: >-
+      Optional path to write the aggregated JSON result. Each entry
+      carries `{ file, resourceType, issues }`.
+    required: false
+    default: ''
+  validator-version:
+    description: >-
+      npm version range for `@records-fhir/validator`. Defaults to
+      `latest`. Pin to a specific minor for reproducible CI.
+    required: false
+    default: 'latest'
+  log-level:
+    description: >-
+      Engine log level: `debug`, `info`, `warn` (default), `error`, or
+      `silent`. The default keeps CI output focused on validation
+      annotations; raise to `info`/`debug` when debugging.
+    required: false
+    default: 'warn'
+
+outputs:
+  issue-count:
+    description: 'Total number of issues emitted across all validated files.'
+    value: ${{ steps.validate.outputs.issue-count }}
+  error-count:
+    description: 'Number of `error`-severity issues.'
+    value: ${{ steps.validate.outputs.error-count }}
+  warning-count:
+    description: 'Number of `warning`-severity issues.'
+    value: ${{ steps.validate.outputs.warning-count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v6
+      with:
+        node-version: '20'
+
+    - name: Install @records-fhir/validator
+      shell: bash
+      run: |
+        set -euo pipefail
+        npm install --no-save --no-audit --no-fund \
+          "@records-fhir/validator@${{ inputs.validator-version }}"
+
+    - name: Run validator
+      id: validate
+      shell: bash
+      env:
+        INPUT_PATHS: ${{ inputs.paths }}
+        INPUT_PROFILE_URL: ${{ inputs.profile-url }}
+        INPUT_FHIR_VERSION: ${{ inputs.fhir-version }}
+        INPUT_FAIL_ON: ${{ inputs.fail-on }}
+        INPUT_OUTPUT_FILE: ${{ inputs.output-file }}
+        INPUT_LOG_LEVEL: ${{ inputs.log-level }}
+      run: node "${{ github.action_path }}/action-run.mjs"
