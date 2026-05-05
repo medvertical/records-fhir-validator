@@ -44,8 +44,8 @@ setEngineLogger({
   error: LOG_THRESHOLD <= 3 ? (m, x) => x !== undefined ? console.error(m, x) : console.error(m) : noop,
 });
 
-if (!['R4', 'R5', 'R6'].includes(FHIR_VERSION)) {
-  console.error(`::error::fhir-version must be R4, R5, or R6 (got '${FHIR_VERSION}')`);
+if (!['R4', 'R4B', 'R5', 'R6'].includes(FHIR_VERSION)) {
+  console.error(`::error::fhir-version must be R4, R4B, R5, or R6 (got '${FHIR_VERSION}')`);
   process.exit(2);
 }
 

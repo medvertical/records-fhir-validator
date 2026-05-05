@@ -1,7 +1,67 @@
 
 # Records FHIR Validator
 
-Pure TypeScript FHIR validation packages extracted from MedVertical Records.
+TypeScript FHIR validator for CI pipelines and standalone Node.js use.
+
+## GitHub Action
+
+Validate FHIR JSON resources in pull requests:
+
+```yaml
+name: Validate FHIR
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  fhir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: medvertical/records-fhir-validator@v0.1.0
+        with:
+          paths: |
+            examples/**/*.json
+            test/fixtures/**/*.json
+          fhir-version: R4
+          fail-on: error
+```
+
+Optional profile validation:
+
+```yaml
+- uses: medvertical/records-fhir-validator@v0.1.0
+  with:
+    paths: resources/**/*.json
+    profile-url: http://hl7.org/fhir/StructureDefinition/Patient
+    fhir-version: R4
+```
+
+The action validates parsed JSON resources. It does not bundle third-party IG
+packages yet; provide custom profiles through the package APIs when embedding
+the validator directly.
+
+## npm Packages
+
+```sh
+npm install @records-fhir/validator
+```
+
+```ts
+import { recordsValidator } from '@records-fhir/validator';
+
+const issues = await recordsValidator.validate(
+  { resourceType: 'Patient', id: 'example' },
+  'http://hl7.org/fhir/StructureDefinition/Patient',
+  'R4',
+);
+```
+
+The package supports FHIR `R4`, `R4B`, `R5`, and `R6`.
+
+## Repository Scope
 
 Records itself is commercial closed-source software. This repository contains only the open-source validator packages extracted from Records:
 

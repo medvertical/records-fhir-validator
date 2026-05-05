@@ -1,6 +1,6 @@
-name: 'Records FHIR Validator'
+name: 'FHIR Validator'
 description: >-
-  Validate FHIR R4/R5/R6 resources against StructureDefinitions,
+  Validate FHIR R4/R4B/R5/R6 resources against StructureDefinitions,
   terminology and references using @records-fhir/validator. Useful as a
   CI gate for IG implementers, custom profiles, and FHIR-based exchanges.
 author: 'medvertical'
@@ -23,7 +23,7 @@ inputs:
     required: false
     default: ''
   fhir-version:
-    description: 'FHIR version: R4, R5, or R6.'
+    description: 'FHIR version: R4, R4B, R5, or R6.'
     required: false
     default: 'R4'
   fail-on:
