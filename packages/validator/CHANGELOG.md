@@ -10,25 +10,76 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-05-05
+
+Patch release fixing a public-export gap that shipped in 0.1.2. No
+behaviour or API changes beyond the missing re-exports being
+restored.
+
+### Fixes
+
+- Re-export `applyFixPatch` + `FixApplyResult`, `checkFhirpathSandbox`
+  + `SandboxLimits` + `SandboxResult`, and the fix-suggestions
+  catalog (`FixSuggestions`, `getFixSuggestion`, `formatFixSuggestion`,
+  `createValidationIssue`, `CreateIssueParams`) from the package
+  root. In 0.1.2 they existed in subpath barrels only; the
+  CHANGELOG and concept docs advertised them as top-level exports
+  but a fresh `npm install` of 0.1.2 threw
+  `SyntaxError: does not provide an export named 'applyFixPatch'`
+  when consumers followed the docs. Caught by an out-of-tree
+  smoke test against the packed tarballs after publication.
+
+  Verified against the published tarball: the named exports
+  `applyFixPatch`, `checkFhirpathSandbox`, and `getFixSuggestion`
+  are present at the package root in 0.1.3.
+
+### Migration from 0.1.2
+
+If you worked around the missing exports with subpath imports:
+
+```ts
+import { applyFixPatch } from '@records-fhir/validator/issues';
+import { checkFhirpathSandbox } from '@records-fhir/validator/validators/fhirpath-sandbox';
+```
+
+…you can switch to the documented top-level form:
+
+```ts
+import { applyFixPatch, checkFhirpathSandbox } from '@records-fhir/validator';
+```
+
+Both forms continue to work; the subpath imports stay supported.
+
+## [0.1.2] — 2026-05-04
+
+Coordinated release with `@records-fhir/validation-types` 0.1.1.
+Bundles the entire 2026-05-03 sprint plus the OSS boundary cleanup,
+business-rules subpath exports, and the validator engine extractions
+that landed before the bump. Not yet published to npm pending the
+license decision (see the `oss-launch-checklist.md` in the source
+repo).
+
 ### Engine
 
-- `compliesWithProfile` now checks `required`/`extensible`
-  binding ValueSet compatibility for `cw-binding-*` fixtures. Simple
+- `compliesWithProfile` now checks `required`/`extensible` binding
+  ValueSet compatibility for `cw-binding-*` fixtures. Simple
   inline/contained ValueSet concept lists are compared directly, so
   `cw-binding-superset` fails correctly while legitimate
-  `cw-binding-subset` refinements pass. If expansion is not local and
-  simple, the validator falls back to conservative URL inequality.
-  Launch-discovery executed comparisons are now 100.0% pass rate
+  `cw-binding-subset` refinements pass. Falls back to conservative
+  URL inequality when expansion is not local and simple.
+  Launch-discovery executed comparisons reach 100.0% pass rate
   (547/547) with 0 skips.
 
 ### Public API
 
 - `recordsValidator.validate()` and the new `PublicFhirVersion` type
-  now accept `'R4B'` alongside `'R4' | 'R5' | 'R6'`. R4B routes
-  through the R4 internal path (same StructureDefinitions, same
-  FHIRPath context) — this matches R4B's status as a maintenance
-  release of R4. R4B-specific package bundling
-  (`hl7.fhir.r4b.core`) is tracked under K-2.
+  accept `'R4B'` alongside `'R4' | 'R5' | 'R6'`. R4B routes through
+  the R4 internal path (same StructureDefinitions, same FHIRPath
+  context) — this matches R4B's status as a maintenance release of
+  R4. R4B-specific package bundling (`hl7.fhir.r4b.core`) is tracked
+  under K-2.
+- `toInternalFhirVersion(v: PublicFhirVersion)` exported for
+  embedders that need to route their own internal calls.
 
 ### Terminology
 
@@ -38,41 +89,84 @@ ship together; package-only changes are noted under each release.
   are cached; `'unknown'` (server error / malformed response) is
   intentionally not cached so a retry within the TTL can succeed.
   New `clearSubsumesCache()` and `getSubsumesCacheSize()` exports.
-- New `TerminologyApiClient.isSubsumedBy(system, child, parent)`
+- `TerminologyApiClient.isSubsumedBy(system, child, parent)`
   convenience helper. Returns `true` only when the parent strictly
-  subsumes the child or is equivalent — the FHIR `$subsumes`
-  argument order (codeA subsumes codeB) is easy to reverse and the
-  named helper makes the intent at the call site obvious.
+  subsumes the child or is equivalent — the FHIR `$subsumes` argument
+  order (codeA subsumes codeB) is easy to reverse and the named
+  helper makes the intent at the call site obvious.
 
 ### Security
 
-- New `checkFhirpathSandbox(expression, limits?)` static safety
+- `checkFhirpathSandbox(expression, limits?)` — static safety
   pre-flight for user-defined Custom Rules. fhirpath.js is
   synchronous and cannot be hard-timed out from the calling thread,
   so the only reliable defence against a pathological customer
-  expression is to reject it before it runs. The sandbox enforces
-  three bounds (default values shown):
+  expression is to reject it before it runs. Three bounds:
     - `expressionLength`: 4096 characters
     - `functionCallCount`: 64
     - `nestingDepth`: 16
   String-literal aware: identifiers inside quoted spans don't count
-  as function calls, so `matches('where(...)')` doesn't inflate
-  metrics. Wired into `CustomRuleExecutor` in both the public
-  package and the server-side mirror — rejected rules emit a
-  `custom-rule-rejected-by-sandbox` warning issue with the measured
-  metrics in `details.sandboxMetrics` so customers can tune.
+  as function calls. Wired into `CustomRuleExecutor`; rejected rules
+  emit a `custom-rule-rejected-by-sandbox` warning with the measured
+  metrics in `details.sandboxMetrics`.
 
 ### Fixes
 
-- New `applyFixPatch(resource, patch)` helper for executing
-  resolved `FixPatch` objects from the fix-suggestions catalog.
-  Supports `add` / `replace` / `remove` actions on dotted paths with
-  `[index]` array syntax, deep-clones the input (no mutation),
-  rejects unresolved `{{templates}}`, coerces JSON-shaped string
-  values into objects/arrays/numbers/booleans/null. Exported from
-  the package root as `applyFixPatch`. Foundation for D-1 Auto-Fix
-  Application — the catalog had 290 patches but no executor; this
-  adds the executor.
+- `applyFixPatch(resource, patch)` executor for resolved `FixPatch`
+  objects from the fix-suggestions catalog. Supports
+  `add` / `replace` / `remove` on dotted paths with `[index]` array
+  syntax, deep-clones the input, rejects unresolved `{{templates}}`,
+  coerces JSON-shaped string values into objects/arrays/numbers/
+  booleans/null.
+- Fixed: fhirpath.js compiled-function `traceFn` was being passed in
+  the wrong arg position (envVars instead of additionalOptions),
+  causing `TRACE:[unmatched] []` lines to appear in CI output for
+  any constraint that called `.trace()`. Moved to the third arg.
+
+### Subpath exports (OSS extraction)
+
+- `@records-fhir/validator/business-rules` — built-in business rule
+  registry + element-path resolver, extracted from the server.
+- `@records-fhir/validator/business-rules/rule-registry` — direct
+  access to the rule registry for callers that wire their own
+  catalogs.
+- StructureDefinition → FHIRSchema converter prototype moved into
+  the OSS validator surface.
+
+### Boundary
+
+- Dropped `node-fetch` runtime dep; uses platform `fetch`.
+- New `FHIR_BUNDLED_PROFILES_PATH` env var so embedders can point at
+  any local `~/.fhir/packages`-shaped directory tree.
+
+### Distribution / day-1 OSS material
+
+- `examples/` directory ships in the tarball (`standalone-validate.mjs`,
+  `bulk-folder-validate.mjs`, `github-workflow.yml`, `README.md`).
+- `CHANGELOG.md` and `CONTRIBUTING.md` ship in the tarball.
+- `log-level` input on the composite GitHub Action with `warn`
+  default — CI output for a typical run drops from ~47 to ~9 lines
+  per file (100% signal).
+
+### Internal — Records platform
+
+- MII KDS 2026 advisor-rule starter set (`mii-kds.yaml` + TS mirror)
+  plus a generic `AdvisorRuleSet` YAML loader.
+- `getActiveAdvisorRules()` merges built-ins (canonical-URL sanity,
+  MII KDS) with DB-managed customer rules deterministically.
+- `mii-2026.records-lock.json` now contains transitive canonical
+  pinning (was package-list only) when MII packages are resolvable
+  on disk.
+- `POST /api/validation/validateResource` MII-validator-compatible
+  shim.
+- Dataset Quality Reports gain per-resource-type issue rates
+  (`resourceTypeIssueRates` field).
+- HAPI Hybrid Bridge deployment guide (`docs/operations/`).
+
+## [0.1.1] — Skipped
+
+Bumped in `package.json` for the boundary cleanup landed in #104 but
+never published to npm. Superseded by 0.1.2.
 
 ## [0.1.0] — Initial public release
 

@@ -19,6 +19,8 @@ export {
     hasParentElement,
     hasAllAncestors,
     getPathDebugInfo,
+    isArrayAtPath,
+    expandPathWithArrayIndex,
 } from './element-path-resolver';
 
 export type { PathComponents, ValidationTarget } from './element-path-resolver';

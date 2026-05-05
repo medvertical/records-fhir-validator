@@ -131,7 +131,9 @@ export class StructureDefinitionLoader {
    * consumers who only validate against online tx servers.
    *
    * Resolution order:
-   *   1. `RECORDS_BUNDLED_PROFILES_PATH` env var (operator override)
+   *   1. `FHIR_BUNDLED_PROFILES_PATH` env var (operator override).
+   *      `RECORDS_BUNDLED_PROFILES_PATH` is honored as a deprecated alias
+   *      for the 0.1.x line and will be removed in 0.2.
    *   2. `@records-fhir/bundled-profiles` resolved via npm — works inside
    *      the monorepo via the workspace symlink, and from a normal
    *      `npm install` if the consumer opted in to the peer dep.
@@ -141,8 +143,16 @@ export class StructureDefinitionLoader {
    * settings. Constructor `bundledPath` arg overrides this default.
    */
   private getDefaultBundledPath(): string | null {
-    const fromEnv = process.env.RECORDS_BUNDLED_PROFILES_PATH;
-    if (fromEnv) return fromEnv;
+    const fromEnv =
+      process.env.FHIR_BUNDLED_PROFILES_PATH ?? process.env.RECORDS_BUNDLED_PROFILES_PATH;
+    if (fromEnv) {
+      if (process.env.RECORDS_BUNDLED_PROFILES_PATH && !process.env.FHIR_BUNDLED_PROFILES_PATH) {
+        logger.warn(
+          '[SDLoader] RECORDS_BUNDLED_PROFILES_PATH is deprecated; rename to FHIR_BUNDLED_PROFILES_PATH (will be removed in 0.2.x).',
+        );
+      }
+      return fromEnv;
+    }
 
     try {
       const require = createRequire(import.meta.url);

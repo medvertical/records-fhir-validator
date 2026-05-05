@@ -1,9 +1,13 @@
 {
   "name": "@records-fhir/validation-types",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Validation-domain TypeScript types for the Records FHIR validator: ValidationIssue, ValidationSettings, ValidationResult, advisor rules, fix suggestions. No runtime code, no DB coupling.",
   "type": "module",
   "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/medvertical/records-fhir-validator.git",
@@ -37,6 +41,7 @@
   "files": [
     "dist/",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {

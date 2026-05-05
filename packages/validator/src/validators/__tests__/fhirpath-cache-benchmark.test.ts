@@ -14,13 +14,17 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readdirSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { RecordsValidator } from '../../core/validator-engine';
 import { getCombinedFHIRPathCacheStats, clearFHIRPathCache } from '../constraint-validator';
 import { clearSDFHIRPathCache } from '../sd-fhirpath-executor';
 
+// The corpus lives in the commercial Records monorepo, outside this OSS
+// package. When the package is extracted on its own (e.g. inside the
+// published tarball), the corpus is absent and this benchmark is skipped.
 const CORPUS_DIR = join(__dirname, '../../../../../../..', 'quality-corpus/r4/profiled');
+const HAS_CORPUS = existsSync(CORPUS_DIR);
 
 interface CorpusFixture {
     name: string;
@@ -38,7 +42,7 @@ function loadCorpus(): CorpusFixture[] {
     });
 }
 
-describe('FHIRPath Cache Benchmark', () => {
+describe.skipIf(!HAS_CORPUS)('FHIRPath Cache Benchmark', () => {
     let validator: RecordsValidator;
     let fixtures: CorpusFixture[];
 

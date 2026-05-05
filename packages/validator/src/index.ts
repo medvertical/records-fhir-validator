@@ -396,3 +396,22 @@ export {
     createFilesystemProfileSource,
 } from './persistence/filesystem-profile-source';
 export type { FilesystemProfileSourceOptions } from './persistence/filesystem-profile-source';
+
+// Issue helpers — fix-suggestions catalog + applier (D-1)
+export {
+    type FixSuggestion,
+    type CreateIssueParams,
+    FixSuggestions,
+    getFixSuggestion,
+    formatFixSuggestion,
+    createValidationIssue,
+    applyFixPatch,
+    type FixApplyResult,
+} from './issues';
+
+// FHIRPath sandbox — static safety pre-flight for Custom Rules (P-3)
+export {
+    checkFhirpathSandbox,
+    type SandboxLimits,
+    type SandboxResult,
+} from './validators/fhirpath-sandbox';

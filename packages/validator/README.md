@@ -55,16 +55,36 @@ Three copy-pasteable starting points ship in
 
 ## Usage
 
+### Quick start (singleton)
+
+For most use cases, use the lazy singleton — no class instantiation,
+profile source pre-wired to the package's defaults:
+
 ```ts
 import {
-  getRecordsValidatorClass,
-  createFilesystemProfileSource,
+  recordsValidator,
   setProfileSource,
+  createFilesystemProfileSource,
 } from '@records-fhir/validator';
 
+// Optional: point at a local FHIR package directory.
+// Skip this if `~/.fhir/packages` is populated or you installed
+// `@records-fhir/bundled-profiles`.
 setProfileSource(createFilesystemProfileSource({
   packageDirs: ['./fhir-packages'],
 }));
+
+const issues = await recordsValidator.validate(
+  { resourceType: 'Patient', id: 'example', name: [{ family: 'Doe' }] },
+  'http://hl7.org/fhir/StructureDefinition/Patient',
+  'R4', // 'R4' | 'R4B' | 'R5' | 'R6'
+);
+```
+
+### Class form (full control)
+
+```ts
+import { getRecordsValidatorClass } from '@records-fhir/validator';
 
 const RecordsValidator = await getRecordsValidatorClass();
 const validator = new RecordsValidator({
@@ -72,9 +92,72 @@ const validator = new RecordsValidator({
   strictMode: false,
 });
 
-const issues = await validator.validate({
-  resourceType: 'Patient',
-  id: 'example',
+const issues = await validator.validate({ resourceType: 'Patient' });
+```
+
+### FHIR version routing (R4B)
+
+`PublicFhirVersion` accepts `'R4' | 'R4B' | 'R5' | 'R6'`. R4B is
+routed through the R4 internal path because R4B is a maintenance
+release of R4 with the same StructureDefinitions and FHIRPath
+context. Use `toInternalFhirVersion` to apply the same mapping in
+embedder code:
+
+```ts
+import { toInternalFhirVersion, type PublicFhirVersion } from '@records-fhir/validator';
+
+const v: PublicFhirVersion = 'R4B';
+toInternalFhirVersion(v); // → 'R4'
+```
+
+### Apply a fix-suggestion patch
+
+The catalog ships ~290 structured patches; `applyFixPatch` is the
+executor:
+
+```ts
+import { applyFixPatch, getFixSuggestion } from '@records-fhir/validator';
+
+const suggestion = getFixSuggestion('terminology-binding-required');
+const result = applyFixPatch(
+  { resourceType: 'Patient', id: 'p1' },
+  { action: 'add', path: 'Patient.gender', value: 'other' },
+);
+// result.applied → true
+// result.resource → { resourceType: 'Patient', id: 'p1', gender: 'other' }
+```
+
+### Custom Rules with the FHIRPath sandbox
+
+User-defined Custom Rules go through a static safety pre-flight
+before fhirpath.js evaluates them. Pathological expressions
+(unbounded `repeat()`, deep `where()` nesting, megabyte regexes) are
+rejected with a clear reason; legitimate FHIR core constraints sit
+well under the limits.
+
+```ts
+import { checkFhirpathSandbox } from '@records-fhir/validator';
+
+checkFhirpathSandbox('Patient.name.exists()');
+// → { ok: true, metrics: { expressionLength: 21, functionCallCount: 1, nestingDepth: 1 } }
+
+checkFhirpathSandbox('a'.repeat(5000));
+// → { ok: false, reason: 'Expression length 5000 exceeds limit 4096', metrics: { ... } }
+```
+
+### Routing engine logs
+
+By default the engine logs to `console.{debug,info,warn,error}`. Wire
+in your own logger (Winston, pino, …) via `setEngineLogger`:
+
+```ts
+import { setEngineLogger } from '@records-fhir/validator';
+
+setEngineLogger({
+  debug: () => {},                       // silence debug
+  info:  (msg, meta) => myLogger.info(msg, meta),
+  warn:  (msg, meta) => myLogger.warn(msg, meta),
+  error: (msg, meta) => myLogger.error(msg, meta),
 });
 ```
 

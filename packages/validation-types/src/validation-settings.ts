@@ -1,12 +1,24 @@
 /**
- * Simplified Validation Settings Schema
- * 
- * This module defines a simplified, minimal schema for validation settings
- * focusing only on essential functionality: 6 validation aspects, performance settings,
- * and resource type filtering. No presets, audit trails, or complex features.
- * 
- * REFACTORED: This file now re-exports from the split modules in shared/validation/
- * to maintain backward compatibility while reducing file size.
+ * @deprecated Back-compat facade for the 0.1.x line. Will be removed in
+ *   `@records-fhir/validation-types@0.2.0`. Migrate imports to the root:
+ *
+ *   ```ts
+ *   // Before
+ *   import type { ValidationSettings } from '@records-fhir/validation-types/validation-settings';
+ *
+ *   // After
+ *   import type { ValidationSettings } from '@records-fhir/validation-types';
+ *   ```
+ *
+ *   Symbols missing from the root barrel (TerminologyAuthConfig,
+ *   AdvancedTerminologyConfig, COMMON_FHIR_RESOURCE_TYPES, etc.) will be
+ *   added to the root before the facade is removed; see the 0.2.0
+ *   migration guide for the canonical paths.
+ *
+ * This file used to be the single source of truth for validation
+ * settings types. It now re-exports the split modules in `./validation/`
+ * so the same symbols stay reachable through both paths during the
+ * deprecation window.
  */
 
 // ============================================================================

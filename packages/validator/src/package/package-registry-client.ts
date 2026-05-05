@@ -9,8 +9,8 @@
  * - Search by canonical: GET https://packages.fhir.org?canonical=<url>
  */
 
-import fetch from 'node-fetch';
 import { logger } from '../logger';
+import { getProfileSource } from '../persistence';
 
 // ============================================================================
 // Types
@@ -145,7 +145,7 @@ export class PackageRegistryClient {
       }, this.timeout);
 
       const response = await fetch(url, {
-        signal: controller.signal as AbortSignal,
+        signal: controller.signal,
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'Records-FHIR-Validator/1.0'
@@ -254,7 +254,7 @@ export class PackageRegistryClient {
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
       const response = await fetch(packageInfo.tarballUrl, {
-        signal: controller.signal as AbortSignal,
+        signal: controller.signal,
         headers: {
           'User-Agent': 'Records-FHIR-Validator/1.0'
         }
@@ -415,7 +415,6 @@ export class PackageRegistryClient {
     try {
       // Use the embedder's package-mapping fallback (server wires the
       // DB-backed ProfilePackageMapper here; standalone callers skip).
-      const { getProfileSource } = await import('../persistence');
       const find = getProfileSource().findPackageForProfile;
       if (find) {
         const packageInfo = await find(profileUrl);
