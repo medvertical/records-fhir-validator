@@ -1,0 +1,25 @@
+{
+    "resourceType": "StructureDefinition",
+    "id": "ACP-TreatmentDirective",
+    "url": "https://api.iknl.nl/docs/pzp/r4/StructureDefinition/ACP-TreatmentDirective",
+    "version": "1.0.0",
+    "name": "ACPTreatmentDirective",
+    "title": "ACP Treatment Directive (Stub)",
+    "status": "active",
+    "fhirVersion": "4.0.1",
+    "kind": "resource",
+    "abstract": false,
+    "type": "Consent",
+    "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Consent",
+    "derivation": "constraint",
+    "snapshot": {
+        "element": [
+            {
+                "id": "Consent",
+                "path": "Consent",
+                "min": 0,
+                "max": "*"
+            }
+        ]
+    }
+}

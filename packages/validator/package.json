@@ -1,0 +1,111 @@
+{
+  "name": "@records-fhir/validator",
+  "version": "0.1.0",
+  "description": "Pure-TypeScript FHIR R4/R5/R6 validation engine. Validates resources against StructureDefinitions, terminology, references, and custom rules with no database required.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/medvertical/records-fhir-validator.git",
+    "directory": "packages/validator"
+  },
+  "homepage": "https://github.com/medvertical/records-fhir-validator/tree/main/packages/validator#readme",
+  "keywords": [
+    "fhir",
+    "validation",
+    "fhirpath",
+    "structuredefinition",
+    "healthcare",
+    "interoperability",
+    "hl7"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core/batch-utils": {
+      "types": "./dist/core/batch-utils.d.ts",
+      "import": "./dist/core/batch-utils.js"
+    },
+    "./core/executors/custom-rule-executor": {
+      "types": "./dist/core/executors/custom-rule-executor.d.ts",
+      "import": "./dist/core/executors/custom-rule-executor.js"
+    },
+    "./core/executors/structural-executor-helpers": {
+      "types": "./dist/core/executors/structural-executor-helpers.d.ts",
+      "import": "./dist/core/executors/structural-executor-helpers.js"
+    },
+    "./core/operation-outcome-converter": {
+      "types": "./dist/core/operation-outcome-converter.d.ts",
+      "import": "./dist/core/operation-outcome-converter.js"
+    },
+    "./core/structure-definition-loader": {
+      "types": "./dist/core/structure-definition-loader.d.ts",
+      "import": "./dist/core/structure-definition-loader.js"
+    },
+    "./core/validation-utils": {
+      "types": "./dist/core/validation-utils.d.ts",
+      "import": "./dist/core/validation-utils.js"
+    },
+    "./core/validator-engine": {
+      "types": "./dist/core/validator-engine.d.ts",
+      "import": "./dist/core/validator-engine.js"
+    },
+    "./package/package-downloader": {
+      "types": "./dist/package/package-downloader.d.ts",
+      "import": "./dist/package/package-downloader.js"
+    },
+    "./validators/constraint-validator": {
+      "types": "./dist/validators/constraint-validator.d.ts",
+      "import": "./dist/validators/constraint-validator.js"
+    },
+    "./validators/invariant-registry": {
+      "types": "./dist/validators/invariant-registry.d.ts",
+      "import": "./dist/validators/invariant-registry.js"
+    },
+    "./validators/valueset-cache": {
+      "types": "./dist/validators/valueset-cache.d.ts",
+      "import": "./dist/validators/valueset-cache.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsx ../../scripts/fix-esm-specifiers.ts dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@records-fhir/validation-types": "^0.1.0",
+    "axios": "^1.10.0",
+    "date-fns": "^3.6.0",
+    "fhirpath": "^4.8.2",
+    "node-fetch": "^3.3.2",
+    "tar": "^7.5.2"
+  },
+  "peerDependencies": {
+    "@records-fhir/bundled-profiles": "^0.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@records-fhir/bundled-profiles": {
+      "optional": true
+    }
+  },
+  "files": [
+    "dist/",
+    "examples/",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

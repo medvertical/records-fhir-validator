@@ -1,0 +1,46 @@
+{
+  "include": [
+    "packages/*/src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
+    "noEmit": true,
+    "target": "es2020",
+    "module": "ESNext",
+    "strict": true,
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable"
+    ],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "@records-fhir/validation-types": [
+        "./packages/validation-types/src/index.ts"
+      ],
+      "@records-fhir/validation-types/*": [
+        "./packages/validation-types/src/*"
+      ],
+      "@records-fhir/validator": [
+        "./packages/validator/src/index.ts"
+      ],
+      "@records-fhir/validator/*": [
+        "./packages/validator/src/*"
+      ]
+    }
+  }
+}
