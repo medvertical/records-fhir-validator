@@ -331,12 +331,15 @@ export class ReferenceValidator implements IReferenceValidator {
     // Bundle's. The entry resource is validated separately (full
     // validate() pipeline recurses into Bundle.entry[].resource), so
     // nesting check fires at the right scope there.
+    // Parameters.parameter[].resource is the same scoping pattern: the
+    // embedded resource owns its contained[] namespace.
     const refs = extractReferences(resource, resourceType);
     const containedRefs = refs.filter(
       r =>
         r.reference.startsWith('#')
         && !/(?:^|\.)contained\[/.test(r.path)
-        && !/(?:^|\.)entry\[\d+\]\.resource\./.test(r.path),
+        && !/(?:^|\.)entry\[\d+\]\.resource\./.test(r.path)
+        && !/(?:^|\.)parameter\[\d+\]\.resource\./.test(r.path),
     );
 
     for (const { path, reference } of containedRefs) {
@@ -452,12 +455,15 @@ export class ReferenceValidator implements IReferenceValidator {
     // Also skip refs that live inside Bundle.entry[].resource — those
     // resolve against the entry resource's own contained[], and the
     // entry resource is validated separately by the engine recursion.
+    // Parameters.parameter[].resource has the same resource-local contained
+    // scope and must not be checked against Parameters.contained.
     const refs = extractReferences(resource, resource.resourceType || 'Unknown');
     const containedRefs = refs.filter(
       r =>
         r.reference.startsWith('#')
         && !/(?:^|\.)contained\[/.test(r.path)
-        && !/(?:^|\.)entry\[\d+\]\.resource\./.test(r.path),
+        && !/(?:^|\.)entry\[\d+\]\.resource\./.test(r.path)
+        && !/(?:^|\.)parameter\[\d+\]\.resource\./.test(r.path),
     );
 
     for (const { path, reference } of containedRefs) {
@@ -675,4 +681,3 @@ export class ReferenceValidator implements IReferenceValidator {
     return this.batchedChecker.filterExistingReferences(references, config);
   }
 }
-

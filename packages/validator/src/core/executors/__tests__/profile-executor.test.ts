@@ -428,6 +428,48 @@ describe('ProfileExecutor', () => {
       expect(issues).toEqual([...extensionIssues, ...slicingIssues]);
     });
 
+    it('should suppress duplicate extension slice minimum when extension cardinality already reports it', async () => {
+      mockContext.resource.extension = [];
+      mockStructureDef.snapshot!.element = [
+        {
+          path: 'Patient.extension',
+          min: 0,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'value', path: 'url' }],
+            rules: 'open'
+          }
+        } as ElementDefinition
+      ];
+
+      const extensionIssues: ValidationIssue[] = [{
+        id: 'extension-min',
+        aspect: 'profile',
+        severity: 'error',
+        code: 'profile-extension-min-cardinality',
+        message: 'Extension requires at least 1 instance(s), found 0',
+        path: 'Patient.extension',
+        timestamp: new Date()
+      }];
+
+      const slicingIssues: ValidationIssue[] = [{
+        id: 'slice-min',
+        aspect: 'profile',
+        severity: 'error',
+        code: 'profile-slice-min-cardinality',
+        message: 'Slice minimum cardinality not met',
+        path: 'Patient.extension',
+        timestamp: new Date()
+      }];
+
+      mockExtensionValidator.validateExtensions = vi.fn().mockResolvedValue(extensionIssues);
+      mockSlicingValidator.validateSlicing = vi.fn().mockResolvedValue(slicingIssues);
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues).toEqual(extensionIssues);
+    });
+
     it('should handle validation errors gracefully', async () => {
       mockContext.getValueAtPath = () => {
         throw new Error('Test error');

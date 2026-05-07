@@ -240,6 +240,30 @@ export class ReferenceTypeExtractor {
         };
       }
 
+      // Fallback: try to extract from the last instance path segments.
+      // Public FHIR endpoints often include a version/base segment before the
+      // resource type, e.g. /R4/Patient/123/_history/<uuid>.
+      if (pathParts.length >= 4 && pathParts[pathParts.length - 2] === '_history') {
+        const resourceType = pathParts[pathParts.length - 4];
+        const resourceId = pathParts[pathParts.length - 3];
+        const version = pathParts[pathParts.length - 1];
+        const isValidResourceType = this.isValidResourceType(resourceType);
+
+        return {
+          resourceType: isValidResourceType ? resourceType : null,
+          resourceId,
+          referenceType: 'absolute',
+          isValid: isValidResourceType && !!resourceId,
+          originalReference: reference,
+          baseUrl: `${url.origin}/${pathParts.slice(0, -4).join('/')}`.replace(/\/$/, ''),
+          version,
+          metadata: {
+            isHistorical: true,
+            hasVersion: true,
+          },
+        };
+      }
+
       // Fallback: try to extract from the last two path segments
       if (pathParts.length >= 2) {
         const resourceType = pathParts[pathParts.length - 2];

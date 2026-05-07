@@ -55,3 +55,33 @@ describe('ReferenceValidator — Bundle entry contained-ref scoping', () => {
     expect(containedErrors.length).toBeGreaterThan(0);
   });
 });
+
+describe('ReferenceValidator — Parameters embedded resource contained-ref scoping', () => {
+  it('does not check refs inside Parameters.parameter[].resource against Parameters.contained', async () => {
+    const validator = new ReferenceValidator();
+    const parameters = {
+      resourceType: 'Parameters',
+      parameter: [
+        {
+          name: 'coverage',
+          resource: {
+            resourceType: 'Coverage',
+            contained: [{ resourceType: 'Organization', id: 'payer' }],
+            status: 'active',
+            beneficiary: { reference: 'Patient/p1' },
+            payor: [{ reference: '#payer' }],
+          },
+        },
+      ],
+    };
+
+    const result = await validator.validate(parameters, { resourceType: 'Parameters', fhirVersion: 'R4' });
+    const containedErrors = result.issues.filter(
+      (i: any) =>
+        (i.code === 'reference-contained-unresolved' || i.code === 'reference-ref1-invariant')
+        && /payer/.test(i.message || ''),
+    );
+
+    expect(containedErrors).toHaveLength(0);
+  });
+});

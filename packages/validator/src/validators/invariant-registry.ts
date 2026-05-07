@@ -66,9 +66,22 @@ const SPECIALISED_INVARIANT_HANDLERS: Record<string, string> = {
 
   // Universal Extension constraint — extension.url must be a URI and
   // extension must have either extension.* or value[x], not both.
-  // Dispatched through sd-fhirpath-executor.ts today; intentionally
-  // NOT in this registry so the generic engine keeps evaluating it.
-  // Listed here as a comment so future maintainers don't wonder.
+  //
+  // Specialised because the FHIRPath expression
+  //   `extension.exists() != value.exists()`
+  // uses the polymorphic `value` element which fhirpath.js cannot
+  // resolve on raw JS objects — JS has `valueString`, `valueQuantity`,
+  // etc., not a literal `value` property. fhirpath.js evaluates
+  // `value.exists()` against a non-existent property → returns false →
+  // an extension with `valueString="foo"` and no nested `extension`
+  // gets `extension.exists()=false`, `value.exists()=false`,
+  // `false != false` → constraint violated. Result: a false positive on
+  // every well-formed extension that uses a typed value[x].
+  //
+  // The `ExtensionValidator.validateExtensionStructure` and
+  // `ComplexTypeValidator.checkExt1` paths cover the same semantics
+  // correctly via JS introspection on `value*` keys.
+  'ext-1': 'extension-validator.ts',
 
   // Observation: componentdataAbsentReason / referenceRange /
   // value-vs-code disambiguation.

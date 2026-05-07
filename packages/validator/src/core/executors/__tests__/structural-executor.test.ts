@@ -495,6 +495,29 @@ describe('StructuralExecutor', () => {
       ]));
     });
 
+    it('counts references between sibling contained resources', () => {
+      const issues = executor.validateResourceIdAndArrays({
+        resourceType: 'QuestionnaireResponse',
+        id: 'qr-contained-sibling-ref',
+        contained: [
+          {
+            resourceType: 'Questionnaire',
+            id: 'q',
+            item: [{ linkId: 'a', type: 'choice', answerValueSet: '#vs' }],
+          },
+          { resourceType: 'ValueSet', id: 'vs', status: 'draft' },
+        ],
+        questionnaire: '#q',
+      });
+
+      expect(issues).not.toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          code: 'invalid',
+          path: 'QuestionnaireResponse.contained[1]',
+        }),
+      ]));
+    });
+
     it('reports duplicate element-level ids within the same resource', () => {
       const issues = executor.validateResourceIdAndArrays({
         resourceType: 'Patient',

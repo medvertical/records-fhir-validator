@@ -29,4 +29,25 @@ describe('dedupeIssues', () => {
       'slice-min-Slice2',
     ]);
   });
+
+  it('dedupes equivalent resource-prefixed and relative paths', () => {
+    const deduped = dedupeIssues([
+      issue({
+        code: 'terminology-code-invalid',
+        severity: 'warning',
+        path: 'Organization.meta.tag',
+        resourceType: 'Organization',
+        details: { resourceType: 'Organization' },
+      }),
+      issue({
+        code: 'terminology-code-invalid',
+        severity: 'warning',
+        path: 'meta.tag',
+        resourceType: 'Organization',
+        details: { resourceType: 'Organization' },
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+  });
 });

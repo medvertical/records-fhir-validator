@@ -122,6 +122,51 @@ describe('loadProfileWithSnapshot', () => {
     expect(mocks.sdLoader.loadProfile).not.toHaveBeenCalled();
   });
 
+  it('does not load core FHIR StructureDefinitions from the target server', async () => {
+    const coreUrl = 'http://hl7.org/fhir/StructureDefinition/Encounter';
+    const loaderSd = makeSD({ id: 'r4-encounter', url: coreUrl, type: 'Encounter', fhirVersion: '4.0.1' } as any);
+    mocks.profileCache.get.mockReturnValue(null);
+    mocks.fhirClient.searchResources.mockResolvedValue({
+      entry: [{ resource: makeSD({ id: 'r5-encounter-from-server', url: coreUrl, type: 'Encounter', fhirVersion: '5.0.0' } as any) }],
+    });
+    mocks.sdLoader.loadProfile.mockResolvedValue(loaderSd);
+
+    const result = await loadProfileWithSnapshot(
+      mocks.sdLoader as any,
+      mocks.profileCache as any,
+      mocks.snapshotGenerator as any,
+      coreUrl,
+      FHIR_VERSION,
+      mocks.fhirClient as any,
+    );
+
+    expect(result).toBe(loaderSd);
+    expect(mocks.fhirClient.searchResources).not.toHaveBeenCalled();
+    expect(mocks.sdLoader.loadProfile).toHaveBeenCalledWith(coreUrl, FHIR_VERSION);
+  });
+
+  it('ignores FHIR client profiles from the wrong FHIR version', async () => {
+    const r5ClientSd = makeSD({ id: 'from-client-r5', fhirVersion: '5.0.0' } as any);
+    const r4LoaderSd = makeSD({ id: 'from-loader-r4', fhirVersion: '4.0.1' } as any);
+    mocks.profileCache.get.mockReturnValue(null);
+    mocks.fhirClient.searchResources.mockResolvedValue({
+      entry: [{ resource: r5ClientSd }],
+    });
+    mocks.sdLoader.loadProfile.mockResolvedValue(r4LoaderSd);
+
+    const result = await loadProfileWithSnapshot(
+      mocks.sdLoader as any,
+      mocks.profileCache as any,
+      mocks.snapshotGenerator as any,
+      PROFILE_URL,
+      FHIR_VERSION,
+      mocks.fhirClient as any,
+    );
+
+    expect(result).toBe(r4LoaderSd);
+    expect(mocks.sdLoader.loadProfile).toHaveBeenCalledWith(PROFILE_URL, FHIR_VERSION);
+  });
+
   it('falls back to loader when FHIR client returns empty bundle', async () => {
     const loaderSd = makeSD({ id: 'from-loader' });
     mocks.profileCache.get.mockReturnValue(null);
@@ -307,5 +352,26 @@ describe('loadProfileForValidation', () => {
 
     expect(result).toBe(clientSd);
     expect(mocks.sdLoader.loadProfile).not.toHaveBeenCalled();
+  });
+
+  it('falls back to loader when FHIR client returns wrong FHIR version', async () => {
+    const r5ClientSd = makeSD({ id: 'from-client-r5', fhirVersion: '5.0.0' } as any);
+    const r4LoaderSd = makeSD({ id: 'from-loader-r4', fhirVersion: '4.0.1' } as any);
+    mocks.fhirClient.searchResources.mockResolvedValue({
+      entry: [{ resource: r5ClientSd }],
+    });
+    mocks.sdLoader.loadProfile.mockResolvedValue(r4LoaderSd);
+
+    const result = await loadProfileForValidation(
+      mocks.sdLoader as any,
+      mocks.snapshotGenerator as any,
+      PROFILE_URL,
+      FHIR_VERSION,
+      undefined,
+      mocks.fhirClient as any,
+    );
+
+    expect(result).toBe(r4LoaderSd);
+    expect(mocks.sdLoader.loadProfile).toHaveBeenCalledWith(PROFILE_URL, FHIR_VERSION);
   });
 });

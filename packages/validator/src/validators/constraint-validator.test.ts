@@ -150,6 +150,55 @@ describe('ConstraintValidator', () => {
       // Should NOT have any issues - contact is optional and absent
       expect(issues).toHaveLength(0);
     });
+
+    it('resolves choice values inside repeating backbone elements', async () => {
+      const validator = new ConstraintValidator();
+
+      const resource = {
+        resourceType: 'Observation',
+        id: 'bp-panel',
+        category: [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+            code: 'vital-signs',
+          }],
+        }],
+        component: [
+          {
+            code: { coding: [{ system: 'http://loinc.org', code: '8462-4' }] },
+            valueQuantity: { value: 79, system: 'http://unitsofmeasure.org', code: 'mm[Hg]' },
+          },
+          {
+            code: { coding: [{ system: 'http://loinc.org', code: '8480-6' }] },
+            valueQuantity: { value: 93, system: 'http://unitsofmeasure.org', code: 'mm[Hg]' },
+          },
+        ],
+      };
+
+      const elements = [
+        {
+          path: 'Observation.component',
+          min: 0,
+          type: [{ code: 'BackboneElement' }],
+          constraint: [
+            {
+              key: 'vs-3',
+              severity: 'error' as const,
+              human: 'If there is no a value a data absent reason must be present',
+              expression: 'value.exists() or dataAbsentReason.exists()',
+            },
+          ],
+        },
+      ];
+
+      const issues = await validator.validate(
+        resource,
+        elements as any,
+        'http://hl7.org/fhir/StructureDefinition/vitalsigns',
+      );
+
+      expect(issues).toHaveLength(0);
+    });
   });
 
   // TODO: This test requires integration-level setup with proper element path resolution

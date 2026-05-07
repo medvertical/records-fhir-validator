@@ -9,6 +9,160 @@ import type { StructureDefinition } from '../../core/structure-definition-types'
 describe('SlicingValidator', () => {
   const validator = new SlicingValidator();
 
+  it('matches value $this slices that constrain the whole Coding with patternCoding', async () => {
+    const bodyTemperatureProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://nictiz.nl/fhir/StructureDefinition/zib-BodyTemperature',
+      name: 'ZibBodyTemperature',
+      status: 'draft',
+      kind: 'resource',
+      abstract: false,
+      type: 'Observation',
+      snapshot: {
+        element: [
+          {
+            id: 'Observation.code.coding',
+            path: 'Observation.code.coding',
+            min: 1,
+            max: '*',
+            type: [{ code: 'Coding' }],
+            slicing: {
+              discriminator: [{ type: 'value', path: '$this' }],
+              rules: 'open',
+            },
+          },
+          {
+            id: 'Observation.code.coding:BodyTempCode',
+            path: 'Observation.code.coding',
+            sliceName: 'BodyTempCode',
+            min: 1,
+            max: '1',
+            type: [{ code: 'Coding' }],
+            patternCoding: {
+              system: 'http://loinc.org',
+              code: '8310-5',
+            },
+          },
+        ],
+      },
+    } as any;
+
+    const issues = await validator.validateSlicing(
+      [{ system: 'http://loinc.org', code: '8310-5', display: 'Body temperature' }],
+      'Observation.code.coding',
+      bodyTemperatureProfile,
+    );
+
+    expect(issues.some(i => i.code === 'profile-slice-min-cardinality')).toBe(false);
+  });
+
+  it('matches value $this slices using child patterns from a Coding type profile', async () => {
+    const profileUrl = 'http://example.org/StructureDefinition/BodyTempCoding';
+    const validatorWithResolver = new SlicingValidator();
+    validatorWithResolver.setTypeProfileResolver(async (url) => url === profileUrl
+      ? {
+        resourceType: 'StructureDefinition',
+        url: profileUrl,
+        name: 'BodyTempCoding',
+        status: 'draft',
+        kind: 'complex-type',
+        abstract: false,
+        type: 'Coding',
+        snapshot: {
+          element: [
+            { id: 'Coding', path: 'Coding' },
+            { id: 'Coding.system', path: 'Coding.system', patternUri: 'http://loinc.org' },
+            { id: 'Coding.code', path: 'Coding.code', patternCode: '8310-5' },
+          ],
+        },
+      } as any
+      : null);
+
+    const bodyTemperatureProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://nictiz.nl/fhir/StructureDefinition/zib-BodyTemperature',
+      name: 'ZibBodyTemperature',
+      status: 'draft',
+      kind: 'resource',
+      abstract: false,
+      type: 'Observation',
+      snapshot: {
+        element: [
+          {
+            id: 'Observation.code.coding',
+            path: 'Observation.code.coding',
+            min: 1,
+            max: '*',
+            type: [{ code: 'Coding' }],
+            slicing: {
+              discriminator: [{ type: 'value', path: '$this' }],
+              rules: 'open',
+            },
+          },
+          {
+            id: 'Observation.code.coding:BodyTempCode',
+            path: 'Observation.code.coding',
+            sliceName: 'BodyTempCode',
+            min: 1,
+            max: '1',
+            type: [{ code: 'Coding', profile: [profileUrl] }],
+          },
+        ],
+      },
+    } as any;
+
+    const issues = await validatorWithResolver.validateSlicing(
+      [{ system: 'http://loinc.org', code: '8310-5', display: 'Body temperature' }],
+      'Observation.code.coding',
+      bodyTemperatureProfile,
+    );
+
+    expect(issues.some(i => i.code === 'profile-slice-min-cardinality')).toBe(false);
+  });
+
+  it('matches $this type slices for primitive date values', async () => {
+    const usCoreGoalProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-goal',
+      name: 'USCoreGoalProfile',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Goal',
+      snapshot: {
+        element: [
+          {
+            id: 'Goal.target.due[x]',
+            path: 'Goal.target.due[x]',
+            min: 0,
+            max: '1',
+            type: [{ code: 'date' }],
+            slicing: {
+              discriminator: [{ type: 'type', path: '$this' }],
+              rules: 'closed',
+            },
+          },
+          {
+            id: 'Goal.target.due[x]:dueDate',
+            path: 'Goal.target.due[x]',
+            sliceName: 'dueDate',
+            min: 0,
+            max: '1',
+            type: [{ code: 'date' }],
+          },
+        ],
+      },
+    } as any;
+
+    const issues = await validator.validateSlicing(
+      ['2020-11-25'],
+      'Goal.target.due[x]',
+      usCoreGoalProfile,
+    );
+
+    expect(issues.some(i => i.code === 'profile-slice-closed-unmatched')).toBe(false);
+  });
+
   // Mock UK Core Patient profile with NHS Number identifier slicing
   const mockUKCorePatientProfile: StructureDefinition = {
     resourceType: 'StructureDefinition',

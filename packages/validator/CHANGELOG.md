@@ -10,6 +10,34 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-05-06
+
+Patch release for the Firely validation triage and public package
+sync.
+
+### Fixes
+
+- Fixed false positives in slice matching for `$this` Coding slices and
+  slice child constraints.
+- Hardened StructureDefinition loading so R4/R5 core definitions and
+  cached package scans do not cross-contaminate validation runs.
+- Tightened unknown-property detection so internal enhancer fields and
+  valid primitive companion fields are not reported as structural
+  errors.
+- Improved terminology parity: display comparisons now ignore
+  case/whitespace-only differences, missing CodeSystem values are
+  warnings, and unvalidated terminology coverage uses stable issue
+  codes.
+- Improved reference parsing for contained references, absolute URLs,
+  versioned references, and Bundle entry contexts.
+
+### Tests
+
+- Added focused regression coverage for StructureDefinition cache
+  versioning, unknown-property walking, slice element matching,
+  terminology issue classification, and reference format/type
+  extraction.
+
 ## [0.1.3] — 2026-05-05
 
 Patch release fixing a public-export gap that shipped in 0.1.2. No

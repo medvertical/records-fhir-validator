@@ -95,4 +95,41 @@ describe('ValueSetValidator required primitive bindings', () => {
     expect(issues[0].severity).toBe('warning');
     expect(issues[0].path).toBe('Condition.code.coding[0].display');
   });
+
+  it('does not warn when Coding.display only differs in case or whitespace', async () => {
+    const valueSetUrl = 'http://example.org/fhir/ValueSet/test';
+    const systemUrl = 'http://example.org/fhir/CodeSystem/test';
+    valueSetCache.setValueSetFile(valueSetUrl, {
+      resourceType: 'ValueSet',
+      url: valueSetUrl,
+      status: 'active',
+      compose: { include: [{ system: systemUrl }] },
+    });
+    valueSetCache.setExpandedCodes(valueSetUrl, new Set([`${systemUrl}|vital-signs`, 'vital-signs']));
+    valueSetCache.setCodeSystem(systemUrl, {
+      resourceType: 'CodeSystem',
+      url: systemUrl,
+      content: 'complete',
+      concept: [{ code: 'vital-signs', display: 'Vital Signs' }],
+    });
+
+    const validator = new ValueSetValidator();
+
+    const issues = await validator.validateBinding(
+      {
+        coding: [{
+          system: systemUrl,
+          code: 'vital-signs',
+          display: '  vital   signs ',
+        }],
+      },
+      {
+        strength: 'required',
+        valueSet: valueSetUrl,
+      },
+      'Observation.category',
+    );
+
+    expect(issues).toHaveLength(0);
+  });
 });

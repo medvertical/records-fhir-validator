@@ -23,6 +23,30 @@ import { checkDatabaseCache } from './sd-loader-db-cache';
 import { attemptAutoDownload, isPublicProfile } from './sd-loader-auto-download';
 import { getProfileSource } from '../persistence';
 
+function fhirVersionFamily(sd: StructureDefinition): 'R4' | 'R5' | 'R6' | null {
+  const sdFhirVersion = (sd as { fhirVersion?: string }).fhirVersion;
+  if (!sdFhirVersion) return null;
+  if (sdFhirVersion.startsWith('4.')) return 'R4';
+  if (sdFhirVersion.startsWith('5.')) return 'R5';
+  if (sdFhirVersion.startsWith('6.')) return 'R6';
+  return null;
+}
+
+function matchesRequestedFhirVersion(
+  sd: StructureDefinition,
+  fhirVersion: 'R4' | 'R5' | 'R6'
+): boolean {
+  const family = fhirVersionFamily(sd);
+  return !family || family === fhirVersion;
+}
+
+function cacheKeyForProfile(
+  url: string,
+  fhirVersion: 'R4' | 'R5' | 'R6'
+): string {
+  return `${url}:${fhirVersion}`;
+}
+
 // Re-export types from separate file to break circular dependencies
 export type {
   StructureDefinition,
@@ -232,7 +256,10 @@ export class StructureDefinitionLoader {
       for (const [, result] of loadedProfiles.entries()) {
         if (result.profile) {
           const sanitized = this.sanitizeProfile(result.profile);
-          this.cache.set(result.canonicalUrl, sanitized);
+          const family = fhirVersionFamily(sanitized);
+          if (family) {
+            this.cache.set(cacheKeyForProfile(result.canonicalUrl, family), sanitized);
+          }
           this.availableProfiles.add(result.canonicalUrl);
         }
       }
@@ -274,8 +301,11 @@ export class StructureDefinitionLoader {
       // Step 2: Check in-memory cache for all profiles
       const uncachedUrls: string[] = [];
       for (const url of uniqueUrls) {
-        if (this.cache.has(url)) {
-          results.set(url, this.cache.get(url)!);
+        const resolvedUrl = this.resolvePinnedCanonical(url);
+        const cacheKey = cacheKeyForProfile(resolvedUrl, fhirVersion);
+        const cached = this.cache.get(cacheKey);
+        if (cached && matchesRequestedFhirVersion(cached, fhirVersion)) {
+          results.set(url, cached);
         } else {
           uncachedUrls.push(url);
         }
@@ -336,17 +366,10 @@ export class StructureDefinitionLoader {
       // Canonical pinning: if the URL is unversioned and we have a pinned
       // resolution, redirect to the versioned form. This makes runtime
       // resolution deterministic regardless of which packages are loaded.
-      let resolvedUrl = url;
-      if (this.pinnedCanonicals && !url.includes('|')) {
-        const pinned = this.pinnedCanonicals.get(url);
-        if (pinned) {
-          resolvedUrl = pinned;
-          logger.debug(`[SDLoader] Pinned: ${url} → ${pinned}`);
-        }
-      }
+      const resolvedUrl = this.resolvePinnedCanonical(url);
 
       // Use version-specific cache key to avoid R4/R5 confusion
-      const cacheKey = `${resolvedUrl}:${fhirVersion}`;
+      const cacheKey = cacheKeyForProfile(resolvedUrl, fhirVersion);
 
       // Check in-memory cache first (version-specific)
       if (this.cache.has(cacheKey)) {
@@ -594,12 +617,24 @@ export class StructureDefinitionLoader {
    * Cache a profile from external source (e.g., FHIR client)
    * This ensures profiles loaded from the FHIR server are reused in subsequent validation runs
    */
-  cacheProfile(url: string, profile: StructureDefinition): void {
+  cacheProfile(url: string, profile: StructureDefinition, fhirVersion?: 'R4' | 'R5' | 'R6'): void {
     if (!profile || !url) return;
 
-    this.cache.set(url, profile);
+    const family = fhirVersionFamily(profile) ?? fhirVersion ?? 'R4';
+    this.cache.set(cacheKeyForProfile(url, family), profile);
     this.availableProfiles.add(url);
-    logger.debug(`[SDLoader] Externally cached profile: ${url}`);
+    logger.debug(`[SDLoader] Externally cached profile: ${url} (${family})`);
+  }
+
+  private resolvePinnedCanonical(url: string): string {
+    if (this.pinnedCanonicals && !url.includes('|')) {
+      const pinned = this.pinnedCanonicals.get(url);
+      if (pinned) {
+        logger.debug(`[SDLoader] Pinned: ${url} → ${pinned}`);
+        return pinned;
+      }
+    }
+    return url;
   }
 
   /**

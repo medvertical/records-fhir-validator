@@ -573,6 +573,142 @@ describe('TerminologyExecutor', () => {
       validateBindingSpy.mockRestore();
     });
 
+    it('does not apply required bindings from non-matching slice descendants', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          id: 'Practitioner.identifier',
+          path: 'Practitioner.identifier',
+          min: 1,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'value', path: '$this' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Practitioner.identifier:NPI',
+          path: 'Practitioner.identifier',
+          sliceName: 'NPI',
+          min: 0,
+          max: '*',
+          pattern: {
+            system: 'http://hl7.org/fhir/sid/us-npi',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Practitioner.identifier:NPI.use',
+          path: 'Practitioner.identifier.use',
+          min: 0,
+          max: '1',
+          type: [{ code: 'code' }],
+          binding: {
+            strength: 'required',
+            valueSet: 'http://hl7.org/fhir/ValueSet/identifier-use',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Practitioner.identifier:ein',
+          path: 'Practitioner.identifier',
+          sliceName: 'ein',
+          min: 0,
+          max: '1',
+          pattern: {
+            system: 'urn:oid:2.16.840.1.113883.4.4',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Practitioner.identifier:ein.use',
+          path: 'Practitioner.identifier.use',
+          min: 1,
+          max: '1',
+          type: [{ code: 'code' }],
+          binding: {
+            strength: 'required',
+            valueSet: 'http://hl7.org/fhir/ValueSet/identifier-use',
+          },
+        } as ElementDefinition,
+      ];
+      mockContext.resource = {
+        resourceType: 'Practitioner',
+        identifier: [{
+          system: 'http://hl7.org/fhir/sid/us-npi',
+          value: '1234567890',
+        }],
+      };
+      mockContext.getValueAtPath = (resource: any, path: string) => {
+        if (path === 'Practitioner.identifier') return resource.identifier;
+        if (path === 'Practitioner.identifier.use') {
+          return resource.identifier.map((identifier: any) => identifier.use).filter(Boolean);
+        }
+        return undefined;
+      };
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues.some(issue => issue.code === 'binding-required-missing')).toBe(false);
+    });
+
+    it('reports missing required bindings for matching slice descendants', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          id: 'Practitioner.identifier',
+          path: 'Practitioner.identifier',
+          min: 1,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'value', path: '$this' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Practitioner.identifier:ein',
+          path: 'Practitioner.identifier',
+          sliceName: 'ein',
+          min: 0,
+          max: '1',
+          pattern: {
+            system: 'urn:oid:2.16.840.1.113883.4.4',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Practitioner.identifier:ein.use',
+          path: 'Practitioner.identifier.use',
+          min: 1,
+          max: '1',
+          type: [{ code: 'code' }],
+          binding: {
+            strength: 'required',
+            valueSet: 'http://hl7.org/fhir/ValueSet/identifier-use',
+          },
+        } as ElementDefinition,
+      ];
+      mockContext.resource = {
+        resourceType: 'Practitioner',
+        identifier: [{
+          system: 'urn:oid:2.16.840.1.113883.4.4',
+          value: '12-3456789',
+        }],
+      };
+      mockContext.getValueAtPath = (resource: any, path: string) => {
+        if (path === 'Practitioner.identifier') return resource.identifier;
+        if (path === 'Practitioner.identifier.use') {
+          return resource.identifier.map((identifier: any) => identifier.use).filter(Boolean);
+        }
+        return undefined;
+      };
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          aspect: 'terminology',
+          severity: 'error',
+          code: 'binding-required-missing',
+          path: 'Practitioner.identifier.use',
+        }),
+      ]));
+    });
+
     it('applies sliced CodeableConcept bindings only to matching patternCodeableConcept values', async () => {
       const laboratoryCategory = {
         coding: [{
@@ -794,6 +930,34 @@ describe('TerminologyExecutor', () => {
         severity: 'warning',
         code: 'terminology-code-invalid',
         path: 'ImagingStudy.series[0].extension[0].extension[0].valueCodeableConcept.coding[1]',
+      }));
+    });
+
+    it('does not treat terminology artifact concepts as bare Coding values', async () => {
+      mockStructureDef.type = 'ValueSet';
+      mockStructureDef.snapshot!.element = [];
+      mockContext.resource = {
+        resourceType: 'ValueSet',
+        compose: {
+          include: [{
+            system: 'http://example.org/CodeSystem/test',
+            concept: [
+              { code: 'a', display: 'Alpha' },
+              { code: 'b', display: 'Beta' },
+            ],
+          }],
+        },
+      };
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues).not.toContainEqual(expect.objectContaining({
+        code: 'terminology-code-invalid',
+        path: 'ValueSet.compose.include[0].concept[0]',
+      }));
+      expect(issues).not.toContainEqual(expect.objectContaining({
+        code: 'terminology-code-invalid',
+        path: 'ValueSet.compose.include[0].concept[1]',
       }));
     });
 

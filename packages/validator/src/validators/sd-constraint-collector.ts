@@ -27,6 +27,15 @@ export interface CollectedConstraint {
     minCardinality: number;
     /** Type(s) of the element */
     elementTypes: string[];
+    /**
+     * Slice name when the source element is part of a slice
+     * (e.g. `Organization.identifier:NPI` → `'NPI'`). Constraints on
+     * slice elements only apply to instances matching the slice
+     * discriminator — the generic executor does not have slice-aware
+     * context resolution and would fire the constraint on every value
+     * at the path, so the executor uses this field to skip them.
+     */
+    sliceName?: string;
 }
 
 export interface ConstraintCollectionResult {
@@ -84,7 +93,8 @@ export class SDConstraintCollector {
                     constraint,
                     isRootConstraint,
                     minCardinality: element.min || 0,
-                    elementTypes
+                    elementTypes,
+                    ...(element.sliceName ? { sliceName: element.sliceName } : {}),
                 };
 
                 constraints.push(collected);

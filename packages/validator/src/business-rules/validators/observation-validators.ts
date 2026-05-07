@@ -224,21 +224,7 @@ export async function validateObservationEffectiveDate(resource: any, resourceTy
 export async function validateObservationStatusValueConsistency(resource: any, resourceType: string): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
 
-  // Check if observation has status 'final' but no value
-  // Check all possible value[x] types in FHIR Observation
-  const hasValue = !!(
-    resource.valueQuantity ||
-    resource.valueCodeableConcept ||
-    resource.valueString ||
-    resource.valueBoolean ||
-    resource.valueInteger ||
-    resource.valueRange ||
-    resource.valueRatio ||
-    resource.valueSampledData ||
-    resource.valueTime ||
-    resource.valueDateTime ||
-    resource.valuePeriod
-  );
+  const hasValue = hasObservationValue(resource);
 
   if (resource.status === 'final' && !hasValue) {
     issues.push({
@@ -265,3 +251,28 @@ export async function validateObservationStatusValueConsistency(resource: any, r
   return issues;
 }
 
+function hasObservationValue(observation: any): boolean {
+  if (hasValueX(observation) || observation.dataAbsentReason) {
+    return true;
+  }
+
+  return Array.isArray(observation.component) && observation.component.some((component: any) =>
+    hasValueX(component) || component.dataAbsentReason
+  );
+}
+
+function hasValueX(element: any): boolean {
+  return !!(
+    element.valueQuantity ||
+    element.valueCodeableConcept ||
+    element.valueString ||
+    element.valueBoolean ||
+    element.valueInteger ||
+    element.valueRange ||
+    element.valueRatio ||
+    element.valueSampledData ||
+    element.valueTime ||
+    element.valueDateTime ||
+    element.valuePeriod
+  );
+}

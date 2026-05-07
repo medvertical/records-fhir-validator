@@ -39,6 +39,27 @@ describe('unknown-property-walker', () => {
     expect(issues).toHaveLength(0);
   });
 
+  it('does not flag standard keys when a downloaded profile contains only a stub root element', async () => {
+    const stubIndex = buildSnapshotIndex({
+      url: 'http://example.org/stub-profile',
+      snapshot: { element: [{ path: 'Consent' }] },
+    } as any);
+
+    const issues = await detectUnknownProperties(
+      {
+        resourceType: 'Consent',
+        status: 'active',
+        scope: { coding: [{ system: 'http://terminology.hl7.org/CodeSystem/consentscope', code: 'adr' }] },
+        patient: { reference: 'Patient/example' },
+      },
+      stubIndex,
+      'Consent',
+      'http://example.org/stub-profile',
+    );
+
+    expect(issues).toHaveLength(0);
+  });
+
   it('flags unknown top-level keys as error severity', async () => {
     const issues = await detectUnknownProperties(
       { resourceType: 'TestRes', namee: { family: 'Doe' } },

@@ -10,6 +10,10 @@ import * as path from 'path';
 import type { StructureDefinition } from './structure-definition-types';
 import { logger } from '../logger';
 
+function isPreReleaseVersion(version: string | undefined): boolean {
+  return typeof version === 'string' && version.includes('-');
+}
+
 /**
  * Check if a package is relevant for a given profile URL and version
  */
@@ -127,10 +131,14 @@ export async function loadFromLocalCache(
               const checkSd = (sd: any, sourceName: string) => {
                 if (sd?.resourceType === 'StructureDefinition' && sd.url === targetUrl) {
                   if (!targetVersion || sd.version === targetVersion) {
+                    if (!targetVersion && isPreReleaseVersion(sd.version)) {
+                      logger.info(`[SDLoader] Skipping pre-release profile ${targetUrl}@${sd.version} from ${sourceName}; unversioned canonicals must resolve to stable packages`);
+                      return null;
+                    }
                     return sd; // Found exact match
                   }
                   // Keep candidate if we haven't found one yet
-                  if (!urlMatch) {
+                  if (!urlMatch && !isPreReleaseVersion(sd.version)) {
                     urlMatch = sd;
                     urlMatchSource = sourceName;
                   }
@@ -267,4 +275,3 @@ export async function loadFromSource(
 
   return null;
 }
-

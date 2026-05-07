@@ -29,6 +29,34 @@ const DEFAULT_PROFILE_SOURCES: ProfileSourcesConfig = {
   packageRegistry: true
 };
 
+function isCoreFhirStructureDefinition(url: string): boolean {
+  return url.startsWith('http://hl7.org/fhir/StructureDefinition/') &&
+    !url.includes('/us/') &&
+    !url.includes('/uv/') &&
+    !url.includes('/extensions/');
+}
+
+function fhirVersionFamily(sd: StructureDefinition): 'R4' | 'R5' | 'R6' | null {
+  const sdFhirVersion = (sd as { fhirVersion?: string }).fhirVersion;
+  if (!sdFhirVersion) return null;
+  if (sdFhirVersion.startsWith('4.')) return 'R4';
+  if (sdFhirVersion.startsWith('5.')) return 'R5';
+  if (sdFhirVersion.startsWith('6.')) return 'R6';
+  return null;
+}
+
+function matchesRequestedFhirVersion(sd: StructureDefinition, requested: 'R4' | 'R5' | 'R6'): boolean {
+  const family = fhirVersionFamily(sd);
+  return !family || family === requested;
+}
+
+function cacheDownloadedProfile(url: string, sd: StructureDefinition, context: AutoDownloadContext): void {
+  const requested = context.fhirVersion || 'R4';
+  const family = fhirVersionFamily(sd) ?? requested;
+  context.cache.set(`${url}:${family}`, sd);
+  context.availableProfiles.add(url);
+}
+
 // ============================================================================
 // Request Deduplication and Negative Caching
 // ============================================================================
@@ -112,7 +140,7 @@ async function executeAutoDownload(
     const result = await Promise.race([
       (async () => {
         // Step 1: Try FHIR Server if enabled and client available
-        if (config.fhirServer && context.fhirClient) {
+        if (config.fhirServer && context.fhirClient && !isCoreFhirStructureDefinition(url)) {
           try {
             logger.info(`[SDLoader] Trying FHIR Server for: ${url}`);
             const bundle = await context.fhirClient.searchResources(
@@ -124,10 +152,13 @@ async function executeAutoDownload(
 
             if (bundle?.entry?.[0]?.resource) {
               const sd = bundle.entry[0].resource as StructureDefinition;
-              context.cache.set(url, sd);
-              context.availableProfiles.add(url);
-              logger.info(`[SDLoader] ✅ Profile fetched from FHIR Server: ${url}`);
-              return sd;
+              if (!matchesRequestedFhirVersion(sd, context.fhirVersion || 'R4')) {
+                logger.warn(`[SDLoader] Ignoring FHIR Server profile with mismatched fhirVersion: ${url}`);
+              } else {
+                cacheDownloadedProfile(url, sd, context);
+                logger.info(`[SDLoader] ✅ Profile fetched from FHIR Server: ${url}`);
+                return sd;
+              }
             }
             logger.debug(`[SDLoader] Profile not found on FHIR Server`);
           } catch (fhirError: any) {
@@ -145,10 +176,13 @@ async function executeAutoDownload(
               logger.info(`[SDLoader] Trying external-fetch fallback for: ${url}`);
               const sd = await fetchExternal(url);
               if (sd) {
-                context.cache.set(url, sd);
-                context.availableProfiles.add(url);
-                logger.info(`[SDLoader] ✅ Profile fetched via external fallback: ${url}`);
-                return sd as StructureDefinition;
+                if (!matchesRequestedFhirVersion(sd, context.fhirVersion || 'R4')) {
+                  logger.warn(`[SDLoader] Ignoring external profile with mismatched fhirVersion: ${url}`);
+                } else {
+                  cacheDownloadedProfile(url, sd as StructureDefinition, context);
+                  logger.info(`[SDLoader] ✅ Profile fetched via external fallback: ${url}`);
+                  return sd as StructureDefinition;
+                }
               }
               logger.debug(`[SDLoader] Profile not found via external fallback`);
             }
@@ -172,8 +206,7 @@ async function executeAutoDownload(
               const sd = await loadFromLocalCache(url, context.packageSources, context.fhirVersion || 'R4');
 
               if (sd) {
-                context.cache.set(url, sd);
-                context.availableProfiles.add(url);
+                cacheDownloadedProfile(url, sd, context);
                 logger.info(`[SDLoader] ✅ Profile loaded from package: ${url}`);
                 return sd;
               }

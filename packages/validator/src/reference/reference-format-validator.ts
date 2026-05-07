@@ -8,6 +8,28 @@
 import type { ValidationIssue } from '../types';
 import type { ReferenceFormatValidation } from './reference-types';
 
+function extractInstanceReferenceFromPath(pathname: string): {
+  resourceType?: string;
+  resourceId?: string;
+  version?: string;
+} {
+  const pathParts = pathname.split('/').filter(p => p);
+  if (pathParts.length < 2) return {};
+
+  if (pathParts.length >= 4 && pathParts[pathParts.length - 2] === '_history') {
+    return {
+      resourceType: pathParts[pathParts.length - 4],
+      resourceId: pathParts[pathParts.length - 3],
+      version: pathParts[pathParts.length - 1],
+    };
+  }
+
+  return {
+    resourceType: pathParts[pathParts.length - 2],
+    resourceId: pathParts[pathParts.length - 1],
+  };
+}
+
 // ============================================================================
 // Reference Format Validation
 // ============================================================================
@@ -74,19 +96,7 @@ export function validateReferenceFormat(reference: string): ReferenceFormatValid
 
     try {
       const url = new URL(reference);
-      const pathParts = url.pathname.split('/').filter(p => p);
-
-      if (pathParts.length >= 2) {
-        resourceType = pathParts[pathParts.length - 2];
-        resourceId = pathParts[pathParts.length - 1];
-
-        // Check for version in URL
-        if (resourceId?.includes('/_history/')) {
-          const parts = resourceId.split('/_history/');
-          resourceId = parts[0];
-          version = parts[1];
-        }
-      }
+      ({ resourceType, resourceId, version } = extractInstanceReferenceFromPath(url.pathname));
     } catch (error) {
       issues.push({
         id: `reference-invalid-url-${Date.now()}`,
@@ -122,7 +132,7 @@ export function validateReferenceFormat(reference: string): ReferenceFormatValid
   }
 
   // Relative reference: ResourceType/id or ResourceType/id/_history/version
-  const relativePattern = /^([A-Z][a-zA-Z]+)\/([A-Za-z0-9\-.]+)(?:\/_history\/([0-9]+))?$/;
+  const relativePattern = /^([A-Z][a-zA-Z]+)\/([A-Za-z0-9\-.]+)(?:\/_history\/([A-Za-z0-9\-.]+))?$/;
   const match = reference.match(relativePattern);
 
   if (match) {
@@ -188,4 +198,3 @@ export function extractReferences(resource: any, resourceType: string): Array<{ 
   traverse(resource, resourceType);
   return references;
 }
-

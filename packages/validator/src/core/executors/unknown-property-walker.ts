@@ -121,6 +121,10 @@ export async function detectUnknownProperties(
   sdUrl: string | undefined,
   deps?: WalkerDeps,
 ): Promise<ValidationIssue[]> {
+  if (index.knownPaths.size <= 1 && index.knownPaths.has(resourceType)) {
+    return [];
+  }
+
   const issues: ValidationIssue[] = [];
   await walk(resource, resourceType, index, sdUrl, issues, true, deps);
   return issues;

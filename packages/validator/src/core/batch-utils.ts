@@ -139,7 +139,7 @@ export async function preloadProfiles(
             if (profile) {
               profilesMap.set(url, profile);
               // Cache in sdLoader for future runs
-              sdLoader.cacheProfile(url, profile);
+              sdLoader.cacheProfile(url, profile, fhirVersion);
               resolvedCount++;
             }
           } catch {

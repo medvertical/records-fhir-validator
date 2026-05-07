@@ -18,6 +18,7 @@ import { StructureDefinitionValidator } from '../../validators/structure-definit
 import { CompliesWithValidator } from '../../validators/complies-with-validator';
 import { StringSecurityValidator } from '../../validators/string-security-validator';
 import { validateChoiceTypeProperties } from '../../validators/choice-type-property-validator';
+import { extractFixedValue, extractPatternValue, matchesPattern, valuesMatch } from '../../validators/slice-utils';
 import { getValidationTargets, shouldValidateRequired } from '../../business-rules';
 import { getValueAtPath as getValueAtPathUtil } from '../validation-utils';
 import { createValidationIssue } from '../../issues';
@@ -43,6 +44,34 @@ export interface StructuralValidationContext {
   structureDef: StructureDefinition;
   getValueAtPath: (resource: any, path: string) => any;
   settings?: any; // ValidationSettings - using any to avoid circular deps or heavy imports
+}
+
+function elementRuleMatchesValue(elementDef: any, value: any): boolean {
+  const fixed = extractFixedValue(elementDef);
+  if (fixed !== undefined && !valuesMatch(value, fixed)) return false;
+
+  const pattern = extractPatternValue(elementDef);
+  if (pattern !== undefined && !matchesPattern(value, pattern)) return false;
+
+  return fixed !== undefined || pattern !== undefined;
+}
+
+function shouldSkipRulesForSiblingSliceTarget(
+  elementDef: any,
+  value: any,
+  structureDef: StructureDefinition,
+): boolean {
+  if (!elementDef.id?.includes(':')) return false;
+  if (elementRuleMatchesValue(elementDef, value)) return false;
+
+  const siblingRuleElements = structureDef.snapshot?.element.filter(candidate =>
+    candidate !== elementDef &&
+    candidate.path === elementDef.path &&
+    candidate.id?.includes(':') &&
+    (extractFixedValue(candidate) !== undefined || extractPatternValue(candidate) !== undefined),
+  ) ?? [];
+
+  return siblingRuleElements.some(candidate => elementRuleMatchesValue(candidate, value));
 }
 
 function hasElementDefinitionRules(elementDef: Record<string, unknown>): boolean {
@@ -396,13 +425,15 @@ export class StructuralExecutor {
                 hasElementDefinitionRules(elementDef);
 
               if (shouldApplyChoiceElementRules) {
-                const ruleIssues = this.elementRulesValidator.validate(
-                  target.value,
-                  elementDef,
-                  target.fullPath,
-                  effectiveProfileUrl
-                );
-                issues.push(...ruleIssues);
+                if (!shouldSkipRulesForSiblingSliceTarget(elementDef, target.value, structureDef)) {
+                  const ruleIssues = this.elementRulesValidator.validate(
+                    target.value,
+                    elementDef,
+                    target.fullPath,
+                    effectiveProfileUrl
+                  );
+                  issues.push(...ruleIssues);
+                }
                 continue;
               }
 
@@ -424,13 +455,15 @@ export class StructuralExecutor {
                 );
                 issues.push(...typeIssues);
 
-                const ruleIssues = this.elementRulesValidator.validate(
-                  target.value,
-                  elementDef,
-                  target.fullPath,
-                  effectiveProfileUrl
-                );
-                issues.push(...ruleIssues);
+                if (!shouldSkipRulesForSiblingSliceTarget(elementDef, target.value, structureDef)) {
+                  const ruleIssues = this.elementRulesValidator.validate(
+                    target.value,
+                    elementDef,
+                    target.fullPath,
+                    effectiveProfileUrl
+                  );
+                  issues.push(...ruleIssues);
+                }
 
                 // Recursively validate required sub-elements of complex types
                 const complexTypeIssues = await this.complexTypeValidator.validateComplexTypeSubElements(
@@ -1058,7 +1091,9 @@ export class StructuralExecutor {
     }
     if (containedIds.size === 0) return issues;
 
-    // Collect all #id references in the resource (excluding the contained[] array itself).
+    // Collect all #id references in the full resource tree. References inside
+    // contained resources can legitimately point at sibling contained resources
+    // (for example a contained Questionnaire answerValueSet="#vs").
     // A contained resource can be referenced from Reference.reference ("#id"),
     // canonical fields like answerValueSet ("#id"), or any other string-valued
     // property that starts with "#". We therefore scan ALL string values.
@@ -1085,7 +1120,7 @@ export class StructuralExecutor {
         }
       }
     };
-    collectRefs(resource, true);
+    collectRefs(resource, false);
 
     // Flag any contained resource whose id is not referenced
     for (const [id, idx] of containedIds) {

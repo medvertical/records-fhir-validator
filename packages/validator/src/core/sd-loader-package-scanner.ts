@@ -17,6 +17,10 @@ export interface ScanCacheDirectoryOptions {
   packageVersionPins?: Record<string, string>;
 }
 
+function parsePackageJson(content: string): unknown {
+  return JSON.parse(content.replace(/^\uFEFF/, ''));
+}
+
 /**
  * Parse package name into base name and version
  * Format: packageId#version (e.g., "hl7.fhir.r4.core#4.0.1")
@@ -94,7 +98,7 @@ export async function scanPackageDirectory(
 
       try {
         const content = await fs.readFile(filePath, 'utf-8');
-        const sd = JSON.parse(content) as StructureDefinition;
+        const sd = parsePackageJson(content) as StructureDefinition;
 
         if (sd?.resourceType === 'StructureDefinition' && sd.url) {
           availableProfiles.add(sd.url);

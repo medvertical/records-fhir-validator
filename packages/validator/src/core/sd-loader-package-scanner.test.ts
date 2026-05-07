@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { afterEach, describe, expect, it } from 'vitest';
-import { scanCacheDirectory } from './sd-loader-package-scanner';
+import { scanCacheDirectory, scanPackageDirectory } from './sd-loader-package-scanner';
 
 describe('scanCacheDirectory package version pins', () => {
   const tempDirs: string[] = [];
@@ -56,5 +56,22 @@ describe('scanCacheDirectory package version pins', () => {
 
     expect(scanned).toBe(0);
     expect(availableProfiles.size).toBe(0);
+  });
+
+  it('accepts package JSON files with a UTF-8 BOM', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'records-sd-scan-'));
+    tempDirs.push(root);
+    await writeFile(
+      join(root, 'StructureDefinition-bom.json'),
+      `\uFEFF${JSON.stringify({
+        resourceType: 'StructureDefinition',
+        url: 'http://example.org/bom-profile'
+      })}`
+    );
+
+    const availableProfiles = new Set<string>();
+    await scanPackageDirectory(root, availableProfiles);
+
+    expect(availableProfiles.has('http://example.org/bom-profile')).toBe(true);
   });
 });

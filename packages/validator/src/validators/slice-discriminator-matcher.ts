@@ -61,6 +61,13 @@ function matchValueDiscriminator(
   const elementValue = getValueAtPath(element, path);
   const childPath = normalizeChildConstraintPath(path);
 
+  if (!path || path === '$this') {
+    if (slice.fixed !== undefined) return valuesMatch(elementValue, slice.fixed);
+    if (slice.pattern !== undefined) return matchesPatternFn(elementValue, slice.pattern);
+    const childConstraintMatch = matchWholeElementChildConstraints(elementValue, slice, matchesPatternFn);
+    if (childConstraintMatch !== null) return childConstraintMatch;
+  }
+
   if (path && path !== '$this') {
     if (slice.childFixed) {
       const childFixed = slice.childFixed.get(childPath);
@@ -157,14 +164,44 @@ function matchTypeDiscriminator(element: any, slice: SliceDefinition, path: stri
 
   const valueType = inferType(value);
 
-  if (slice.type && slice.type.length > 0) return slice.type.some(t => t.code === valueType);
+  if (slice.type && slice.type.length > 0) {
+    return slice.type.some(t => typeCodeMatchesValue(t.code, valueType, value));
+  }
 
   if (slice.childTypes && path && path !== '$this') {
     const ct = slice.childTypes.get(path);
-    if (ct && ct.length > 0) return ct.some(t => t.code === valueType);
+    if (ct && ct.length > 0) return ct.some(t => typeCodeMatchesValue(t.code, valueType, value));
   }
 
   return false;
+}
+
+function typeCodeMatchesValue(expectedType: string | undefined, inferredType: string, value: any): boolean {
+  if (!expectedType) return false;
+  if (expectedType === inferredType) return true;
+
+  if (typeof value !== 'string') return false;
+  switch (expectedType) {
+    case 'date':
+      return /^\d{4}(-\d{2}(-\d{2})?)?$/.test(value);
+    case 'dateTime':
+    case 'instant':
+      return /^\d{4}-\d{2}-\d{2}T/.test(value);
+    case 'time':
+      return /^([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d+)?$/.test(value);
+    case 'string':
+    case 'code':
+    case 'markdown':
+    case 'id':
+    case 'uri':
+    case 'url':
+    case 'canonical':
+    case 'oid':
+    case 'uuid':
+      return inferredType === 'string';
+    default:
+      return false;
+  }
 }
 
 function matchProfileDiscriminator(

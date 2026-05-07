@@ -78,13 +78,13 @@ export class ProfileExecutor {
           getValueAtPath
         }
       );
-      issues.push(...extensionIssues);
 
       // 2. Validate slicing (check for sliced elements like Patient.identifier)
       if (structureDef.snapshot?.element) {
-        issues.push(...await this.validateAllSlicing(
+        const slicingIssues = await this.validateAllSlicing(
           resource, structureDef, getValueAtPath
-        ));
+        );
+        issues.push(...this.suppressDuplicateExtensionSliceMinimum(extensionIssues, slicingIssues));
 
         // 3. Validate FHIRPath constraints
         // Using snapshot elements which contain the constraints
@@ -95,6 +95,8 @@ export class ProfileExecutor {
           { strictMode, fhirVersion } // Pass strictMode for severity escalation + FHIR version for FHIRPath model
         );
         issues.push(...constraintIssues);
+      } else {
+        issues.push(...extensionIssues);
       }
 
       // 4. Validate German identifier systems (GKV/PKV assigner validation)
@@ -215,6 +217,42 @@ export class ProfileExecutor {
   private coerceToArray(val: any): any[] {
     if (val === undefined || val === null) return [];
     return Array.isArray(val) ? val : [val];
+  }
+
+  private suppressDuplicateExtensionSliceMinimum(
+    extensionIssues: ValidationIssue[],
+    slicingIssues: ValidationIssue[],
+  ): ValidationIssue[] {
+    const extensionMinPaths = new Set(
+      extensionIssues
+        .filter(issue => issue.code === 'profile-extension-min-cardinality')
+        .map(issue => this.normalizePath(issue.path))
+        .filter(path => this.isExtensionPath(path))
+    );
+
+    if (extensionMinPaths.size === 0) {
+      return [...extensionIssues, ...slicingIssues];
+    }
+
+    return [
+      ...extensionIssues,
+      ...slicingIssues.filter(issue => {
+        if (issue.code !== 'profile-slice-min-cardinality') return true;
+        const path = this.normalizePath(issue.path);
+        return !this.isExtensionPath(path) || !extensionMinPaths.has(path);
+      }),
+    ];
+  }
+
+  private normalizePath(path: string | undefined): string {
+    return (path || '')
+      .replace(/\[\d+\]/g, '')
+      .replace(/:[^.]+/g, '')
+      .toLowerCase();
+  }
+
+  private isExtensionPath(path: string): boolean {
+    return path.endsWith('.extension') || path.endsWith('.modifierextension');
   }
 
   /**

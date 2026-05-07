@@ -18,6 +18,10 @@ describe('isSnomedNationalExtensionCode', () => {
     expect(isSnomedNationalExtensionCode('16181000237107')).toBe(true);    // UK lab code
   });
 
+  it('detects US Extension SCTIDs (namespace 1000124)', () => {
+    expect(isSnomedNationalExtensionCode('454711000124102')).toBe(true);
+  });
+
   it('returns false for International Edition SCTIDs', () => {
     expect(isSnomedNationalExtensionCode('22298006')).toBe(false);         // Myocardial infarction
     expect(isSnomedNationalExtensionCode('386661006')).toBe(false);        // Fever

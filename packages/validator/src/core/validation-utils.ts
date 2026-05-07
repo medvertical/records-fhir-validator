@@ -133,13 +133,32 @@ export function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
       ? ((details as Record<string, unknown>).constraintKey ?? (details as Record<string, unknown>).sliceName)
       : undefined;
     const ruleKey = issue.ruleId ?? detailRuleKey ?? '';
-    const key = `${issue.code}:${issue.path || ''}:${issue.severity}:${ruleKey}`;
+    const key = `${issue.code}:${normalizeIssuePathForDedupe(issue)}:${issue.severity}:${ruleKey}`;
     if (!seen.has(key)) {
       seen.add(key);
       out.push(issue);
     }
   }
   return out;
+}
+
+function normalizeIssuePathForDedupe(issue: ValidationIssue): string {
+  const path = issue.path || '';
+  const details = issue.details;
+  const detailsResourceType = details && typeof details === 'object' && !Array.isArray(details)
+    ? (details as Record<string, unknown>).resourceType
+    : undefined;
+  const resourceType = typeof issue.resourceType === 'string'
+    ? issue.resourceType
+    : typeof detailsResourceType === 'string'
+      ? detailsResourceType
+      : undefined;
+
+  if (!resourceType) return path;
+
+  const prefix = `${resourceType}.`.toLowerCase();
+  const lowerPath = path.toLowerCase();
+  return lowerPath.startsWith(prefix) ? path.slice(prefix.length) : path;
 }
 
 /**

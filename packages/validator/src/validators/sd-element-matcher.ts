@@ -86,6 +86,10 @@ export class SDElementMatcher {
         const map = new Map<string, ElementDefinition>();
 
         for (const element of elements) {
+            if (typeof element.id === 'string' && element.id.includes(':')) {
+                continue;
+            }
+
             map.set(element.path, element);
 
             // Also add without choice type suffix for matching

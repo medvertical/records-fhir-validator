@@ -53,6 +53,7 @@ export class DeepProfileValidator {
         // that specific slice discriminator, not unconditionally to all values at the path.
         for (const elementDef of structureDef.snapshot.element) {
             if (elementDef.sliceName) continue;
+            if (typeof elementDef.id === 'string' && elementDef.id.includes(':')) continue;
             const elementIssues = this.validateElement(resource, resourceType, elementDef, structureDef);
             issues.push(...elementIssues);
         }

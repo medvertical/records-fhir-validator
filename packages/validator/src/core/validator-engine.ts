@@ -297,7 +297,7 @@ export class RecordsValidator {
    */
   async validate(
     resource: any,
-    profileUrl: string,
+    profileUrl?: string,
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
     settings?: ValidationSettings,
     fhirClient?: FhirClientLike
@@ -309,7 +309,12 @@ export class RecordsValidator {
     const issues: ValidationIssue[] = [];
 
     try {
-      logger.info(`[RecordsValidator] Validating ${resource.resourceType} against ${profileUrl}`);
+      const declaredProfileUrl =
+        profileUrl ??
+        resource.meta?.profile?.[0] ??
+        `http://hl7.org/fhir/StructureDefinition/${resource.resourceType}`;
+
+      logger.info(`[RecordsValidator] Validating ${resource.resourceType} against ${declaredProfileUrl}`);
       this.applyRuntimeSettings(settings as ValidationSettings | undefined);
 
       // 1. Load StructureDefinition with snapshot generation if needed.
@@ -320,7 +325,7 @@ export class RecordsValidator {
       const loadResult = await loadProfileOrBase(
         this.sdLoader,
         this.snapshotGenerator,
-        profileUrl,
+        declaredProfileUrl,
         resource.resourceType,
         fhirVersion,
         this.profileCache,
@@ -332,14 +337,14 @@ export class RecordsValidator {
         return [createValidationErrorIssue(
           'profile',
           'profile-not-found',
-          `Profile ${profileUrl} not found and base StructureDefinition for ${resource.resourceType} could not be loaded`,
-          { profile: profileUrl },
+          `Profile ${declaredProfileUrl} not found and base StructureDefinition for ${resource.resourceType} could not be loaded`,
+          { profile: declaredProfileUrl },
           'meta.profile'
         )];
       }
 
       const profileFallbackIssue: ValidationIssue | null = loadResult.usedBaseFallback
-        ? createProfileFallbackIssue(profileUrl, resource.resourceType)
+        ? createProfileFallbackIssue(declaredProfileUrl, resource.resourceType)
         : null;
 
       // 2. Run all aspect validations
@@ -347,7 +352,7 @@ export class RecordsValidator {
         {
           resource,
           resourceType: resource.resourceType,
-          profileUrl,
+          profileUrl: declaredProfileUrl,
           fhirVersion,
           structureDef,
           strictMode: this.config.strictMode || false,
@@ -366,7 +371,7 @@ export class RecordsValidator {
       const bestPracticeIssues = this.bestPracticeValidator.validate({
         resource,
         resourceType: resource.resourceType,
-        profileUrl
+        profileUrl: declaredProfileUrl
       });
 
       issues.push(...suppressRedundantBindingWarnings(dedupeIssues([

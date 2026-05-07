@@ -11,8 +11,10 @@
 import type { ValidationIssue } from '../../types';
 import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
 import { ValueSetValidator, type TerminologyResolutionConfig } from '../../validators/valueset-validator';
+import { valueSetCache } from '../../validators/valueset-cache';
 import { shouldValidateRequired } from '../../business-rules';
 import { validateUcumCode, quantityUsesUcum } from '../../validators/ucum-validator';
+import { matchesPattern } from '../../validators/slice-utils';
 import { logger } from '../../logger';
 
 // FHIR types whose `code` field carries a UCUM expression when `system`
@@ -88,6 +90,13 @@ function shouldValidateBindingForValue(
   return !quantityLike;
 }
 
+function isCodingHygienePath(path: string): boolean {
+  return (
+    /\.coding\[\d+\]$/.test(path) ||
+    /\.(?:value|answer|pattern|fixed)Coding$/.test(path)
+  );
+}
+
 function codingMatchesPattern(coding: unknown, pattern: Record<string, unknown>): boolean {
   if (!coding || typeof coding !== 'object' || Array.isArray(coding)) return false;
   const candidate = coding as Record<string, unknown>;
@@ -113,6 +122,9 @@ function codeableConceptMatchesPattern(value: unknown, pattern: Record<string, u
 }
 
 function elementMatchesOwnPattern(elementDef: ElementDefinition, value: unknown): boolean {
+  const patternOrFixed = getPatternOrFixedValue(elementDef);
+  if (patternOrFixed !== undefined) return matchesPattern(value, patternOrFixed);
+
   const patternCoding = (elementDef as ElementDefinition & { patternCoding?: Record<string, unknown> }).patternCoding;
   if (patternCoding) return codingMatchesPattern(value, patternCoding);
 
@@ -168,8 +180,83 @@ function elementMatchesSliceChildConstraints(
 
   return constraints.every(constraint => {
     const relativePath = constraint.id!.substring(`${elementDef.id}.`.length);
-    return getValueAtRelativePath(value, relativePath) === getPatternOrFixedValue(constraint);
+    return matchesPattern(getValueAtRelativePath(value, relativePath), getPatternOrFixedValue(constraint));
   });
+}
+
+function getOwningSliceElement(
+  structureDef: StructureDefinition,
+  elementDef: ElementDefinition,
+): ElementDefinition | null {
+  if (!elementDef.id || !elementDef.id.includes(':')) return null;
+  if (elementDef.sliceName) return elementDef;
+
+  const sliceRootEnd = elementDef.id.indexOf('.', elementDef.id.indexOf(':'));
+  if (sliceRootEnd === -1) return null;
+
+  const sliceRootId = elementDef.id.slice(0, sliceRootEnd);
+  return structureDef.snapshot?.element.find(candidate =>
+    candidate.id === sliceRootId && Boolean(candidate.sliceName),
+  ) ?? null;
+}
+
+function getRelativePathWithinSlice(elementDef: ElementDefinition, sliceElement: ElementDefinition): string {
+  if (!elementDef.id || !sliceElement.id || elementDef.id === sliceElement.id) return '';
+  return elementDef.id.substring(`${sliceElement.id}.`.length);
+}
+
+function elementMatchesSlice(
+  value: unknown,
+  sliceElement: ElementDefinition,
+  structureDef: StructureDefinition,
+): boolean {
+  const ownPatternOrFixed = getPatternOrFixedValue(sliceElement);
+  if (ownPatternOrFixed !== undefined) return matchesPattern(value, ownPatternOrFixed);
+  if (elementMatchesOwnPattern(sliceElement, value)) return true;
+
+  const ownChildConstraints = getSliceChildConstraints(structureDef, sliceElement);
+  if (ownChildConstraints.length > 0) {
+    return elementMatchesSliceChildConstraints(value, sliceElement, structureDef);
+  }
+
+  const siblingPatterns = getSiblingSlicePatterns(structureDef, sliceElement);
+  if (siblingPatterns.length > 0) {
+    return !siblingPatterns.some(sibling => elementMatchesOwnPattern(sibling, value));
+  }
+
+  return true;
+}
+
+function selectSliceScopedValues(
+  resource: unknown,
+  elementDef: ElementDefinition,
+  structureDef: StructureDefinition,
+  getValueAtPath: (resource: any, path: string) => any,
+): { hasMatchingSliceElements: boolean; values: unknown[] } | null {
+  const sliceElement = getOwningSliceElement(structureDef, elementDef);
+  if (!sliceElement) return null;
+
+  const sliceParentValue = getValueAtPath(resource, sliceElement.path);
+  const sliceParentValues = Array.isArray(sliceParentValue)
+    ? sliceParentValue
+    : sliceParentValue !== null && sliceParentValue !== undefined
+      ? [sliceParentValue]
+      : [];
+  const matchingSliceValues = sliceParentValues.filter(value =>
+    elementMatchesSlice(value, sliceElement, structureDef),
+  );
+
+  const relativePath = getRelativePathWithinSlice(elementDef, sliceElement);
+  if (!relativePath) {
+    return { hasMatchingSliceElements: matchingSliceValues.length > 0, values: matchingSliceValues };
+  }
+
+  const values = matchingSliceValues
+    .map(value => getValueAtRelativePath(value, relativePath))
+    .filter(value => value !== null && value !== undefined)
+    .flatMap(value => Array.isArray(value) ? value : [value]);
+
+  return { hasMatchingSliceElements: matchingSliceValues.length > 0, values };
 }
 
 function getSiblingSlicePatterns(structureDef: StructureDefinition, elementDef: ElementDefinition): ElementDefinition[] {
@@ -197,6 +284,11 @@ function selectValuesForBinding(
 
   if (!elementDef.sliceName) {
     return values;
+  }
+
+  const ownPatternOrFixed = getPatternOrFixedValue(elementDef);
+  if (ownPatternOrFixed !== undefined) {
+    return values.filter(item => matchesPattern(item, ownPatternOrFixed));
   }
 
   const patternCoding = (elementDef as ElementDefinition & { patternCoding?: Record<string, unknown> }).patternCoding;
@@ -290,7 +382,16 @@ export class TerminologyExecutor {
         for (const elementDef of structureDef.snapshot.element) {
           if (elementDef.binding) {
             const path = elementDef.path;
-            const value = getValueAtPath(resource, path);
+            const sliceSelection = selectSliceScopedValues(resource, elementDef, structureDef, getValueAtPath);
+            if (sliceSelection && !sliceSelection.hasMatchingSliceElements) {
+              continue;
+            }
+
+            const value = sliceSelection
+              ? (sliceSelection.values.length === 0
+                  ? undefined
+                  : sliceSelection.values.length === 1 ? sliceSelection.values[0] : sliceSelection.values)
+              : getValueAtPath(resource, path);
 
             // For required bindings, check if value is present
             if (elementDef.binding.strength === 'required') {
@@ -518,16 +619,36 @@ export class TerminologyExecutor {
       }
 
       if (coding && typeof coding === 'object' && coding.system && coding.code) {
+        // Detect a common authoring mistake: using a ValueSet canonical URL
+        // (`.../ValueSet/...`) where a CodeSystem URL is expected. Java's
+        // reference validator emits this as an error; Records previously
+        // accepted any HL7-domain URL as a valid CodeSystem URL via regex.
+        if (/\/ValueSet\//i.test(coding.system)) {
+          const systemPath = Array.isArray(value) ? `${path}[${i}].system` : `${path}.system`;
+          issues.push({
+            id: `terminology-codesystem-is-valueset-${Date.now()}-${i}`,
+            aspect: 'terminology',
+            severity: 'error',
+            code: 'invalid',
+            message: `The Coding references a value set, not a code system ('${coding.system}')`,
+            path: systemPath,
+            timestamp: new Date()
+          });
+        }
+
         // Validate CodeSystem URL is known/valid
         const systemValidation = this.validateCodeSystemUrl(coding.system);
-        if (!systemValidation.valid) {
+        const cacheKnowsIt =
+          valueSetCache.hasCodeSystem(coding.system) ||
+          valueSetCache.hasCodeSystemFile(coding.system);
+        if (!systemValidation.valid && !cacheKnowsIt) {
           const systemPath = Array.isArray(value) ? `${path}[${i}].system` : `${path}.system`;
           issues.push({
             id: `terminology-codesystem-not-found-${Date.now()}-${i}`,
             aspect: 'terminology',
             severity: 'warning',
             code: 'not-found',
-            message: `Unknown CodeSystem URL: '${coding.system}'`,
+            message: `A definition for CodeSystem '${coding.system}' could not be found, so the code cannot be validated`,
             path: systemPath,
             timestamp: new Date()
           });
@@ -558,14 +679,21 @@ export class TerminologyExecutor {
 
           if (!result.valid) {
             const codingPath = Array.isArray(value) ? `${path}[${i}].code` : `${path}.code`;
+            const isSystemUnresolvable = result.reason === 'system-unresolvable';
             issues.push({
-              id: `terminology-codesystem-invalid-${Date.now()}-${i}`,
+              id: `terminology-codesystem-${isSystemUnresolvable ? 'unresolvable' : 'invalid'}-${Date.now()}-${i}`,
               aspect: 'terminology',
-              severity: 'error',
-              code: 'terminology-code-invalid',
+              severity: isSystemUnresolvable ? 'warning' : 'error',
+              code: isSystemUnresolvable ? 'terminology-codesystem-unresolvable' : 'terminology-code-invalid',
               message: result.message || `Unknown code '${coding.code}' in CodeSystem '${coding.system}'`,
               path: codingPath,
-              timestamp: new Date()
+              timestamp: new Date(),
+              details: {
+                code: coding.code,
+                system: coding.system,
+                ...(coding.display ? { display: coding.display } : {}),
+                ...(result.reason ? { reason: result.reason } : {}),
+              },
             });
           }
         }
@@ -645,7 +773,7 @@ export class TerminologyExecutor {
 
       if (!value || typeof value !== 'object') return;
 
-      if (typeof value.code === 'string' && !value.system) {
+      if (typeof value.code === 'string' && !value.system && isCodingHygienePath(path)) {
         pushOnce({
           severity: 'warning',
           code: 'terminology-code-invalid',

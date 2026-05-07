@@ -351,6 +351,23 @@ export class SDFHIRPathExecutor {
             return issues;
         }
 
+        // Skip constraints attached to slice elements. The generic
+        // executor resolves contexts at the path level — for
+        // `Organization.identifier:NPI`, it sees the path
+        // `Organization.identifier` and would fire `value.matches(...)`
+        // against EVERY identifier on the resource (NPI, NAIC, CLIA,
+        // internal IDs alike), producing one constraint violation per
+        // non-matching identifier. On the latest Fire.ly run that's
+        // ~700 false positives across us-core-16/17/18/19. Slice-aware
+        // discriminator filtering would be the proper fix; until that
+        // exists, deferring slice constraints to the slicing-validator
+        // (which already enforces "instance matches slice or doesn't")
+        // is the safer behaviour. See sd-constraint-collector.ts for
+        // the rationale.
+        if (collected.sliceName) {
+            return issues;
+        }
+
         // Pre-substitute type-literal patterns. Root path: elementType is
         // the resource's own type (isRootConstraint). Monomorphic element
         // paths: single declared type. Polymorphic `[x]`: pass null to

@@ -354,7 +354,7 @@ export class ValueSetValidator {
     if (!codeInfo.system || !codeInfo.display) return null;
 
     const expectedDisplay = await this.resolveExpectedDisplay(codeInfo, valueSetUrl);
-    if (!expectedDisplay || expectedDisplay === codeInfo.display) return null;
+    if (!expectedDisplay || displaysEquivalent(expectedDisplay, codeInfo.display)) return null;
 
     const displayPath = this.resolveDisplayPath(rawCode, elementPath);
     return createValidationIssue({
@@ -446,7 +446,7 @@ export class ValueSetValidator {
   async validateCodeInCodeSystem(
     code: string,
     system: string
-  ): Promise<{ valid: boolean; message?: string }> {
+  ): Promise<{ valid: boolean; message?: string; reason?: 'code-unknown' | 'system-unresolvable' }> {
     if (!this.isExternalCodeSystem(system)) {
       return { valid: true };
     }
@@ -693,4 +693,12 @@ export class ValueSetValidator {
 
     return null;
   }
+}
+
+function displaysEquivalent(expected: string, actual: string): boolean {
+  return normalizeDisplay(expected) === normalizeDisplay(actual);
+}
+
+function normalizeDisplay(display: string): string {
+  return display.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
 }

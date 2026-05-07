@@ -19,7 +19,7 @@ const SNOMED_SYSTEM = 'http://snomed.info/sct';
  * Detect whether a SNOMED CT SCTID belongs to a national extension rather
  * than the International Edition.  National-extension SCTIDs use the
  * "long format": 7-digit namespace + itemId + 2-digit partition + check.
- * Known namespace prefixes: 10000xx (UK, US, AU, …), 10002xx (clinical
+ * Known namespace prefixes: 1000xxx (UK, US, AU, …), 1002xxx (clinical
  * extensions).  International-core SCTIDs use the "short format" and are
  * typically ≤ 9 digits.
  */
@@ -30,9 +30,10 @@ export function isSnomedNationalExtensionCode(code: string): boolean {
     // They appear at a predictable position: sctid = namespace(7) + itemId(N) + partition(2) + check(1).
     // The partition+check are the last 3 chars, the namespace is the leading 7.
     // However, some very large international IDs exist too (> 9 digits) in short format.
-    // Pragmatic check: if the SCTID contains a registered-namespace-style segment
-    // (10000xx or 10002xx) we treat it as national.
-    return /10000\d{2}|10002\d{2}/.test(code);
+    // Pragmatic check: if the SCTID contains a registered-namespace-style
+    // seven-digit segment (for example UK 1000000, US 1000124, clinical
+    // extension 1000237) we treat it as national.
+    return /1000\d{3}|1002\d{3}/.test(code);
 }
 
 // Shared circuit breaker for CodeSystem validation (fail fast when tx.fhir.org is down)

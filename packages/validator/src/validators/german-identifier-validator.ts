@@ -159,7 +159,9 @@ export class GermanIdentifierValidator {
     /**
      * Check if a profile URL suggests German content
      */
-    isGermanProfile(profileUrl: string): boolean {
+    isGermanProfile(profileUrl?: string): boolean {
+        if (!profileUrl) return false;
+
         const germanProfilePatterns = [
             'fhir.de',
             'medizininformatik-initiative.de',
