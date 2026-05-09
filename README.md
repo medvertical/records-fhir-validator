@@ -1,11 +1,24 @@
 
 # Records FHIR Validator
 
-TypeScript FHIR validator for CI pipelines and standalone Node.js use.
+Pure TypeScript FHIR validator for CI pipelines, GitHub Actions, and
+standalone Node.js use. It validates FHIR JSON resources against
+StructureDefinitions, FHIRPath invariants, terminology bindings, references,
+slicing, extensions, Bundle rules, metadata, and optional custom rules without
+requiring a JVM, database, or Records server.
 
-## GitHub Action
+[![npm](https://img.shields.io/npm/v/@records-fhir/validator)](https://www.npmjs.com/package/@records-fhir/validator)
+[![FHIR](https://img.shields.io/badge/FHIR-R4%20%7C%20R4B%20%7C%20R5%20%7C%20R6-blue)](#fhir-version-support)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
+[![HL7 parity](https://img.shields.io/badge/HL7%20JSON%20parity-496%2F496-brightgreen)](#validation-evidence)
+[![MII scope](https://img.shields.io/badge/MII%202026%20scope-241%2F241-brightgreen)](#mii-2026-reference-scope)
 
-Validate FHIR JSON resources in pull requests:
+## Quick Start
+
+### GitHub Action
+
+Use the floating major tag for the latest stable validator in the current
+major line:
 
 ```yaml
 name: Validate FHIR
@@ -20,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: medvertical/records-fhir-validator@v0.1.0
+      - uses: medvertical/records-fhir-validator@v0
         with:
           paths: |
             examples/**/*.json
@@ -29,25 +42,35 @@ jobs:
           fail-on: error
 ```
 
-Optional profile validation:
+For production CI, pin an immutable patch tag:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.1.0
+- uses: medvertical/records-fhir-validator@v0.1.5
   with:
     paths: resources/**/*.json
     profile-url: http://hl7.org/fhir/StructureDefinition/Patient
     fhir-version: R4
+    fail-on: error
 ```
 
-The action validates parsed JSON resources. It does not bundle third-party IG
-packages yet; provide custom profiles through the package APIs when embedding
-the validator directly.
+Action pinning:
 
-## npm Packages
+| Goal | Pin in `uses:` | Notes |
+|---|---|---|
+| Latest stable in current major | `medvertical/records-fhir-validator@v0` | Floating tag, force-moved on stable releases only |
+| Exact released version | `medvertical/records-fhir-validator@v0.1.5` | Immutable consumer tag |
+| Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | Best for audit and forensics |
+
+The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
+`v<semver>` or a commit SHA for GitHub Action pins.
+
+### npm Package
 
 ```sh
-npm install @records-fhir/validator
+npm install @records-fhir/validator@0.1.5 @records-fhir/validation-types@0.1.1
 ```
+
+Validate a resource from Node.js:
 
 ```ts
 import { recordsValidator } from '@records-fhir/validator';
@@ -59,36 +82,48 @@ const issues = await recordsValidator.validate(
 );
 ```
 
-The package supports FHIR `R4`, `R4B`, `R5`, and `R6`.
+Optional offline profile packages can be loaded through the package APIs. The
+default public repository export intentionally excludes bundled third-party IG
+artifacts until their upstream licenses and notices have been reviewed.
+
+## What Is Included
+
+- `@records-fhir/validator` 0.1.5 - Apache-2.0 validation engine.
+- `@records-fhir/validation-types` 0.1.1 - Apache-2.0 validation-domain types.
+- Composite GitHub Action at repository root.
+- Standalone examples under `packages/validator/examples/`.
+- Boundary audit and smoke-test scripts.
+- Public conformance evidence artifacts under `conformance-results/`.
 
 ## Repository Scope
 
-Records itself is commercial closed-source software. This repository contains only the open-source validator packages extracted from Records:
+Records itself is commercial closed-source software. This repository contains
+only the open-source validator packages extracted from Records.
 
-- `@records-fhir/validator` - Apache-2.0 validation engine
-- `@records-fhir/validation-types` - Apache-2.0 validation-domain types
+This public repository must not contain the Records web application, Records
+API server, database schema, migrations, repositories, governance reports,
+customer integrations, environment files, or commercial deployment
+configuration.
 
 `@records-fhir/bundled-profiles` is intentionally excluded from the default export until all bundled upstream FHIR and implementation-guide artifact licenses have been reviewed. Re-run the export with `--include-bundled-profiles` only after that review.
 
-## Boundary
-
-This repository must not contain the Records web application, Records API server,
-database schema, migrations, repositories, governance reports, customer
-integrations, environment files, or commercial deployment configuration.
-
 The validator packages are designed for standalone embedding. Host applications
-can provide optional profile, rule, persistence, and logging integrations through
-explicit package APIs.
+can provide optional profile, rule, persistence, and logging integrations
+through explicit package APIs.
 
-## Conformance
+## FHIR Version Support
 
-Current HL7 `FHIR/fhir-test-cases` status in the source Records repository:
+The package supports public FHIR versions `R4`, `R4B`, `R5`, and `R6`.
+R4B routes through the R4 internal validation path because R4B is a maintenance
+release of R4 with compatible StructureDefinition and FHIRPath context for this
+validator mode.
+
+## Validation Evidence
+
+Current HL7 `FHIR/fhir-test-cases` JSON resource validation status:
 
 - Upstream manifest entries: 969.
-- Pre-filtered out before validation: 438 because this harness measures JSON
-  FHIR resource validation against Java `OperationOutcome` baselines, not XML,
-  non-resource formats, disabled upstream cases, unsupported modules, logical
-  models, or cases without a Java baseline.
+- Pre-filtered out before validation: 438.
 - Candidate JSON comparison set: 531.
 - Runtime skipped from the headline lane: 35.
 - Executed and compared against Java `OperationOutcome`: 496.
@@ -96,6 +131,12 @@ Current HL7 `FHIR/fhir-test-cases` status in the source Records repository:
 - Failed/errors: 0.
 - Headline JSON resource parity: 100.0%.
 - Launch-discovery lane: 547/547 comparisons passed, 0 skipped, 0 failed.
+
+Evidence artifacts:
+
+- [`conformance-results/report-2026-05-09.json`](./conformance-results/report-2026-05-09.json)
+- [`conformance-results/baseline-backlog-discovery-2026-05-03.json`](./conformance-results/baseline-backlog-discovery-2026-05-03.json)
+- [`conformance-results/mii-triangulation-2026-05-09.json`](./conformance-results/mii-triangulation-2026-05-09.json)
 
 The 438 pre-filtered entries are not counted as failures because they do not
 exercise the thing this harness measures: JSON FHIR resource validation with a
@@ -111,8 +152,6 @@ DSIG JSON, and hidden-Java-outcome fixtures, with 0 skips.
 
 The scope expansion plan is tracked in
 [`docs/conformance-scope-roadmap.md`](./docs/conformance-scope-roadmap.md).
-The exact discovery artifact is tracked in
-[`conformance-results/baseline-backlog-discovery-2026-05-03.json`](./conformance-results/baseline-backlog-discovery-2026-05-03.json).
 
 ### Why So Many Manifest Entries Are Not Counted
 
@@ -144,7 +183,7 @@ It should not be read as:
 
 Spec dispatch coverage for the measured R4 base package constraints is 100%.
 
-### MII 2026 Reference Scope
+## MII 2026 Reference Scope
 
 MII conformance is measured in a separate lane from the HL7
 `FHIR/fhir-test-cases` score. The current scoped MII-2026 reference run
@@ -156,6 +195,15 @@ skips.
 This is a scoped parity claim for the measured package-example corpus. It is
 not an MII certification claim and does not imply full site-level MII
 Must-Support readiness.
+
+## Examples
+
+- [Standalone validation](./packages/validator/examples/standalone-validate.mjs)
+- [Bulk folder validation](./packages/validator/examples/bulk-folder-validate.mjs)
+- [GitHub workflow example](./packages/validator/examples/github-workflow.yml)
+
+The package-level README contains the fuller API guide:
+[`packages/validator/README.md`](./packages/validator/README.md).
 
 ## Development
 
