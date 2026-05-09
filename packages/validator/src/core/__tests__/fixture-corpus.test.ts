@@ -19,7 +19,7 @@ import { join, basename } from 'path';
 // Setup
 // ============================================================================
 
-const FIXTURES_ROOT = join(__dirname, '../../../../../../tests/fixtures/fhir-resources');
+const FIXTURES_ROOT = join(process.cwd(), 'server/tests/fixtures/fhir-resources');
 const VALID_DIR = join(FIXTURES_ROOT, 'valid');
 const INVALID_DIR = join(FIXTURES_ROOT, 'invalid');
 
@@ -54,6 +54,16 @@ describe('Fixture Corpus', () => {
       strictMode: false,
       timeout: 30000,
       autoDownload: false,
+    });
+    validator.configureTerminologyResolution({
+      strategy: 'local-only',
+      serverUrl: undefined,
+      serverDelegation: {
+        expandValueSets: false,
+        validateCodes: false,
+        cacheResults: true,
+        cacheTTLSeconds: 3600,
+      },
     });
     await validator.waitForInitialization();
   }, 120_000);

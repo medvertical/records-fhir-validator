@@ -125,9 +125,19 @@ export function createValidationInfoIssue(
  * cardinality failures that legitimately share one base path.
  */
 export function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
+  const specificBundleInvariantKeys = new Set<string>();
+  for (const issue of issues) {
+    if (issue.code === 'bdl-9-violation') specificBundleInvariantKeys.add('bdl-9');
+    if (issue.code === 'bdl-10-violation') specificBundleInvariantKeys.add('bdl-10');
+  }
+
   const seen = new Set<string>();
   const out: ValidationIssue[] = [];
   for (const issue of issues) {
+    if (isRedundantBundleInvariantIssue(issue, specificBundleInvariantKeys)) {
+      continue;
+    }
+
     const details = issue.details;
     const detailRuleKey = details && typeof details === 'object' && !Array.isArray(details)
       ? ((details as Record<string, unknown>).constraintKey ?? (details as Record<string, unknown>).sliceName)
@@ -140,6 +150,26 @@ export function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
     }
   }
   return out;
+}
+
+function isRedundantBundleInvariantIssue(issue: ValidationIssue, specificKeys: Set<string>): boolean {
+  if (issue.code !== 'profile-constraint-violation' || specificKeys.size === 0) return false;
+
+  const details = issue.details;
+  const detailConstraint = details && typeof details === 'object' && !Array.isArray(details)
+    ? (details as Record<string, unknown>).constraintKey
+    : undefined;
+  const message = issue.message ?? '';
+
+  const constraintKey = typeof detailConstraint === 'string'
+    ? detailConstraint
+    : message.includes("Constraint 'bdl-9'")
+      ? 'bdl-9'
+      : message.includes("Constraint 'bdl-10'")
+        ? 'bdl-10'
+        : undefined;
+
+  return Boolean(constraintKey && specificKeys.has(constraintKey));
 }
 
 function normalizeIssuePathForDedupe(issue: ValidationIssue): string {

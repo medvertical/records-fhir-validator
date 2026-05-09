@@ -17,6 +17,7 @@ import { CanonicalResourceInvariantValidator } from '../../validators/canonical-
 import { StructureDefinitionValidator } from '../../validators/structure-definition-validator';
 import { CompliesWithValidator } from '../../validators/complies-with-validator';
 import { StringSecurityValidator } from '../../validators/string-security-validator';
+import type { TerminologyResolutionConfig } from '../../validators/valueset-validator';
 import { validateChoiceTypeProperties } from '../../validators/choice-type-property-validator';
 import { extractFixedValue, extractPatternValue, matchesPattern, valuesMatch } from '../../validators/slice-utils';
 import { getValidationTargets, shouldValidateRequired } from '../../business-rules';
@@ -126,6 +127,10 @@ export class StructuralExecutor {
     this.compliesWithValidator = new CompliesWithValidator(sdLoader);
     this.stringSecurityValidator = new StringSecurityValidator();
     this.sdLoader = sdLoader;
+  }
+
+  configureTerminologyResolution(config: Partial<TerminologyResolutionConfig>): void {
+    this.complexTypeValidator.configureTerminologyResolution(config);
   }
 
   /**

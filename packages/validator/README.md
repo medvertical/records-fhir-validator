@@ -41,6 +41,23 @@ For offline profile validation, install the optional profile bundle:
 npm install @records-fhir/bundled-profiles
 ```
 
+### Pinning
+
+Three valid ways to pin the GitHub Action that wraps this validator,
+depending on your trade-off between freshness and stability:
+
+| Goal | Pin in `uses:` | Notes |
+|---|---|---|
+| Always-latest within current major | `medvertical/records-fhir-validator@v0` | Force-moved on every stable release; never advances onto a prerelease |
+| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.1.5` | Immutable once published |
+| Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | For audit / forensic builds |
+
+The `validator-v<semver>` tag you may see on the public repo's release
+page is the **npm tarball mirror** identifier — it titles the GitHub
+release and lets you cross-reference a public-repo commit against an
+npm tarball. It is not intended as a consumer pin; use `v<semver>` for
+Action references.
+
 ## Examples
 
 Three copy-pasteable starting points ship in
@@ -198,7 +215,10 @@ Without these integrations, the validator uses no-op defaults and runs as a stan
 
 ## Conformance
 
-Current HL7 `FHIR/fhir-test-cases` status: 100.0% of executable comparison tests passing.
+Current HL7 `FHIR/fhir-test-cases` status: 100.0% of executable comparison
+tests passing. The latest report was generated on 2026-05-09 from upstream
+commit `e543043a076c493656fc8008df250659b15d02cb` and is stored in the source
+repository as `conformance-results/report-2026-05-09.json`.
 
 The upstream manifest contains more than 900 entries. Records does not claim
 that all manifest entries are executable in the current TypeScript validator
@@ -210,9 +230,9 @@ can be compared against the Java validator's expected `OperationOutcome`.
 | Upstream manifest entries | 969 | All entries in `FHIR/fhir-test-cases/validator/manifest.json` at commit `e543043a`. |
 | Pre-filtered out | 438 | Not executable by this harness: the current comparison runner measures JSON FHIR resource validation against Java `OperationOutcome` baselines, not XML, non-resource formats, disabled upstream cases, unsupported modules, logical models, or cases without a Java baseline. |
 | Candidate comparison set | 531 | R4/R5 or unversioned JSON-oriented entries with a declared Java baseline. |
-| Runtime skipped | 38 | Candidate entries kept outside the headline JSON score. |
-| Executed and compared | 493 | Records result was normalized to `OperationOutcome` and diffed against Java. |
-| Passed | 493 | All executable comparisons passed. |
+| Runtime skipped | 35 | Candidate entries kept outside the headline JSON score because their Java baseline output is not available locally. |
+| Executed and compared | 496 | Records result was normalized to `OperationOutcome` and diffed against Java. |
+| Passed | 496 | All executable comparisons passed. |
 
 Pre-filter exclusions:
 
@@ -230,7 +250,6 @@ Runtime skips inside the 531 candidate set for the headline lane:
 | Reason | Count |
 |---|---:|
 | Java baseline/parity backlog | 35 |
-| Non-JSON payload that passes manifest filtering (`.fml`, `.ndjson`) | 3 |
 
 The Java baseline/parity backlog is measured separately with the explicit
 `--include-baseline-backlog` discovery flag. The 2026-05-03 discovery run
@@ -266,7 +285,7 @@ product scope with actual JSON resource validation correctness.
 
 For that reason, the headline number should be read as:
 
-> Records matches the Java validator on 493/493 currently executable FHIR JSON
+> Records matches the Java validator on 496/496 currently executable FHIR JSON
 > resource validation comparisons.
 
 It should not be read as:
@@ -280,11 +299,13 @@ constraints measured by `quality:spec-coverage`.
 ### MII 2026 Reference Scope
 
 MII conformance is measured in a separate lane from the HL7
-`FHIR/fhir-test-cases` score. The current scoped MII-2026 reference run matches
-the official MII FHIR Validator on 241/241 measured resources from the refreshed
-MII 2026 corpus under the `mii-2026-reference` profile scope and
-`mii-local-blaze` terminology mode, with 12 classified corpus/profile-drift
-skips.
+`FHIR/fhir-test-cases` score. The current scoped MII-2026 reference run was
+generated on 2026-05-09 against the official MII FHIR Validator container at
+`http://localhost:8080`. It matches the reference validator on 241/241 measured
+resources from the refreshed MII 2026 corpus under the `mii-2026-reference`
+profile scope and `mii-local-blaze` terminology mode, with 12 classified
+corpus/profile-drift skips. The source-repository report is
+`conformance-results/mii-triangulation-2026-05-09.json`.
 
 This is a scoped parity claim for the measured package-example corpus. It is
 not an MII certification claim and does not imply full site-level MII

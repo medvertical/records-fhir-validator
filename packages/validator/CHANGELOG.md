@@ -10,6 +10,32 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-05-09
+
+Patch release for terminology slice parity and refreshed conformance evidence.
+
+### Fixes
+
+- Fixed required-binding false positives for missing optional slice roots. The
+  terminology executor now leaves absent optional slices to slicing/cardinality
+  validation instead of emitting broad `binding-required-missing` diagnostics.
+- Fixed slice-descendant binding validation for FHIR choice-type paths such as
+  `Observation.component.value[x]`; matching slice values now resolve concrete
+  instance keys such as `valueCodeableConcept`.
+- Kept the server-side Records validator mirror in sync with the standalone
+  package executor.
+
+### Tests
+
+- Added regression coverage for sliced `Observation.component.value[x]`
+  bindings using `valueCodeableConcept`.
+- Refreshed HL7 `FHIR/fhir-test-cases` evidence: 496/496 executable JSON
+  comparisons passed with 35 Java-baseline backlog skips at upstream commit
+  `e543043a076c493656fc8008df250659b15d02cb`.
+- Refreshed scoped MII 2026 reference parity against the official MII validator
+  container: 241/241 measured resources passed, 12 classified corpus/profile
+  skips, parity score 100.0%.
+
 ## [0.1.4] — 2026-05-06
 
 Patch release for the Firely validation triage and public package

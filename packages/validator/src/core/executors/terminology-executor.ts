@@ -155,7 +155,17 @@ function getValueAtRelativePath(value: unknown, path: string): unknown {
   let current: unknown = value;
   for (const part of path.split('.')) {
     if (!current || typeof current !== 'object') return undefined;
-    current = (current as Record<string, unknown>)[part];
+    const object = current as Record<string, unknown>;
+    if (part.includes('[x]')) {
+      const choicePrefix = part.replace('[x]', '');
+      current = Object.entries(object).find(([key]) =>
+        key.startsWith(choicePrefix) &&
+        key.length > choicePrefix.length &&
+        key.charAt(choicePrefix.length) === key.charAt(choicePrefix.length).toUpperCase()
+      )?.[1];
+    } else {
+      current = object[part];
+    }
   }
   return current;
 }

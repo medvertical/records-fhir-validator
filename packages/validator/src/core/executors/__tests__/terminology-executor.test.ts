@@ -709,6 +709,79 @@ describe('TerminologyExecutor', () => {
       ]));
     });
 
+    it('resolves choice-type values for matching slice descendants', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          id: 'Observation.component',
+          path: 'Observation.component',
+          min: 0,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'pattern', path: 'code' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:representative-coding-hgvs',
+          path: 'Observation.component',
+          sliceName: 'representative-coding-hgvs',
+          min: 0,
+          max: '1',
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:representative-coding-hgvs.code',
+          path: 'Observation.component.code',
+          min: 1,
+          max: '1',
+          patternCodeableConcept: {
+            coding: [{ system: 'http://loinc.org', code: '48004-6' }],
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:representative-coding-hgvs.value[x]',
+          path: 'Observation.component.value[x]',
+          min: 1,
+          max: '1',
+          type: [{ code: 'CodeableConcept' }],
+          binding: {
+            strength: 'required',
+            valueSet: 'http://hl7.org/fhir/uv/genomics-reporting/ValueSet/hgvs-vs',
+          },
+        } as ElementDefinition,
+      ];
+      mockContext.resource = {
+        resourceType: 'Observation',
+        component: [{
+          code: {
+            coding: [{ system: 'http://loinc.org', code: '48004-6' }],
+          },
+          valueCodeableConcept: {
+            coding: [{ system: 'http://varnomen.hgvs.org', code: 'NM_004333.4:c.1799T>A' }],
+          },
+        }],
+      };
+      mockContext.getValueAtPath = (resource: any, path: string) => {
+        if (path === 'Observation.component') return resource.component;
+        return undefined;
+      };
+      const validatorInstance = (executor as any).valuesetValidator;
+      const validateBindingSpy = vi.spyOn(validatorInstance, 'validateBinding').mockResolvedValue([]);
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues.some(issue => issue.code === 'binding-required-missing')).toBe(false);
+      expect(validateBindingSpy).toHaveBeenCalledWith(
+        mockContext.resource.component[0].valueCodeableConcept,
+        expect.objectContaining({
+          strength: 'required',
+          valueSet: 'http://hl7.org/fhir/uv/genomics-reporting/ValueSet/hgvs-vs',
+        }),
+        'Observation.component.value[x]',
+        expect.any(Object),
+      );
+      validateBindingSpy.mockRestore();
+    });
+
     it('applies sliced CodeableConcept bindings only to matching patternCodeableConcept values', async () => {
       const laboratoryCategory = {
         coding: [{

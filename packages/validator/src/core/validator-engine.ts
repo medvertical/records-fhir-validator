@@ -894,6 +894,7 @@ export class RecordsValidator {
     };
   }): void {
     this.terminologyExecutor.configureResolution(config);
+    this.structuralExecutor.configureTerminologyResolution(config);
     this.valuesetValidator.setResolutionConfig(config);
     const scopedCount = config.servers?.filter(s => s.preferredSystems && s.preferredSystems.length > 0).length || 0;
     logger.info(

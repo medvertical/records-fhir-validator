@@ -1,6 +1,6 @@
 import type { ValidationIssue } from '../types';
 import { TypeValidator } from './type-validator';
-import { ValueSetValidator } from './valueset-validator';
+import { ValueSetValidator, type TerminologyResolutionConfig } from './valueset-validator';
 import { createValidationIssue } from '../issues';
 import type { StructureDefinition, ElementDefinition } from '../core/structure-definition-types';
 import type { StructureDefinitionLoader } from '../core/structure-definition-loader';
@@ -25,6 +25,10 @@ export class ComplexTypeValidator {
         private typeValidator?: TypeValidator
     ) {
         this.valueSetValidator = new ValueSetValidator();
+    }
+
+    configureTerminologyResolution(config: Partial<TerminologyResolutionConfig>): void {
+        this.valueSetValidator.setResolutionConfig(config);
     }
 
     /**

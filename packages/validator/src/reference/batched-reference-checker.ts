@@ -50,6 +50,10 @@ export interface BatchCheckConfig {
   headers?: Record<string, string>;
   /** Whether to follow redirects (default: true) */
   followRedirects?: boolean;
+  /** Whether absolute references may call arbitrary external hosts (default: false). */
+  allowExternalAbsoluteReferences?: boolean;
+  /** Whether absolute references may call the configured FHIR server origin (default: true). */
+  allowSameOriginAbsoluteReferences?: boolean;
 }
 
 export interface BatchCheckResult {
@@ -120,6 +124,8 @@ export class BatchedReferenceChecker {
         'Accept': 'application/fhir+json',
       },
       followRedirects: config?.followRedirects !== undefined ? config.followRedirects : true,
+      allowExternalAbsoluteReferences: config?.allowExternalAbsoluteReferences ?? false,
+      allowSameOriginAbsoluteReferences: config?.allowSameOriginAbsoluteReferences ?? true,
     };
 
     logger.info('[BatchedReferenceChecker] Task 10.9: Initialized with optimized config:', {
@@ -311,7 +317,7 @@ export class BatchedReferenceChecker {
     const startTime = Date.now();
 
     // Build URL
-    const url = this.buildUrl(reference, parseResult, config.baseUrl);
+    const url = this.buildUrl(reference, parseResult, config);
     if (!url) {
       return {
         reference,
@@ -416,6 +422,14 @@ export class BatchedReferenceChecker {
     }
   }
 
+  private isSameOrigin(referenceUrl: string, baseUrl: string): boolean {
+    try {
+      return new URL(referenceUrl).origin === new URL(baseUrl).origin;
+    } catch {
+      return false;
+    }
+  }
+
   /**
    * Return true when the host's circuit is currently open.
    * Auto-closes the circuit once `circuitCooldownMs` has elapsed.
@@ -466,16 +480,27 @@ export class BatchedReferenceChecker {
   private buildUrl(
     reference: string,
     parseResult: ReferenceParseResult,
-    baseUrl: string
+    config: Required<BatchCheckConfig>
   ): string | null {
-    // Absolute URL - use as-is
+    // Absolute URL - only call it when it stays on the configured FHIR server
+    // origin, unless explicitly opted into arbitrary external reference checks.
     if (parseResult.referenceType === 'absolute') {
-      return reference;
+      if (config.allowExternalAbsoluteReferences) {
+        return reference;
+      }
+      if (
+        config.allowSameOriginAbsoluteReferences
+        && config.baseUrl
+        && this.isSameOrigin(reference, config.baseUrl)
+      ) {
+        return reference;
+      }
+      return null;
     }
 
     // Relative reference - combine with base URL
-    if (parseResult.referenceType === 'relative' && baseUrl) {
-      const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    if (parseResult.referenceType === 'relative' && config.baseUrl) {
+      const cleanBase = config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl;
       const cleanRef = reference.startsWith('/') ? reference.slice(1) : reference;
       return `${cleanBase}/${cleanRef}`;
     }
@@ -730,4 +755,3 @@ export function getBatchedReferenceChecker(config?: Partial<BatchCheckConfig>): 
 export function resetBatchedReferenceChecker(): void {
   checkerInstance = null;
 }
-
