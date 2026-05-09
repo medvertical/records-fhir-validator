@@ -1,6 +1,6 @@
 # FHIR Conformance Scope Roadmap
 
-**Status:** 2026-05-03
+**Status:** 2026-05-09
 **Scope owner:** validator engine / HL7 `FHIR/fhir-test-cases` lane
 **Repository boundary:** public `medvertical/records-fhir-validator` package scope
 **Current headline:** 100.0% on executable JSON resource comparison cases
@@ -28,19 +28,19 @@ standard represented in `FHIR/fhir-test-cases`.
 | Upstream manifest entries | 969 | All entries in `FHIR/fhir-test-cases/validator/manifest.json` at commit `e543043a`. |
 | Pre-filtered out | 438 | Not executable by the current JSON resource comparison harness. |
 | Candidate comparison set | 531 | R4/R5 or unversioned entries with a declared Java baseline. |
-| Runtime skipped | 38 | Candidate entries kept outside the headline JSON score; all are measured in the explicit discovery lane. |
-| Executed and compared | 493 | Records output was normalized to `OperationOutcome` and diffed against Java. |
-| Passed | 493 | All executable comparisons passed. |
+| Runtime skipped | 35 | Candidate entries kept outside the headline JSON score; all are measured in the explicit discovery lane. |
+| Executed and compared | 496 | Records output was normalized to `OperationOutcome` and diffed against Java. |
+| Passed | 496 | All executable comparisons passed. |
 
 The explicit launch-discovery lane is broader than the headline JSON claim:
 it admits the former runtime backlog plus discovery-only JSON5, DSIG JSON,
 parser-baseline, and hidden-Java-outcome fixtures. That lane now executes
 547/547 comparisons with 0 skips and 0 failures.
 
-The 100.0% score applies only to the 493 executed comparison cases. It should
+The 100.0% score applies only to the 496 executed comparison cases. It should
 be described as:
 
-> Records matches the Java validator on 493/493 currently executable FHIR JSON
+> Records matches the Java validator on 496/496 currently executable FHIR JSON
 > resource validation comparisons.
 
 It should not be described as support for every item in the upstream manifest.
@@ -60,12 +60,11 @@ These are excluded because they do not test the current package contract:
 validate a parsed FHIR JSON resource and compare the result with a Java
 `OperationOutcome` baseline.
 
-## Why 38 Candidate Entries Are Runtime Skipped In The Headline Lane
+## Why 35 Candidate Entries Are Runtime Skipped In The Headline Lane
 
 | Reason | Count | Decision |
 |---|---:|---|
 | Java baseline/parity backlog | 35 | Highest-priority expansion path because these are mostly normal JSON validation cases once their Java baseline path or semantic disagreement is resolved. |
-| Non-JSON payload that passed filtering (`.fml`, `.ndjson`) | 3 | Measured in the explicit discovery lane against Java parser baselines, not silently inside the headline JSON score. |
 
 ### Missing Java Baselines By Module
 
@@ -117,7 +116,7 @@ Measured result on 2026-05-03:
 
 | Lane | Executed | Passed | Failed | Skipped | Score |
 |---|---:|---:|---:|---:|---:|
-| Headline JSON resource parity | 493 | 493 | 0 | 38 | 100.0% |
+| Headline JSON resource parity | 496 | 496 | 0 | 35 | 100.0% |
 | Baseline-backlog discovery | 547 | 547 | 0 | 0 | 100.0% pass rate (`similarityScore`: 99.7%) |
 
 Accepted Java-baseline compatibility fixtures in discovery:

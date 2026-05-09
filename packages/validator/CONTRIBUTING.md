@@ -68,7 +68,7 @@ AI-assisted work; otherwise a topic-style branch (`fix-slicing-edge-case`,
   in `conformance-results/` with the measured delta.
 - Changelog entry under the `[Unreleased]` section in `CHANGELOG.md`.
 - Description that includes the conformance-run delta if the PR touches a
-  validator path. Format: `JSON parity: 493/493 → 494/494` or
+  validator path. Format: `JSON parity: 496/496 → 497/497` or
   `discovery lane executed comparisons: 546/547 → 547/547`.
 
 **What CI runs:**
@@ -86,7 +86,7 @@ disable them — fix the underlying issue.
 
 ## Conformance discipline
 
-The headline conformance number (493/493 JSON resource parity against the
+The headline conformance number (496/496 JSON resource parity against the
 Java validator) is the package's externally-visible quality claim.
 Treat it like a public API:
 

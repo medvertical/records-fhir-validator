@@ -90,9 +90,9 @@ Current HL7 `FHIR/fhir-test-cases` status in the source Records repository:
   non-resource formats, disabled upstream cases, unsupported modules, logical
   models, or cases without a Java baseline.
 - Candidate JSON comparison set: 531.
-- Runtime skipped from the headline lane: 38.
-- Executed and compared against Java `OperationOutcome`: 493.
-- 493 passed.
+- Runtime skipped from the headline lane: 35.
+- Executed and compared against Java `OperationOutcome`: 496.
+- 496 passed.
 - Failed/errors: 0.
 - Headline JSON resource parity: 100.0%.
 - Launch-discovery lane: 547/547 comparisons passed, 0 skipped, 0 failed.
@@ -104,7 +104,7 @@ versions, unsupported modules (SHC, CDA, CDS Hooks, JSON5, XVer, DSIG, HL7 v2),
 disabled upstream tests, logical models, or entries without a declared Java
 baseline.
 
-The 38 headline runtime skips are measured by the explicit
+The 35 headline runtime skips are measured by the explicit
 `--include-baseline-backlog` discovery lane. That lane now executes 547
 launch-discovery comparisons, including discovery-only FML/NDJSON, JSON5,
 DSIG JSON, and hidden-Java-outcome fixtures, with 0 skips.
@@ -134,7 +134,7 @@ product scope with actual JSON resource validation correctness.
 
 For that reason, the headline number should be read as:
 
-> Records matches the Java validator on 493/493 currently executable FHIR JSON
+> Records matches the Java validator on 496/496 currently executable FHIR JSON
 > resource validation comparisons.
 
 It should not be read as:

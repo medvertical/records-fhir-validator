@@ -61,9 +61,9 @@ Current HL7 `FHIR/fhir-test-cases` status:
 - Upstream manifest entries: 969.
 - Pre-filtered out before validation: 438 because this harness measures JSON FHIR resource validation against Java `OperationOutcome` baselines, not XML, non-resource formats, disabled upstream cases, unsupported modules, logical models, or cases without a Java baseline.
 - Candidate JSON comparison set: 531.
-- Runtime skipped: 38.
-- Executed and compared against Java `OperationOutcome`: 493.
-- Passed: 493.
+- Runtime skipped: 35.
+- Executed and compared against Java `OperationOutcome`: 496.
+- Passed: 496.
 - Failed/errors: 0.
 - Executable comparison score: 100.0%.
 - Baseline-backlog discovery: 547/547 executed comparisons (100.0% pass
@@ -76,7 +76,7 @@ versions, unsupported modules (SHC, CDA, CDS Hooks, JSON5, XVer, DSIG, HL7 v2),
 disabled upstream tests, logical models, or entries without a declared Java
 baseline.
 
-The 38 headline runtime skips are measured by the explicit
+The 35 headline runtime skips are measured by the explicit
 `--include-baseline-backlog` discovery lane. That lane now executes 547
 launch-discovery comparisons, including discovery-only FML/NDJSON,
 JSON5, DSIG JSON, and hidden-Java-outcome fixtures, with 0 skips.
