@@ -42,8 +42,8 @@ vi.mock('../profile-loader-utils', () => ({
   }),
 }));
 
-// Mock all the stand-alone validators — they run in addition to the executor
-// issues, and we don't want their noise in this test.
+// Mock auxiliary validators — they run in addition to the executor issues,
+// and we don't want their noise in this test.
 vi.mock('../validators/deep-profile-validator', () => ({
   deepProfileValidator: { validate: () => [] },
 }));
@@ -52,12 +52,6 @@ vi.mock('../validators/deep-binding-validator', () => ({
 }));
 vi.mock('../validators/sd-fhirpath-executor', () => ({
   sdFHIRPathExecutor: { execute: async () => [] },
-}));
-vi.mock('../validators/observation-invariants-validator', () => ({
-  observationInvariantsValidator: { validate: () => [] },
-}));
-vi.mock('../validators/resource-specific-constraints-validator', () => ({
-  resourceSpecificConstraintsValidator: { validate: () => [] },
 }));
 vi.mock('../validators/contained-resource-validator', () => ({
   containedResourceValidator: { validate: () => [] },

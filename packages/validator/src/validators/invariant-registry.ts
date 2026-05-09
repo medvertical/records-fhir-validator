@@ -85,9 +85,9 @@ const SPECIALISED_INVARIANT_HANDLERS: Record<string, string> = {
 
   // Observation: componentdataAbsentReason / referenceRange /
   // value-vs-code disambiguation.
-  'obs-3': 'observation-invariants-validator.ts',
-  'obs-6': 'observation-invariants-validator.ts',
-  'obs-7': 'observation-invariants-validator.ts',
+  'obs-3': 'resource-specific-constraints-validator.ts',
+  'obs-6': 'resource-specific-constraints-validator.ts',
+  'obs-7': 'resource-specific-constraints-validator.ts',
 
   // Patient: contact SHALL have at least one of name/telecom/address/
   // organization.

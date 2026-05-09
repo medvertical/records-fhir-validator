@@ -25,8 +25,6 @@ import { loadProfileOrBase, createProfileFallbackIssue } from './profile-loader-
 import { deepProfileValidator } from '../validators/deep-profile-validator';
 import { deepBindingValidator } from '../validators/deep-binding-validator';
 import { sdFHIRPathExecutor } from '../validators/sd-fhirpath-executor';
-import { observationInvariantsValidator } from '../validators/observation-invariants-validator';
-import { resourceSpecificConstraintsValidator } from '../validators/resource-specific-constraints-validator';
 import { containedResourceValidator } from '../validators/contained-resource-validator';
 import { universalConstraintsValidator } from '../validators/universal-constraints-validator';
 import { terminologyResourceValidator } from '../validators/terminology-resource-validator';
@@ -104,6 +102,7 @@ export function buildMultiAspectValidateCallback(
         });
       }
     };
+    const collectedIssues = () => collectedAspects.flatMap(aspect => aspect.issues);
 
     const loadResult = await loadProfileOrBase(
       deps.sdLoader,
@@ -161,11 +160,21 @@ export function buildMultiAspectValidateCallback(
       });
     }
 
-    // 2–7. Remaining aspects run in parallel for performance
+    // Profile and terminology run before invariants when the invariant
+    // aspect is requested, matching validate()'s existingIssues context.
+    const needsInvariantContext = aspects.includes('invariant');
+    const preInvariantAspects: Promise<void>[] = [];
     const parallelAspects: Promise<void>[] = [];
+    const scheduleAspect = (promise: Promise<void>, contributesToInvariantContext: boolean) => {
+      if (needsInvariantContext && contributesToInvariantContext) {
+        preInvariantAspects.push(promise);
+      } else {
+        parallelAspects.push(promise);
+      }
+    };
 
     if (aspects.includes('profile')) {
-      parallelAspects.push(runAspect('profile', async () => {
+      scheduleAspect(runAspect('profile', async () => {
         const profileIssues = await deps.profileExecutor.validate({ ...ctx, getValueAtPath });
         const deepProfileIssues = ctx.structureDef
           ? deepProfileValidator.validate({
@@ -189,15 +198,15 @@ export function buildMultiAspectValidateCallback(
           ...deepProfileIssues,
           ...sdFHIRPathIssues,
         ];
-      }));
+      }), true);
     } else if (profileFallbackIssue) {
       // Even without the profile aspect requested, the fallback warning must
       // still reach the caller — otherwise the unresolvable profile is silent.
-      parallelAspects.push(runAspect('profile', async () => [profileFallbackIssue]));
+      scheduleAspect(runAspect('profile', async () => [profileFallbackIssue]), false);
     }
 
     if (aspects.includes('terminology')) {
-      parallelAspects.push(runAspect('terminology', async () => {
+      scheduleAspect(runAspect('terminology', async () => {
         const terminologyIssues = await deps.terminologyExecutor.validate({
           resource: ctx.resource,
           structureDef: ctx.structureDef,
@@ -209,7 +218,11 @@ export function buildMultiAspectValidateCallback(
           structureDef: ctx.structureDef
         });
         return [...terminologyIssues, ...deepBindingIssues];
-      }));
+      }), true);
+    }
+
+    if (preInvariantAspects.length > 0) {
+      await Promise.all(preInvariantAspects);
     }
 
     if (aspects.includes('reference')) {
@@ -227,12 +240,11 @@ export function buildMultiAspectValidateCallback(
         const invariantIssues = await deps.invariantExecutor.validate({
           resource: ctx.resource,
           structureDef: ctx.structureDef,
-          profileUrl: ctx.profileUrl
+          profileUrl: ctx.profileUrl,
+          existingIssues: collectedIssues()
         });
         return [
           ...invariantIssues,
-          ...observationInvariantsValidator.validate(ctx.resource),
-          ...resourceSpecificConstraintsValidator.validate(ctx.resource),
           ...containedResourceValidator.validate(ctx.resource),
           ...universalConstraintsValidator.validate(ctx.resource),
           ...terminologyResourceValidator.validate(ctx.resource)

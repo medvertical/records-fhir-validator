@@ -10,7 +10,7 @@
  * rates so regressions are caught, but the primary value is the console
  * output showing actual hit/miss/size metrics.
  *
- * Usage: npx vitest run server/services/validation/engine/records-validator/validators/__tests__/fhirpath-cache-benchmark.test.ts
+ * Usage: npx vitest run packages/validator/src/validators/__tests__/fhirpath-cache-benchmark.test.ts
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';

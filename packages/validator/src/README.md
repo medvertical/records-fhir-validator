@@ -23,6 +23,15 @@ Disallowed dependencies:
 - Records authentication, deployment, billing, reporting, or governance workflow code
 - Environment-specific configuration or customer data
 
+Server-side Records code should import this package through
+`@records-fhir/validator` or through the local adapter
+`server/services/validation/engine/records-validator-package.ts`. Direct
+imports into the legacy server mirror are blocked by:
+
+```sh
+npm run architecture:validator-mirror
+```
+
 Run the boundary audit before publishing:
 
 ```sh

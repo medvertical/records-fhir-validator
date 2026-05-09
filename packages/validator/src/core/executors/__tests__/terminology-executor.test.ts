@@ -29,8 +29,8 @@ const { MockValueSetValidator, getMockInstance } = vi.hoisted(() => {
   return { MockValueSetValidator, getMockInstance: () => lastInstance };
 });
 
-// Mock path resolves relative to this test file (__tests__/ → ../../.. → records-validator/validators)
-// which matches the import path used in terminology-executor.ts (executors/ → ../../.. → records-validator/validators)
+// Mock path resolves relative to this test file and matches the import path
+// used in terminology-executor.ts.
 vi.mock('../../../validators/valueset-validator', () => ({
   ValueSetValidator: MockValueSetValidator
 }));

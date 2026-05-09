@@ -46,12 +46,6 @@ vi.mock('../validators/deep-binding-validator', () => ({
 vi.mock('../validators/sd-fhirpath-executor', () => ({
   sdFHIRPathExecutor: { execute: async () => [] },
 }));
-vi.mock('../validators/observation-invariants-validator', () => ({
-  observationInvariantsValidator: { validate: () => [] },
-}));
-vi.mock('../validators/resource-specific-constraints-validator', () => ({
-  resourceSpecificConstraintsValidator: { validate: () => [] },
-}));
 vi.mock('../validators/contained-resource-validator', () => ({
   containedResourceValidator: { validate: () => [] },
 }));

@@ -4,7 +4,7 @@
  * Pure JavaScript/TypeScript FHIR Validation Engine
  * 
  * Usage:
- *   import { recordsValidator } from './records-validator';
+ *   import { recordsValidator } from '@records-fhir/validator';
  *   const issues = await recordsValidator.validate(resource, profileUrl);
  */
 

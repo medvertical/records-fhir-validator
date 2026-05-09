@@ -17,7 +17,6 @@ import {
   MetadataExecutor
 } from './executors';
 import { getValueAtPath } from './validation-utils';
-import { resourceSpecificConstraintsValidator } from '../validators/resource-specific-constraints-validator';
 import { terminologyResourceValidator } from '../validators/terminology-resource-validator';
 
 export interface ValidationOrchestratorContext {
@@ -88,19 +87,6 @@ export async function runAllAspectValidations(
     existingIssues: issues
   });
   issues.push(...invariantIssues);
-
-  // Resource-specific invariants and business rules (pat-1, con-*,
-  // bdl-*, Patient future-birthDate, etc.). These used to run only in
-  // the multi-aspect batch path via `multi-aspect-validate-callback.ts`
-  // — the single-resource `validate()` code path never invoked them,
-  // meaning any consumer that called `validate()` directly silently
-  // lost Records-specific business-rule detection. Wired in here so
-  // the two code paths converge.
-  const resourceSpecificIssues = resourceSpecificConstraintsValidator.validate(
-    context.resource,
-    issues,
-  );
-  issues.push(...resourceSpecificIssues);
 
   // Terminology resource business rules (CodeSystem/ValueSet canonical URLs,
   // caseSensitive, concept definitions, compose.include validation)
