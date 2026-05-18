@@ -109,6 +109,10 @@ export function validateUcumCode(code: string | undefined | null): UcumValidatio
   return result;
 }
 
+export function ucumCodeHasAnnotation(code: string | undefined | null): boolean {
+  return typeof code === 'string' && /\{[^{}]*\}/.test(code);
+}
+
 /**
  * Convenience: check whether a Quantity-shaped value carries a UCUM code
  * that the validator should evaluate. FHIR profiles can declare

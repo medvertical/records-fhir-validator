@@ -196,6 +196,20 @@ describe('TypeValidator', () => {
       expect(issues).toHaveLength(1);
       expect(issues[0].code).toBe('structural-type-mismatch');
     });
+
+    it('accepts extension-only complex values in choice slots', async () => {
+      const types: ElementType[] = [{ code: 'dateTime' }, { code: 'Period' }];
+      const value = {
+        extension: [{
+          url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+          valueCode: 'unknown',
+        }],
+      };
+
+      const issues = await validator.validate(value, types, 'MedicationStatement.effective[x]');
+
+      expect(issues).toHaveLength(0);
+    });
   });
 
   describe('Mixed Type Systems', () => {
@@ -240,4 +254,3 @@ describe('TypeValidator', () => {
     });
   });
 });
-

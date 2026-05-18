@@ -10,6 +10,41 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.1.7] — 2026-05-18
+
+Patch release for eHDS document-Bundle conformance and public-package
+hardening. Released with `@records-fhir/validation-types` 0.1.2.
+
+### Fixes
+
+- Added document-context validation for eHDS/EPS-style Bundles so Composition
+  section entries are checked against their section `targetProfile` contracts.
+- Added conformance-aware Bundle entry slice matching, including
+  `structuredefinition-imposeProfile` support, so imposed IPS/EPS Composition
+  profile requirements produce the same parent-profile and slice-min
+  consequences observed in the reference HAPI/MII validator.
+- Shared document-context validation between single-resource and multi-aspect
+  validator paths to keep package and server behavior aligned.
+- Fixed invariant execution context ownership in the package engine and removed
+  stale server-side mirror paths that could drift from the OSS validator.
+
+### Terminology and packages
+
+- Hardened terminology/package loading around package download retries,
+  filesystem StructureDefinition loading, ValueSet cache behavior, and UCUM
+  canonical unit handling.
+- Added public validation settings support for `performance.enableDeltaSearch`
+  through `@records-fhir/validation-types` 0.1.2.
+
+### Tests
+
+- Added regression coverage for multi-aspect Bundle entry validation,
+  document-context targetProfile narrowing, imposed-profile slice consequences,
+  SD FHIRPath choice types, slice discriminator matching, package downloads,
+  and ART-DECOR document parent parity.
+- Added ART-DECOR/HAPI smoke commands and an `ehds-strict` policy gate used to
+  keep Records-vs-HAPI semantic deltas actionable.
+
 ## [0.1.5] — 2026-05-09
 
 Patch release for terminology slice parity and refreshed conformance evidence.

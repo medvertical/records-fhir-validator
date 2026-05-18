@@ -276,6 +276,154 @@ describe('TerminologyExecutor', () => {
       validateBindingSpy.mockRestore();
     });
 
+    it('keeps global CodeSystem display hygiene as a warning on the display path', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          path: 'Observation.code',
+          min: 1,
+          max: '1',
+          type: [{ code: 'CodeableConcept' }],
+        } as ElementDefinition,
+      ];
+      mockContext.resource = {
+        resourceType: 'Observation',
+        code: {
+          coding: [{
+            system: 'http://snomed.info/sct',
+            code: '394712000',
+            display: 'Urine microscopy (procedure)',
+          }],
+        },
+      };
+      mockContext.getValueAtPath = (resource: any, path: string) => {
+        if (path === 'Observation.code') return resource.code;
+        return undefined;
+      };
+
+      const validatorInstance = (executor as any).valuesetValidator;
+      validatorInstance.isExternalCodeSystem.mockReturnValue(true);
+      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
+        valid: false,
+        reason: 'display-mismatch',
+        message: "Wrong Display Name 'Urine microscopy (procedure)' for http://snomed.info/sct#394712000",
+        issues: [{
+          severity: 'error',
+          code: 'invalid-display',
+          message: "Wrong Display Name 'Urine microscopy (procedure)' for http://snomed.info/sct#394712000",
+          expression: ['display'],
+        }],
+      });
+
+      const issues = await executor.validate(mockContext);
+
+      expect(validatorInstance.validateCodeInCodeSystem).toHaveBeenCalledWith(
+        '394712000',
+        'http://snomed.info/sct',
+        'Urine microscopy (procedure)',
+      );
+      expect(issues).toHaveLength(1);
+      expect(issues[0]).toEqual(expect.objectContaining({
+        severity: 'warning',
+        code: 'terminology-display-mismatch',
+        path: 'Observation.code.coding[0].display',
+      }));
+    });
+
+    it('preserves terminology server display severity for coded value displays', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          path: 'Observation.value[x]',
+          min: 0,
+          max: '1',
+          type: [{ code: 'CodeableConcept' }],
+        } as ElementDefinition,
+      ];
+      mockContext.resource = {
+        resourceType: 'Observation',
+        valueCodeableConcept: {
+          coding: [{
+            system: 'http://snomed.info/sct',
+            code: '394712000',
+            display: 'Urine leukocyte test',
+          }],
+        },
+      };
+      mockContext.getValueAtPath = (resource: any, path: string) => {
+        if (path === 'Observation.value[x]') return resource.valueCodeableConcept;
+        return undefined;
+      };
+
+      const validatorInstance = (executor as any).valuesetValidator;
+      validatorInstance.isExternalCodeSystem.mockReturnValue(true);
+      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
+        valid: false,
+        reason: 'display-mismatch',
+        message: "Wrong Display Name 'Urine leukocyte test' for http://snomed.info/sct#394712000",
+        issues: [{
+          severity: 'error',
+          code: 'invalid-display',
+          message: "Wrong Display Name 'Urine leukocyte test' for http://snomed.info/sct#394712000",
+          expression: ['display'],
+        }],
+      });
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]).toEqual(expect.objectContaining({
+        severity: 'error',
+        code: 'terminology-display-mismatch',
+        path: 'Observation.value[x].coding[0].display',
+      }));
+    });
+
+    it('keeps inactive CodeSystem warnings even when the terminology server returns result=true', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          path: 'Condition.code',
+          min: 1,
+          max: '1',
+          type: [{ code: 'CodeableConcept' }],
+        } as ElementDefinition,
+      ];
+      mockContext.resource = {
+        resourceType: 'Condition',
+        code: {
+          coding: [{
+            system: 'http://snomed.info/sct',
+            code: '15777000',
+            display: 'Prediabetes',
+          }],
+        },
+      };
+      mockContext.getValueAtPath = (resource: any, path: string) => {
+        if (path === 'Condition.code') return resource.code;
+        return undefined;
+      };
+
+      const validatorInstance = (executor as any).valuesetValidator;
+      validatorInstance.isExternalCodeSystem.mockReturnValue(true);
+      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
+        valid: true,
+        inactive: true,
+        message: "The concept '15777000' has a status of inactive and its use should be reviewed",
+        issues: [{
+          severity: 'warning',
+          code: 'code-comment',
+          message: "The concept '15777000' has a status of inactive and its use should be reviewed",
+        }],
+      });
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]).toEqual(expect.objectContaining({
+        severity: 'warning',
+        code: 'terminology-code-inactive',
+        path: 'Condition.code.coding[0].code',
+      }));
+    });
+
     it('should handle validation errors gracefully', async () => {
       mockContext.getValueAtPath = () => {
         throw new Error('Test error');
@@ -971,6 +1119,84 @@ describe('TerminologyExecutor', () => {
         severity: 'error',
         code: 'terminology-code-invalid',
         path: 'Observation.value[x].coding[0].code',
+      }));
+    });
+
+    it('emits indexed UCUM Quantity paths without duplicate hygiene issues', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          path: 'Observation.referenceRange.low',
+          min: 0,
+          max: '1',
+          type: [{ code: 'SimpleQuantity' }],
+        } as ElementDefinition,
+      ];
+      mockContext.resource = {
+        resourceType: 'Observation',
+        referenceRange: [
+          { low: { value: 5, system: 'http://unitsofmeasure.org', code: 'pH' } },
+          { low: { value: 6, system: 'http://unitsofmeasure.org', code: 'pH' } },
+        ],
+      };
+
+      const issues = await executor.validate(mockContext);
+      const invalidUcumIssues = issues.filter(issue => issue.code === 'terminology-code-invalid');
+
+      expect(invalidUcumIssues).toHaveLength(2);
+      expect(invalidUcumIssues).toContainEqual(expect.objectContaining({
+        path: 'Observation.referenceRange[0].low.code',
+      }));
+      expect(invalidUcumIssues).toContainEqual(expect.objectContaining({
+        path: 'Observation.referenceRange[1].low.code',
+      }));
+      expect(invalidUcumIssues).not.toContainEqual(expect.objectContaining({
+        path: 'Observation.referenceRange.low.code',
+      }));
+    });
+
+    it('warns for UCUM Quantity codes that rely on human-readable annotations', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          path: 'MedicationStatement.dosage.doseAndRate.dose[x]',
+          min: 0,
+          max: '1',
+          type: [{ code: 'Quantity' }],
+        } as ElementDefinition,
+      ];
+      mockContext.structureDef.type = 'MedicationStatement';
+      mockContext.resource = {
+        resourceType: 'MedicationStatement',
+        dosage: [{
+          doseAndRate: [{
+            doseQuantity: { value: 1, system: 'http://unitsofmeasure.org', code: '{tbl}' },
+          }],
+        }],
+      };
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        severity: 'warning',
+        code: 'terminology-ucum-annotation',
+        path: 'MedicationStatement.dosage[0].doseAndRate[0].doseQuantity.code',
+      }));
+    });
+
+    it('warns for UCUM Coding values that rely on human-readable annotations', async () => {
+      mockStructureDef.snapshot!.element = [];
+      mockContext.resource = {
+        resourceType: 'Observation',
+        valueCodeableConcept: {
+          coding: [{ system: 'http://unitsofmeasure.org', code: '{tbl}' }],
+        },
+      };
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        severity: 'warning',
+        code: 'terminology-ucum-annotation',
+        path: 'Observation.valueCodeableConcept.coding[0].code',
       }));
     });
 

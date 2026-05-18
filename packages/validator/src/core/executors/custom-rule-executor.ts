@@ -10,6 +10,7 @@ import fhirpath from 'fhirpath';
 import { getFhirPathModel } from '../../validators/fhirpath-model-resolver';
 import { checkFhirpathSandbox } from '../../validators/fhirpath-sandbox';
 import { getCustomRulesSource } from '../../persistence';
+import type { EngineCustomRule } from '../../persistence';
 import { createValidationIssue } from '../../issues';
 import type { ValidationIssue } from '../../types';
 import type { StructureDefinition } from '../structure-definition-types';
@@ -22,6 +23,47 @@ export interface CustomRuleValidationContext {
 }
 
 export class CustomRuleExecutor {
+    private ruleCache = new Map<string, { expiresAt: number; promise: Promise<EngineCustomRule[]> }>();
+    private static readonly RULE_CACHE_TTL_MS = 30_000;
+    private static readonly RULE_LOAD_TIMEOUT_MS = 250;
+
+    private async loadRules(resourceType: string): Promise<EngineCustomRule[]> {
+        const now = Date.now();
+        const cached = this.ruleCache.get(resourceType);
+        if (cached && cached.expiresAt > now) {
+            return cached.promise;
+        }
+
+        const sourcePromise = getCustomRulesSource().getRulesByResourceType(resourceType);
+        const timeoutPromise = new Promise<EngineCustomRule[]>((resolve) => {
+            setTimeout(() => {
+                logger.warn(
+                    `[CustomRuleExecutor] Rule fetch timed out after ` +
+                    `${CustomRuleExecutor.RULE_LOAD_TIMEOUT_MS}ms for ${resourceType}, skipping custom rules`
+                );
+                resolve([]);
+            }, CustomRuleExecutor.RULE_LOAD_TIMEOUT_MS);
+        });
+
+        const promise = Promise.race([sourcePromise, timeoutPromise])
+            .catch(error => {
+                // A custom-rule source failure is environmental, not a
+                // resource validation failure. Cache the empty result briefly
+                // so batch validation does not stampede the backing store.
+                logger.warn(
+                    `[CustomRuleExecutor] Fetch/setup failed for ${resourceType}, skipping custom rules: ` +
+                    (error instanceof Error ? error.message : String(error))
+                );
+                return [];
+            });
+
+        this.ruleCache.set(resourceType, {
+            expiresAt: now + CustomRuleExecutor.RULE_CACHE_TTL_MS,
+            promise,
+        });
+
+        return promise;
+    }
 
     /**
      * Validate user-defined custom rules
@@ -36,7 +78,7 @@ export class CustomRuleExecutor {
             // Fetch enabled rules for this resource type. The source is
             // embedder-provided and defaults to a noop (returns []) when
             // no host has wired up a backing store.
-            const rules = await getCustomRulesSource().getRulesByResourceType(resource.resourceType);
+            const rules = await this.loadRules(resource.resourceType);
 
             if (rules.length === 0) {
                 return issues;
@@ -126,7 +168,7 @@ export class CustomRuleExecutor {
             // issues; the regular customRules pipeline will resurface it via
             // monitoring if persistent.
             logger.warn(
-                `[CustomRuleExecutor] Fetch/setup failed, skipping custom rules: ` +
+                `[CustomRuleExecutor] Validation failed, skipping custom rules: ` +
                 (error instanceof Error ? error.message : String(error))
             );
             return [];

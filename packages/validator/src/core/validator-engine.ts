@@ -42,6 +42,10 @@ import { executeBatchValidation, type BatchValidationOptions } from './batch-val
 import { runAllAspectValidations } from './validation-orchestrator';
 import { buildMultiAspectValidateCallback } from './multi-aspect-validate-callback';
 import { AnomalyDetector, type AnomalyFinding, type AnomalyDetectorConfig } from '../validators/anomaly-detector';
+import {
+  buildBundleDocumentContextIssues,
+  type BundleDocumentContextChildResult,
+} from './bundle-document-context';
 
 // ============================================================================
 // Types
@@ -257,6 +261,8 @@ export class RecordsValidator {
           {
             sdLoader: this.sdLoader,
             snapshotGenerator: this.snapshotGenerator,
+            profileCache: this.profileCache,
+            fhirClient: options.fhirClient,
             structuralExecutor: this.structuralExecutor,
             profileExecutor: this.profileExecutor,
             terminologyExecutor: this.terminologyExecutor,
@@ -551,8 +557,18 @@ export class RecordsValidator {
     recursionDepth: number
   ): Promise<ValidationIssue[]> {
     const out: ValidationIssue[] = [];
+    const childResults: BundleDocumentContextChildResult[] = [];
     const entries: any[] = Array.isArray(bundle?.entry) ? bundle.entry : [];
     if (entries.length === 0) return out;
+    const bundleDeclaredProfiles: string[] = Array.isArray(bundle?.meta?.profile) ? bundle.meta.profile : [];
+    const bundleProfileUrl = bundleDeclaredProfiles[0] || 'http://hl7.org/fhir/StructureDefinition/Bundle';
+    const bundleStructureDef = await loadProfileWithSnapshot(
+      this.sdLoader,
+      this.profileCache,
+      this.snapshotGenerator,
+      bundleProfileUrl,
+      fhirVersion,
+    ) ?? undefined;
 
     for (let i = 0; i < entries.length; i++) {
       const entryResource = entries[i]?.resource;
@@ -599,10 +615,12 @@ export class RecordsValidator {
       // (code + path + message) before the prefix rewrite so the diff
       // against Java is not penalised by Records-internal duplication.
       const seen = new Set<string>();
+      const dedupedEntryIssues: ValidationIssue[] = [];
       for (const issue of entryIssues) {
         const key = `${issue.code}|${issue.path}|${issue.message}`;
         if (seen.has(key)) continue;
         seen.add(key);
+        dedupedEntryIssues.push(issue);
         const rewritten: ValidationIssue = {
           ...issue,
           path: this.rewriteEntryPath(issue.path, prefix, entryResource.resourceType, rtLen),
@@ -612,7 +630,25 @@ export class RecordsValidator {
         }
         out.push(rewritten);
       }
+
+      childResults.push({
+        index: i,
+        entryResource,
+        resourceType: entryResource.resourceType,
+        issues: dedupedEntryIssues,
+        structureDef: entryResource.resourceType === 'Composition'
+          ? await loadProfileWithSnapshot(
+            this.sdLoader,
+            this.profileCache,
+            this.snapshotGenerator,
+            profileUrl,
+            fhirVersion,
+          ) ?? undefined
+          : undefined,
+      });
     }
+
+    out.push(...buildBundleDocumentContextIssues(bundle, childResults, bundleStructureDef));
 
     return out;
   }
@@ -814,6 +850,29 @@ export class RecordsValidator {
     if (settings.packageDownload?.pinnedVersions) {
       this.sdLoader.setPackageVersionPins(settings.packageDownload.pinnedVersions);
     }
+
+    const enabledTerminologyServers = (settings.terminologyServers || []).filter(server =>
+      server.enabled && !server.circuitOpen && Boolean(server.url)
+    );
+    const primaryTerminologyServer = enabledTerminologyServers[0];
+
+    this.configureTerminologyResolution({
+      strategy: primaryTerminologyServer
+        ? (settings.terminologyResolution?.strategy || 'local-first')
+        : 'local-only',
+      serverUrl: primaryTerminologyServer?.url,
+      auth: primaryTerminologyServer?.authConfig,
+      servers: (settings.terminologyServers || []).map(server => ({
+        id: server.id,
+        url: server.url,
+        enabled: server.enabled,
+        fhirVersions: server.fhirVersions,
+        preferredSystems: server.preferredSystems,
+        circuitOpen: server.circuitOpen,
+        authConfig: server.authConfig,
+      })),
+      serverDelegation: settings.terminologyResolution?.serverDelegation,
+    });
   }
 
   /**

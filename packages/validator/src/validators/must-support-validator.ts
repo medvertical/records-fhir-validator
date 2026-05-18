@@ -7,6 +7,29 @@ import {
     getDirectValue
 } from '../core/executors/structural-executor-helpers';
 
+const CHOICE_BASES = [
+    'value', 'effective', 'onset', 'abatement', 'deceased', 'multipleBirth',
+    'defaultValue', 'medication', 'reported', 'occurrence', 'timing',
+    'product', 'serviced', 'location', 'allowed', 'used',
+    'rate', 'born', 'age',
+];
+
+function hasChoiceValue(element: any, base: string): boolean {
+    if (!element || typeof element !== 'object') return false;
+    if (!isValueEmpty(element[base])) return true;
+
+    return Object.keys(element).some(key =>
+        key.startsWith(base) &&
+        key.length > base.length &&
+        key[base.length] === key[base.length].toUpperCase() &&
+        !isValueEmpty(element[key])
+    );
+}
+
+function hasAnyChoiceValue(element: any): boolean {
+    return CHOICE_BASES.some(base => hasChoiceValue(element, base));
+}
+
 /**
  * Validator for MustSupport elements
  * Handles validation of elements marked with mustSupport=true
@@ -55,6 +78,10 @@ export class MustSupportValidator {
         // For Observation.value[x], dataAbsentReason satisfies the requirement
         if (path === 'Observation.value[x]' || path.match(/^Observation\.value\[x\]$/i)) {
             if (resource.dataAbsentReason && !isValueEmpty(resource.dataAbsentReason)) return true;
+
+            // Blood pressure/panel-style Observations legitimately carry their
+            // measurements in component.value[x] rather than top-level value[x].
+            if (Array.isArray(resource.component) && resource.component.some(hasAnyChoiceValue)) return true;
         }
 
         // For Observation.component.value[x], check component dataAbsentReason
@@ -64,6 +91,16 @@ export class MustSupportValidator {
                 if (components.every((c: any) => c.dataAbsentReason && !isValueEmpty(c.dataAbsentReason))) {
                     return true;
                 }
+            }
+        }
+
+        // For component dataAbsentReason, a concrete component.value[x] is the
+        // positive evidence. Requiring dataAbsentReason in addition to a value
+        // is the inverse of the FHIR invariant.
+        if (path.match(/^Observation\.component(?::[^.]+)?\.dataAbsentReason$/i)) {
+            const components = resource.component;
+            if (Array.isArray(components) && components.length > 0) {
+                if (components.every(hasAnyChoiceValue)) return true;
             }
         }
 

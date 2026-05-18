@@ -14,6 +14,14 @@ function isPreReleaseVersion(version: string | undefined): boolean {
   return typeof version === 'string' && version.includes('-');
 }
 
+function allowsUnversionedPreRelease(targetUrl: string): boolean {
+  // The EHDS EPS package currently publishes the agreed test IG as
+  // 1.0.0-xtehr. ART-DECOR resources declare unversioned canonicals, so
+  // rejecting that local package would silently fall back to base FHIR and
+  // skip the EPS slice rules we explicitly need to validate.
+  return targetUrl.includes('hl7.eu/fhir/eps');
+}
+
 /**
  * Check if a package is relevant for a given profile URL and version
  */
@@ -48,6 +56,28 @@ export function isRelevantPackage(
   if (url.includes('fhir.de') || url.includes('basisprofil')) {
     return packageName.startsWith('de.basisprofil') ||
       packageName.startsWith('de.einwilligungsmanagement');
+  }
+
+  // HL7 Europe packages. Without these guards, EU profile lookups fall
+  // through to the generic "scan every package" path and repeatedly parse
+  // large unrelated IGs during batch validation.
+  if (url.includes('hl7.eu/fhir/eps')) {
+    return packageName.startsWith('hl7.fhir.eu.eps');
+  }
+
+  if (url.includes('hl7.eu/fhir/base')) {
+    return packageName.startsWith('hl7.fhir.eu.base');
+  }
+
+  if (url.includes('hl7.eu/fhir') || url.includes('hl7.eu/')) {
+    return packageName.startsWith('hl7.fhir.eu.');
+  }
+
+  // IHE Pharmacy MPD extension/profile canonicals used by the EU EPS
+  // Medication profiles. Restrict to the MPD R4 package instead of scanning
+  // every local package for each extension URL.
+  if (url.includes('profiles.ihe.net/PHARM/MPD')) {
+    return packageName.startsWith('ihe.pharm.mpd.r4');
   }
 
   // ISiP profiles (nursing care – de.gematik.isip package)
@@ -131,14 +161,14 @@ export async function loadFromLocalCache(
               const checkSd = (sd: any, sourceName: string) => {
                 if (sd?.resourceType === 'StructureDefinition' && sd.url === targetUrl) {
                   if (!targetVersion || sd.version === targetVersion) {
-                    if (!targetVersion && isPreReleaseVersion(sd.version)) {
+                    if (!targetVersion && isPreReleaseVersion(sd.version) && !allowsUnversionedPreRelease(targetUrl)) {
                       logger.info(`[SDLoader] Skipping pre-release profile ${targetUrl}@${sd.version} from ${sourceName}; unversioned canonicals must resolve to stable packages`);
                       return null;
                     }
                     return sd; // Found exact match
                   }
                   // Keep candidate if we haven't found one yet
-                  if (!urlMatch && !isPreReleaseVersion(sd.version)) {
+                  if (!urlMatch && (!isPreReleaseVersion(sd.version) || allowsUnversionedPreRelease(targetUrl))) {
                     urlMatch = sd;
                     urlMatchSource = sourceName;
                   }

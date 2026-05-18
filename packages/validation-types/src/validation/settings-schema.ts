@@ -204,6 +204,7 @@ export const ValidationSettingsSchema = z.object({
     performance: z.object({
         maxConcurrent: z.number().min(1).max(20),
         batchSize: z.number().min(10).max(100),
+        enableDeltaSearch: z.boolean().optional(),
     }),
 
     // Resource type filtering

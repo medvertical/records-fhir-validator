@@ -29,11 +29,26 @@ import {
   EXTERNAL_CODE_SYSTEMS
 } from './valueset-types';
 import { ValueSetCache, valueSetCache } from './valueset-cache';
-import { TerminologyApiClient } from './terminology-api-client';
+import { TerminologyApiClient, type CodeSystemValidationResult } from './terminology-api-client';
 import { ValueSetPackageLoader } from './valueset-package-loader';
 
 // Re-export types for backwards compatibility
 export type { TerminologyResolutionStrategy, TerminologyResolutionConfig, ValueSet, CodeSystem } from './valueset-types';
+
+type FhirVersion = 'R4' | 'R5' | 'R6';
+
+function versionedExpansionCacheKey(valueSetUrl: string, fhirVersion?: FhirVersion): string {
+  if (valueSetUrl.includes('|')) return valueSetUrl;
+  return fhirVersion ? `${valueSetUrl}|${fhirVersion}` : valueSetUrl;
+}
+
+function displayMismatchSeverityForBinding(
+  bindingStrength?: 'required' | 'extensible' | 'preferred' | 'example',
+): ValidationIssue['severity'] {
+  if (bindingStrength === 'required') return 'error';
+  if (bindingStrength === 'preferred') return 'information';
+  return 'warning';
+}
 
 // ============================================================================
 // Known ValueSet Expansions (Common FHIR R4 ValueSets)
@@ -217,19 +232,36 @@ export class ValueSetValidator {
     return Boolean(override?.url || this.resolutionConfig.serverUrl);
   }
 
+  private getExpansionCacheKey(valueSetUrl: string, fhirVersion?: FhirVersion): string {
+    const baseKey = versionedExpansionCacheKey(valueSetUrl, fhirVersion);
+    const serverScope = [
+      this.resolutionConfig.strategy,
+      this.resolutionConfig.serverUrl ?? 'no-server',
+      ...(this.resolutionConfig.servers ?? []).map(server => [
+        server.id,
+        server.url,
+        server.enabled ? 'on' : 'off',
+        server.authConfig?.type ?? 'none',
+      ].join(':')),
+    ].join('|');
+
+    return `${baseKey}|${serverScope}`;
+  }
+
   private async validateCodeViaTerminologyServer(
     code: string,
     system: string | undefined,
     valueSetUrl: string,
     bindingStrength: 'required' | 'extensible' | 'preferred' | 'example' | undefined,
     override: { url: string; auth?: any } | undefined,
+    fhirVersion?: FhirVersion,
   ): Promise<boolean> {
     const isValidOnServer = await this.apiClient.validateCode(code, system, valueSetUrl, bindingStrength, override);
     if (isValidOnServer) {
       return true;
     }
 
-    return this.validateCodeAgainstConceptFilters(code, system, valueSetUrl, override);
+    return this.validateCodeAgainstConceptFilters(code, system, valueSetUrl, override, fhirVersion);
   }
 
   private async validateCodeAgainstConceptFilters(
@@ -237,10 +269,11 @@ export class ValueSetValidator {
     system: string | undefined,
     valueSetUrl: string,
     override: { url: string; auth?: any } | undefined,
+    fhirVersion?: FhirVersion,
   ): Promise<boolean> {
     if (!system || !this.hasTerminologyServer(override)) return false;
 
-    const filters = await this.packageLoader.getIncludeConceptFilters(valueSetUrl);
+    const filters = await this.packageLoader.getIncludeConceptFilters(valueSetUrl, fhirVersion);
     for (const filter of filters) {
       if (filter.system !== system || filter.property !== 'concept') continue;
 
@@ -272,6 +305,7 @@ export class ValueSetValidator {
     options?: {
       valueSetUrl?: string;
       profileUrl?: string;
+      fhirVersion?: FhirVersion;
     }
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
@@ -294,7 +328,8 @@ export class ValueSetValidator {
         codeInfo.code,
         codeInfo.system,
         options?.valueSetUrl || binding.valueSet,
-        binding.strength as 'required' | 'extensible' | 'preferred' | 'example'
+        binding.strength as 'required' | 'extensible' | 'preferred' | 'example',
+        options?.fhirVersion,
       );
 
       const displayIssue = await this.validateDisplayMatchesCodeSystem(
@@ -302,7 +337,9 @@ export class ValueSetValidator {
         codeInfo,
         options?.valueSetUrl || binding.valueSet,
         elementPath,
+        binding.strength as 'required' | 'extensible' | 'preferred' | 'example' | undefined,
         options?.profileUrl,
+        options?.fhirVersion,
       );
       if (displayIssue) {
         issues.push(displayIssue);
@@ -349,11 +386,13 @@ export class ValueSetValidator {
     codeInfo: { code: string; system?: string; display?: string },
     valueSetUrl: string,
     elementPath: string,
+    bindingStrength?: 'required' | 'extensible' | 'preferred' | 'example',
     profileUrl?: string,
+    fhirVersion?: FhirVersion,
   ): Promise<ValidationIssue | null> {
     if (!codeInfo.system || !codeInfo.display) return null;
 
-    const expectedDisplay = await this.resolveExpectedDisplay(codeInfo, valueSetUrl);
+    const expectedDisplay = await this.resolveExpectedDisplay(codeInfo, valueSetUrl, fhirVersion);
     if (!expectedDisplay || displaysEquivalent(expectedDisplay, codeInfo.display)) return null;
 
     const displayPath = this.resolveDisplayPath(rawCode, elementPath);
@@ -365,7 +404,7 @@ export class ValueSetValidator {
       customMessage:
         `Wrong Display Name '${codeInfo.display}' for ${codeInfo.system}#${codeInfo.code}. ` +
         `Valid display is '${expectedDisplay}'`,
-      severityOverride: 'warning',
+      severityOverride: displayMismatchSeverityForBinding(bindingStrength),
       aspectOverride: 'terminology',
     });
   }
@@ -373,10 +412,13 @@ export class ValueSetValidator {
   private async resolveExpectedDisplay(
     codeInfo: { code: string; system?: string; display?: string },
     valueSetUrl: string,
+    fhirVersion?: FhirVersion,
   ): Promise<string | null> {
     if (!codeInfo.system) return null;
 
-    const valueSet = this.cache.getValueSetFile(valueSetUrl)
+    const valueSetCacheKey = versionedExpansionCacheKey(valueSetUrl, fhirVersion);
+    const valueSet = this.cache.getValueSetFile(valueSetCacheKey)
+      ?? this.cache.getValueSetFile(valueSetUrl)
       ?? this.cache.getValueSetFile(valueSetUrl.split('|')[0]);
     const include = valueSet?.compose?.include?.find(entry =>
       entry.system === codeInfo.system
@@ -389,7 +431,7 @@ export class ValueSetValidator {
     if (!codeSystem) {
       codeSystem = await this.packageLoader.loadCodeSystem(
         codeInfo.system,
-        undefined,
+        fhirVersion === 'R4' ? '4' : fhirVersion === 'R5' ? '5' : fhirVersion === 'R6' ? '6' : undefined,
         include?.version,
       );
     }
@@ -426,10 +468,11 @@ export class ValueSetValidator {
     code: string,
     system: string | undefined,
     valueSetUrl: string,
-    bindingStrength: 'required' | 'extensible' | 'preferred' | 'example'
+    bindingStrength: 'required' | 'extensible' | 'preferred' | 'example',
+    fhirVersion?: FhirVersion,
   ): Promise<boolean> {
     try {
-      return await this.isCodeInValueSetStrict(code, system, valueSetUrl, bindingStrength);
+      return await this.isCodeInValueSetStrict(code, system, valueSetUrl, bindingStrength, fhirVersion);
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
       if (bindingStrength === 'required') {
@@ -445,8 +488,9 @@ export class ValueSetValidator {
    */
   async validateCodeInCodeSystem(
     code: string,
-    system: string
-  ): Promise<{ valid: boolean; message?: string; reason?: 'code-unknown' | 'system-unresolvable' }> {
+    system: string,
+    display?: string,
+  ): Promise<CodeSystemValidationResult> {
     if (!this.isExternalCodeSystem(system)) {
       return { valid: true };
     }
@@ -454,7 +498,7 @@ export class ValueSetValidator {
     // this system, call THAT server instead of the default. Otherwise
     // pass undefined and the api client uses its default serverUrl.
     const override = this.resolveServerForSystem(system);
-    return this.apiClient.validateCodeInCodeSystem(code, system, override);
+    return this.apiClient.validateCodeInCodeSystem(code, system, display, override);
   }
 
   /**
@@ -463,7 +507,8 @@ export class ValueSetValidator {
   async isCodeInValueSet(
     code: string,
     system: string | undefined,
-    valueSetUrl: string
+    valueSetUrl: string,
+    fhirVersion?: FhirVersion,
   ): Promise<boolean> {
     try {
       // BCP-47 Handling
@@ -474,7 +519,7 @@ export class ValueSetValidator {
         return this.validateBCP47(code);
       }
 
-      const expandedCodes = await this.getExpandedValueSet(valueSetUrl);
+      const expandedCodes = await this.getExpandedValueSet(valueSetUrl, fhirVersion);
 
       const fullCode = system ? `${system}|${code}` : code;
       const isInExpansion = expandedCodes.has(fullCode) || expandedCodes.has(code);
@@ -487,7 +532,14 @@ export class ValueSetValidator {
       const override = this.resolveServerForSystem(system);
       if (this.hasTerminologyServer(override) && (expandedCodes.size === 0 || this.resolutionConfig.serverDelegation?.validateCodes)) {
         logger.debug(`[ValueSetValidator] Code not found in local expansion for ${valueSetUrl}. Attempting server $validate-code...`);
-        const isValidOnServer = await this.validateCodeViaTerminologyServer(code, system, valueSetUrl, undefined, override);
+        const isValidOnServer = await this.validateCodeViaTerminologyServer(
+          code,
+          system,
+          valueSetUrl,
+          undefined,
+          override,
+          fhirVersion,
+        );
         if (isValidOnServer) {
           return true;
         }
@@ -544,7 +596,8 @@ export class ValueSetValidator {
     code: string,
     system: string | undefined,
     valueSetUrl: string,
-    bindingStrength: 'required' | 'extensible' | 'preferred' | 'example'
+    bindingStrength: 'required' | 'extensible' | 'preferred' | 'example',
+    fhirVersion?: FhirVersion,
   ): Promise<boolean> {
     // BCP-47 Handling
     const isAllLanguages = valueSetUrl.includes('all-languages') || valueSetUrl === 'http://hl7.org/fhir/ValueSet/languages';
@@ -554,7 +607,7 @@ export class ValueSetValidator {
       return this.validateBCP47(code);
     }
 
-    const expandedCodes = await this.getExpandedValueSet(valueSetUrl);
+    const expandedCodes = await this.getExpandedValueSet(valueSetUrl, fhirVersion);
 
     const fullCode = system ? `${system}|${code}` : code;
 
@@ -574,7 +627,7 @@ export class ValueSetValidator {
     // For required bindings, a non-empty local expansion is authoritative.
     // Do not let terminology-server fail-open behavior turn a known invalid
     // primitive/status code back into a valid result.
-    const filteredIncludes = await this.packageLoader.getIncludeConceptFilters(valueSetUrl);
+    const filteredIncludes = await this.packageLoader.getIncludeConceptFilters(valueSetUrl, fhirVersion);
     const hasServerEvaluatedFilters = filteredIncludes.length > 0;
     const override = this.resolveServerForSystem(system);
     const shouldDelegateToServer =
@@ -584,7 +637,14 @@ export class ValueSetValidator {
 
     if (this.hasTerminologyServer(override) && shouldDelegateToServer) {
       logger.debug(`[ValueSetValidator] Code not found in local expansion for ${valueSetUrl}. Attempting server $validate-code...`);
-      const isValidOnServer = await this.validateCodeViaTerminologyServer(code, system, valueSetUrl, bindingStrength, override);
+      const isValidOnServer = await this.validateCodeViaTerminologyServer(
+        code,
+        system,
+        valueSetUrl,
+        bindingStrength,
+        override,
+        fhirVersion,
+      );
       if (isValidOnServer) {
         return true;
       }
@@ -605,9 +665,10 @@ export class ValueSetValidator {
     return /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*$/.test(code);
   }
 
-  private async getExpandedValueSet(valueSetUrl: string): Promise<Set<string>> {
+  private async getExpandedValueSet(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<Set<string>> {
     // Check cache first
-    const cached = this.cache.getExpandedCodes(valueSetUrl);
+    const cacheKey = this.getExpansionCacheKey(valueSetUrl, fhirVersion);
+    const cached = this.cache.getExpandedCodes(cacheKey);
     if (cached) {
       return cached;
     }
@@ -621,7 +682,7 @@ export class ValueSetValidator {
         const serverExpansion = await this.apiClient.expandValueSet(baseUrl);
         if (serverExpansion && serverExpansion.size > 0) {
           serverExpansion.forEach(code => expandedCodes.add(code));
-          this.cache.setExpandedCodes(valueSetUrl, expandedCodes);
+          this.cache.setExpandedCodes(cacheKey, expandedCodes);
           logger.debug(`[ValueSetValidator] Server-First: Expanded ${valueSetUrl} with ${expandedCodes.size} codes from server`);
           return expandedCodes;
         }
@@ -632,15 +693,15 @@ export class ValueSetValidator {
       const knownExpansion = KNOWN_VALUE_SET_EXPANSIONS[baseUrl];
       if (knownExpansion) {
         knownExpansion.forEach(code => expandedCodes.add(code));
-        this.cache.setExpandedCodes(valueSetUrl, expandedCodes);
+        this.cache.setExpandedCodes(cacheKey, expandedCodes);
         return expandedCodes;
       }
 
       // 2. Try local packages (pass full URL with version for version-aware loading)
-      const packageExpansion = await this.packageLoader.loadValueSet(valueSetUrl);
+      const packageExpansion = await this.packageLoader.loadValueSet(valueSetUrl, fhirVersion);
       if (packageExpansion && packageExpansion.length > 0) {
         packageExpansion.forEach(code => expandedCodes.add(code));
-        this.cache.setExpandedCodes(valueSetUrl, expandedCodes);
+        this.cache.setExpandedCodes(cacheKey, expandedCodes);
         return expandedCodes;
       }
 
@@ -649,7 +710,7 @@ export class ValueSetValidator {
         const serverExpansion = await this.apiClient.expandValueSet(baseUrl);
         if (serverExpansion && serverExpansion.size > 0) {
           serverExpansion.forEach(code => expandedCodes.add(code));
-          this.cache.setExpandedCodes(valueSetUrl, expandedCodes);
+          this.cache.setExpandedCodes(cacheKey, expandedCodes);
           logger.debug(`[ValueSetValidator] Local-First: Used server fallback for ${valueSetUrl}, got ${expandedCodes.size} codes`);
           return expandedCodes;
         }
@@ -663,7 +724,7 @@ export class ValueSetValidator {
     }
 
     // Cache even if empty
-    this.cache.setExpandedCodes(valueSetUrl, expandedCodes);
+    this.cache.setExpandedCodes(cacheKey, expandedCodes);
     return expandedCodes;
   }
 

@@ -167,6 +167,13 @@ export class TypeValidator {
     const normalizedType = normalizeFhirType(typeCode);
     const effectiveType = normalizedType || typeCode;
 
+    if (
+      this.isExtensionOnly(value) &&
+      !TypeValidator.PRIMITIVE_TYPE_CODES.has(effectiveType)
+    ) {
+      return true;
+    }
+
     // Handle primitive types (using normalized type)
     switch (effectiveType) {
       case 'string':
@@ -220,7 +227,7 @@ export class TypeValidator {
       // extension(s) and/or id. An extension-only object matches any
       // complex type because all sub-elements are optional in R4.
       case 'CodeableConcept':
-        return this.isCodeableConcept(value) || this.isExtensionOnly(value);
+        return this.isCodeableConcept(value);
 
       case 'Coding':
         return this.isCoding(value);
@@ -490,4 +497,3 @@ export class TypeValidator {
     return keys.length > 0 && keys.every(k => k === 'extension' || k === 'id');
   }
 }
-

@@ -79,7 +79,8 @@ export {
 export function getDefaultPerformanceSettings(): ValidationSettings['performance'] {
   return {
     maxConcurrent: PERFORMANCE_LIMITS.maxConcurrent.default,
-    batchSize: PERFORMANCE_LIMITS.batchSize.default
+    batchSize: PERFORMANCE_LIMITS.batchSize.default,
+    enableDeltaSearch: true
   };
 }
 

@@ -86,6 +86,7 @@ export function buildSnapshotIndex(sd: StructureDefinition | undefined): Snapsho
   const byPath = new Map<string, PathInfo>();
   for (const el of sd?.snapshot?.element || []) {
     if (!el?.path) continue;
+    if (typeof el.id === 'string' && el.id.includes(':')) continue;
     const type = (el as any)?.type?.[0]?.code;
     byPath.set(el.path, { type });
     if (el.path.endsWith('[x]')) {
@@ -105,8 +106,9 @@ export function buildSnapshotIndex(sd: StructureDefinition | undefined): Snapsho
 export function makeWalkerDeps(
   sdLoader: StructureDefinitionLoader,
   fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+  typeIndexCache: Map<string, SnapshotIndex | null> = new Map(),
 ): WalkerDeps {
-  return { sdLoader, fhirVersion, typeIndexCache: new Map() };
+  return { sdLoader, fhirVersion, typeIndexCache };
 }
 
 /**

@@ -71,7 +71,7 @@ export class SDElementMatcher {
 
         // Filter to elements with constraints
         const constraintElements = matches.filter(m =>
-            m.element.constraint && m.element.constraint.length > 0
+            m.element.constraint && m.element.constraint.length > 0 && !Array.isArray(m.data)
         );
 
         logger.debug(`[SDElementMatcher] Matched ${matches.length} elements, ${constraintElements.length} with constraints`);
@@ -149,7 +149,7 @@ export class SDElementMatcher {
                 // Recurse into array items
                 if (typeof obj[i] === 'object' && obj[i] !== null) {
                     for (const key of Object.keys(obj[i])) {
-                        this.traverseAndMatch(obj[i][key], `${currentPath}.${key}`, elementMap, matches, unmatchedPaths);
+                        this.traverseAndMatch(obj[i][key], `${itemPath}.${key}`, elementMap, matches, unmatchedPaths);
                     }
                 }
             }

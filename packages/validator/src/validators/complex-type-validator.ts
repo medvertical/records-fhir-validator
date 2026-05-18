@@ -19,6 +19,7 @@ export class ComplexTypeValidator {
     // Lazy, shared — VSV carries its own cache, instantiating per-resource
     // wastes those caches. A singleton per ComplexTypeValidator is enough.
     private valueSetValidator: ValueSetValidator;
+    private typeDefinitionCache = new Map<string, Promise<StructureDefinition | null>>();
 
     constructor(
         private sdLoader: StructureDefinitionLoader,
@@ -29,6 +30,25 @@ export class ComplexTypeValidator {
 
     configureTerminologyResolution(config: Partial<TerminologyResolutionConfig>): void {
         this.valueSetValidator.setResolutionConfig(config);
+    }
+
+    private async loadTypeDefinition(
+        typeCode: string,
+        fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
+    ): Promise<StructureDefinition | null> {
+        const key = `${fhirVersion}|${typeCode}`;
+        let promise = this.typeDefinitionCache.get(key);
+        if (!promise) {
+            promise = this.sdLoader
+                .loadProfile(`http://hl7.org/fhir/StructureDefinition/${typeCode}`, fhirVersion)
+                .then(sd => sd?.snapshot?.element ? sd : null)
+                .catch(error => {
+                    logger.debug(`[ComplexTypeValidator] Could not load base StructureDefinition for ${typeCode}:`, error);
+                    return null;
+                });
+            this.typeDefinitionCache.set(key, promise);
+        }
+        return promise;
     }
 
     /**
@@ -240,12 +260,7 @@ export class ComplexTypeValidator {
         parentStructureDef?: StructureDefinition,
         fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
     ): Promise<Map<string, ElementDefinition> | null> {
-        let baseTypeDef: StructureDefinition | null = null;
-        try {
-            baseTypeDef = await this.sdLoader.loadProfile(`http://hl7.org/fhir/StructureDefinition/${typeCode}`, fhirVersion);
-        } catch (error) {
-            logger.debug(`[ComplexTypeValidator] Could not load base StructureDefinition for ${typeCode}:`, error);
-        }
+        const baseTypeDef = await this.loadTypeDefinition(typeCode, fhirVersion);
 
         if (!baseTypeDef?.snapshot?.element) {
             logger.debug(`[ComplexTypeValidator] No base StructureDefinition found for type: ${typeCode}`);
@@ -402,7 +417,7 @@ export class ComplexTypeValidator {
                 issues.push(...typeIssues);
                 return issues;
             }
-            return this.validateComplexTypeSubElements(subValue, effectiveElementDef, fullPath, profileUrl, parentStructureDef);
+            return this.validateComplexTypeSubElements(subValue, effectiveElementDef, fullPath, profileUrl, parentStructureDef, _fhirVersion);
         } else if (subValue !== undefined && subValue !== null) {
             const issues: ValidationIssue[] = [];
 
@@ -468,7 +483,7 @@ export class ComplexTypeValidator {
             try {
                 // Load definition to get fields
                 // Note: basic caching in sdLoader makes this relatively cheap
-                const def = await this.sdLoader.loadProfile(`http://hl7.org/fhir/StructureDefinition/${type.code}`, fhirVersion);
+                const def = await this.loadTypeDefinition(type.code, fhirVersion);
                 if (!def?.snapshot?.element) continue;
 
                 // valid keys for this type are immediate children of the root

@@ -40,6 +40,23 @@ function matchesRequestedFhirVersion(
   return !family || family === fhirVersion;
 }
 
+function urlFhirVersionFamily(url: string): 'R4' | 'R5' | 'R6' | null {
+  const match = url.match(/\/fhir\/([456])\.0(?:\.\d+)?\/StructureDefinition\//);
+  if (!match) return null;
+  if (match[1] === '4') return 'R4';
+  if (match[1] === '5') return 'R5';
+  if (match[1] === '6') return 'R6';
+  return null;
+}
+
+function urlMatchesRequestedFhirVersion(
+  url: string,
+  fhirVersion: 'R4' | 'R5' | 'R6'
+): boolean {
+  const family = urlFhirVersionFamily(url);
+  return !family || family === fhirVersion;
+}
+
 function cacheKeyForProfile(
   url: string,
   fhirVersion: 'R4' | 'R5' | 'R6'
@@ -74,6 +91,8 @@ export class StructureDefinitionLoader {
   private packageVersionPins: Record<string, string>;
   private initializationPromise: Promise<void>;
   private dbCacheNotFound: Set<string> = new Set(); // Negative cache for DB lookups
+  private profileNotFound: Set<string> = new Set(); // Negative cache for full loadProfile misses
+  private profileLoadPromises = new Map<string, Promise<StructureDefinition | null>>();
   private initializationComplete: boolean = false; // Guard against re-initialization
   private pinnedCanonicals: Map<string, string> | null = null; // url → url|version
 
@@ -371,6 +390,17 @@ export class StructureDefinitionLoader {
       // Use version-specific cache key to avoid R4/R5 confusion
       const cacheKey = cacheKeyForProfile(resolvedUrl, fhirVersion);
 
+      if (this.profileNotFound.has(cacheKey)) {
+        logger.debug(`[SDLoader] Skipping profile load for ${cacheKey} (known not found)`);
+        return null;
+      }
+
+      if (!urlMatchesRequestedFhirVersion(resolvedUrl, fhirVersion)) {
+        logger.debug(`[SDLoader] Skipping FHIR-version-incompatible profile URL: ${resolvedUrl} (${fhirVersion})`);
+        this.profileNotFound.add(cacheKey);
+        return null;
+      }
+
       // Check in-memory cache first (version-specific)
       if (this.cache.has(cacheKey)) {
         logger.debug(`[SDLoader] Loading from in-memory cache: ${cacheKey}`);
@@ -384,6 +414,7 @@ export class StructureDefinitionLoader {
         const sanitized = this.sanitizeProfile(dbCachedProfile);
         this.cache.set(cacheKey, sanitized);
         this.availableProfiles.add(url);
+        this.profileNotFound.delete(cacheKey);
         return sanitized;
       }
 
@@ -395,11 +426,12 @@ export class StructureDefinitionLoader {
       }
 
       // Skip scanning for private profiles UNLESS they're in availableProfiles
-      const isInBundledProfiles = this.availableProfiles.has(url);
+      const isInBundledProfiles = this.availableProfiles.has(url) || this.availableProfiles.has(resolvedUrl);
       const publicProfile = isPublicProfile(url);
 
       if (!publicProfile && !isInBundledProfiles) {
         logger.debug(`[SDLoader] Skipping filesystem/auto-download for private/custom profile: ${url}`);
+        this.profileNotFound.add(cacheKey);
         return null;
       }
 
@@ -411,57 +443,68 @@ export class StructureDefinitionLoader {
       // Filesystem scans are too slow (30s+ for 36 packages with 1000+ profiles)
       // DB cache (2ms) + auto-download (20s timeout) is much faster
       logger.debug(`[SDLoader] Skipped filesystem cache for ${url} (filesystem scanning disabled)`);
-      let sd = null;
 
-      // If profile URL was found during scan, load it from filesystem
-      if (this.availableProfiles.has(url)) {
-        logger.debug(`[SDLoader] Profile found in availableProfiles, loading from filesystem: ${url}`);
-        sd = await loadFromLocalCache(url, this.packageSources, fhirVersion);
-
-        if (sd) {
-          const sanitized = this.sanitizeProfile(sd);
-          this.cache.set(cacheKey, sanitized);
-          return sanitized;
-        } else {
-          logger.warn(`[SDLoader] Profile in availableProfiles but failed to load: ${url}`);
-        }
+      const existingLoad = this.profileLoadPromises.get(cacheKey);
+      if (existingLoad) {
+        return existingLoad;
       }
 
-      // Auto-download if enabled
-      if (this.autoDownload) {
-        const downloadedProfile = await attemptAutoDownload(url, {
-          registryClient: this.registryClient,
-          packageDownloader: this.packageDownloader,
-          allowedPackages: this.allowedPackages,
-          packageVersionPins: this.packageVersionPins,
-          packageSources: this.packageSources,
-          cache: this.cache,
-          availableProfiles: this.availableProfiles,
-          profileSourcesConfig: this.profileSourcesConfig,
-          fhirVersion: fhirVersion
-        });
+      const loadPromise = (async (): Promise<StructureDefinition | null> => {
+        // If profile URL was found during scan, load it from filesystem
+        if (this.availableProfiles.has(url) || this.availableProfiles.has(resolvedUrl)) {
+          logger.debug(`[SDLoader] Profile found in availableProfiles, loading from filesystem: ${url}`);
+          const sd = await loadFromLocalCache(resolvedUrl, this.packageSources, fhirVersion);
 
-        if (downloadedProfile) {
-          // Note: attemptAutoDownload does not cache in this.cache directly? 
-          // Actually we assume it might but we should ensure we return sanitized version.
-          // If we cache it, we should sanitize first.
-          // Let's sanitize the return value only, since cache logic inside autoDownload is opaque here?
-          // Actually attemptAutoDownload takes `cache` as arg.
-          // We can't easily intercept the internal caching there unless we modify auto-download.ts
-          // BUT since we pass `this.cache` to it, it likely populates it.
-          // We SHOULD ensure `attemptAutoDownload` sanitizes OR we sanitize before use.
-          // If it populates cache autonomously, we might have dirty cache.
-          // However, we return the downloaded profile here.
-          // We can update the cache with sanitized version if we want.
-          const sanitized = this.sanitizeProfile(downloadedProfile);
-          this.cache.set(cacheKey, sanitized); // Force update cache with sanitized version
-          return sanitized;
+          if (sd) {
+            const sanitized = this.sanitizeProfile(sd);
+            this.cache.set(cacheKey, sanitized);
+            this.profileNotFound.delete(cacheKey);
+            return sanitized;
+          } else {
+            logger.warn(`[SDLoader] Profile in availableProfiles but failed to load: ${url}`);
+            this.profileNotFound.add(cacheKey);
+            return null;
+          }
         }
-      }
 
-      logger.warn(`[SDLoader] Profile not found: ${url}`);
-      logger.debug(`[SDLoader] Auto-download was ${this.autoDownload ? 'enabled' : 'disabled'}`);
-      return null;
+        // Auto-download if enabled
+        if (this.autoDownload) {
+          const downloadedProfile = await attemptAutoDownload(url, {
+            registryClient: this.registryClient,
+            packageDownloader: this.packageDownloader,
+            allowedPackages: this.allowedPackages,
+            packageVersionPins: this.packageVersionPins,
+            packageSources: this.packageSources,
+            cache: this.cache,
+            availableProfiles: this.availableProfiles,
+            profileSourcesConfig: this.profileSourcesConfig,
+            fhirVersion: fhirVersion
+          });
+
+          if (downloadedProfile) {
+            const sanitized = this.sanitizeProfile(downloadedProfile);
+            this.cache.set(cacheKey, sanitized);
+            this.profileNotFound.delete(cacheKey);
+            return sanitized;
+          }
+
+          logger.warn(`[SDLoader] Profile not found: ${url}`);
+          logger.debug(`[SDLoader] Auto-download was enabled`);
+          this.profileNotFound.add(cacheKey);
+          return null;
+
+        }
+
+        logger.warn(`[SDLoader] Profile not found: ${url}`);
+        logger.debug(`[SDLoader] Auto-download was disabled`);
+        this.profileNotFound.add(cacheKey);
+        return null;
+      })().finally(() => {
+        this.profileLoadPromises.delete(cacheKey);
+      });
+
+      this.profileLoadPromises.set(cacheKey, loadPromise);
+      return loadPromise;
 
     } catch (error: unknown) {
       logger.error(`[SDLoader] Error loading profile ${url}:`, error);
@@ -621,8 +664,11 @@ export class StructureDefinitionLoader {
     if (!profile || !url) return;
 
     const family = fhirVersionFamily(profile) ?? fhirVersion ?? 'R4';
-    this.cache.set(cacheKeyForProfile(url, family), profile);
+    const cacheKey = cacheKeyForProfile(url, family);
+    this.cache.set(cacheKey, profile);
     this.availableProfiles.add(url);
+    this.profileNotFound.delete(cacheKey);
+    this.profileLoadPromises.delete(cacheKey);
     logger.debug(`[SDLoader] Externally cached profile: ${url} (${family})`);
   }
 
@@ -664,6 +710,9 @@ export class StructureDefinitionLoader {
     this.availableProfiles.add(sd.url);
     // Clear any prior "not-found" marker so subsequent lookups hit the cache
     this.dbCacheNotFound.delete(sd.url);
+    this.dbCacheNotFound.delete(cacheKey);
+    this.profileNotFound.delete(cacheKey);
+    this.profileLoadPromises.delete(cacheKey);
 
     logger.debug(`[SDLoader] Registered external profile: ${sd.url} (${fhirVersion})`);
     return true;
@@ -674,6 +723,8 @@ export class StructureDefinitionLoader {
    */
   clearCache(): void {
     this.cache.clear();
+    this.profileNotFound.clear();
+    this.profileLoadPromises.clear();
     logger.info('[SDLoader] Cache cleared');
   }
 

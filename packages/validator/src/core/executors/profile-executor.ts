@@ -11,7 +11,7 @@
 import type { ValidationIssue } from '../../types';
 import type { StructureDefinition } from '../structure-definition-types';
 import { ExtensionValidator } from '../../validators/extension-validator';
-import { SlicingValidator } from '../../validators/slicing-validator';
+import { SlicingValidator, type ReferenceResolver } from '../../validators/slicing-validator';
 import { ConstraintValidator } from '../../validators/constraint-validator';
 import { GermanIdentifierValidator } from '../../validators/german-identifier-validator';
 import { GermanExtensionValidator } from '../../validators/german-extension-validator';
@@ -29,6 +29,7 @@ export interface ProfileValidationContext {
   structureDef: StructureDefinition;
   strictMode: boolean;
   getValueAtPath: (resource: any, path: string) => any;
+  referenceResolver?: ReferenceResolver | null;
 }
 
 // ============================================================================
@@ -63,7 +64,7 @@ export class ProfileExecutor {
     const issues: ValidationIssue[] = [];
 
     try {
-      const { resource, structureDef, profileUrl, fhirVersion, strictMode, getValueAtPath } = context;
+      const { resource, structureDef, profileUrl, fhirVersion, strictMode, getValueAtPath, referenceResolver } = context;
 
       // 1. Validate extensions
       const extensionIssues = await this.extensionValidator.validateExtensions(
@@ -82,7 +83,7 @@ export class ProfileExecutor {
       // 2. Validate slicing (check for sliced elements like Patient.identifier)
       if (structureDef.snapshot?.element) {
         const slicingIssues = await this.validateAllSlicing(
-          resource, structureDef, getValueAtPath
+          resource, structureDef, getValueAtPath, referenceResolver,
         );
         issues.push(...this.suppressDuplicateExtensionSliceMinimum(extensionIssues, slicingIssues));
 
@@ -140,16 +141,17 @@ export class ProfileExecutor {
     resource: any,
     structureDef: StructureDefinition,
     getValueAtPath: (resource: any, path: string) => any,
+    referenceResolver?: ReferenceResolver | null,
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
     for (const elementDef of structureDef.snapshot!.element!) {
       if (!elementDef.slicing) continue;
-      if (this.isSlicingNestedUnderSlice(elementDef)) continue;
       const path = elementDef.path;
       const parentItems = this.resolveParentArrayItems(resource, path, structureDef, getValueAtPath);
 
       if (parentItems) {
-        for (const parentItem of parentItems) {
+        const scopedParents = this.scopeParentItemsToNestedSlice(parentItems, elementDef, structureDef) ?? parentItems;
+        for (const parentItem of scopedParents) {
           const leafKey = path.split('.').pop()!;
           let childVal = parentItem[leafKey];
           if (childVal === undefined && leafKey.endsWith('[x]')) {
@@ -158,7 +160,7 @@ export class ProfileExecutor {
             if (actualKey) childVal = parentItem[actualKey];
           }
           issues.push(...await this.slicingValidator.validateSlicing(
-            this.coerceToArray(childVal), path, structureDef
+            this.coerceToArray(childVal), path, structureDef, referenceResolver, elementDef.id
           ));
         }
       } else {
@@ -172,7 +174,7 @@ export class ProfileExecutor {
         // Pass an empty array when the element is absent so required
         // slices still produce profile-slice-min-cardinality + ghost children.
         issues.push(...await this.slicingValidator.validateSlicing(
-          slicedValue, path, structureDef
+          slicedValue, path, structureDef, referenceResolver, elementDef.id
         ));
       }
     }
@@ -185,6 +187,84 @@ export class ProfileExecutor {
     const segments = id.split('.');
     const pathDepth = elementDef.path.split('.').length;
     return segments.length >= pathDepth && segments.slice(0, -1).some(segment => segment.includes(':'));
+  }
+
+  private scopeParentItemsToNestedSlice(
+    parentItems: any[],
+    elementDef: { id?: string; path?: string },
+    structureDef: StructureDefinition,
+  ): any[] | null {
+    const id = elementDef.id;
+    if (!id || !elementDef.path || !this.isSlicingNestedUnderSlice(elementDef)) return null;
+
+    const nestedStart = id.lastIndexOf(':');
+    const parentPathEnd = elementDef.path.lastIndexOf('.');
+    if (nestedStart < 0 || parentPathEnd < 0) return null;
+
+    const parentSliceElementId = id.slice(0, nestedStart);
+    const parentSlice = structureDef.snapshot?.element?.find(e => e.id === parentSliceElementId);
+    if (!parentSlice?.sliceName || !parentSlice.path) return null;
+
+    const parentSlicingBase = structureDef.snapshot?.element?.find(
+      e => e.path === parentSlice.path && e.slicing,
+    );
+    if (!parentSlicingBase?.slicing?.discriminator?.length) return null;
+
+    const discriminator = parentSlicingBase.slicing.discriminator[0];
+    if (discriminator.type !== 'value') return null;
+
+    const discriminatorConstraint = structureDef.snapshot?.element?.find(
+      e => e.id === `${parentSliceElementId}.${discriminator.path}`,
+    );
+    const expectedPattern = this.extractPattern(discriminatorConstraint ?? parentSlice);
+    const expectedFixed = this.extractFixed(discriminatorConstraint ?? parentSlice);
+    const expected = expectedPattern ?? expectedFixed;
+    if (expected === undefined) return null;
+
+    return parentItems.filter(item => this.valueContainsPattern(
+      this.getPathValue(item, discriminator.path),
+      expected,
+    ));
+  }
+
+  private extractPattern(elementDef: any): any {
+    for (const [key, value] of Object.entries(elementDef)) {
+      if (key.startsWith('pattern')) return value;
+    }
+    return undefined;
+  }
+
+  private extractFixed(elementDef: any): any {
+    for (const [key, value] of Object.entries(elementDef)) {
+      if (key.startsWith('fixed')) return value;
+    }
+    return undefined;
+  }
+
+  private getPathValue(value: any, path: string): any {
+    if (!path || path === '$this') return value;
+    return path.split('.').reduce((current, segment) => {
+      if (current == null) return undefined;
+      return current[segment];
+    }, value);
+  }
+
+  private valueContainsPattern(actual: any, expected: any): boolean {
+    if (expected === undefined || expected === null) return true;
+    if (actual === undefined || actual === null) return false;
+    if (Array.isArray(expected)) {
+      if (!Array.isArray(actual)) return false;
+      return expected.every(expectedItem =>
+        actual.some(actualItem => this.valueContainsPattern(actualItem, expectedItem)),
+      );
+    }
+    if (typeof expected === 'object') {
+      if (typeof actual !== 'object') return false;
+      return Object.entries(expected).every(([key, expectedValue]) =>
+        this.valueContainsPattern(actual[key], expectedValue),
+      );
+    }
+    return actual === expected;
   }
 
   private elementMin(elementDef: { min?: number | string }): number {

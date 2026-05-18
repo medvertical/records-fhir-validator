@@ -11,6 +11,18 @@ captures changes that affect type-package consumers directly.
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-05-18
+
+Released alongside `@records-fhir/validator` 0.1.7.
+
+### Surface
+
+- Added optional `performance.enableDeltaSearch` to `ValidationSettings`.
+- Included `enableDeltaSearch: true` in the R4/R5 default validation settings
+  and the default performance settings helper.
+- Extended the Zod validation settings schema to accept
+  `performance.enableDeltaSearch`.
+
 ## [0.1.1] — 2026-05-04
 
 Released alongside `@records-fhir/validator` 0.1.2. Not yet published

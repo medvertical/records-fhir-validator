@@ -395,6 +395,17 @@ export class PackageRegistryClient {
       return 'hl7.fhir.au.base';
     }
 
+    // HL7 Europe EPS branch packages are not consistently published through
+    // the public package registry. The package manifest name includes the R4
+    // suffix even when the IG is referred to as hl7.fhir.eu.eps.
+    if (profileUrl.includes('hl7.eu/fhir/eps')) {
+      return 'hl7.fhir.eu.eps.r4';
+    }
+
+    if (profileUrl.includes('hl7.eu/fhir/base')) {
+      return 'hl7.fhir.eu.base';
+    }
+
     // Canadian Baseline: http://hl7.org/fhir/ca/baseline/StructureDefinition/...
     if (profileUrl.includes('hl7.org/fhir/ca')) {
       return 'hl7.fhir.ca.baseline';

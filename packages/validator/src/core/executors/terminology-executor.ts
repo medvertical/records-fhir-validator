@@ -13,7 +13,7 @@ import type { ElementDefinition, StructureDefinition } from '../structure-defini
 import { ValueSetValidator, type TerminologyResolutionConfig } from '../../validators/valueset-validator';
 import { valueSetCache } from '../../validators/valueset-cache';
 import { shouldValidateRequired } from '../../business-rules';
-import { validateUcumCode, quantityUsesUcum } from '../../validators/ucum-validator';
+import { validateUcumCode, quantityUsesUcum, ucumCodeHasAnnotation } from '../../validators/ucum-validator';
 import { matchesPattern } from '../../validators/slice-utils';
 import { logger } from '../../logger';
 
@@ -60,6 +60,7 @@ export interface TerminologyValidationContext {
   resource: any;
   structureDef: StructureDefinition;
   getValueAtPath: (resource: any, path: string) => any;
+  fhirVersion?: 'R4' | 'R5' | 'R6';
 }
 
 // ============================================================================
@@ -386,6 +387,7 @@ export class TerminologyExecutor {
     try {
       const { resource, structureDef, getValueAtPath } = context;
       const profileUrl = structureDef.url;
+      const fhirVersion = context.fhirVersion ?? 'R4';
 
       // Validate value set bindings
       if (structureDef.snapshot?.element) {
@@ -434,7 +436,7 @@ export class TerminologyExecutor {
                 const effectiveBinding = effectiveBindingForElement(elementDef);
                 for (const candidateValue of selectValuesForBinding(elementDef, value, structureDef)) {
                   const bindingIssues = await this.valuesetValidator.validateBinding(
-                    candidateValue, effectiveBinding, path, { profileUrl },
+                    candidateValue, effectiveBinding, path, { profileUrl, fhirVersion },
                   );
                   issues.push(...bindingIssues);
                 }
@@ -532,16 +534,21 @@ export class TerminologyExecutor {
 
     // Descend to the leaf's containers. Each segment may produce an
     // array of containers when the intermediate element is repeatable.
-    let containers: any[] = [resource];
+    interface ContainerHit { value: any; path: string; }
+    let containers: ContainerHit[] = [{ value: resource, path: segments[0] || resource?.resourceType || 'Resource' }];
     for (const seg of parentSegments) {
-      const next: any[] = [];
+      const next: ContainerHit[] = [];
       for (const c of containers) {
-        if (c === null || c === undefined) continue;
-        const v = c[seg];
+        if (c.value === null || c.value === undefined) continue;
+        const v = c.value[seg];
         if (Array.isArray(v)) {
-          for (const item of v) if (item !== null && item !== undefined) next.push(item);
+          v.forEach((item, index) => {
+            if (item !== null && item !== undefined) {
+              next.push({ value: item, path: `${c.path}.${seg}[${index}]` });
+            }
+          });
         } else if (v !== undefined && v !== null) {
-          next.push(v);
+          next.push({ value: v, path: `${c.path}.${seg}` });
         }
       }
       containers = next;
@@ -551,7 +558,7 @@ export class TerminologyExecutor {
     // FHIR path suffix. A polymorphic element can carry multiple
     // concrete keys on the same container, so we accumulate (value, key)
     // pairs and then walk them uniformly.
-    interface LeafHit { value: any; leafName: string; }
+    interface LeafHit { value: any; leafName: string; basePath: string; }
     const leaves: LeafHit[] = [];
     for (const c of containers) {
       if (isPolymorphic) {
@@ -559,16 +566,14 @@ export class TerminologyExecutor {
         for (const t of elementTypes) {
           if (!UCUM_BEARING_TYPES.has(t)) continue;
           const key = stem + t.charAt(0).toUpperCase() + t.slice(1);
-          const v = c[key];
-          if (v !== undefined && v !== null) leaves.push({ value: v, leafName: key });
+          const v = c.value[key];
+          if (v !== undefined && v !== null) leaves.push({ value: v, leafName: key, basePath: c.path });
         }
       } else {
-        const v = c[leafSeg];
-        if (v !== undefined && v !== null) leaves.push({ value: v, leafName: leafSeg });
+        const v = c.value[leafSeg];
+        if (v !== undefined && v !== null) leaves.push({ value: v, leafName: leafSeg, basePath: c.path });
       }
     }
-
-    const basePath = segments.slice(0, -1).join('.');
 
     for (const hit of leaves) {
       const items = Array.isArray(hit.value) ? hit.value : [hit.value];
@@ -576,10 +581,23 @@ export class TerminologyExecutor {
         const q = items[idx];
         if (!quantityUsesUcum(q)) continue;
         const result = validateUcumCode(q.code);
-        if (result.valid) continue;
-
         const arrayPart = Array.isArray(hit.value) ? `[${idx}]` : '';
-        const finalPath = `${basePath}.${hit.leafName}${arrayPart}.code`;
+        const finalPath = `${hit.basePath}.${hit.leafName}${arrayPart}.code`;
+
+        if (result.valid) {
+          if (ucumCodeHasAnnotation(q.code)) {
+            issues.push({
+              id: `terminology-ucum-annotation-${Date.now()}-${idx}`,
+              aspect: 'terminology',
+              severity: 'warning',
+              code: 'terminology-ucum-annotation',
+              message: `UCUM code '${q.code}' at ${finalPath} contains a human-readable annotation. UCUM annotations are ignored semantically, so validation should not depend on them`,
+              path: finalPath,
+              timestamp: new Date(),
+            });
+          }
+          continue;
+        }
 
         issues.push({
           id: `terminology-ucum-invalid-${Date.now()}-${idx}`,
@@ -684,10 +702,59 @@ export class TerminologyExecutor {
         if (this.valuesetValidator.isExternalCodeSystem(coding.system)) {
           const result = await this.valuesetValidator.validateCodeInCodeSystem(
             coding.code,
-            coding.system
+            coding.system,
+            typeof coding.display === 'string' ? coding.display : undefined,
           );
 
+          const terminologyServerIssues = result.issues ?? [];
+          const displayIssue = terminologyServerIssues.find(issue => issue.code === 'invalid-display');
+          if (displayIssue) {
+            const displayPath = Array.isArray(value) ? `${path}[${i}].display` : `${path}.display`;
+            const severity = isAuthoritativeValueDisplayPath(path)
+              ? normalizeTerminologyServerSeverity(displayIssue.severity, 'warning')
+              : 'warning';
+            issues.push({
+              id: `terminology-codesystem-display-${Date.now()}-${i}`,
+              aspect: 'terminology',
+              severity,
+              code: 'terminology-display-mismatch',
+              message: displayIssue.message || result.message || `Wrong Display Name '${coding.display}' for ${coding.system}#${coding.code}`,
+              path: displayPath,
+              timestamp: new Date(),
+              details: {
+                code: coding.code,
+                system: coding.system,
+                ...(coding.display ? { display: coding.display } : {}),
+              },
+            });
+          }
+
+          const inactiveIssue = terminologyServerIssues.find(issue =>
+            issue.code === 'code-comment' &&
+            /inactive/i.test(issue.message)
+          );
+          if (result.inactive || inactiveIssue) {
+            const codingPath = Array.isArray(value) ? `${path}[${i}].code` : `${path}.code`;
+            issues.push({
+              id: `terminology-codesystem-inactive-${Date.now()}-${i}`,
+              aspect: 'terminology',
+              severity: 'warning',
+              code: 'terminology-code-inactive',
+              message: inactiveIssue?.message || result.message || `The concept '${coding.code}' is inactive and its use should be reviewed`,
+              path: codingPath,
+              timestamp: new Date(),
+              details: {
+                code: coding.code,
+                system: coding.system,
+                ...(result.display ? { display: result.display } : {}),
+              },
+            });
+          }
+
           if (!result.valid) {
+            if (result.reason === 'display-mismatch') {
+              continue;
+            }
             const codingPath = Array.isArray(value) ? `${path}[${i}].code` : `${path}.code`;
             const isSystemUnresolvable = result.reason === 'system-unresolvable';
             issues.push({
@@ -794,7 +861,14 @@ export class TerminologyExecutor {
 
       if (value.system === 'http://unitsofmeasure.org' && typeof value.code === 'string') {
         const result = validateUcumCode(value.code);
-        if (!result.valid) {
+        if (result.valid && ucumCodeHasAnnotation(value.code)) {
+          pushOnce({
+            severity: 'warning',
+            code: 'terminology-ucum-annotation',
+            message: `UCUM code '${value.code}' at ${path}.code contains a human-readable annotation. UCUM annotations are ignored semantically, so validation should not depend on them`,
+            path: `${path}.code`,
+          });
+        } else if (!result.valid) {
           pushOnce({
             severity: 'error',
             code: 'terminology-code-invalid',
@@ -884,4 +958,18 @@ export class TerminologyExecutor {
     // Only flag as warning for completely unknown patterns
     return { valid: false, message: `Unknown CodeSystem URL: '${systemUrl}'` };
   }
+}
+
+function isAuthoritativeValueDisplayPath(path: string): boolean {
+  return /\.value(?:\[x\]|CodeableConcept)\.coding$/.test(path);
+}
+
+function normalizeTerminologyServerSeverity(
+  severity: unknown,
+  fallback: ValidationIssue['severity'],
+): ValidationIssue['severity'] {
+  return severity === 'fatal' || severity === 'error' || severity === 'warning' ||
+    severity === 'information' || severity === 'info'
+    ? severity
+    : fallback;
 }

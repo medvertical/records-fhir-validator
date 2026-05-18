@@ -152,7 +152,6 @@ export interface CodeSystem {
 
 export const DEFAULT_RESOLUTION_CONFIG: TerminologyResolutionConfig = {
     strategy: 'local-first',
-    serverUrl: 'https://tx.fhir.org/r4',
     serverDelegation: {
         expandValueSets: true,
         validateCodes: true,

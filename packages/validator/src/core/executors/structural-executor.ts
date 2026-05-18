@@ -31,7 +31,7 @@ import {
   isValueEmpty,
   mergeElementConstraints as _mergeElementConstraints
 } from './structural-executor-helpers';
-import { buildSnapshotIndex, detectUnknownProperties, makeWalkerDeps } from './unknown-property-walker';
+import { buildSnapshotIndex, detectUnknownProperties, makeWalkerDeps, type SnapshotIndex } from './unknown-property-walker';
 
 // ============================================================================
 // Types
@@ -107,6 +107,7 @@ export class StructuralExecutor {
   private compliesWithValidator: CompliesWithValidator;
   private stringSecurityValidator: StringSecurityValidator;
   private sdLoader: StructureDefinitionLoader;
+  private walkerTypeIndexCaches = new Map<'R4' | 'R5' | 'R6', Map<string, SnapshotIndex | null>>();
 
   constructor(sdLoader: StructureDefinitionLoader) {
     this.cardinalityValidator = new CardinalityValidator();
@@ -740,7 +741,12 @@ export class StructuralExecutor {
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ): Promise<ValidationIssue[]> {
     const index = buildSnapshotIndex(structureDef);
-    const deps = makeWalkerDeps(this.sdLoader, fhirVersion);
+    let typeIndexCache = this.walkerTypeIndexCaches.get(fhirVersion);
+    if (!typeIndexCache) {
+      typeIndexCache = new Map();
+      this.walkerTypeIndexCaches.set(fhirVersion, typeIndexCache);
+    }
+    const deps = makeWalkerDeps(this.sdLoader, fhirVersion, typeIndexCache);
     return detectUnknownProperties(resource, index, resourceType, structureDef?.url, deps);
   }
 

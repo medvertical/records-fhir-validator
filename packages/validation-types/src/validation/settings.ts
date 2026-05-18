@@ -312,6 +312,7 @@ export interface ValidationSettings {
   performance: {
     maxConcurrent: number; // 1-20, default: 4
     batchSize: number;     // 10-100, default: 50
+    enableDeltaSearch?: boolean; // default: true
   };
 
   /** Resource Type Filtering (essential for performance) */
@@ -563,4 +564,3 @@ export const PERFORMANCE_LIMITS = {
     default: 50
   }
 } as const;
-

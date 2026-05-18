@@ -9,7 +9,10 @@
 
 import type { ValidationIssue, ValidationSettings } from '../types';
 import type { StructureDefinitionLoader } from './structure-definition-loader';
+import type { StructureDefinition } from './structure-definition-types';
 import type { SnapshotGenerator } from './snapshot-generator';
+import type { ProfileCache } from '../cache/profile-cache';
+import type { FhirClientLike, ProfileLoadResult } from './profile-loader-utils';
 import type {
   StructuralExecutor,
   ProfileExecutor,
@@ -30,10 +33,17 @@ import { universalConstraintsValidator } from '../validators/universal-constrain
 import { terminologyResourceValidator } from '../validators/terminology-resource-validator';
 import { applyStrictnessSeverity, resolveStrictnessConfig } from '../strictness';
 import { applyAdvisorRules, type AdvisorRule } from '../advisor';
+import type { ReferenceResolver } from '../validators/slicing-validator';
+import {
+  buildBundleDocumentContextIssues,
+  type BundleDocumentContextChildResult,
+} from './bundle-document-context';
 
 interface MultiAspectDeps {
   sdLoader: StructureDefinitionLoader;
   snapshotGenerator: SnapshotGenerator;
+  profileCache?: ProfileCache;
+  fhirClient?: FhirClientLike;
   structuralExecutor: StructuralExecutor;
   profileExecutor: ProfileExecutor;
   terminologyExecutor: TerminologyExecutor;
@@ -52,6 +62,37 @@ interface AspectResult {
   isValid: boolean;
 }
 
+type MultiAspectValidateResult = {
+  isValid: boolean;
+  aspects: AspectResult[];
+  structureDef?: StructureDefinition;
+};
+
+type ValidateOneFn = (
+  resource: unknown,
+  profileUrl: string,
+  fhirVersion: 'R4' | 'R5' | 'R6',
+  recursionDepth: number,
+  enclosingBundle?: Record<string, unknown>,
+) => Promise<MultiAspectValidateResult>;
+
+const BUNDLE_ENTRY_MAX_DEPTH = 3;
+const BUNDLE_ENTRY_VALIDATION_CONCURRENCY = 8;
+const bundleReferenceIndexCache = new WeakMap<Record<string, unknown>, BundleReferenceIndex>();
+
+interface BundleReferenceIndex {
+  fullUrl: Map<string, any>;
+  relative: Map<string, any>;
+  hasEntries: boolean;
+}
+
+interface BundleChildValidationResult {
+  index: number;
+  entryResource: Record<string, unknown>;
+  resourceType: string;
+  result: MultiAspectValidateResult;
+}
+
 /**
  * Builds the validateResource callback for multi-aspect batch validation.
  * Each invocation validates a single resource across all enabled aspects
@@ -61,10 +102,7 @@ export function buildMultiAspectValidateCallback(
   deps: MultiAspectDeps,
   aspects: string[],
   settings: unknown
-): (resource: unknown, profileUrl: string, fhirVersion: 'R4' | 'R5' | 'R6') => Promise<{
-  isValid: boolean;
-  aspects: AspectResult[];
-}> {
+): (resource: unknown, profileUrl: string, fhirVersion: 'R4' | 'R5' | 'R6') => Promise<MultiAspectValidateResult> {
   // Resolve once per batch, not per resource — strictness, aspect
   // severity caps, and advisor rules don't change between resources.
   const typedSettings = settings as ValidationSettings | undefined;
@@ -73,8 +111,15 @@ export function buildMultiAspectValidateCallback(
   );
   const advisorRules: AdvisorRule[] =
     typedSettings?.advisorRules ?? [];
+  const profileLoadCache = new Map<string, Promise<ProfileLoadResult>>();
 
-  return async (resource: unknown, profileUrl: string, fhirVersion: 'R4' | 'R5' | 'R6') => {
+  const validateOne: ValidateOneFn = async (
+    resource: unknown,
+    profileUrl: string,
+    fhirVersion: 'R4' | 'R5' | 'R6',
+    recursionDepth: number,
+    enclosingBundle?: Record<string, unknown>,
+  ) => {
     const res = resource as Record<string, unknown>;
     const collectedAspects: AspectResult[] = [];
 
@@ -104,13 +149,22 @@ export function buildMultiAspectValidateCallback(
     };
     const collectedIssues = () => collectedAspects.flatMap(aspect => aspect.issues);
 
-    const loadResult = await loadProfileOrBase(
-      deps.sdLoader,
-      deps.snapshotGenerator,
-      profileUrl,
-      res.resourceType as string,
-      fhirVersion
-    );
+    const resourceType = res.resourceType as string;
+    const profileLoadKey = `${fhirVersion}|${profileUrl}|${resourceType}`;
+    let profileLoadPromise = profileLoadCache.get(profileLoadKey);
+    if (!profileLoadPromise) {
+      profileLoadPromise = loadProfileOrBase(
+        deps.sdLoader,
+        deps.snapshotGenerator,
+        profileUrl,
+        resourceType,
+        fhirVersion,
+        deps.profileCache,
+        deps.fhirClient
+      );
+      profileLoadCache.set(profileLoadKey, profileLoadPromise);
+    }
+    const loadResult = await profileLoadPromise;
     const structureDef = loadResult.structureDef;
 
     if (!structureDef) {
@@ -136,12 +190,13 @@ export function buildMultiAspectValidateCallback(
 
     const ctx = {
       resource: res,
-      resourceType: res.resourceType as string,
+      resourceType,
       profileUrl,
       fhirVersion,
       structureDef,
       strictMode: deps.strictMode,
-      settings
+      settings,
+      referenceResolver: createBundleReferenceResolver(enclosingBundle ?? (resourceType === 'Bundle' ? res : undefined), res),
     };
 
     // 1. Structural (runs first — validates basic structure)
@@ -210,7 +265,8 @@ export function buildMultiAspectValidateCallback(
         const terminologyIssues = await deps.terminologyExecutor.validate({
           resource: ctx.resource,
           structureDef: ctx.structureDef,
-          getValueAtPath
+          getValueAtPath,
+          fhirVersion: ctx.fhirVersion
         });
         const deepBindingIssues = deepBindingValidator.validate({
           resource: ctx.resource,
@@ -268,9 +324,275 @@ export function buildMultiAspectValidateCallback(
       await Promise.all(parallelAspects);
     }
 
+    if (resourceType === 'Bundle' && recursionDepth < BUNDLE_ENTRY_MAX_DEPTH) {
+      await appendBundleEntryValidationResults(
+        res,
+        fhirVersion,
+        recursionDepth,
+        validateOne,
+        collectedAspects,
+        structureDef,
+        issues => applyAdvisorRules(
+          applyStrictnessSeverity(issues, strictness, aspectSeverityFor('profile')),
+          advisorRules,
+        ).resultIssues,
+      );
+    }
+
     return {
       isValid: collectedAspects.every(a => a.isValid),
-      aspects: collectedAspects
+      aspects: collectedAspects,
+      structureDef,
     };
   };
+
+  return (resource, profileUrl, fhirVersion) => validateOne(resource, profileUrl, fhirVersion, 0);
+}
+
+async function appendBundleEntryValidationResults(
+  bundle: Record<string, unknown>,
+  fhirVersion: 'R4' | 'R5' | 'R6',
+  recursionDepth: number,
+  validateOne: ValidateOneFn,
+  parentAspects: AspectResult[],
+  parentStructureDef: StructureDefinition | undefined,
+  transformDocumentContextIssues: (issues: ValidationIssue[]) => ValidationIssue[],
+): Promise<void> {
+  const entries = Array.isArray(bundle.entry) ? bundle.entry : [];
+  if (entries.length === 0) return;
+
+  const validationTargets = entries
+    .map((entry, index) => {
+      const entryRecord = entry as Record<string, unknown> | undefined;
+      const entryResource = entryRecord?.resource as Record<string, unknown> | undefined;
+      if (!entryResource || typeof entryResource !== 'object') return null;
+      const resourceType = typeof entryResource.resourceType === 'string'
+        ? entryResource.resourceType
+        : null;
+      if (!resourceType) return null;
+
+      const declared = Array.isArray((entryResource.meta as any)?.profile)
+        ? (entryResource.meta as any).profile.filter((profile: unknown): profile is string => typeof profile === 'string')
+        : [];
+      const profileUrl = declared[0] || `http://hl7.org/fhir/StructureDefinition/${resourceType}`;
+      return { index, entryResource, resourceType, profileUrl };
+    })
+    .filter((target): target is {
+      index: number;
+      entryResource: Record<string, unknown>;
+      resourceType: string;
+      profileUrl: string;
+    } => target !== null);
+
+  const childResults: BundleChildValidationResult[] = [];
+
+  for (let i = 0; i < validationTargets.length; i += BUNDLE_ENTRY_VALIDATION_CONCURRENCY) {
+    const chunk = validationTargets.slice(i, i + BUNDLE_ENTRY_VALIDATION_CONCURRENCY);
+    const chunkResults = await Promise.all(chunk.map(async target => ({
+      index: target.index,
+      entryResource: target.entryResource,
+      resourceType: target.resourceType,
+      result: await validateOne(target.entryResource, target.profileUrl, fhirVersion, recursionDepth + 1, bundle),
+    })));
+    childResults.push(...chunkResults);
+  }
+
+  childResults.sort((a, b) => a.index - b.index);
+  for (const child of childResults) {
+    mergeEntryAspects(parentAspects, child.result.aspects, child.index, child.entryResource, child.resourceType);
+  }
+
+  const documentContextIssues = transformDocumentContextIssues(
+    buildBundleDocumentContextIssues(
+      bundle,
+      childResults.map(toDocumentContextChildResult),
+      parentStructureDef,
+    ),
+  );
+  if (documentContextIssues.length > 0) {
+    appendIssuesToAspect(parentAspects, 'profile', documentContextIssues);
+  }
+}
+
+function toDocumentContextChildResult(
+  child: BundleChildValidationResult,
+): BundleDocumentContextChildResult {
+  return {
+    index: child.index,
+    entryResource: child.entryResource,
+    resourceType: child.resourceType,
+    issues: child.result.aspects.flatMap(aspect => aspect.issues),
+    structureDef: child.result.structureDef,
+  };
+}
+
+function mergeEntryAspects(
+  parentAspects: AspectResult[],
+  childAspects: AspectResult[],
+  entryIndex: number,
+  entryResource: Record<string, unknown>,
+  resourceType: string,
+): void {
+  const prefix = bundleEntryResourcePrefix(entryIndex, entryResource, resourceType);
+
+  for (const childAspect of childAspects) {
+    const rewrittenIssues = dedupeEntryIssues(childAspect.issues).map(issue =>
+      rewriteEntryIssue(issue, prefix, resourceType),
+    );
+    if (rewrittenIssues.length === 0) continue;
+
+    let parentAspect = parentAspects.find(aspect => aspect.aspect === childAspect.aspect);
+    if (!parentAspect) {
+      parentAspect = {
+        aspect: childAspect.aspect,
+        issues: [],
+        validationTime: 0,
+        isValid: true,
+      };
+      parentAspects.push(parentAspect);
+    }
+
+    parentAspect.issues.push(...rewrittenIssues);
+    parentAspect.validationTime += childAspect.validationTime;
+    parentAspect.isValid = parentAspect.issues.every(issue =>
+      issue.severity !== 'error' && issue.severity !== 'fatal',
+    );
+  }
+}
+
+function dedupeEntryIssues(issues: ValidationIssue[]): ValidationIssue[] {
+  const seen = new Set<string>();
+  const out: ValidationIssue[] = [];
+
+  for (const issue of issues) {
+    const key = `${issue.code}|${issue.path}|${issue.message}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(issue);
+  }
+
+  return out;
+}
+
+function rewriteEntryIssue(
+  issue: ValidationIssue,
+  prefix: string,
+  resourceType: string,
+): ValidationIssue {
+  const rewritten: ValidationIssue = {
+    ...issue,
+    path: rewriteEntryPath(issue.path, prefix, resourceType),
+  };
+  if (issue.expression) {
+    rewritten.expression = rewriteEntryPath(issue.expression, prefix, resourceType);
+  }
+  return rewritten;
+}
+
+function rewriteEntryPath(
+  path: string | undefined,
+  prefix: string,
+  resourceType: string,
+): string | undefined {
+  if (!path) return path;
+  if (path === resourceType) return prefix;
+  if (path.startsWith(`${resourceType}.`)) return `${prefix}.${path.slice(resourceType.length + 1)}`;
+  return `${prefix}.${path}`;
+}
+
+function bundleEntryResourcePrefix(
+  entryIndex: number,
+  entryResource: Record<string, unknown>,
+  resourceType: string,
+): string {
+  const rtId = typeof entryResource.id === 'string'
+    ? `${resourceType}/${entryResource.id}`
+    : resourceType;
+  return `Bundle.entry[${entryIndex}].resource/*${rtId}*/`;
+}
+
+function appendIssuesToAspect(
+  parentAspects: AspectResult[],
+  aspectName: string,
+  issues: ValidationIssue[],
+): void {
+  if (issues.length === 0) return;
+  let parentAspect = parentAspects.find(aspect => aspect.aspect === aspectName);
+  if (!parentAspect) {
+    parentAspect = {
+      aspect: aspectName,
+      issues: [],
+      validationTime: 0,
+      isValid: true,
+    };
+    parentAspects.push(parentAspect);
+  }
+
+  const existing = new Set(parentAspect.issues.map(issue => `${issue.code}|${issue.path}|${issue.message}`));
+  for (const issue of issues) {
+    const key = `${issue.code}|${issue.path}|${issue.message}`;
+    if (existing.has(key)) continue;
+    existing.add(key);
+    parentAspect.issues.push(issue);
+  }
+  parentAspect.isValid = parentAspect.issues.every(issue =>
+    issue.severity !== 'error' && issue.severity !== 'fatal',
+  );
+}
+
+function createBundleReferenceResolver(
+  bundle: Record<string, unknown> | undefined,
+  rootResource: Record<string, unknown>,
+): ReferenceResolver | null {
+  const contained = Array.isArray((rootResource as any).contained)
+    ? (rootResource as any).contained
+    : [];
+  const bundleIndex = bundle ? getBundleReferenceIndex(bundle) : null;
+
+  if (contained.length === 0 && !bundleIndex?.hasEntries) return null;
+  const containedById = contained.length > 0
+    ? new Map(contained
+      .filter((resource: any) => typeof resource?.id === 'string')
+      .map((resource: any) => [resource.id, resource]))
+    : null;
+
+  return (reference: string) => {
+    if (!reference) return null;
+
+    if (reference.startsWith('#')) {
+      const id = reference.slice(1);
+      return containedById?.get(id) ?? null;
+    }
+
+    return bundleIndex?.fullUrl.get(reference)
+      ?? bundleIndex?.relative.get(reference)
+      ?? null;
+  };
+}
+
+function getBundleReferenceIndex(bundle: Record<string, unknown>): BundleReferenceIndex {
+  const cached = bundleReferenceIndexCache.get(bundle);
+  if (cached) return cached;
+
+  const fullUrl = new Map<string, any>();
+  const relative = new Map<string, any>();
+  const entries = Array.isArray((bundle as any).entry) ? (bundle as any).entry : [];
+
+  for (const entry of entries) {
+    const resource = entry?.resource;
+    if (!resource || typeof resource !== 'object') continue;
+
+    if (typeof entry.fullUrl === 'string' && !fullUrl.has(entry.fullUrl)) {
+      fullUrl.set(entry.fullUrl, resource);
+    }
+
+    if (typeof resource.resourceType === 'string' && typeof resource.id === 'string') {
+      const key = `${resource.resourceType}/${resource.id}`;
+      if (!relative.has(key)) relative.set(key, resource);
+    }
+  }
+
+  const index = { fullUrl, relative, hasEntries: fullUrl.size > 0 || relative.size > 0 };
+  bundleReferenceIndexCache.set(bundle, index);
+  return index;
 }

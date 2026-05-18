@@ -26,7 +26,7 @@ const KNOWN_SYSTEMS: Record<string, { name: string; commonCodes: string[] }> = {
   },
   'http://terminology.hl7.org/CodeSystem/v3-ActReason': {
     name: 'ActReason',
-    commonCodes: ['HTEST'],
+    commonCodes: ['HTEST', 'TRAIN'],
   },
   'http://terminology.hl7.org/CodeSystem/v3-ObservationValue': {
     name: 'ObservationValue',

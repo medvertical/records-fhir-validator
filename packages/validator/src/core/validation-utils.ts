@@ -140,9 +140,14 @@ export function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
 
     const details = issue.details;
     const detailRuleKey = details && typeof details === 'object' && !Array.isArray(details)
-      ? ((details as Record<string, unknown>).constraintKey ?? (details as Record<string, unknown>).sliceName)
+      ? [
+        (details as Record<string, unknown>).constraintKey ?? (details as Record<string, unknown>).sliceName,
+        (details as Record<string, unknown>).sourceProfile,
+      ].filter(value => typeof value === 'string' && value.length > 0).join(':')
       : undefined;
-    const ruleKey = issue.ruleId ?? detailRuleKey ?? '';
+    const ruleKey = [issue.ruleId, detailRuleKey]
+      .filter(value => typeof value === 'string' && value.length > 0)
+      .join(':');
     const key = `${issue.code}:${normalizeIssuePathForDedupe(issue)}:${issue.severity}:${ruleKey}`;
     if (!seen.has(key)) {
       seen.add(key);

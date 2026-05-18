@@ -15,10 +15,10 @@ export interface SliceDefinition {
   discriminator?: SlicingDiscriminator[];
   pattern?: any;
   fixed?: any;
-  type?: Array<{ code: string; profile?: string[] }>;
+  type?: Array<{ code: string; profile?: string[]; targetProfile?: string[] }>;
   childPatterns?: Map<string, any>;
   childFixed?: Map<string, any>;
-  childTypes?: Map<string, Array<{ code: string; profile?: string[] }>>;
+  childTypes?: Map<string, Array<{ code: string; profile?: string[]; targetProfile?: string[] }>>;
   nestedElements?: ElementDefinition[];
   bindingCodes?: Set<string>;
 }

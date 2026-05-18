@@ -56,7 +56,7 @@ describe('ValueSetValidator required primitive bindings', () => {
     expect(issues).toHaveLength(0);
   });
 
-  it('warns when Coding.display differs from the local CodeSystem concept display', async () => {
+  it('errors when Coding.display differs from a required binding CodeSystem concept display', async () => {
     const valueSetUrl = 'http://example.org/fhir/ValueSet/test';
     const systemUrl = 'http://example.org/fhir/CodeSystem/test';
     valueSetCache.setValueSetFile(valueSetUrl, {
@@ -92,7 +92,7 @@ describe('ValueSetValidator required primitive bindings', () => {
 
     expect(issues).toHaveLength(1);
     expect(issues[0].code).toBe('terminology-display-mismatch');
-    expect(issues[0].severity).toBe('warning');
+    expect(issues[0].severity).toBe('error');
     expect(issues[0].path).toBe('Condition.code.coding[0].display');
   });
 
@@ -131,5 +131,41 @@ describe('ValueSetValidator required primitive bindings', () => {
     );
 
     expect(issues).toHaveLength(0);
+  });
+
+  it('keeps unversioned ValueSet lookups isolated by requested FHIR version', async () => {
+    const validator = new ValueSetValidator();
+    validator.setResolutionConfig({
+      strategy: 'local-only',
+      serverUrl: undefined,
+      serverDelegation: {
+        expandValueSets: false,
+        validateCodes: false,
+        cacheResults: false,
+        cacheTTLSeconds: 0,
+      },
+    });
+
+    const binding = {
+      strength: 'extensible' as const,
+      valueSet: 'http://hl7.org/fhir/ValueSet/provenance-activity-type',
+    };
+    const coding = {
+      coding: [{
+        system: 'http://terminology.hl7.org/CodeSystem/v3-DataOperation',
+        code: 'CREATE',
+      }],
+    };
+
+    const r5Issues = await validator.validateBinding(coding, binding, 'Provenance.activity', {
+      fhirVersion: 'R5',
+    });
+    expect(r5Issues).toHaveLength(1);
+    expect(r5Issues[0].code).toBe('terminology-binding-extensible');
+
+    const r4Issues = await validator.validateBinding(coding, binding, 'Provenance.activity', {
+      fhirVersion: 'R4',
+    });
+    expect(r4Issues).toHaveLength(0);
   });
 });

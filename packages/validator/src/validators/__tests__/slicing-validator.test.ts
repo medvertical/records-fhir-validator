@@ -1275,4 +1275,238 @@ describe('SlicingValidator', () => {
       expect(minErrors.length).toBeGreaterThan(0);
     });
   });
+
+  describe('EPS bundle slice regressions', () => {
+    const COMPOSITION_EPS = 'http://hl7.eu/fhir/eps/StructureDefinition/composition-eu-eps';
+    const PATIENT_EPS = 'http://hl7.eu/fhir/eps/StructureDefinition/patient-eu-eps';
+
+    const bundleProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://hl7.eu/fhir/eps/StructureDefinition/bundle-eu-eps',
+      name: 'BundleEuEps',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Bundle',
+      snapshot: {
+        element: [
+          {
+            id: 'Bundle.entry',
+            path: 'Bundle.entry',
+            min: 0,
+            max: '*',
+            slicing: {
+              discriminator: [
+                { type: 'type', path: 'resource' },
+                { type: 'profile', path: 'resource' },
+              ],
+              rules: 'open',
+              ordered: false,
+            },
+          } as any,
+          {
+            id: 'Bundle.entry:composition',
+            path: 'Bundle.entry',
+            sliceName: 'composition',
+            min: 1,
+            max: '1',
+            type: [{ code: 'BackboneElement' }],
+          } as any,
+          {
+            id: 'Bundle.entry:composition.resource',
+            path: 'Bundle.entry.resource',
+            type: [{ code: 'Composition', profile: [COMPOSITION_EPS] }],
+          } as any,
+          {
+            id: 'Bundle.entry:patient',
+            path: 'Bundle.entry',
+            sliceName: 'patient',
+            min: 1,
+            max: '1',
+            type: [{ code: 'BackboneElement' }],
+          } as any,
+          {
+            id: 'Bundle.entry:patient.resource',
+            path: 'Bundle.entry.resource',
+            type: [{ code: 'Patient', profile: [PATIENT_EPS] }],
+          } as any,
+        ],
+      },
+    };
+
+    it('matches Bundle.entry slices by embedded resourceType and meta.profile', async () => {
+      const localValidator = new SlicingValidator();
+      const issues = await localValidator.validateSlicing(
+        [
+          {
+            fullUrl: 'urn:uuid:c1',
+            resource: {
+              resourceType: 'Composition',
+              id: 'c1',
+              meta: { profile: [COMPOSITION_EPS] },
+              status: 'final',
+            },
+          },
+          {
+            fullUrl: 'urn:uuid:p1',
+            resource: {
+              resourceType: 'Patient',
+              id: 'p1',
+              meta: { profile: [PATIENT_EPS] },
+            },
+          },
+        ],
+        'Bundle.entry',
+        bundleProfile,
+      );
+
+      expect(issues.filter(i => i.code === 'profile-slice-min-cardinality')).toHaveLength(0);
+    });
+
+    it('accepts date-only precision for dateTime type discriminator slices', async () => {
+      const conditionProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://example.org/StructureDefinition/condition-onset',
+        name: 'ConditionOnset',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Condition',
+        snapshot: {
+          element: [
+            {
+              id: 'Condition.onset[x]',
+              path: 'Condition.onset[x]',
+              min: 0,
+              max: '1',
+              slicing: {
+                discriminator: [{ type: 'type', path: '$this' }],
+                rules: 'closed',
+                ordered: false,
+              },
+            } as any,
+            {
+              id: 'Condition.onset[x]:onsetDateTime',
+              path: 'Condition.onset[x]',
+              sliceName: 'onsetDateTime',
+              min: 0,
+              max: '1',
+              type: [{ code: 'dateTime' }],
+            } as any,
+          ],
+        },
+      };
+
+      const localValidator = new SlicingValidator();
+      const issues = await localValidator.validateSlicing(
+        ['2003-12-18'],
+        'Condition.onset[x]',
+        conditionProfile,
+      );
+
+      expect(issues.find(i => i.code === 'profile-slice-closed-unmatched')).toBeUndefined();
+    });
+
+    it('matches nested Composition.section.entry slices by resolved targetProfile', async () => {
+      const MEDICAL_TEST_RESULT = 'http://hl7.eu/fhir/base/StructureDefinition/medicalTestResult-eu-core';
+      const compositionProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: COMPOSITION_EPS,
+        name: 'CompositionEuEps',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Composition',
+        snapshot: {
+          element: [
+            {
+              id: 'Composition.section:sectionResults.entry',
+              path: 'Composition.section.entry',
+              min: 0,
+              max: '*',
+              slicing: {
+                discriminator: [{ type: 'type', path: 'resolve()' }],
+                rules: 'open',
+                ordered: false,
+              },
+            } as any,
+            {
+              id: 'Composition.section:sectionResults.entry:results-medicalTestResult',
+              path: 'Composition.section.entry',
+              sliceName: 'results-medicalTestResult',
+              min: 1,
+              max: '*',
+              type: [{ code: 'Reference', targetProfile: [MEDICAL_TEST_RESULT] }],
+            } as any,
+          ],
+        },
+      };
+
+      const localValidator = new SlicingValidator();
+      const issues = await localValidator.validateSlicing(
+        [{ reference: 'urn:uuid:o1' }],
+        'Composition.section.entry',
+        compositionProfile,
+        ref => ref === 'urn:uuid:o1'
+          ? {
+              resourceType: 'Observation',
+              id: 'o1',
+              meta: { profile: [MEDICAL_TEST_RESULT] },
+            }
+          : null,
+        'Composition.section:sectionResults.entry',
+      );
+
+      expect(issues.filter(i => i.code === 'profile-slice-min-cardinality')).toHaveLength(0);
+    });
+
+    it('accepts extension-only complex values for type discriminator slices', async () => {
+      const medicationStatementProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://example.org/StructureDefinition/medication-statement-effective',
+        name: 'MedicationStatementEffective',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'MedicationStatement',
+        snapshot: {
+          element: [
+            {
+              id: 'MedicationStatement.effective[x]',
+              path: 'MedicationStatement.effective[x]',
+              min: 0,
+              max: '1',
+              slicing: {
+                discriminator: [{ type: 'type', path: '$this' }],
+                rules: 'closed',
+                ordered: false,
+              },
+            } as any,
+            {
+              id: 'MedicationStatement.effective[x]:effectivePeriod',
+              path: 'MedicationStatement.effective[x]',
+              sliceName: 'effectivePeriod',
+              min: 0,
+              max: '1',
+              type: [{ code: 'Period' }],
+            } as any,
+          ],
+        },
+      };
+
+      const localValidator = new SlicingValidator();
+      const issues = await localValidator.validateSlicing(
+        [{
+          extension: [{
+            url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+            valueCode: 'unknown',
+          }],
+        }],
+        'MedicationStatement.effective[x]',
+        medicationStatementProfile,
+      );
+
+      expect(issues.find(i => i.code === 'profile-slice-closed-unmatched')).toBeUndefined();
+    });
+  });
 });

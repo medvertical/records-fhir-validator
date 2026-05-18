@@ -25,6 +25,13 @@ import fhirpath from 'fhirpath';
 import { getFhirPathModel } from '../core/fhirpath-context';
 import { logger } from '../logger';
 
+const CHOICE_BASES = [
+    'value', 'effective', 'onset', 'abatement', 'deceased', 'multipleBirth',
+    'defaultValue', 'medication', 'reported', 'occurrence', 'timing',
+    'product', 'serviced', 'location', 'allowed', 'used',
+    'rate', 'born', 'age',
+];
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -419,7 +426,12 @@ export class SDFHIRPathExecutor {
         const compiled = expressionCache.getOrCompile(expression, fhirVersion);
         if (!compiled) return true; // Skip if can't compile
 
-        return this.evaluateCompiled(compiled, context, rootResource, userInvocationTable);
+        return this.evaluateCompiled(
+            compiled,
+            this.prepareElementContext(context, expression),
+            rootResource,
+            userInvocationTable,
+        );
     }
 
     /**
@@ -488,6 +500,44 @@ export class SDFHIRPathExecutor {
             },
             { traceFn: () => { } },
         );
+    }
+
+    /**
+     * fhirpath.js can resolve `value[x]` aliases such as `valueQuantity` when
+     * evaluating from a typed resource root. SD traversal evaluates some
+     * constraints on raw BackboneElement objects, which have no FHIR type
+     * metadata. Add shallow choice aliases so element-local constraints like
+     * `value.exists() or dataAbsentReason.exists()` keep FHIR choice semantics.
+     */
+    private prepareElementContext(context: any, expression: string): any {
+        if (Array.isArray(context)) {
+            return context.map(item => this.prepareElementContext(item, expression));
+        }
+
+        if (!context || typeof context !== 'object' || context.resourceType) {
+            return context;
+        }
+
+        const keys = Object.keys(context);
+        let normalized: any | undefined;
+
+        for (const base of CHOICE_BASES) {
+            if (!new RegExp(`\\b${base}\\b`).test(expression)) continue;
+            if (context[base] !== undefined) continue;
+
+            const concreteKey = keys.find(key =>
+                key.startsWith(base) &&
+                key.length > base.length &&
+                key[base.length] === key[base.length].toUpperCase()
+            );
+
+            if (concreteKey) {
+                normalized ??= { ...context };
+                normalized[base] = context[concreteKey];
+            }
+        }
+
+        return normalized ?? context;
     }
 
     /**

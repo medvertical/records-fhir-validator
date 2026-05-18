@@ -198,6 +198,54 @@ describe('unknown-property-walker', () => {
     expect(issues).toHaveLength(0);
   });
 
+  it('does not let sliced resource children override Resource-typed Bundle.entry.resource', async () => {
+    const bundleIndex = buildSnapshotIndex({
+      url: 'http://example.org/StructureDefinition/bundle-eu-eps',
+      snapshot: {
+        element: [
+          { id: 'Bundle', path: 'Bundle' },
+          { id: 'Bundle.entry', path: 'Bundle.entry', type: [{ code: 'BackboneElement' }] },
+          { id: 'Bundle.entry.fullUrl', path: 'Bundle.entry.fullUrl', type: [{ code: 'uri' }] },
+          { id: 'Bundle.entry.resource', path: 'Bundle.entry.resource', type: [{ code: 'Resource' }] },
+          { id: 'Bundle.entry:composition', path: 'Bundle.entry', sliceName: 'composition' },
+          {
+            id: 'Bundle.entry:composition.resource',
+            path: 'Bundle.entry.resource',
+            type: [{ code: 'Composition' }],
+          },
+          { id: 'Bundle.entry:patient', path: 'Bundle.entry', sliceName: 'patient' },
+          {
+            id: 'Bundle.entry:patient.resource',
+            path: 'Bundle.entry.resource',
+            type: [{ code: 'Patient' }],
+          },
+        ],
+      },
+    } as any);
+
+    const issues = await detectUnknownProperties(
+      {
+        resourceType: 'Bundle',
+        entry: [
+          {
+            fullUrl: 'urn:uuid:c1',
+            resource: {
+              resourceType: 'Composition',
+              id: 'c1',
+              status: 'final',
+              title: 'European Patient Summary',
+            },
+          },
+        ],
+      },
+      bundleIndex,
+      'Bundle',
+      'http://example.org/StructureDefinition/bundle-eu-eps',
+    );
+
+    expect(issues).toHaveLength(0);
+  });
+
   it('skips contained (validated separately by engine recursion)', async () => {
     const issues = await detectUnknownProperties(
       {

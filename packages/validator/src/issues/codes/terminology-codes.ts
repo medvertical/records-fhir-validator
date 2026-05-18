@@ -63,6 +63,11 @@ export const TerminologyCodes = {
         severity: 'warning',
         description: 'Coding display does not match CodeSystem concept display',
     },
+    'terminology-code-inactive': {
+        aspect: 'terminology',
+        severity: 'warning',
+        description: 'CodeSystem concept is inactive',
+    },
 } as const satisfies Record<string, ValidationCodeMetadata>;
 
 export type TerminologyCode = keyof typeof TerminologyCodes;

@@ -50,6 +50,20 @@ function matchesRequestedFhirVersion(sd: StructureDefinition, requested: 'R4' | 
   return !family || family === requested;
 }
 
+function urlFhirVersionFamily(url: string): 'R4' | 'R5' | 'R6' | null {
+  const match = url.match(/\/fhir\/([456])\.0(?:\.\d+)?\/StructureDefinition\//);
+  if (!match) return null;
+  if (match[1] === '4') return 'R4';
+  if (match[1] === '5') return 'R5';
+  if (match[1] === '6') return 'R6';
+  return null;
+}
+
+function urlMatchesRequestedFhirVersion(url: string, requested: 'R4' | 'R5' | 'R6'): boolean {
+  const family = urlFhirVersionFamily(url);
+  return !family || family === requested;
+}
+
 function cacheDownloadedProfile(url: string, sd: StructureDefinition, context: AutoDownloadContext): void {
   const requested = context.fhirVersion || 'R4';
   const family = fhirVersionFamily(sd) ?? requested;
@@ -131,6 +145,12 @@ async function executeAutoDownload(
   url: string,
   context: AutoDownloadContext
 ): Promise<StructureDefinition | null> {
+  const requestedFhirVersion = context.fhirVersion || 'R4';
+  if (!urlMatchesRequestedFhirVersion(url, requestedFhirVersion)) {
+    logger.info(`[SDLoader] Skipping auto-download for FHIR-version-incompatible profile URL: ${url} (${requestedFhirVersion})`);
+    return null;
+  }
+
   const config = context.profileSourcesConfig || DEFAULT_PROFILE_SOURCES;
   logger.info(`[SDLoader] Profile not found locally, trying remote sources for: ${url}`);
   logger.debug(`[SDLoader] Enabled sources: FHIR=${config.fhirServer}, Simplifier=${config.simplifier}, Registry=${config.packageRegistry}`);
@@ -152,7 +172,7 @@ async function executeAutoDownload(
 
             if (bundle?.entry?.[0]?.resource) {
               const sd = bundle.entry[0].resource as StructureDefinition;
-              if (!matchesRequestedFhirVersion(sd, context.fhirVersion || 'R4')) {
+              if (!matchesRequestedFhirVersion(sd, requestedFhirVersion)) {
                 logger.warn(`[SDLoader] Ignoring FHIR Server profile with mismatched fhirVersion: ${url}`);
               } else {
                 cacheDownloadedProfile(url, sd, context);
@@ -176,7 +196,7 @@ async function executeAutoDownload(
               logger.info(`[SDLoader] Trying external-fetch fallback for: ${url}`);
               const sd = await fetchExternal(url);
               if (sd) {
-                if (!matchesRequestedFhirVersion(sd, context.fhirVersion || 'R4')) {
+                if (!matchesRequestedFhirVersion(sd, requestedFhirVersion)) {
                   logger.warn(`[SDLoader] Ignoring external profile with mismatched fhirVersion: ${url}`);
                 } else {
                   cacheDownloadedProfile(url, sd as StructureDefinition, context);

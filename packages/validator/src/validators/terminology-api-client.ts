@@ -45,6 +45,22 @@ const codeSystemCircuitBreaker = new CircuitBreaker('codesystem-validation', {
 
 export type SubsumptionOutcome = 'subsumes' | 'subsumed-by' | 'equivalent' | 'not-subsumed' | 'unknown';
 
+export interface CodeSystemValidationIssue {
+    severity: 'error' | 'warning' | 'information';
+    code: string;
+    message: string;
+    expression?: string[];
+}
+
+export interface CodeSystemValidationResult {
+    valid: boolean;
+    message?: string;
+    reason?: 'code-unknown' | 'system-unresolvable' | 'display-mismatch';
+    issues?: CodeSystemValidationIssue[];
+    inactive?: boolean;
+    display?: string;
+}
+
 /**
  * In-memory TTL cache for `$validate-code` results. A single bulk run
  * (82k resources) sees ~1860 tx roundtrips with thousands of repeats on
@@ -73,6 +89,10 @@ function makeValidateCodeCacheKey(
     valueSetUrl: string,
 ): string {
     return `${serverUrl}|${system ?? ''}|${code}|${valueSetUrl}`;
+}
+
+function makeServerExpansionCacheKey(serverUrl: string, valueSetUrl: string): string {
+    return `${serverUrl}|${valueSetUrl}`;
 }
 
 function getFromValidateCodeCache(key: string): boolean | undefined {
@@ -155,6 +175,41 @@ export function clearSubsumesCache(): void {
 /** Expose current subsumes cache size — for tests + ops observability. */
 export function getSubsumesCacheSize(): number {
     return subsumesCache.size;
+}
+
+function normalizeOutcomeSeverity(severity: unknown): CodeSystemValidationIssue['severity'] {
+    if (severity === 'error' || severity === 'warning' || severity === 'information') return severity;
+    if (severity === 'fatal') return 'error';
+    if (severity === 'info') return 'information';
+    return 'warning';
+}
+
+function extractIssueCode(issue: any): string {
+    const codingCode = issue?.details?.coding?.find((coding: any) =>
+        coding?.system === 'http://hl7.org/fhir/tools/CodeSystem/tx-issue-type' &&
+        typeof coding?.code === 'string'
+    )?.code;
+    if (codingCode) return codingCode;
+    if (typeof issue?.code === 'string') return issue.code;
+    return 'terminology-issue';
+}
+
+function mapOperationOutcomeIssues(outcome: any): CodeSystemValidationIssue[] {
+    if (!outcome || outcome.resourceType !== 'OperationOutcome' || !Array.isArray(outcome.issue)) {
+        return [];
+    }
+
+    return outcome.issue.map((issue: any) => ({
+        severity: normalizeOutcomeSeverity(issue?.severity),
+        code: extractIssueCode(issue),
+        message: issue?.details?.text || issue?.diagnostics || 'Terminology server reported a code issue',
+        ...(Array.isArray(issue?.expression) ? { expression: issue.expression } : {}),
+    }));
+}
+
+function extractTerminologyIssues(parameters: any): CodeSystemValidationIssue[] {
+    const issuesResource = parameters?.parameter?.find((p: any) => p?.name === 'issues')?.resource;
+    return mapOperationOutcomeIssues(issuesResource);
 }
 
 // ============================================================================
@@ -348,7 +403,8 @@ export class TerminologyApiClient {
 
         // Check server expansion cache with TTL
         const ttlSeconds = this.config.serverDelegation?.cacheTTLSeconds ?? 3600;
-        const cached = this.cache.getServerExpansion(valueSetUrl, ttlSeconds);
+        const cacheKey = makeServerExpansionCacheKey(serverUrl, valueSetUrl);
+        const cached = this.cache.getServerExpansion(cacheKey, ttlSeconds);
         if (cached) {
             return cached;
         }
@@ -375,7 +431,7 @@ export class TerminologyApiClient {
 
                 // Cache the result
                 if (this.config.serverDelegation?.cacheResults !== false) {
-                    this.cache.setServerExpansion(valueSetUrl, codes);
+                    this.cache.setServerExpansion(cacheKey, codes);
                 }
 
                 logger.debug(`[TerminologyApiClient] Server $expand succeeded: ${valueSetUrl}, ${codes.size} codes`);
@@ -488,12 +544,14 @@ export class TerminologyApiClient {
     async validateCodeInCodeSystem(
         code: string,
         system: string,
+        display?: string,
         override?: TerminologyServerOverride,
-    ): Promise<{ valid: boolean; message?: string }> {
+    ): Promise<CodeSystemValidationResult> {
         const serverUrl = override?.url ?? this.config.serverUrl;
         if (!serverUrl) {
-            logger.debug(`[TerminologyApiClient] No terminology server configured, skipping CodeSystem validation for ${system}`);
-            return { valid: true }; // No server = can't validate = fail open
+            const message = `No terminology server configured for CodeSystem '${system}'`;
+            logger.debug(`[TerminologyApiClient] ${message}`);
+            return { valid: false, reason: 'system-unresolvable', message };
         }
 
         // Circuit breaker: fail fast if server is down
@@ -506,6 +564,7 @@ export class TerminologyApiClient {
             const params = {
                 url: system,
                 code: code,
+                ...(display ? { display } : {}),
                 _format: 'json'
             };
 
@@ -523,10 +582,20 @@ export class TerminologyApiClient {
             if (parameters.resourceType === 'Parameters' && parameters.parameter) {
                 const resultParam = parameters.parameter.find((p: any) => p.name === 'result');
                 const messageParam = parameters.parameter.find((p: any) => p.name === 'message');
+                const inactiveParam = parameters.parameter.find((p: any) => p.name === 'inactive');
+                const displayParam = parameters.parameter.find((p: any) => p.name === 'display');
+                const issues = extractTerminologyIssues(parameters);
+                const hasDisplayMismatch = issues.some(issue => issue.code === 'invalid-display');
 
                 if (resultParam?.valueBoolean === true) {
                     logger.debug(`[TerminologyApiClient] Code '${code}' is valid in ${system}`);
-                    return { valid: true };
+                    return {
+                        valid: true,
+                        message: messageParam?.valueString,
+                        issues,
+                        inactive: inactiveParam?.valueBoolean === true,
+                        display: displayParam?.valueString,
+                    };
                 } else {
                     const errorMessage = messageParam?.valueString || `Unknown code '${code}' in CodeSystem '${system}'`;
                     // National-extension SNOMED codes (UK, US, AU, …) won't be
@@ -538,7 +607,14 @@ export class TerminologyApiClient {
                         return { valid: true };
                     }
                     logger.debug(`[TerminologyApiClient] Code '${code}' is INVALID in ${system}: ${errorMessage}`);
-                    return { valid: false, message: errorMessage };
+                    return {
+                        valid: false,
+                        message: errorMessage,
+                        reason: hasDisplayMismatch ? 'display-mismatch' : 'code-unknown',
+                        issues,
+                        inactive: inactiveParam?.valueBoolean === true,
+                        display: displayParam?.valueString,
+                    };
                 }
             }
 
@@ -561,7 +637,13 @@ export class TerminologyApiClient {
                 const opOutcome = axiosResp?.data;
                 if (opOutcome?.resourceType === 'OperationOutcome' && opOutcome.issue?.[0]) {
                     const msg = opOutcome.issue[0].details?.text || opOutcome.issue[0].diagnostics || `Unknown code '${code}' in CodeSystem '${system}'`;
-                    return { valid: false, message: msg };
+                    const issues = mapOperationOutcomeIssues(opOutcome);
+                    return {
+                        valid: false,
+                        message: msg,
+                        reason: issues.some(issue => issue.code === 'invalid-display') ? 'display-mismatch' : 'code-unknown',
+                        issues,
+                    };
                 }
                 return { valid: false, message: `Unknown code '${code}' in CodeSystem '${system}'` };
             }

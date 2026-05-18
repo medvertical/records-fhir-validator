@@ -26,6 +26,18 @@ export interface ValueSetConceptFilter {
     version?: string;
 }
 
+type FhirVersion = 'R4' | 'R5' | 'R6';
+
+function preferredMajorFor(fhirVersion?: FhirVersion): string | undefined {
+    if (!fhirVersion) return undefined;
+    return fhirVersion === 'R4' ? '4' : fhirVersion === 'R5' ? '5' : '6';
+}
+
+function versionedCacheKey(canonical: string, requestedVersion?: string, fhirVersion?: FhirVersion): string {
+    if (requestedVersion) return `${canonical}|${requestedVersion}`;
+    return fhirVersion ? `${canonical}|${fhirVersion}` : canonical;
+}
+
 // ============================================================================
 // Package Loader
 // ============================================================================
@@ -222,17 +234,18 @@ export class ValueSetPackageLoader {
     /**
      * Attempt to load a ValueSet definition from local packages and return its codes
      */
-    async loadValueSet(valueSetUrl: string): Promise<string[] | null> {
-        if (this.cache.hasValueSetFile(valueSetUrl)) {
-            const cached = this.cache.getValueSetFile(valueSetUrl);
-            return cached ? await this.extractCodesFromValueSet(cached) : null;
-        }
+    async loadValueSet(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<string[] | null> {
         const parts = valueSetUrl.split('|');
         const canonical = parts[0];
         const requestedVersion = parts[1];
+        const cacheKey = versionedCacheKey(canonical, requestedVersion, fhirVersion);
+        if (this.cache.hasValueSetFile(cacheKey)) {
+            const cached = this.cache.getValueSetFile(cacheKey);
+            return cached ? await this.extractCodesFromValueSet(cached) : null;
+        }
         const lastSegment = canonical.split('/').pop();
-        if (!lastSegment) { this.cache.setValueSetFile(valueSetUrl, null); return null; }
-        const preferredMajor = requestedVersion ? requestedVersion.split('.')[0] : undefined;
+        if (!lastSegment) { this.cache.setValueSetFile(cacheKey, null); return null; }
+        const preferredMajor = requestedVersion ? requestedVersion.split('.')[0] : preferredMajorFor(fhirVersion);
         const bestMatch = await this.findInPackages<ValueSet>(
             canonical,
             [`ValueSet-${lastSegment}.json`, `${lastSegment}.json`],
@@ -245,10 +258,10 @@ export class ValueSetPackageLoader {
             requestedVersion,
         );
         if (bestMatch) {
-            this.cache.setValueSetFile(valueSetUrl, bestMatch);
+            this.cache.setValueSetFile(cacheKey, bestMatch);
             return await this.extractCodesFromValueSet(bestMatch);
         }
-        this.cache.setValueSetFile(valueSetUrl, null);
+        this.cache.setValueSetFile(cacheKey, null);
         return null;
     }
 
@@ -257,11 +270,11 @@ export class ValueSetPackageLoader {
      * distinguish a complete local expansion from a partial one where a
      * CodeSystem filter needs terminology-server evaluation.
      */
-    async getIncludeConceptFilters(valueSetUrl: string): Promise<ValueSetConceptFilter[]> {
-        const valueSet = await this.loadValueSetResource(valueSetUrl);
+    async getIncludeConceptFilters(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<ValueSetConceptFilter[]> {
+        const valueSet = await this.loadValueSetResource(valueSetUrl, fhirVersion);
         if (!valueSet) return [];
 
-        return this.collectIncludeConceptFilters(valueSet, new Set(), 0);
+        return this.collectIncludeConceptFilters(valueSet, new Set(), 0, preferredMajorFor(fhirVersion));
     }
 
     /**
@@ -505,18 +518,22 @@ export class ValueSetPackageLoader {
      * Load a ValueSet resource (not just its codes) for use in recursive
      * composition. Uses the same package search path as `loadValueSet`.
      */
-    private async loadValueSetResource(valueSetUrl: string): Promise<ValueSet | null> {
-        if (this.cache.hasValueSetFile(valueSetUrl)) {
-            return this.cache.getValueSetFile(valueSetUrl) ?? null;
+    private async loadValueSetResource(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<ValueSet | null> {
+        const [canonical, requestedVersion] = valueSetUrl.split('|');
+        const cacheKey = versionedCacheKey(canonical, requestedVersion, fhirVersion);
+        if (this.cache.hasValueSetFile(cacheKey)) {
+            return this.cache.getValueSetFile(cacheKey) ?? null;
         }
-        const canonical = valueSetUrl.split('|')[0];
         const lastSegment = canonical.split('/').pop();
         if (!lastSegment) return null;
+        const preferredMajor = requestedVersion ? requestedVersion.split('.')[0] : preferredMajorFor(fhirVersion);
         const result = await this.findInPackages<ValueSet>(
             canonical,
             [`ValueSet-${lastSegment}.json`, `${lastSegment}.json`],
+            preferredMajor,
+            requestedVersion,
         );
-        if (result) this.cache.setValueSetFile(valueSetUrl, result);
+        if (result) this.cache.setValueSetFile(cacheKey, result);
         return result;
     }
 
@@ -524,6 +541,7 @@ export class ValueSetPackageLoader {
         valueSet: ValueSet,
         visited: Set<string>,
         depth: number,
+        preferredFhirMajor?: string,
     ): Promise<ValueSetConceptFilter[]> {
         if (depth >= ValueSetPackageLoader.MAX_COMPOSITION_DEPTH) return [];
         if (valueSet.url && visited.has(valueSet.url)) return [];
@@ -544,9 +562,12 @@ export class ValueSetPackageLoader {
             }
 
             for (const nestedUrl of include.valueSet ?? []) {
-                const nested = await this.loadValueSetResource(nestedUrl);
+                const nested = await this.loadValueSetResource(
+                    nestedUrl,
+                    preferredFhirMajor === '4' ? 'R4' : preferredFhirMajor === '5' ? 'R5' : preferredFhirMajor === '6' ? 'R6' : undefined,
+                );
                 if (nested) {
-                    filters.push(...await this.collectIncludeConceptFilters(nested, visited, depth + 1));
+                    filters.push(...await this.collectIncludeConceptFilters(nested, visited, depth + 1, preferredFhirMajor));
                 }
             }
         }

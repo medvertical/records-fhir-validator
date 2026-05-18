@@ -30,6 +30,29 @@ describe('dedupeIssues', () => {
     ]);
   });
 
+  it('preserves same slice issues that originate from different imposed profiles', () => {
+    const deduped = dedupeIssues([
+      issue({
+        ruleId: 'slice-min-composition-conformance',
+        path: 'Bundle',
+        details: {
+          sliceName: 'composition',
+          sourceProfile: 'http://hl7.eu/fhir/eps/StructureDefinition/bundle-eu-eps',
+        },
+      }),
+      issue({
+        ruleId: 'slice-min-composition-conformance',
+        path: 'Bundle',
+        details: {
+          sliceName: 'composition',
+          sourceProfile: 'http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips',
+        },
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(2);
+  });
+
   it('dedupes equivalent resource-prefixed and relative paths', () => {
     const deduped = dedupeIssues([
       issue({

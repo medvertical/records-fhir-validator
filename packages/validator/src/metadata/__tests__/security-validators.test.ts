@@ -180,6 +180,20 @@ describe('SecurityValidator', () => {
       expect(issues.find(i => i.code === 'metadata-security-unknown-code')).toBeUndefined();
     });
 
+    it('should accept TRAIN security labels from v3 ActReason', () => {
+      const security = [
+        {
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActReason',
+          code: 'TRAIN',
+          display: 'training',
+        },
+      ];
+      const issues = validator.validate(security, 'Bundle');
+
+      expect(issues.find(i => i.code === 'metadata-security-unknown-system')).toBeUndefined();
+      expect(issues.find(i => i.code === 'metadata-security-unknown-code')).toBeUndefined();
+    });
+
     it('should handle valid URIs for system', () => {
       const security = [
         {

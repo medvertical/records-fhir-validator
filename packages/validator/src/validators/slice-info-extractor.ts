@@ -58,17 +58,22 @@ export async function extractSlicingInfo(
   profileSD: StructureDefinition,
   typeProfileResolver: TypeProfileResolverFn,
   valueSetLoader: ValueSetLoaderLike | null,
+  slicingElementId?: string,
 ): Promise<{ slicing: SlicingDefinition; slices: SliceDefinition[] } | null> {
   const elements = profileSD.snapshot?.element || profileSD.differential?.element || [];
 
-  const baseElement = elements.find(e => e.path === elementPath && e.slicing);
+  const baseElement = slicingElementId
+    ? elements.find(e => e.id === slicingElementId && e.path === elementPath && e.slicing)
+    : elements.find(e => e.path === elementPath && e.slicing);
   if (!baseElement || !baseElement.slicing) return null;
 
   const slicingDef: SlicingDefinition = baseElement.slicing;
   const slices: SliceDefinition[] = [];
+  const nestedSlicePrefix = baseElement.id ? `${baseElement.id}:` : null;
 
   for (const element of elements) {
     if (element.path !== elementPath || !element.sliceName) continue;
+    if (nestedSlicePrefix && !element.id?.startsWith(nestedSlicePrefix)) continue;
 
     const sliceDef: SliceDefinition = {
       sliceName: element.sliceName,

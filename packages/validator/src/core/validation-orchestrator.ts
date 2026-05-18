@@ -18,6 +18,7 @@ import {
 } from './executors';
 import { getValueAtPath } from './validation-utils';
 import { terminologyResourceValidator } from '../validators/terminology-resource-validator';
+import type { ReferenceResolver } from '../validators/slicing-validator';
 
 export interface ValidationOrchestratorContext {
   resource: any;
@@ -27,6 +28,7 @@ export interface ValidationOrchestratorContext {
   structureDef: StructureDefinition;
   strictMode: boolean;
   settings?: any;
+  referenceResolver?: ReferenceResolver | null;
 }
 
 /**
@@ -67,7 +69,8 @@ export async function runAllAspectValidations(
     fhirVersion: context.fhirVersion,
     structureDef: context.structureDef,
     strictMode: context.strictMode,
-    getValueAtPath
+    getValueAtPath,
+    referenceResolver: context.referenceResolver,
   });
   issues.push(...profileIssues);
 
@@ -75,7 +78,8 @@ export async function runAllAspectValidations(
   const terminologyIssues = await terminologyExecutor.validate({
     resource: context.resource,
     structureDef: context.structureDef,
-    getValueAtPath
+    getValueAtPath,
+    fhirVersion: context.fhirVersion
   });
   issues.push(...terminologyIssues);
 

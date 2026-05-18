@@ -348,7 +348,8 @@ export const DEFAULT_VALIDATION_SETTINGS_R4: ValidationSettings = {
   },
   performance: {
     maxConcurrent: 5,
-    batchSize: 50
+    batchSize: 50,
+    enableDeltaSearch: true
   },
   resourceTypes: {
     enabled: true,
@@ -451,7 +452,8 @@ export const DEFAULT_VALIDATION_SETTINGS_R5: ValidationSettings = {
   },
   performance: {
     maxConcurrent: 5,
-    batchSize: 50
+    batchSize: 50,
+    enableDeltaSearch: true
   },
   resourceTypes: {
     enabled: true,

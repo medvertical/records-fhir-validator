@@ -92,16 +92,16 @@ export class ValueSetCache {
     // Server Expansion Cache (TTL-based)
     // -------------------------------------------------------------------------
 
-    getServerExpansion(valueSetUrl: string, ttlSeconds: number): Set<string> | null {
-        const cached = this.serverExpansionCache.get(valueSetUrl);
+    getServerExpansion(cacheKey: string, ttlSeconds: number): Set<string> | null {
+        const cached = this.serverExpansionCache.get(cacheKey);
         if (cached && (Date.now() - cached.timestamp) < ttlSeconds * 1000) {
             return cached.codes;
         }
         return null;
     }
 
-    setServerExpansion(valueSetUrl: string, codes: Set<string>): void {
-        this.serverExpansionCache.set(valueSetUrl, {
+    setServerExpansion(cacheKey: string, codes: Set<string>): void {
+        this.serverExpansionCache.set(cacheKey, {
             codes,
             timestamp: Date.now()
         });

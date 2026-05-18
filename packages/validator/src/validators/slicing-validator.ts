@@ -125,13 +125,15 @@ export class SlicingValidator {
   async validateSlicing(
     elements: any[],
     elementPath: string,
-    profileSD: StructureDefinition
+    profileSD: StructureDefinition,
+    referenceResolverOverride?: ReferenceResolver | null,
+    slicingElementId?: string,
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
 
     try {
       // Get slicing definition for this path
-      const slicingInfo = await this.extractSlicingInfo(elementPath, profileSD);
+      const slicingInfo = await this.extractSlicingInfo(elementPath, profileSD, slicingElementId);
 
       if (!slicingInfo || slicingInfo.slices.length === 0) {
         // No slicing defined for this element
@@ -149,7 +151,8 @@ export class SlicingValidator {
         const matchedSlice = this.matchElementToSlice(
           element,
           slicingInfo.slices,
-          slicingInfo.slicing
+          slicingInfo.slicing,
+          referenceResolverOverride,
         );
 
         if (matchedSlice) {
@@ -273,11 +276,18 @@ export class SlicingValidator {
   private matchElementToSlice(
     element: any,
     slices: SliceDefinition[],
-    slicingDef: SlicingDefinition
+    slicingDef: SlicingDefinition,
+    referenceResolverOverride?: ReferenceResolver | null,
   ): SliceDefinition | null {
     // Try to match element against each slice
     for (const slice of slices) {
-      if (this.elementMatchesSlice(element, slice, slicingDef.discriminator || [], slices)) {
+      if (this.elementMatchesSlice(
+        element,
+        slice,
+        slicingDef.discriminator || [],
+        slices,
+        referenceResolverOverride,
+      )) {
         return slice;
       }
     }
@@ -292,7 +302,8 @@ export class SlicingValidator {
     element: any,
     slice: SliceDefinition,
     discriminators: SlicingDiscriminator[],
-    allSlices?: SliceDefinition[]
+    allSlices?: SliceDefinition[],
+    referenceResolverOverride?: ReferenceResolver | null,
   ): boolean {
     // If no discriminators, we can't match
     if (discriminators.length === 0) {
@@ -301,7 +312,7 @@ export class SlicingValidator {
 
     // All discriminators must match
     for (const discriminator of discriminators) {
-      if (!this.matchDiscriminator(element, slice, discriminator, allSlices)) {
+      if (!this.matchDiscriminator(element, slice, discriminator, allSlices, referenceResolverOverride)) {
         return false;
       }
     }
@@ -322,11 +333,12 @@ export class SlicingValidator {
     element: any,
     slice: SliceDefinition,
     discriminator: SlicingDiscriminator,
-    allSlices?: SliceDefinition[]
+    allSlices?: SliceDefinition[],
+    referenceResolverOverride?: ReferenceResolver | null,
   ): boolean {
     return externalMatchDiscriminator(
       element, slice, discriminator,
-      this.referenceResolver ?? null,
+      referenceResolverOverride ?? this.referenceResolver ?? null,
       matchesPattern,
       codingMatchesBindingCodes,
       allSlices,
@@ -380,12 +392,14 @@ export class SlicingValidator {
   // Delegated to slice-info-extractor.ts.
   private async extractSlicingInfo(
     elementPath: string,
-    profileSD: StructureDefinition
+    profileSD: StructureDefinition,
+    slicingElementId?: string,
   ) {
     return externalExtractSlicingInfo(
       elementPath, profileSD,
       this.typeProfileResolver,
       this.getValueSetLoader(),
+      slicingElementId,
     );
   }
   /**

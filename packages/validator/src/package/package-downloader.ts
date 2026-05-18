@@ -87,6 +87,19 @@ export class PackageDownloader {
     this.downloadLocks.add(lockKey);
 
     try {
+      if (!options.force) {
+        const installed = await this.findInstalledPackage(packageId, version);
+        if (installed) {
+          logger.info(`[PackageDownloader] ✓ Package already installed locally: ${installed.packageId}#${installed.version}`);
+          return {
+            success: true,
+            packageId: installed.packageId,
+            version: installed.version,
+            path: installed.path
+          };
+        }
+      }
+
       // Get package info
       const infoStartTime = Date.now();
       logger.info(`[PackageDownloader] 📦 Fetching package info: ${packageId}@${version || 'latest'}`);
@@ -304,6 +317,63 @@ export class PackageDownloader {
     }
   }
 
+  private async findInstalledPackage(
+    packageId: string,
+    version?: string
+  ): Promise<{ packageId: string; version: string; path: string } | null> {
+    try {
+      const entries = await fs.readdir(this.cachePath, { withFileTypes: true });
+      const candidates = entries
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .filter(name => this.matchesInstalledPackageName(name, packageId, version));
+
+      for (const candidate of candidates) {
+        const packageDir = path.join(this.cachePath, candidate);
+        if (!await this.isPackageInstalled(packageDir)) {
+          continue;
+        }
+
+        const manifest = await this.readInstalledPackageManifest(packageDir);
+        const [namePart, versionPart] = candidate.split('#');
+        return {
+          packageId: manifest?.name || namePart,
+          version: manifest?.version || versionPart || version || 'unknown',
+          path: packageDir
+        };
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private matchesInstalledPackageName(name: string, packageId: string, version?: string): boolean {
+    const [installedId, installedVersion] = name.split('#');
+    if (!installedId || !installedVersion) {
+      return false;
+    }
+
+    if (version && installedVersion !== version) {
+      return false;
+    }
+
+    return installedId === packageId || installedId.startsWith(`${packageId}.`);
+  }
+
+  private async readInstalledPackageManifest(
+    packageDir: string
+  ): Promise<{ name?: string; version?: string } | null> {
+    try {
+      const packageJsonPath = path.join(packageDir, 'package', 'package.json');
+      const content = await fs.readFile(packageJsonPath, 'utf-8');
+      return JSON.parse(content) as { name?: string; version?: string };
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Get default cache path
    */
@@ -365,4 +435,3 @@ export class PackageDownloader {
 // ============================================================================
 
 export const packageDownloader = new PackageDownloader();
-
