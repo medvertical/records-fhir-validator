@@ -132,40 +132,11 @@ export class BestPracticeValidator {
         // We removed the manual check here to avoid duplicates.
 
 
-        // Check for interpretation when value is present
-        const hasValue = Object.keys(resource).some(k => k.startsWith('value'));
-        if (hasValue && !resource.interpretation) {
-            issues.push({
-                id: `best-practice-observation-interpretation-${Date.now()}`,
-                aspect: 'structural',
-                severity: 'info',
-                code: 'best-practice-observation-interpretation',
-                message: 'Consider adding interpretation to explain the significance of the observation value',
-                path: 'Observation.interpretation',
-                tags: ['best-practice'],
-                timestamp: new Date()
-            });
-        }
-
-        // Check for method if applicable (laboratory/diagnostic observations)
-        const isLabObservation = resource.category?.some((cat: any) =>
-            cat.coding?.some((coding: any) =>
-                coding.code === 'laboratory' || coding.code === 'vital-signs'
-            )
-        );
-
-        if (isLabObservation && !resource.method) {
-            issues.push({
-                id: `best-practice-observation-method-${Date.now()}`,
-                aspect: 'structural',
-                severity: 'info',
-                code: 'best-practice-observation-method',
-                message: 'Laboratory and vital-signs observations should specify the method used',
-                path: 'Observation.method',
-                tags: ['best-practice'],
-                timestamp: new Date()
-            });
-        }
+        // HAPI does not emit generic interpretation/method best-practice
+        // advisories for ordinary Observation measurements. Keeping those
+        // as broad Records-only rules creates high-volume noise on realistic
+        // lab/vital-sign datasets, so they should come from explicit profiles
+        // or configured rule packs instead of the universal best-practice pass.
 
         return issues;
     }

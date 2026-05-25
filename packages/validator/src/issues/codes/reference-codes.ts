@@ -81,7 +81,7 @@ export const ReferenceCodes = {
     },
     'reference-bundle-fullurl-mismatch': {
         aspect: 'reference',
-        severity: 'error',
+        severity: 'warning',
         description: 'Bundle fullUrl does not match resource',
     },
     'reference-bundle-missing-type': {

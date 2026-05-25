@@ -16,8 +16,10 @@ export interface MetadataRequirement {
 /**
  * Metadata requirements per resource type
  * 
- * Defines which metadata fields should be present for specific resource types
- * based on their clinical significance and regulatory requirements.
+ * Defines metadata fields that can be generically expected from server-managed
+ * resources. Security labels are intentionally not required here: they are
+ * policy/profile-specific, and absent labels should not be reported by the
+ * universal validator unless a concrete policy says so.
  */
 export const RESOURCE_METADATA_REQUIREMENTS: Record<string, MetadataRequirement[]> = {
   // Clinical resources that should track provenance
@@ -28,7 +30,6 @@ export const RESOURCE_METADATA_REQUIREMENTS: Record<string, MetadataRequirement[
   ],
   'Observation': [
     { field: 'lastUpdated', severity: 'info', reason: 'Observation resources should track last modification time' },
-    { field: 'security', severity: 'info', reason: 'Security labels recommended for sensitive observations' },
   ],
   'Condition': [
     { field: 'lastUpdated', severity: 'info', reason: 'Condition resources should track last modification time' },
@@ -37,12 +38,10 @@ export const RESOURCE_METADATA_REQUIREMENTS: Record<string, MetadataRequirement[
   'MedicationRequest': [
     { field: 'lastUpdated', severity: 'info', reason: 'Medication orders should track last modification time' },
     { field: 'versionId', severity: 'info', reason: 'Version tracking important for medication safety' },
-    { field: 'security', severity: 'info', reason: 'Security labels recommended for prescription data' },
   ],
   'AllergyIntolerance': [
     { field: 'lastUpdated', severity: 'info', reason: 'Allergy records should track last modification time' },
     { field: 'versionId', severity: 'info', reason: 'Version tracking critical for patient safety' },
-    { field: 'security', severity: 'info', reason: 'Security labels recommended for allergy data' },
   ],
   'Immunization': [
     { field: 'lastUpdated', severity: 'info', reason: 'Immunization records should track last modification time' },
@@ -55,7 +54,6 @@ export const RESOURCE_METADATA_REQUIREMENTS: Record<string, MetadataRequirement[
   'DiagnosticReport': [
     { field: 'lastUpdated', severity: 'info', reason: 'Diagnostic reports should track last modification time' },
     { field: 'versionId', severity: 'info', reason: 'Version tracking recommended for report history' },
-    { field: 'security', severity: 'info', reason: 'Security labels recommended for diagnostic data' },
   ],
 
   // Infrastructure resources
@@ -64,16 +62,13 @@ export const RESOURCE_METADATA_REQUIREMENTS: Record<string, MetadataRequirement[
   ],
   'Provenance': [
     { field: 'lastUpdated', severity: 'info', reason: 'Provenance resources should track when they were created' },
-    { field: 'security', severity: 'info', reason: 'Security labels recommended for audit trail integrity' },
   ],
   'AuditEvent': [
     { field: 'lastUpdated', severity: 'info', reason: 'Audit events must track creation time' },
-    { field: 'security', severity: 'info', reason: 'Security labels important for audit integrity' },
   ],
   'Consent': [
     { field: 'lastUpdated', severity: 'info', reason: 'Consent records must track last modification time' },
     { field: 'versionId', severity: 'info', reason: 'Version tracking critical for legal compliance' },
-    { field: 'security', severity: 'info', reason: 'Security labels required for consent data' },
   ],
 
   // Financial resources
@@ -115,4 +110,3 @@ export const COMMON_RESOURCE_TYPES = [
   'Organization', 'Practitioner', 'Immunization', 'CarePlan',
   'Bundle', 'Composition', 'Provenance', 'Patient',
 ];
-

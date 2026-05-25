@@ -20,5 +20,6 @@ export interface SliceDefinition {
   childFixed?: Map<string, any>;
   childTypes?: Map<string, Array<{ code: string; profile?: string[]; targetProfile?: string[] }>>;
   nestedElements?: ElementDefinition[];
+  bindingValueSet?: string;
   bindingCodes?: Set<string>;
 }

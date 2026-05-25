@@ -7,7 +7,7 @@
  * - Identifiers (versionId)
  * - Meta field structure
  * 
- * Delegates to specialized validators in engine/metadata/validators
+ * Delegates to specialized validators in the package metadata module.
  */
 
 import type { ValidationIssue } from '../../types';

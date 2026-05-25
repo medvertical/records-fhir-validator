@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fhirpath from 'fhirpath';
 import { ConstraintValidator } from './constraint-validator';
+import { valueSetCache } from './valueset-cache';
 
 describe('ConstraintValidator', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    valueSetCache.clear();
   });
 
   it('skips reference constraints when element is absent', async () => {
@@ -35,6 +37,128 @@ describe('ConstraintValidator', () => {
 
     expect(issues).toEqual([]);
     expect(evaluateSpy).not.toHaveBeenCalled();
+  });
+
+  it('skips con-3 because CodeableConcept semantics are handled by the resource-specific validator', async () => {
+    const validator = new ConstraintValidator();
+
+    const issues = await validator.validate(
+      {
+        resourceType: 'Condition',
+        id: 'encounter-diagnosis',
+        category: [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+            code: 'encounter-diagnosis',
+          }],
+        }],
+      },
+      [{
+        path: 'Condition',
+        constraint: [{
+          key: 'con-3',
+          severity: 'warning' as const,
+          human: 'Condition.clinicalStatus SHALL be present if verificationStatus is not entered-in-error and category is problem-list-item',
+          expression: "clinicalStatus.exists() or verificationStatus.coding.where(system='http://terminology.hl7.org/CodeSystem/condition-ver-status' and code = 'entered-in-error').exists() or category.select($this='problem-list-item').empty()",
+        }],
+      }] as any,
+      'http://hl7.org/fhir/StructureDefinition/Condition',
+    );
+
+    expect(issues.find(issue => issue.ruleId === 'con-3')).toBeUndefined();
+  });
+
+  it('treats simple ValueSet in-exists constraints as CodeableConcept membership checks', async () => {
+    const validator = new ConstraintValidator();
+    const valueSetUrl = 'http://hl7.org/fhir/us/core/ValueSet/us-core-condition-category';
+    valueSetCache.setValueSetFile(`${valueSetUrl}|R4`, {
+      resourceType: 'ValueSet',
+      url: valueSetUrl,
+      compose: {
+        include: [{
+          system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+          concept: [
+            { code: 'problem-list-item' },
+            { code: 'encounter-diagnosis' },
+          ],
+        }],
+      },
+    } as any);
+
+    const elements = [{
+      path: 'Condition',
+      constraint: [{
+        key: 'us-core-1',
+        severity: 'warning' as const,
+        human: 'A code in Condition.category SHOULD be from US Core Condition Category Codes value set.',
+        expression: `where(category in '${valueSetUrl}').exists()`,
+      }],
+    }];
+
+    const validIssues = await validator.validate(
+      {
+        resourceType: 'Condition',
+        id: 'encounter-diagnosis',
+        category: [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+            code: 'encounter-diagnosis',
+          }],
+        }],
+      },
+      elements as any,
+      'http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition',
+    );
+
+    expect(validIssues.find(issue => issue.ruleId === 'us-core-1')).toBeUndefined();
+
+    const invalidIssues = await validator.validate(
+      {
+        resourceType: 'Condition',
+        id: 'unsupported-category',
+        category: [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+            code: 'unsupported-category',
+          }],
+        }],
+      },
+      elements as any,
+      'http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition',
+    );
+
+    expect(invalidIssues).toContainEqual(expect.objectContaining({
+      ruleId: 'us-core-1',
+      code: 'profile-constraint-warning',
+    }));
+  });
+
+  it('does not apply choice-type dateTime casts to Period values', async () => {
+    const validator = new ConstraintValidator();
+
+    const issues = await validator.validate(
+      {
+        resourceType: 'Observation',
+        id: 'period-effective',
+        effectivePeriod: {
+          start: '2022-01-25T00:00:00-05:00',
+          end: '2022-01-26T00:00:00-05:00',
+        },
+      },
+      [{
+        path: 'Observation.effective[x]',
+        type: [{ code: 'dateTime' }, { code: 'Period' }],
+        constraint: [{
+          key: 'us-core-1',
+          severity: 'error' as const,
+          human: 'Datetime must be at least to day.',
+          expression: '($this as dateTime).toString().length() >= 8',
+        }],
+      }] as any,
+      'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab',
+    );
+
+    expect(issues.find(issue => issue.ruleId === 'us-core-1')).toBeUndefined();
   });
 
   describe('PAT-1 constraint with empty backbone elements', () => {
@@ -198,6 +322,44 @@ describe('ConstraintValidator', () => {
       );
 
       expect(issues).toHaveLength(0);
+    });
+
+    it('fails root constraints whose FHIRPath result is a boolean collection containing false', async () => {
+      const validator = new ConstraintValidator();
+
+      const resource = {
+        resourceType: 'Patient',
+        id: 'mixed-names',
+        name: [
+          { given: ['Ada'] },
+          { family: 'Lovelace' },
+        ],
+      };
+
+      const elements = [
+        {
+          path: 'Patient',
+          constraint: [
+            {
+              key: 'pat-name-given',
+              severity: 'error' as const,
+              human: 'Every name must have a given value',
+              expression: 'name.select(given.exists())',
+            },
+          ],
+        },
+      ];
+
+      const issues = await validator.validate(
+        resource,
+        elements as any,
+        'http://example.org/StructureDefinition/patient-name-given',
+      );
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        ruleId: 'pat-name-given',
+        severity: 'error',
+      }));
     });
   });
 

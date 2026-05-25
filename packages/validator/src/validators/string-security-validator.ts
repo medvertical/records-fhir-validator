@@ -19,12 +19,31 @@
 import type { ValidationIssue } from '../types';
 import { createValidationIssue } from '../issues';
 
-// Rough but conservative HTML-tag detection. We match the pattern
-// `<tagname...>` where tagname is a plausible HTML tag identifier. This
-// catches `<script>`, `<b>`, `<iframe>`, `<div class="x">` etc. but does
-// not fire on lone `<` or `>` characters that appear in natural text
-// (e.g. "age < 5").
-const HTML_TAG_REGEX = /<[A-Za-z][A-Za-z0-9]*(?:\s+[^<>]*)?>/;
+const HTML_TAG_NAMES = new Set([
+    'a', 'abbr', 'acronym', 'address', 'area', 'article', 'aside', 'audio',
+    'b', 'base', 'bdi', 'bdo', 'big', 'blockquote', 'body', 'br', 'button',
+    'canvas', 'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'data',
+    'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'dir', 'div', 'dl',
+    'dt', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'font', 'footer',
+    'form', 'frame', 'frameset', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head',
+    'header', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd',
+    'label', 'legend', 'li', 'link', 'main', 'map', 'mark', 'meta', 'meter',
+    'nav', 'noframes', 'noscript', 'object', 'ol', 'optgroup', 'option',
+    'output', 'p', 'param', 'picture', 'pre', 'progress', 'q', 'rp', 'rt',
+    'ruby', 's', 'samp', 'script', 'section', 'select', 'small', 'source',
+    'span', 'strike', 'strong', 'style', 'sub', 'summary', 'sup', 'svg',
+    'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead',
+    'time', 'title', 'tr', 'track', 'tt', 'u', 'ul', 'var', 'video', 'wbr',
+]);
+
+const TAG_LIKE_REGEX = /<\/?([A-Za-z][A-Za-z0-9]*)(?=\s|\/?>)/g;
+
+function containsHtmlTag(value: string): boolean {
+    for (const match of value.matchAll(TAG_LIKE_REGEX)) {
+        if (HTML_TAG_NAMES.has(match[1].toLowerCase())) return true;
+    }
+    return false;
+}
 
 export class StringSecurityValidator {
     /**
@@ -58,7 +77,7 @@ export class StringSecurityValidator {
                 // narrative-validator handles its own XHTML whitelist.
                 if (this.isInsideNarrative(childPath)) continue;
 
-                if (HTML_TAG_REGEX.test(value)) {
+                if (containsHtmlTag(value)) {
                     issues.push(createValidationIssue({
                         code: 'string-security-html',
                         path: childPath,

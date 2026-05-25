@@ -30,6 +30,21 @@ function hasAnyChoiceValue(element: any): boolean {
     return CHOICE_BASES.some(base => hasChoiceValue(element, base));
 }
 
+function hasOldAddress(resource: any): boolean {
+    return Array.isArray(resource.address) &&
+        resource.address.some((address: any) => address?.use === 'old');
+}
+
+function hasArrayContent(value: any): boolean {
+    return Array.isArray(value) && value.length > 0;
+}
+
+function hasEncounterReasonContext(resource: any): boolean {
+    return hasArrayContent(resource.type) ||
+        hasArrayContent(resource.reasonReference) ||
+        hasArrayContent(resource.diagnosis);
+}
+
 /**
  * Validator for MustSupport elements
  * Handles validation of elements marked with mustSupport=true
@@ -49,14 +64,23 @@ export class MustSupportValidator {
      */
     validateMustSupportElement(
         path: string,
-        profileUrl: string
+        profileUrl: string,
+        resource?: any,
+        elementDef: { sliceName?: string } = {}
     ): ValidationIssue[] {
+        if (resource && this.shouldSkipMustSupportElement(resource, path, elementDef)) {
+            return [];
+        }
+
         return [createValidationIssue({
             code: 'profile-mustsupport-missing',
             path,
-            resourceType: 'Unknown',
+            resourceType: resource?.resourceType || 'Unknown',
             profile: profileUrl,
             messageParams: { element: path },
+            severityOverride: this.mustSupportSeverity === 'information'
+                ? 'info'
+                : this.mustSupportSeverity,
         })];
     }
 
@@ -84,6 +108,24 @@ export class MustSupportValidator {
             if (Array.isArray(resource.component) && resource.component.some(hasAnyChoiceValue)) return true;
         }
 
+        // Simple vital-sign Observations legitimately carry their measurement
+        // in top-level value[x] rather than component[]. Reporting the
+        // component element itself as missing adds noise and contradicts the
+        // value/component alternative.
+        if (path.match(/^Observation\.component$/i)) {
+            if (hasChoiceValue(resource, 'value')) return true;
+            if (resource.dataAbsentReason && !isValueEmpty(resource.dataAbsentReason)) return true;
+        }
+
+        // Observation.dataAbsentReason explains why Observation.value[x] is
+        // absent. If the observation already has a value, or represents a
+        // component panel with valued components, requiring dataAbsentReason is
+        // the inverse of the intended alternative.
+        if (path.match(/^Observation\.dataAbsentReason$/i)) {
+            if (hasChoiceValue(resource, 'value')) return true;
+            if (Array.isArray(resource.component) && resource.component.some(hasAnyChoiceValue)) return true;
+        }
+
         // For Observation.component.value[x], check component dataAbsentReason
         if (path.match(/^Observation\.component\.value\[x\]$/i)) {
             const components = resource.component;
@@ -102,6 +144,29 @@ export class MustSupportValidator {
             if (Array.isArray(components) && components.length > 0) {
                 if (components.every(hasAnyChoiceValue)) return true;
             }
+        }
+
+        // Encounter.hospitalization is only clinically meaningful for
+        // inpatient-style encounters. Many profiles mark the element as
+        // MustSupport so systems can exchange it when present, but ambulatory
+        // visits should not be reported as missing hospitalization data.
+        if (path.match(/^Encounter\.hospitalization$/i)) {
+            const classCode = resource.class?.code;
+            if (typeof classCode === 'string' && classCode !== 'IMP') return true;
+        }
+
+        // Encounter.reasonCode is an optional MustSupport element in US Core.
+        // Treat an already-classified encounter as contextually covered instead
+        // of reporting every routine typed visit as missing a coded reason.
+        if (path.match(/^Encounter\.reasonCode$/i) && hasEncounterReasonContext(resource)) {
+            return true;
+        }
+
+        // Patient.address.period is useful for historical addresses, but a
+        // current address without a period is not incomplete data. Treat it as
+        // contextually applicable only when an old address is present.
+        if (path.match(/^Patient\.address\.period$/i) && !hasOldAddress(resource)) {
+            return true;
         }
 
         return false;

@@ -125,4 +125,78 @@ describe('validate-code cache', () => {
 
     vi.doUnmock('axios');
   });
+
+  it('fails open for direct CodeSystem validation when no terminology server is configured', async () => {
+    vi.resetModules();
+    const get = vi.fn();
+
+    vi.doMock('axios', async () => {
+      const actual = await vi.importActual<typeof import('axios')>('axios');
+      return {
+        ...actual,
+        default: {
+          ...actual.default,
+          get,
+        },
+        isAxiosError: actual.isAxiosError,
+      };
+    });
+
+    const { TerminologyApiClient } = await import('../terminology-api-client');
+    const client = new TerminologyApiClient({
+      strategy: 'local-first',
+    });
+
+    const result = await client.validateCodeInCodeSystem(
+      '77606-2',
+      'http://loinc.org',
+      'Weight-for-length Per age and sex',
+    );
+
+    expect(result).toEqual({ valid: true });
+    expect(get).not.toHaveBeenCalled();
+
+    vi.doUnmock('axios');
+  });
+
+  it('is cleared by ValueSetValidator.clearCache for settings and tx-server changes', async () => {
+    vi.resetModules();
+    vi.doMock('axios', async () => {
+      const actual = await vi.importActual<typeof import('axios')>('axios');
+      return {
+        ...actual,
+        default: {
+          ...actual.default,
+          get: vi.fn().mockResolvedValue({
+            data: {
+              resourceType: 'Parameters',
+              parameter: [{ name: 'result', valueBoolean: true }],
+            },
+          }),
+        },
+        isAxiosError: actual.isAxiosError,
+      };
+    });
+
+    const { TerminologyApiClient, getValidateCodeCacheSize: size } =
+      await import('../terminology-api-client');
+    const { ValueSetValidator } = await import('../valueset-validator');
+    const client = new TerminologyApiClient({
+      serverUrl: 'https://tx.example.com/r4',
+      strategy: 'server-first',
+    });
+
+    await client.validateCode('A', 'http://x.sys', 'http://vs/1');
+    expect(size()).toBe(1);
+
+    const validator = new ValueSetValidator();
+    expect(validator.getCacheStats().validateCodeResultCount).toBe(1);
+
+    validator.clearCache();
+
+    expect(size()).toBe(0);
+    expect(validator.getCacheStats().validateCodeResultCount).toBe(0);
+
+    vi.doUnmock('axios');
+  });
 });

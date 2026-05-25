@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 /**
  * Cross-Resource Anomaly Detector
  * --------------------------------
@@ -29,83 +28,22 @@
  * after all per-resource validation is complete. Receives the full
  * resource array and returns `AnomalyFinding[]`.
  */
+import {
+  detectDuplicates,
+  detectMissingFields,
+  detectOrphanReferences,
+} from './anomaly-cohort-detectors';
+import {
+  DEFAULT_ANOMALY_DETECTOR_CONFIG,
+  type AnomalyDetectorConfig,
+  type AnomalyFinding,
+} from './anomaly-types';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type AnomalyType =
-  | 'missing-field'
-  | 'duplicate-resource'
-  | 'orphan-reference'
-  | 'value-distribution-outlier'
-  | 'temporal-gap'
-  | 'coding-inconsistency';
-
-export interface AnomalyFinding {
-  /** Anomaly category */
-  type: AnomalyType;
-  /** Human-readable description */
-  description: string;
-  /** How confident the detector is (0.0 = wild guess, 1.0 = certain) */
-  confidence: number;
-  /** Resource indices in the input array that are affected */
-  affectedIndices: number[];
-  /** Resource IDs (if available) for display */
-  affectedIds: string[];
-  /** Resource type this anomaly concerns */
-  resourceType: string;
-  /** The field path that triggered the anomaly (for missing-field) */
-  fieldPath?: string;
-  /** Remediation suggestion */
-  suggestion: string;
-  /** How many resources in the cohort have the expected pattern */
-  cohortCount?: number;
-  /** How many are outliers */
-  outlierCount?: number;
-}
-
-export interface AnomalyDetectorConfig {
-  /**
-   * Minimum fraction of resources that must have a field for the
-   * missing-field detector to flag outliers. Default 0.8 (80%).
-   */
-  missingFieldThreshold: number;
-
-  /**
-   * Minimum batch size before anomaly detection kicks in. Below this
-   * threshold, cohort-level statistics are meaningless.
-   */
-  minBatchSize: number;
-
-  /**
-   * Enable/disable individual detectors.
-   */
-  enableMissingField: boolean;
-  enableDuplicateDetection: boolean;
-  enableOrphanReferences: boolean;
-  enableValueRangeOutlier: boolean;
-  enableTemporalGap: boolean;
-  enableCodingConsistency: boolean;
-
-  /**
-   * Minimum gap in days between consecutive encounters/observations
-   * for the same subject to flag as a temporal gap. Default 180 (6 months).
-   */
-  temporalGapDays: number;
-}
-
-const DEFAULT_CONFIG: AnomalyDetectorConfig = {
-  missingFieldThreshold: 0.8,
-  minBatchSize: 5,
-  enableMissingField: true,
-  enableDuplicateDetection: true,
-  enableOrphanReferences: true,
-  enableValueRangeOutlier: true,
-  enableTemporalGap: true,
-  enableCodingConsistency: true,
-  temporalGapDays: 180,
-};
+export type { AnomalyDetectorConfig, AnomalyFinding, AnomalyType } from './anomaly-types';
 
 // ============================================================================
 // Anomaly Detector
@@ -115,7 +53,7 @@ export class AnomalyDetector {
   private config: AnomalyDetectorConfig;
 
   constructor(config: Partial<AnomalyDetectorConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.config = { ...DEFAULT_ANOMALY_DETECTOR_CONFIG, ...config };
   }
 
   /**
@@ -132,13 +70,13 @@ export class AnomalyDetector {
     const findings: AnomalyFinding[] = [];
 
     if (this.config.enableMissingField) {
-      findings.push(...this.detectMissingFields(resources));
+      findings.push(...detectMissingFields(resources, this.config));
     }
     if (this.config.enableDuplicateDetection) {
-      findings.push(...this.detectDuplicates(resources));
+      findings.push(...detectDuplicates(resources));
     }
     if (this.config.enableOrphanReferences) {
-      findings.push(...this.detectOrphanReferences(resources));
+      findings.push(...detectOrphanReferences(resources));
     }
     if (this.config.enableValueRangeOutlier) {
       findings.push(...this.detectValueRangeOutliers(resources));
@@ -152,216 +90,6 @@ export class AnomalyDetector {
 
     // Sort by confidence descending, then by outlier count descending
     findings.sort((a, b) => b.confidence - a.confidence || (b.outlierCount ?? 0) - (a.outlierCount ?? 0));
-
-    return findings;
-  }
-
-  // --------------------------------------------------------------------------
-  // Detector 1: Missing-field anomaly
-  // --------------------------------------------------------------------------
-
-  /**
-   * For each resource type in the batch, compute field-presence
-   * statistics. If a field is present in ≥threshold% of resources
-   * but absent in the rest, flag the absent ones as anomalies.
-   *
-   * Only checks direct top-level fields (not deeply nested) to keep
-   * it fast and the findings actionable.
-   */
-  private detectMissingFields(resources: any[]): AnomalyFinding[] {
-    const findings: AnomalyFinding[] = [];
-    const byType = this.groupByType(resources);
-
-    for (const [resourceType, group] of byType) {
-      if (group.length < this.config.minBatchSize) continue;
-
-      // Count field presence across the cohort
-      const fieldCounts = new Map<string, number>();
-      for (const { resource } of group) {
-        for (const key of Object.keys(resource)) {
-          if (key === 'resourceType' || key === 'id' || key === 'meta' || key === 'text') continue;
-          if (resource[key] === undefined || resource[key] === null) continue;
-          fieldCounts.set(key, (fieldCounts.get(key) ?? 0) + 1);
-        }
-      }
-
-      // Find fields above threshold that have outliers
-      const threshold = this.config.missingFieldThreshold;
-      for (const [field, count] of fieldCounts) {
-        const ratio = count / group.length;
-        if (ratio >= threshold && ratio < 1.0) {
-          // This field is present in most but not all
-          const missing = group.filter(g => {
-            const v = g.resource[field];
-            return v === undefined || v === null;
-          });
-          if (missing.length === 0) continue;
-
-          const pct = Math.round(ratio * 100);
-          findings.push({
-            type: 'missing-field',
-            description:
-              `${pct}% of ${resourceType} resources have '${field}', ` +
-              `but ${missing.length} are missing it. This is likely a ` +
-              `data-quality issue rather than intentional omission.`,
-            confidence: ratio, // Higher presence ratio = higher confidence it should be there
-            affectedIndices: missing.map(m => m.index),
-            affectedIds: missing.map(m => m.resource.id || `[index ${m.index}]`),
-            resourceType,
-            fieldPath: `${resourceType}.${field}`,
-            suggestion:
-              `Review the ${missing.length} ${resourceType} resources missing '${field}'. ` +
-              `If the field is expected, add it. If intentionally absent, consider ` +
-              `adding a data-absent-reason extension.`,
-            cohortCount: count,
-            outlierCount: missing.length,
-          });
-        }
-      }
-    }
-
-    return findings;
-  }
-
-  // --------------------------------------------------------------------------
-  // Detector 2: Duplicate detection
-  // --------------------------------------------------------------------------
-
-  /**
-   * For Observations: group by (subject + code + effective date).
-   * If multiple resources share the same key, flag as probable
-   * duplicates.
-   */
-  private detectDuplicates(resources: any[]): AnomalyFinding[] {
-    const findings: AnomalyFinding[] = [];
-    const byType = this.groupByType(resources);
-
-    // Observation duplicates: same subject + code + effectiveDateTime
-    const observations = byType.get('Observation');
-    if (observations && observations.length >= 2) {
-      const keyMap = new Map<string, Array<{ index: number; resource: any }>>();
-
-      for (const entry of observations) {
-        const r = entry.resource;
-        const subject = r.subject?.reference || '';
-        const code = r.code?.coding?.[0]?.code || r.code?.text || '';
-        const effective = r.effectiveDateTime || r.effectivePeriod?.start || '';
-        if (!subject || !code) continue;
-
-        const key = `${subject}|${code}|${effective}`;
-        if (!keyMap.has(key)) keyMap.set(key, []);
-        keyMap.get(key)!.push(entry);
-      }
-
-      for (const [key, group] of keyMap) {
-        if (group.length < 2) continue;
-        const [subject, code, effective] = key.split('|');
-        findings.push({
-          type: 'duplicate-resource',
-          description:
-            `${group.length} Observations for subject '${subject}' with ` +
-            `code '${code}'${effective ? ` at ${effective}` : ''} — ` +
-            `probable duplicate import.`,
-          confidence: 0.85,
-          affectedIndices: group.map(g => g.index),
-          affectedIds: group.map(g => g.resource.id || `[index ${g.index}]`),
-          resourceType: 'Observation',
-          suggestion:
-            `Review and deduplicate. If these are intentional repeat ` +
-            `measurements, consider using different effectiveDateTime values ` +
-            `or adding a method/device discriminator.`,
-          outlierCount: group.length,
-        });
-      }
-    }
-
-    // Generic duplicate: same resourceType + same id
-    for (const [resourceType, group] of byType) {
-      const idMap = new Map<string, Array<{ index: number; resource: any }>>();
-      for (const entry of group) {
-        const id = entry.resource.id;
-        if (!id) continue;
-        if (!idMap.has(id)) idMap.set(id, []);
-        idMap.get(id)!.push(entry);
-      }
-      for (const [id, dupes] of idMap) {
-        if (dupes.length < 2) continue;
-        findings.push({
-          type: 'duplicate-resource',
-          description:
-            `${dupes.length} ${resourceType} resources share id '${id}' — ` +
-            `duplicate resources in the same batch.`,
-          confidence: 0.95,
-          affectedIndices: dupes.map(d => d.index),
-          affectedIds: dupes.map(() => id),
-          resourceType,
-          suggestion: `Remove duplicate ${resourceType}/${id} entries from the batch.`,
-          outlierCount: dupes.length,
-        });
-      }
-    }
-
-    return findings;
-  }
-
-  // --------------------------------------------------------------------------
-  // Detector 3: Orphan reference detection
-  // --------------------------------------------------------------------------
-
-  /**
-   * Collect all reference targets inside the batch and check which
-   * ones point at resources not present in the batch. Only fires
-   * for relative references (Type/id) since absolute URLs may
-   * legitimately point outside the batch.
-   */
-  private detectOrphanReferences(resources: any[]): AnomalyFinding[] {
-    const findings: AnomalyFinding[] = [];
-
-    // Build a set of all resource identities in the batch
-    const present = new Set<string>();
-    for (const r of resources) {
-      if (r.resourceType && r.id) {
-        present.add(`${r.resourceType}/${r.id}`);
-      }
-    }
-    if (present.size === 0) return findings;
-
-    // Walk each resource and collect outgoing relative references
-    const orphans = new Map<string, number[]>(); // target → source indices
-
-    for (let i = 0; i < resources.length; i++) {
-      const refs = this.collectReferences(resources[i]);
-      for (const ref of refs) {
-        // Only check relative references (Type/id pattern)
-        if (/^[A-Z][A-Za-z]+\/[A-Za-z0-9\-.]+$/.test(ref)) {
-          if (!present.has(ref)) {
-            if (!orphans.has(ref)) orphans.set(ref, []);
-            orphans.get(ref)!.push(i);
-          }
-        }
-      }
-    }
-
-    for (const [target, sourceIndices] of orphans) {
-      // Only flag if multiple resources reference the same missing target
-      // (a single reference could be an external reference that's fine)
-      if (sourceIndices.length < 2) continue;
-
-      findings.push({
-        type: 'orphan-reference',
-        description:
-          `${sourceIndices.length} resources reference '${target}' ` +
-          `which is not present in this batch.`,
-        confidence: 0.7,
-        affectedIndices: sourceIndices,
-        affectedIds: sourceIndices.map(i => resources[i]?.id || `[index ${i}]`),
-        resourceType: target.split('/')[0],
-        suggestion:
-          `Include '${target}' in the batch, or verify that the ` +
-          `reference is intentionally external.`,
-        outlierCount: sourceIndices.length,
-      });
-    }
 
     return findings;
   }
@@ -386,10 +114,12 @@ export class AnomalyDetector {
     min: number;
     max: number;
     unit: string;
+    unitAliases?: string[];
   }> = [
-    { loincCode: '8480-6',  display: 'Systolic BP',      min: 30,   max: 350,  unit: 'mm[Hg]' },
-    { loincCode: '8462-4',  display: 'Diastolic BP',     min: 10,   max: 250,  unit: 'mm[Hg]' },
-    { loincCode: '8310-5',  display: 'Body temperature',  min: 25,   max: 45,   unit: 'Cel' },
+    { loincCode: '8480-6',  display: 'Systolic BP',      min: 30,   max: 350,  unit: 'mm[Hg]', unitAliases: ['mmHg'] },
+    { loincCode: '8462-4',  display: 'Diastolic BP',     min: 10,   max: 250,  unit: 'mm[Hg]', unitAliases: ['mmHg'] },
+    { loincCode: '8310-5',  display: 'Body temperature',  min: 25,   max: 45,   unit: 'Cel', unitAliases: ['degC', 'C'] },
+    { loincCode: '8310-5',  display: 'Body temperature',  min: 77,   max: 113,  unit: '[degF]', unitAliases: ['degF', '°F', 'F'] },
     { loincCode: '29463-7', display: 'Body weight',       min: 0.1,  max: 700,  unit: 'kg' },
     { loincCode: '8302-2',  display: 'Body height',       min: 10,   max: 300,  unit: 'cm' },
     { loincCode: '8867-4',  display: 'Heart rate',        min: 10,   max: 400,  unit: '/min' },
@@ -404,13 +134,16 @@ export class AnomalyDetector {
     { loincCode: '2160-0',  display: 'Creatinine',        min: 0.01, max: 50,   unit: 'mg/dL' },
   ];
 
-  private static plausibilityMap: Map<string, (typeof AnomalyDetector.PLAUSIBILITY_RANGES)[0]> | null = null;
+  private static plausibilityMap: Map<string, Array<(typeof AnomalyDetector.PLAUSIBILITY_RANGES)[0]>> | null = null;
 
   private getPlausibilityMap() {
     if (!AnomalyDetector.plausibilityMap) {
-      AnomalyDetector.plausibilityMap = new Map(
-        AnomalyDetector.PLAUSIBILITY_RANGES.map(r => [r.loincCode, r]),
-      );
+      AnomalyDetector.plausibilityMap = new Map();
+      for (const range of AnomalyDetector.PLAUSIBILITY_RANGES) {
+        const ranges = AnomalyDetector.plausibilityMap.get(range.loincCode);
+        if (ranges) ranges.push(range);
+        else AnomalyDetector.plausibilityMap.set(range.loincCode, [range]);
+      }
     }
     return AnomalyDetector.plausibilityMap;
   }
@@ -448,7 +181,7 @@ export class AnomalyDetector {
     quantity: any,
     path: string,
     resourceIndex: number,
-    rangeMap: Map<string, (typeof AnomalyDetector.PLAUSIBILITY_RANGES)[0]>,
+    rangeMap: Map<string, Array<(typeof AnomalyDetector.PLAUSIBILITY_RANGES)[0]>>,
     findings: AnomalyFinding[],
   ): void {
     if (!quantity || typeof quantity.value !== 'number') return;
@@ -472,7 +205,7 @@ export class AnomalyDetector {
 
     for (const coding of codings) {
       if (coding.system !== 'http://loinc.org') continue;
-      const range = rangeMap.get(coding.code);
+      const range = this.selectPlausibilityRange(coding.code, quantity, rangeMap);
       if (!range) continue;
 
       const val = quantity.value;
@@ -500,6 +233,34 @@ export class AnomalyDetector {
     }
   }
 
+  private selectPlausibilityRange(
+    loincCode: string | undefined,
+    quantity: any,
+    rangeMap: Map<string, Array<(typeof AnomalyDetector.PLAUSIBILITY_RANGES)[0]>>,
+  ): (typeof AnomalyDetector.PLAUSIBILITY_RANGES)[0] | undefined {
+    if (!loincCode) return undefined;
+    const ranges = rangeMap.get(loincCode);
+    if (!ranges?.length) return undefined;
+
+    const unit = this.normalizeUnit(quantity?.code ?? quantity?.unit);
+    if (!unit) return undefined;
+
+    return ranges.find(range => this.rangeUnitMatches(range, unit));
+  }
+
+  private rangeUnitMatches(
+    range: (typeof AnomalyDetector.PLAUSIBILITY_RANGES)[0],
+    normalizedUnit: string,
+  ): boolean {
+    return [range.unit, ...(range.unitAliases ?? [])]
+      .map(unit => this.normalizeUnit(unit))
+      .some(unit => unit === normalizedUnit);
+  }
+
+  private normalizeUnit(unit: string | undefined): string | undefined {
+    return unit?.trim().toLowerCase();
+  }
+
   // --------------------------------------------------------------------------
   // Detector 5: Temporal gap detection
   // --------------------------------------------------------------------------
@@ -515,8 +276,8 @@ export class AnomalyDetector {
     const findings: AnomalyFinding[] = [];
     const gapMs = this.config.temporalGapDays * 24 * 60 * 60 * 1000;
 
-    // Collect events per subject
-    const subjectTimelines = new Map<string, Array<{ date: Date; index: number; rt: string; id: string }>>();
+    // Collect comparable events per subject, resource type, and clinical code.
+    const subjectTimelines = new Map<string, Array<{ date: Date; index: number; rt: string; id: string; subject: string }>>();
 
     for (let i = 0; i < resources.length; i++) {
       const r = resources[i];
@@ -545,12 +306,16 @@ export class AnomalyDetector {
       const date = new Date(dateStr);
       if (Number.isNaN(date.getTime())) continue;
 
-      if (!subjectTimelines.has(subject)) subjectTimelines.set(subject, []);
-      subjectTimelines.get(subject)!.push({ date, index: i, rt: r.resourceType, id: r.id || `[${i}]` });
+      const code = this.getPrimaryCode(r);
+      if (!code) continue;
+
+      const timelineKey = `${subject}|${r.resourceType}|${code}`;
+      if (!subjectTimelines.has(timelineKey)) subjectTimelines.set(timelineKey, []);
+      subjectTimelines.get(timelineKey)!.push({ date, index: i, rt: r.resourceType, id: r.id || `[${i}]`, subject });
     }
 
     // Find gaps per subject
-    for (const [subject, events] of subjectTimelines) {
+    for (const events of subjectTimelines.values()) {
       if (events.length < 2) continue;
       events.sort((a, b) => a.date.getTime() - b.date.getTime());
 
@@ -565,14 +330,14 @@ export class AnomalyDetector {
           findings.push({
             type: 'temporal-gap',
             description:
-              `${diffMonths}-month gap (${diffDays} days) in care timeline for ${subject}: ` +
+              `${diffMonths}-month gap (${diffDays} days) in care timeline for ${curr.subject}: ` +
               `last event ${prev.rt}/${prev.id} on ${prev.date.toISOString().slice(0, 10)}, ` +
               `next event ${curr.rt}/${curr.id} on ${curr.date.toISOString().slice(0, 10)}.`,
             confidence: Math.min(0.5 + (diffDays / 365) * 0.3, 0.9),
             affectedIndices: [prev.index, curr.index],
             affectedIds: [prev.id, curr.id],
             resourceType: 'Patient',
-            fieldPath: subject,
+            fieldPath: curr.subject,
             suggestion:
               `Check whether events between ${prev.date.toISOString().slice(0, 10)} and ` +
               `${curr.date.toISOString().slice(0, 10)} were missed during import. ` +
@@ -584,6 +349,12 @@ export class AnomalyDetector {
     }
 
     return findings;
+  }
+
+  private getPrimaryCode(resource: any): string | undefined {
+    const coding = resource.code?.coding?.[0];
+    if (coding?.code) return `${coding.system ?? ''}|${coding.code}`;
+    return resource.code?.text;
   }
 
   // --------------------------------------------------------------------------
@@ -652,34 +423,4 @@ export class AnomalyDetector {
     return findings;
   }
 
-  // --------------------------------------------------------------------------
-  // Helpers
-  // --------------------------------------------------------------------------
-
-  private groupByType(resources: any[]): Map<string, Array<{ index: number; resource: any }>> {
-    const map = new Map<string, Array<{ index: number; resource: any }>>();
-    for (let i = 0; i < resources.length; i++) {
-      const rt = resources[i]?.resourceType;
-      if (!rt) continue;
-      if (!map.has(rt)) map.set(rt, []);
-      map.get(rt)!.push({ index: i, resource: resources[i] });
-    }
-    return map;
-  }
-
-  private collectReferences(obj: any, refs: string[] = []): string[] {
-    if (!obj || typeof obj !== 'object') return refs;
-    if (Array.isArray(obj)) {
-      for (const item of obj) this.collectReferences(item, refs);
-      return refs;
-    }
-    if (typeof obj.reference === 'string') {
-      refs.push(obj.reference);
-    }
-    for (const key of Object.keys(obj)) {
-      if (key === 'resourceType' || key === 'id') continue;
-      this.collectReferences(obj[key], refs);
-    }
-    return refs;
-  }
 }

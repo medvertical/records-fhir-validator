@@ -14,9 +14,6 @@ import type { ValidationIssue } from '../types';
 import { createValidationIssue } from '../issues';
 import {
   getValueAtPath,
-  valuesMatch,
-  extractFixedValue,
-  extractPatternValue,
   codingMatchesBindingCodes,
   matchesPattern,
 } from './slice-utils';
@@ -27,6 +24,12 @@ import type { StructureDefinition, SlicingDefinition, SlicingDiscriminator } fro
 import { ValueSetPackageLoader } from './valueset-package-loader';
 import { ValueSetCache } from './valueset-cache';
 import { logger } from '../logger';
+import {
+  emitMatchedSliceChildIssues,
+  resourceTypeFromPath,
+  validateSliceContentConstraints,
+} from './slicing-content-rules';
+import { validateSliceOrdering } from './slicing-ordering';
 
 // ============================================================================
 // Types
@@ -169,13 +172,17 @@ export class SlicingValidator {
       for (const slice of slicingInfo.slices) {
         const matchedElements = sliceMatches.get(slice.sliceName) || [];
         const count = matchedElements.length;
+        const resourceType = resourceTypeFromPath(elementPath);
 
         // Check min cardinality
-        if (count < slice.min) {
+        if (
+          count < slice.min &&
+          !this.shouldSuppressUnresolvedBindingOnlyMin(slice, elements)
+        ) {
           issues.push(createValidationIssue({
             code: 'profile-slice-min-cardinality',
             path: elementPath,
-            resourceType: 'Unknown',
+            resourceType,
             messageParams: { slice: slice.sliceName, min: slice.min, actual: count },
             ruleId: `slice-min-${slice.sliceName}`,
             details: { sliceName: slice.sliceName },
@@ -194,7 +201,7 @@ export class SlicingValidator {
             issues.push(createValidationIssue({
               code: 'profile-slice-max-cardinality',
               path: elementPath,
-              resourceType: 'Unknown',
+              resourceType,
               messageParams: { slice: slice.sliceName, max: slice.max, actual: count },
               ruleId: `slice-max-${slice.sliceName}`,
               details: { sliceName: slice.sliceName },
@@ -204,7 +211,7 @@ export class SlicingValidator {
 
         // Validate slice content constraints (fixed/pattern values in nested elements)
         for (let i = 0; i < matchedElements.length; i++) {
-          const contentIssues = this.validateSliceContentConstraints(
+          const contentIssues = validateSliceContentConstraints(
             matchedElements[i],
             slice,
             `${elementPath}[${i}]`,
@@ -215,7 +222,7 @@ export class SlicingValidator {
           // Report missing required / mustSupport direct children of the
           // matched slice element so the tree viewer can render ghosts for
           // them (e.g. name:name exists but lacks required family/given).
-          const childIssues = this.emitMatchedSliceChildIssues(
+          const childIssues = emitMatchedSliceChildIssues(
             matchedElements[i],
             slice,
             `${elementPath}[${i}]`,
@@ -230,7 +237,7 @@ export class SlicingValidator {
         issues.push(createValidationIssue({
           code: 'profile-slice-closed-unmatched',
           path: elementPath,
-          resourceType: 'Unknown',
+          resourceType: resourceTypeFromPath(elementPath),
           messageParams: { path: elementPath, count: unmatchedElements.length },
         }));
       }
@@ -247,11 +254,15 @@ export class SlicingValidator {
 
       // Check ordering if required
       if (slicingInfo.slicing.ordered && sliceMatches.size > 1) {
-        const orderIssues = this.validateSliceOrdering(
+        const orderIssues = validateSliceOrdering(
           elements,
           slicingInfo.slices,
-          sliceMatches,
-          elementPath
+          element => this.matchElementToSlice(
+            element,
+            slicingInfo.slices,
+            { discriminator: slicingInfo.slices[0].discriminator },
+          ),
+          elementPath,
         );
         issues.push(...orderIssues);
       }
@@ -262,7 +273,7 @@ export class SlicingValidator {
       issues.push(createValidationIssue({
         code: 'profile-slice-validation-error',
         path: elementPath,
-        resourceType: 'Unknown',
+        resourceType: resourceTypeFromPath(elementPath),
         customMessage: `Slicing validation failed: ${err.message}`,
       }));
     }
@@ -293,6 +304,21 @@ export class SlicingValidator {
     }
 
     return null;
+  }
+
+  private shouldSuppressUnresolvedBindingOnlyMin(slice: SliceDefinition, elements: any[]): boolean {
+    if (elements.length === 0) return false;
+    if (!slice.bindingValueSet || slice.bindingCodes?.size) return false;
+    if (slice.pattern !== undefined || slice.fixed !== undefined) return false;
+    if ((slice.childPatterns?.size ?? 0) > 0 || (slice.childFixed?.size ?? 0) > 0) return false;
+
+    const discriminators = slice.discriminator ?? [];
+    if (discriminators.length === 0) return false;
+
+    return discriminators.every(discriminator =>
+      (discriminator.type === 'pattern' || discriminator.type === 'value') &&
+      (!discriminator.path || discriminator.path === '$this'),
+    );
   }
 
   /**
@@ -344,45 +370,6 @@ export class SlicingValidator {
       allSlices,
     );
   }
-  private validateSliceOrdering(
-    elements: any[],
-    slices: SliceDefinition[],
-    sliceMatches: Map<string, any[]>,
-    elementPath: string
-  ): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-
-    // Build expected order from slice definitions
-    const sliceOrder = slices.map(s => s.sliceName);
-
-    // Track which slice each element belongs to
-    const elementSliceOrder: string[] = [];
-    for (const element of elements) {
-      const matchedSlice = this.matchElementToSlice(element, slices, { discriminator: slices[0].discriminator });
-      if (matchedSlice) {
-        elementSliceOrder.push(matchedSlice.sliceName);
-      }
-    }
-
-    // Check if elements are in correct order
-    let lastSliceIndex = -1;
-    for (const sliceName of elementSliceOrder) {
-      const currentSliceIndex = sliceOrder.indexOf(sliceName);
-      if (currentSliceIndex < lastSliceIndex) {
-        issues.push(createValidationIssue({
-          code: 'profile-slice-ordering-violation',
-          path: elementPath,
-          resourceType: 'Unknown',
-          messageParams: { path: elementPath, sliceName },
-        }));
-        break;
-      }
-      lastSliceIndex = currentSliceIndex;
-    }
-
-    return issues;
-  }
-
   /**
    * Resolve type profiles on a slice element and merge their pattern/fixed
    * values into the child maps. When a slice's type carries a profile
@@ -402,223 +389,6 @@ export class SlicingValidator {
       slicingElementId,
     );
   }
-  /**
-   * Validate content constraints within a matched slice element
-   * 
-   * Checks fixed/pattern values defined in nested element definitions
-   * for a specific slice (e.g., identifier.assigner.identifier.system).
-   */
-  private validateSliceContentConstraints(
-    element: any,
-    slice: SliceDefinition,
-    elementPath: string,
-    profileSD: StructureDefinition
-  ): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-    const elements = profileSD.snapshot?.element || profileSD.differential?.element || [];
-
-    // Nested slice elements in real FHIR snapshots carry the slice marker in
-    // `id` (e.g. `Patient.identifier:gkv.assigner.identifier.system`) while
-    // `path` stays on the base. Match either; tests sometimes embed the
-    // slice marker in `path` directly.
-    const slicePrefix = `${slice.path}:${slice.sliceName}`;
-
-    for (const elementDef of elements) {
-      const id = elementDef.id;
-      const path = elementDef.path;
-
-      let relativePath: string | null = null;
-      if (id && id.startsWith(slicePrefix + '.')) {
-        relativePath = id.substring(slicePrefix.length + 1);
-      } else if (path.startsWith(slicePrefix + '.')) {
-        relativePath = path.substring(slicePrefix.length + 1);
-      }
-      if (relativePath === null) continue;
-
-      // Skip further-nested slices within this slice — those are handled
-      // by their own slicing definitions.
-      if (relativePath.includes(':')) continue;
-
-      // Check for fixed values
-      const fixedValue = extractFixedValue(elementDef);
-      if (fixedValue !== undefined) {
-        const actualValue = getValueAtPath(element, relativePath);
-
-        if (actualValue === undefined || actualValue === null) {
-          // Fixed value is required but element doesn't have it
-          issues.push(createValidationIssue({
-            code: 'profile-slice-fixed-value-missing',
-            path: `${elementPath}.${relativePath}`,
-            resourceType: 'Unknown',
-            customMessage: `Slice '${slice.sliceName}' requires fixed value '${JSON.stringify(fixedValue)}' at ${relativePath}`,
-            details: {
-              sliceName: slice.sliceName,
-              relativePath,
-              expectedValue: fixedValue,
-              actualValue: null,
-            },
-          }));
-        } else if (!valuesMatch(actualValue, fixedValue)) {
-          // Fixed value mismatch
-          issues.push(createValidationIssue({
-            code: 'profile-slice-fixed-value-mismatch',
-            path: `${elementPath}.${relativePath}`,
-            resourceType: 'Unknown',
-            customMessage: `Slice '${slice.sliceName}' requires '${relativePath}' to be '${fixedValue}', found: '${actualValue}'`,
-            details: {
-              sliceName: slice.sliceName,
-              relativePath,
-              expectedValue: fixedValue,
-              actualValue,
-            },
-          }));
-        }
-      }
-
-      // Check for pattern values
-      const patternValue = extractPatternValue(elementDef);
-      if (patternValue !== undefined) {
-        const actualValue = getValueAtPath(element, relativePath);
-
-        if (actualValue !== undefined && actualValue !== null) {
-          // For patterns, the actual value must contain all pattern properties
-          if (!matchesPattern(actualValue, patternValue)) {
-            issues.push(createValidationIssue({
-              code: 'profile-slice-pattern-mismatch',
-              path: `${elementPath}.${relativePath}`,
-              resourceType: 'Unknown',
-              customMessage: `Slice '${slice.sliceName}' pattern mismatch at ${relativePath}`,
-              details: {
-                sliceName: slice.sliceName,
-                relativePath,
-                expectedPattern: patternValue,
-                actualValue,
-              },
-            }));
-          }
-        }
-      }
-    }
-
-    return issues;
-  }
-
-  /**
-   * Emit required-element / mustSupport issues for the direct children of a
-   * missing slice. Profile snapshots distinguish slice children via the
-   * element `id` (e.g. `Patient.identifier:VersichertenId-GKV.type`) while
-   * the `path` stays on the base (`Patient.identifier.type`) — so we match
-   * on `id` prefix, not path.
-   */
-  private emitMissingSliceChildren(
-    slice: SliceDefinition,
-    elementPath: string,
-    profileSD: StructureDefinition
-  ): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-    const snapshot = profileSD.snapshot?.element;
-    if (!snapshot?.length) return issues;
-
-    const idPrefix = `${slice.path}:${slice.sliceName}.`;
-
-    for (const elementDef of snapshot) {
-      const id = elementDef.id;
-      if (!id || !id.startsWith(idPrefix)) continue;
-
-      // Direct children only — skip deeper grandchildren and nested slices
-      const relative = id.substring(idPrefix.length);
-      if (relative.includes('.') || relative.includes(':')) continue;
-
-      const isRequired = (elementDef.min ?? 0) >= 1;
-      const isMustSupport = elementDef.mustSupport === true;
-      if (!isRequired && !isMustSupport) continue;
-
-      const childPath = `${elementPath}:${slice.sliceName}.${relative}`;
-
-      if (isRequired) {
-        issues.push(createValidationIssue({
-          code: 'required-element-missing',
-          path: childPath,
-          resourceType: 'Unknown',
-          messageParams: { element: childPath },
-          details: { sliceName: slice.sliceName, parentMissing: true },
-        }));
-      } else if (isMustSupport) {
-        issues.push(createValidationIssue({
-          code: 'profile-mustsupport-missing',
-          path: childPath,
-          resourceType: 'Unknown',
-          messageParams: { element: childPath },
-          details: { sliceName: slice.sliceName, parentMissing: true },
-        }));
-      }
-    }
-
-    return issues;
-  }
-
-  /**
-   * For each matched slice element, report direct children that are
-   * required (min>=1) or mustSupport but missing. This is the slice
-   * analogue of the structural executor's required/mustSupport pass —
-   * the executor skips slice-scoped elements (id contains ':') so we
-   * must own them here. Deep children are handled recursively through
-   * nested slice elements with their own `emitMatchedSliceChildIssues`
-   * calls further down the tree.
-   */
-  private emitMatchedSliceChildIssues(
-    element: any,
-    slice: SliceDefinition,
-    elementPath: string,
-    profileSD: StructureDefinition
-  ): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-    const snapshot = profileSD.snapshot?.element;
-    if (!snapshot?.length) return issues;
-
-    const idPrefix = `${slice.path}:${slice.sliceName}.`;
-
-    for (const elementDef of snapshot) {
-      const id = elementDef.id;
-      if (!id || !id.startsWith(idPrefix)) continue;
-
-      // Direct children only — skip grandchildren and nested slice markers
-      const relative = id.substring(idPrefix.length);
-      if (relative.includes('.') || relative.includes(':')) continue;
-
-      const isRequired = (elementDef.min ?? 0) >= 1;
-      const isMustSupport = elementDef.mustSupport === true;
-      if (!isRequired && !isMustSupport) continue;
-
-      const actualValue = getValueAtPath(element, relative);
-      const isPresent = actualValue !== undefined && actualValue !== null &&
-        (!Array.isArray(actualValue) || actualValue.length > 0);
-      if (isPresent) continue;
-
-      const childPath = `${elementPath}:${slice.sliceName}.${relative}`;
-
-      if (isRequired) {
-        issues.push(createValidationIssue({
-          code: 'required-element-missing',
-          path: childPath,
-          resourceType: 'Unknown',
-          messageParams: { element: childPath },
-          details: { sliceName: slice.sliceName },
-        }));
-      } else if (isMustSupport) {
-        issues.push(createValidationIssue({
-          code: 'profile-mustsupport-missing',
-          path: childPath,
-          resourceType: 'Unknown',
-          messageParams: { element: childPath },
-          details: { sliceName: slice.sliceName },
-        }));
-      }
-    }
-
-    return issues;
-  }
-
   /**
    * Open value slicing can otherwise hide an intended slice when the
    * discriminator itself is absent. For a single fixed-discriminator slice,
@@ -663,7 +433,7 @@ export class SlicingValidator {
       issues.push(createValidationIssue({
         code: 'profile-constraint-violation',
         path: `${elementPath}[${index}]`,
-        resourceType: 'Unknown',
+        resourceType: resourceTypeFromPath(elementPath),
         customMessage: `Slice '${slice.sliceName}' requires discriminator '${discriminator.path}' to be present`,
         severityOverride: 'info',
         ruleId: `slice-${slice.sliceName}-${discriminator.path}`,

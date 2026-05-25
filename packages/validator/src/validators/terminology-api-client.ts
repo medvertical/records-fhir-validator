@@ -12,29 +12,39 @@ import type { TerminologyResolutionConfig, TerminologyServerOverride, Terminolog
 import { ValueSetCache, valueSetCache } from './valueset-cache';
 import { logger } from '../logger';
 import { CircuitBreaker } from '../terminology';
+import type { CodeSystemValidationResult, SubsumptionOutcome } from './terminology-api-types';
+import {
+    getFromSubsumesCache,
+    getFromValidateCodeCache,
+    makeSubsumesCacheKey,
+    makeValidateCodeCacheKey,
+    storeInSubsumesCache,
+    storeInValidateCodeCache,
+} from './terminology-api-cache';
+import {
+    isSnomedNationalExtensionSystemCode,
+    operationOutcomeToCodeSystemResult,
+    parseCodeSystemValidationParameters,
+} from './terminology-code-system-result';
+import {
+    extractSubsumptionOutcome,
+    operationOutcomeCannotResolveBinding,
+    validateCodeSucceeded,
+} from './terminology-parameters';
 
-const SNOMED_SYSTEM = 'http://snomed.info/sct';
-
-/**
- * Detect whether a SNOMED CT SCTID belongs to a national extension rather
- * than the International Edition.  National-extension SCTIDs use the
- * "long format": 7-digit namespace + itemId + 2-digit partition + check.
- * Known namespace prefixes: 1000xxx (UK, US, AU, …), 1002xxx (clinical
- * extensions).  International-core SCTIDs use the "short format" and are
- * typically ≤ 9 digits.
- */
-export function isSnomedNationalExtensionCode(code: string): boolean {
-    // Must be all-digit and long enough for namespace format (≥ 10 chars)
-    if (!/^\d{10,}$/.test(code)) return false;
-    // National extension namespaces are 7-digit numbers 1000000–9999999.
-    // They appear at a predictable position: sctid = namespace(7) + itemId(N) + partition(2) + check(1).
-    // The partition+check are the last 3 chars, the namespace is the leading 7.
-    // However, some very large international IDs exist too (> 9 digits) in short format.
-    // Pragmatic check: if the SCTID contains a registered-namespace-style
-    // seven-digit segment (for example UK 1000000, US 1000124, clinical
-    // extension 1000237) we treat it as national.
-    return /1000\d{3}|1002\d{3}/.test(code);
-}
+export type {
+    CodeSystemValidationIssue,
+    CodeSystemValidationResult,
+    SubsumptionOutcome,
+} from './terminology-api-types';
+export {
+    clearSubsumesCache,
+    clearValidateCodeCache,
+    getCachedSubsumesOutcome,
+    getSubsumesCacheSize,
+    getValidateCodeCacheSize,
+} from './terminology-api-cache';
+export { isSnomedNationalExtensionCode } from './terminology-code-system-result';
 
 // Shared circuit breaker for CodeSystem validation (fail fast when tx.fhir.org is down)
 const codeSystemCircuitBreaker = new CircuitBreaker('codesystem-validation', {
@@ -42,175 +52,6 @@ const codeSystemCircuitBreaker = new CircuitBreaker('codesystem-validation', {
     resetTimeout: 30000,    // Try again after 30 seconds
     successThreshold: 1,    // Close after 1 success
 });
-
-export type SubsumptionOutcome = 'subsumes' | 'subsumed-by' | 'equivalent' | 'not-subsumed' | 'unknown';
-
-export interface CodeSystemValidationIssue {
-    severity: 'error' | 'warning' | 'information';
-    code: string;
-    message: string;
-    expression?: string[];
-}
-
-export interface CodeSystemValidationResult {
-    valid: boolean;
-    message?: string;
-    reason?: 'code-unknown' | 'system-unresolvable' | 'display-mismatch';
-    issues?: CodeSystemValidationIssue[];
-    inactive?: boolean;
-    display?: string;
-}
-
-/**
- * In-memory TTL cache for `$validate-code` results. A single bulk run
- * (82k resources) sees ~1860 tx roundtrips with thousands of repeats on
- * the same `(system, code, valueSetUrl)` tuple — caching true/false
- * results cuts HTTP volume to < 5% and latency per resource from
- * seconds to milliseconds. Cache is process-wide (module singleton) so
- * it survives across batches within one validator lifetime.
- *
- * Entry format: `${serverUrl}|${system ?? ''}|${code}|${valueSetUrl}`
- * Value: boolean result, timestamped; expires after `CACHE_TTL_MS`.
- *
- * Source: strategic roadmap P-4 — "$validate-code Result-Cache".
- */
-interface ValidateCodeCacheEntry {
-    result: boolean;
-    cachedAt: number;
-}
-const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
-const MAX_CACHE_SIZE = 5000;
-const validateCodeCache = new Map<string, ValidateCodeCacheEntry>();
-
-function makeValidateCodeCacheKey(
-    serverUrl: string,
-    system: string | undefined,
-    code: string,
-    valueSetUrl: string,
-): string {
-    return `${serverUrl}|${system ?? ''}|${code}|${valueSetUrl}`;
-}
-
-function makeServerExpansionCacheKey(serverUrl: string, valueSetUrl: string): string {
-    return `${serverUrl}|${valueSetUrl}`;
-}
-
-function getFromValidateCodeCache(key: string): boolean | undefined {
-    const entry = validateCodeCache.get(key);
-    if (!entry) return undefined;
-    if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
-        validateCodeCache.delete(key);
-        return undefined;
-    }
-    // LRU refresh — re-insert to move to tail.
-    validateCodeCache.delete(key);
-    validateCodeCache.set(key, entry);
-    return entry.result;
-}
-
-function storeInValidateCodeCache(key: string, result: boolean): void {
-    if (validateCodeCache.size >= MAX_CACHE_SIZE) {
-        // Evict oldest (Map preserves insertion order, first key is oldest).
-        const oldest = validateCodeCache.keys().next().value;
-        if (oldest) validateCodeCache.delete(oldest);
-    }
-    validateCodeCache.set(key, { result, cachedAt: Date.now() });
-}
-
-/** Clear the process-wide validateCode cache. Primarily for tests. */
-export function clearValidateCodeCache(): void {
-    validateCodeCache.clear();
-}
-
-/** Expose current cache size — for tests + ops observability. */
-export function getValidateCodeCacheSize(): number {
-    return validateCodeCache.size;
-}
-
-// ============================================================================
-// $subsumes Cache (T-1)
-// ============================================================================
-// SNOMED hierarchy lookups (`is-a` filter expansion, advisor rules that
-// ask "is concept X a kind of Y") issue many subsumes calls per bulk run
-// against the same code pairs. Same TTL + LRU policy as validateCodeCache;
-// `'unknown'` (server error / no result) is NOT cached because a retry
-// within the TTL window may succeed.
-
-interface SubsumesCacheEntry {
-    result: Exclude<SubsumptionOutcome, 'unknown'>;
-    cachedAt: number;
-}
-const subsumesCache = new Map<string, SubsumesCacheEntry>();
-
-function makeSubsumesCacheKey(serverUrl: string, system: string, codeA: string, codeB: string): string {
-    return `${serverUrl}|${system}|${codeA}|${codeB}`;
-}
-
-function getFromSubsumesCache(key: string): SubsumptionOutcome | undefined {
-    const entry = subsumesCache.get(key);
-    if (!entry) return undefined;
-    if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
-        subsumesCache.delete(key);
-        return undefined;
-    }
-    subsumesCache.delete(key);
-    subsumesCache.set(key, entry);
-    return entry.result;
-}
-
-function storeInSubsumesCache(key: string, result: SubsumptionOutcome): void {
-    if (result === 'unknown') return;
-    if (subsumesCache.size >= MAX_CACHE_SIZE) {
-        const oldest = subsumesCache.keys().next().value;
-        if (oldest) subsumesCache.delete(oldest);
-    }
-    subsumesCache.set(key, { result, cachedAt: Date.now() });
-}
-
-/** Clear the process-wide subsumes cache. Primarily for tests. */
-export function clearSubsumesCache(): void {
-    subsumesCache.clear();
-}
-
-/** Expose current subsumes cache size — for tests + ops observability. */
-export function getSubsumesCacheSize(): number {
-    return subsumesCache.size;
-}
-
-function normalizeOutcomeSeverity(severity: unknown): CodeSystemValidationIssue['severity'] {
-    if (severity === 'error' || severity === 'warning' || severity === 'information') return severity;
-    if (severity === 'fatal') return 'error';
-    if (severity === 'info') return 'information';
-    return 'warning';
-}
-
-function extractIssueCode(issue: any): string {
-    const codingCode = issue?.details?.coding?.find((coding: any) =>
-        coding?.system === 'http://hl7.org/fhir/tools/CodeSystem/tx-issue-type' &&
-        typeof coding?.code === 'string'
-    )?.code;
-    if (codingCode) return codingCode;
-    if (typeof issue?.code === 'string') return issue.code;
-    return 'terminology-issue';
-}
-
-function mapOperationOutcomeIssues(outcome: any): CodeSystemValidationIssue[] {
-    if (!outcome || outcome.resourceType !== 'OperationOutcome' || !Array.isArray(outcome.issue)) {
-        return [];
-    }
-
-    return outcome.issue.map((issue: any) => ({
-        severity: normalizeOutcomeSeverity(issue?.severity),
-        code: extractIssueCode(issue),
-        message: issue?.details?.text || issue?.diagnostics || 'Terminology server reported a code issue',
-        ...(Array.isArray(issue?.expression) ? { expression: issue.expression } : {}),
-    }));
-}
-
-function extractTerminologyIssues(parameters: any): CodeSystemValidationIssue[] {
-    const issuesResource = parameters?.parameter?.find((p: any) => p?.name === 'issues')?.resource;
-    return mapOperationOutcomeIssues(issuesResource);
-}
 
 // ============================================================================
 // Terminology API Client
@@ -385,13 +226,6 @@ export class TerminologyApiClient {
     }
 
     /**
-     * Get the server URL from config
-     */
-    get serverUrl(): string | undefined {
-        return this.config.serverUrl;
-    }
-
-    /**
      * Expand a ValueSet using a remote terminology server ($expand operation)
      * Returns null if server is unavailable or expansion fails
      */
@@ -403,7 +237,7 @@ export class TerminologyApiClient {
 
         // Check server expansion cache with TTL
         const ttlSeconds = this.config.serverDelegation?.cacheTTLSeconds ?? 3600;
-        const cacheKey = makeServerExpansionCacheKey(serverUrl, valueSetUrl);
+        const cacheKey = `${serverUrl}|${valueSetUrl}`;
         const cached = this.cache.getServerExpansion(cacheKey, ttlSeconds);
         if (cached) {
             return cached;
@@ -484,15 +318,10 @@ export class TerminologyApiClient {
                 ...(await this.buildRequestConfig(override?.auth, 5000, params)),
             });
 
-            // FHIR $validate-code returns a Parameters resource
-            const parameters = response.data;
-            if (parameters.resourceType === 'Parameters' && parameters.parameter) {
-                const resultParam = parameters.parameter.find((p: any) => p.name === 'result');
-                if (resultParam && resultParam.valueBoolean === true) {
-                    logger.debug(`[TerminologyApiClient] Server $validate-code CONFIRMED ${code} in ${valueSetUrl}`);
-                    storeInValidateCodeCache(cacheKey, true);
-                    return true;
-                }
+            if (validateCodeSucceeded(response.data)) {
+                logger.debug(`[TerminologyApiClient] Server $validate-code CONFIRMED ${code} in ${valueSetUrl}`);
+                storeInValidateCodeCache(cacheKey, true);
+                return true;
             }
 
             storeInValidateCodeCache(cacheKey, false);
@@ -512,14 +341,7 @@ export class TerminologyApiClient {
             // server can't resolve the binding target — emitting an error in that case produces
             // false positives (e.g. core ValueSets not present on a generic tx server).
             if (axiosResp?.status === 422 || axiosResp?.status === 404) {
-                const outcome = axiosResp.data;
-                const cantResolve =
-                    outcome?.resourceType === 'OperationOutcome' &&
-                    Array.isArray(outcome.issue) &&
-                    outcome.issue.some((i: any) =>
-                        i?.code === 'not-found' ||
-                        /could not be (?:found|resolved)|unable to (?:find|resolve)|not.*resolved/i.test(i?.details?.text ?? '')
-                    );
+                const cantResolve = operationOutcomeCannotResolveBinding(axiosResp.data);
                 if (cantResolve || bindingStrength !== 'required') {
                     logger.warn(`[TerminologyApiClient] Server returned ${axiosResp.status} (${cantResolve ? 'not-resolvable' : 'non-required binding'}). Failing open (assuming valid).`);
                     storeInValidateCodeCache(cacheKey, true);
@@ -550,8 +372,8 @@ export class TerminologyApiClient {
         const serverUrl = override?.url ?? this.config.serverUrl;
         if (!serverUrl) {
             const message = `No terminology server configured for CodeSystem '${system}'`;
-            logger.debug(`[TerminologyApiClient] ${message}`);
-            return { valid: false, reason: 'system-unresolvable', message };
+            logger.debug(`[TerminologyApiClient] ${message}; skipping direct CodeSystem validation`);
+            return { valid: true };
         }
 
         // Circuit breaker: fail fast if server is down
@@ -574,85 +396,33 @@ export class TerminologyApiClient {
                 ...(await this.buildRequestConfig(override?.auth, 5000, params)),
             });
 
-            // Success! Record it for circuit breaker
             codeSystemCircuitBreaker.recordSuccess();
-
-            // FHIR $validate-code returns a Parameters resource
-            const parameters = response.data;
-            if (parameters.resourceType === 'Parameters' && parameters.parameter) {
-                const resultParam = parameters.parameter.find((p: any) => p.name === 'result');
-                const messageParam = parameters.parameter.find((p: any) => p.name === 'message');
-                const inactiveParam = parameters.parameter.find((p: any) => p.name === 'inactive');
-                const displayParam = parameters.parameter.find((p: any) => p.name === 'display');
-                const issues = extractTerminologyIssues(parameters);
-                const hasDisplayMismatch = issues.some(issue => issue.code === 'invalid-display');
-
-                if (resultParam?.valueBoolean === true) {
-                    logger.debug(`[TerminologyApiClient] Code '${code}' is valid in ${system}`);
-                    return {
-                        valid: true,
-                        message: messageParam?.valueString,
-                        issues,
-                        inactive: inactiveParam?.valueBoolean === true,
-                        display: displayParam?.valueString,
-                    };
-                } else {
-                    const errorMessage = messageParam?.valueString || `Unknown code '${code}' in CodeSystem '${system}'`;
-                    // National-extension SNOMED codes (UK, US, AU, …) won't be
-                    // found on servers that only carry the International Edition.
-                    // Fail open — we can't confirm validity, but flagging them as
-                    // errors would produce false positives.
-                    if (system === SNOMED_SYSTEM && isSnomedNationalExtensionCode(code)) {
-                        logger.debug(`[TerminologyApiClient] Code '${code}' is a SNOMED national-extension SCTID — failing open (server has International Edition only)`);
-                        return { valid: true };
-                    }
-                    logger.debug(`[TerminologyApiClient] Code '${code}' is INVALID in ${system}: ${errorMessage}`);
-                    return {
-                        valid: false,
-                        message: errorMessage,
-                        reason: hasDisplayMismatch ? 'display-mismatch' : 'code-unknown',
-                        issues,
-                        inactive: inactiveParam?.valueBoolean === true,
-                        display: displayParam?.valueString,
-                    };
-                }
-            }
-
-            return { valid: true }; // Unknown response format = fail open
-
+            return parseCodeSystemValidationParameters(response.data, code, system);
         } catch (error: unknown) {
-            const _err = error instanceof Error ? error : new Error(String(error));
-            const axiosResp = isAxiosError(error) ? error.response : undefined;
-            // 422/404 = code not found (not a server failure)
-            if (axiosResp?.status === 422 || axiosResp?.status === 404) {
-                // This is a valid response, not a failure - record as success
-                codeSystemCircuitBreaker.recordSuccess();
-
-                // National-extension SNOMED codes → fail open (same rationale as above)
-                if (system === SNOMED_SYSTEM && isSnomedNationalExtensionCode(code)) {
-                    logger.debug(`[TerminologyApiClient] Code '${code}' is a SNOMED national-extension SCTID — failing open (server returned ${axiosResp.status})`);
-                    return { valid: true };
-                }
-
-                const opOutcome = axiosResp?.data;
-                if (opOutcome?.resourceType === 'OperationOutcome' && opOutcome.issue?.[0]) {
-                    const msg = opOutcome.issue[0].details?.text || opOutcome.issue[0].diagnostics || `Unknown code '${code}' in CodeSystem '${system}'`;
-                    const issues = mapOperationOutcomeIssues(opOutcome);
-                    return {
-                        valid: false,
-                        message: msg,
-                        reason: issues.some(issue => issue.code === 'invalid-display') ? 'display-mismatch' : 'code-unknown',
-                        issues,
-                    };
-                }
-                return { valid: false, message: `Unknown code '${code}' in CodeSystem '${system}'` };
-            }
-
-            // 500/503/timeout = server failure, record for circuit breaker
-            codeSystemCircuitBreaker.recordFailure();
-            logger.warn(`[TerminologyApiClient] CodeSystem validation failed for ${system}: ${_err.message}`);
-            return { valid: true }; // Fail open
+            return this.handleCodeSystemValidationError(error, code, system);
         }
+    }
+
+    private handleCodeSystemValidationError(
+        error: unknown,
+        code: string,
+        system: string,
+    ): CodeSystemValidationResult {
+        const err = error instanceof Error ? error : new Error(String(error));
+        const axiosResp = isAxiosError(error) ? error.response : undefined;
+
+        if (axiosResp?.status === 422 || axiosResp?.status === 404) {
+            codeSystemCircuitBreaker.recordSuccess();
+            if (isSnomedNationalExtensionSystemCode(system, code)) {
+                logger.debug(`[TerminologyApiClient] Code '${code}' is a SNOMED national-extension SCTID — failing open (server returned ${axiosResp.status})`);
+                return { valid: true };
+            }
+            return operationOutcomeToCodeSystemResult(axiosResp.data, code, system);
+        }
+
+        codeSystemCircuitBreaker.recordFailure();
+        logger.warn(`[TerminologyApiClient] CodeSystem validation failed for ${system}: ${err.message}`);
+        return { valid: true };
     }
 
     /**
@@ -686,14 +456,10 @@ export class TerminologyApiClient {
                 })),
             });
 
-            const parameters = response.data;
-            if (parameters.resourceType === 'Parameters' && Array.isArray(parameters.parameter)) {
-                const outcomeParam = parameters.parameter.find((p: any) => p.name === 'outcome');
-                const outcome = outcomeParam?.valueCode as SubsumptionOutcome | undefined;
-                if (outcome) {
-                    storeInSubsumesCache(cacheKey, outcome);
-                    return outcome;
-                }
+            const outcome = extractSubsumptionOutcome(response.data);
+            if (outcome) {
+                storeInSubsumesCache(cacheKey, outcome);
+                return outcome;
             }
         } catch (error: unknown) {
             const err = error instanceof Error ? error : new Error(String(error));

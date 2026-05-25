@@ -445,6 +445,70 @@ describe('SlicingValidator', () => {
       }));
     });
 
+  it('does not require slice dataAbsentReason when the matched component has value[x]', async () => {
+    const bloodPressureProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-blood-pressure',
+      name: 'USCoreBloodPressure',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Observation',
+      snapshot: {
+        element: [
+          {
+            id: 'Observation.component',
+            path: 'Observation.component',
+            min: 2,
+            max: '*',
+            slicing: {
+              discriminator: [{ type: 'pattern', path: '$this.code' }],
+              rules: 'open',
+            },
+          } as any,
+          {
+            id: 'Observation.component:systolic',
+            path: 'Observation.component',
+            sliceName: 'systolic',
+            min: 1,
+            max: '1',
+            type: [{ code: 'BackboneElement' }],
+          } as any,
+          {
+            id: 'Observation.component:systolic.code',
+            path: 'Observation.component.code',
+            min: 1,
+            max: '1',
+            patternCodeableConcept: {
+              coding: [{ system: 'http://loinc.org', code: '8480-6' }],
+            },
+          } as any,
+          {
+            id: 'Observation.component:systolic.dataAbsentReason',
+            path: 'Observation.component.dataAbsentReason',
+            mustSupport: true,
+          } as any,
+        ],
+      },
+    };
+
+    const issues = await validator.validateSlicing(
+      [{
+        code: {
+          coding: [{ system: 'http://loinc.org', code: '8480-6' }],
+        },
+        valueQuantity: { value: 120, system: 'http://unitsofmeasure.org', code: 'mm[Hg]' },
+      }],
+      'Observation.component',
+      bloodPressureProfile,
+    );
+
+    expect(issues).not.toContainEqual(expect.objectContaining({
+      code: 'profile-mustsupport-missing',
+      path: 'Observation.component:systolic.dataAbsentReason',
+    }));
+  });
+
     it('matches pattern discriminators backed only by slice ValueSet bindings on first use', async () => {
       const loadValueSet = vi.fn(async (url: string) => {
         if (url.includes('beatmung-loinc')) {
@@ -611,6 +675,197 @@ describe('SlicingValidator', () => {
       }));
     });
 
+    it('does not match Condition.category slices through bare codes from another CodeSystem', async () => {
+      const loadValueSet = vi.fn(async (url: string) => {
+        if (url.includes('us-core-problem-or-health-concern')) {
+          return [
+            'http://terminology.hl7.org/CodeSystem/condition-category|problem-list-item',
+            'problem-list-item',
+          ];
+        }
+        if (url.includes('us-core-simple-observation-category')) {
+          return [
+            'http://terminology.hl7.org/CodeSystem/observation-category|survey',
+            'problem-list-item',
+          ];
+        }
+        return [];
+      });
+
+      const categoryValidator = new SlicingValidator();
+      (categoryValidator as any).getValueSetLoader = () => ({ loadValueSet });
+
+      const conditionCategoryProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-condition-problems-health-concerns',
+        name: 'QICoreConditionProblemsHealthConcerns',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Condition',
+        snapshot: {
+          element: [
+            {
+              id: 'Condition.category',
+              path: 'Condition.category',
+              slicing: {
+                discriminator: [{ type: 'value', path: '$this' }],
+                rules: 'open',
+              },
+            } as any,
+            {
+              id: 'Condition.category:us-core',
+              path: 'Condition.category',
+              sliceName: 'us-core',
+              min: 1,
+              max: '*',
+              type: [{ code: 'CodeableConcept' }],
+              binding: {
+                strength: 'required',
+                valueSet: 'http://hl7.org/fhir/us/core/ValueSet/us-core-problem-or-health-concern',
+              },
+            } as any,
+            {
+              id: 'Condition.category:screening-assessment',
+              path: 'Condition.category',
+              sliceName: 'screening-assessment',
+              min: 0,
+              max: '*',
+              type: [{ code: 'CodeableConcept' }],
+              binding: {
+                strength: 'required',
+                valueSet: 'http://hl7.org/fhir/us/core/ValueSet/us-core-simple-observation-category',
+              },
+            } as any,
+          ],
+        },
+      };
+
+      const issues = await categoryValidator.validateSlicing(
+        [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+            code: 'problem-list-item',
+          }],
+        }],
+        'Condition.category',
+        conditionCategoryProfile,
+      );
+
+      expect(issues).not.toContainEqual(expect.objectContaining({
+        code: 'profile-slice-min-cardinality',
+        ruleId: 'slice-min-us-core',
+      }));
+    });
+
+    it('does not claim a binding-only required slice is missing when the ValueSet cannot be resolved', async () => {
+      const loadValueSet = vi.fn(async () => null);
+      const categoryValidator = new SlicingValidator();
+      (categoryValidator as any).getValueSetLoader = () => ({ loadValueSet });
+
+      const conditionCategoryProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-condition-problems-health-concerns',
+        name: 'QICoreConditionProblemsHealthConcerns',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Condition',
+        snapshot: {
+          element: [
+            {
+              id: 'Condition.category',
+              path: 'Condition.category',
+              slicing: {
+                discriminator: [{ type: 'value', path: '$this' }],
+                rules: 'open',
+              },
+            } as any,
+            {
+              id: 'Condition.category:us-core',
+              path: 'Condition.category',
+              sliceName: 'us-core',
+              min: 1,
+              max: '*',
+              type: [{ code: 'CodeableConcept' }],
+              binding: {
+                strength: 'required',
+                valueSet: 'http://hl7.org/fhir/us/core/ValueSet/us-core-problem-or-health-concern',
+              },
+            } as any,
+          ],
+        },
+      };
+
+      const issues = await categoryValidator.validateSlicing(
+        [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+            code: 'problem-list-item',
+          }],
+        }],
+        'Condition.category',
+        conditionCategoryProfile,
+      );
+
+      expect(loadValueSet).toHaveBeenCalledWith(
+        'http://hl7.org/fhir/us/core/ValueSet/us-core-problem-or-health-concern',
+      );
+      expect(issues).not.toContainEqual(expect.objectContaining({
+        code: 'profile-slice-min-cardinality',
+      }));
+    });
+
+    it('still reports binding-only required slice min when the sliced element is absent', async () => {
+      const categoryValidator = new SlicingValidator();
+      (categoryValidator as any).getValueSetLoader = () => ({ loadValueSet: vi.fn(async () => null) });
+
+      const conditionCategoryProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-condition-problems-health-concerns',
+        name: 'QICoreConditionProblemsHealthConcerns',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Condition',
+        snapshot: {
+          element: [
+            {
+              id: 'Condition.category',
+              path: 'Condition.category',
+              slicing: {
+                discriminator: [{ type: 'value', path: '$this' }],
+                rules: 'open',
+              },
+            } as any,
+            {
+              id: 'Condition.category:us-core',
+              path: 'Condition.category',
+              sliceName: 'us-core',
+              min: 1,
+              max: '*',
+              type: [{ code: 'CodeableConcept' }],
+              binding: {
+                strength: 'required',
+                valueSet: 'http://hl7.org/fhir/us/core/ValueSet/us-core-problem-or-health-concern',
+              },
+            } as any,
+          ],
+        },
+      };
+
+      const issues = await categoryValidator.validateSlicing(
+        [],
+        'Condition.category',
+        conditionCategoryProfile,
+      );
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'profile-slice-min-cardinality',
+        ruleId: 'slice-min-us-core',
+      }));
+    });
+
     it('matches pattern $this discriminators with child constraints on the sliced element', async () => {
       const codeCodingProfile: StructureDefinition = {
         resourceType: 'StructureDefinition',
@@ -768,6 +1023,10 @@ describe('SlicingValidator', () => {
         i.code === 'profile-slice-min-cardinality' && i.severity === 'error'
       );
       expect(requiredErrors.length).toBeGreaterThan(0);
+      expect(requiredErrors[0]).toMatchObject({
+        resourceType: 'Patient',
+        details: expect.objectContaining({ resourceType: 'Patient' }),
+      });
     });
 
     it('should handle multiple slices correctly', async () => {

@@ -175,7 +175,7 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
     );
   });
 
-  it('adds document-context targetProfile issues when a Composition section reference points at an invalid embedded profile resource', async () => {
+  it('does not turn display mismatches into Composition targetProfile match failures', async () => {
     const callback = buildMultiAspectValidateCallback(
       makeDeps({
         structuralIssueForObservation: false,
@@ -238,29 +238,33 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
     expect(terminology?.issues.map(issue => issue.path)).toContain(
       'Bundle.entry[1].resource/*Observation/obs-1*/.valueCodeableConcept.coding[0].display',
     );
+    expect(terminology?.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'terminology-display-mismatch',
+        details: expect.objectContaining({
+          bundleUnit: expect.objectContaining({
+            entryIndex: 1,
+            resourceType: 'Observation',
+            resourceId: 'obs-1',
+            reference: 'Observation/obs-1',
+          }),
+        }),
+      }),
+    ]));
 
     const profile = result.aspects.find(aspect => aspect.aspect === 'profile');
-    expect(profile?.issues).toEqual(expect.arrayContaining([
+    expect(profile?.issues ?? []).not.toEqual(expect.arrayContaining([
       expect.objectContaining({
-        code: 'profile-constraint-violation',
-        path: 'Bundle.entry[0].resource/*Composition/comp-1*/.section[0].entry[0]',
-        message: 'Unable to find a profile match for urn:uuid:obs-1 among choices: http://hl7.eu/fhir/base/StructureDefinition/medicalTestResult-eu-core',
+        ruleId: 'profile-targetprofile-match-failed',
       }),
       expect.objectContaining({
-        code: 'profile-slice-min-cardinality',
-        path: 'Bundle',
-        message: "Slice 'Bundle.entry:composition': a matching slice is required, but not found (from http://hl7.eu/fhir/eps/StructureDefinition/bundle-eu-eps|1.0.0-test)",
-      }),
-      expect.objectContaining({
-        code: 'profile-slice-min-cardinality',
-        path: 'Bundle',
-        message: "Slice 'Bundle.entry:composition': a matching slice is required, but not found (from http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips)",
+        ruleId: 'slice-min-composition-conformance',
       }),
     ]));
     expect(result.isValid).toBe(false);
   });
 
-  it('guards ART-DECOR document parity for multiple targetProfile failures and imposed Bundle parents', async () => {
+  it('does not raise ART-DECOR targetProfile consequences for display-only child issues', async () => {
     const callback = buildMultiAspectValidateCallback(
       makeDeps({
         structuralIssueForObservation: false,
@@ -345,30 +349,8 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
       issue.ruleId === 'slice-min-composition-conformance'
     );
 
-    expect(targetProfileIssues).toHaveLength(2);
-    expect(targetProfileIssues.map(issue => issue.path)).toEqual([
-      'Bundle.entry[0].resource/*Composition/comp-1*/.section[0].entry[0]',
-      'Bundle.entry[0].resource/*Composition/comp-1*/.section[0].entry[1]',
-    ]);
-    expect(bundleCompositionSliceIssues).toHaveLength(2);
-    expect(bundleCompositionSliceIssues).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        code: 'profile-slice-min-cardinality',
-        path: 'Bundle',
-        message: "Slice 'Bundle.entry:composition': a matching slice is required, but not found (from http://hl7.eu/fhir/eps/StructureDefinition/bundle-eu-eps|1.0.0-test)",
-        details: expect.objectContaining({
-          sourceProfile: 'http://hl7.eu/fhir/eps/StructureDefinition/bundle-eu-eps',
-        }),
-      }),
-      expect.objectContaining({
-        code: 'profile-slice-min-cardinality',
-        path: 'Bundle',
-        message: "Slice 'Bundle.entry:composition': a matching slice is required, but not found (from http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips)",
-        details: expect.objectContaining({
-          sourceProfile: 'http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips',
-        }),
-      }),
-    ]));
+    expect(targetProfileIssues).toHaveLength(0);
+    expect(bundleCompositionSliceIssues).toHaveLength(0);
   });
 
   it('treats structural child conformance errors as Composition targetProfile match failures', async () => {
@@ -426,7 +408,7 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
       expect.objectContaining({
         code: 'profile-constraint-violation',
         path: 'Bundle.entry[0].resource/*Composition/comp-1*/.section[0].entry[0]',
-        message: 'Unable to find a profile match for urn:uuid:obs-1 among choices: http://hl7.eu/fhir/base/StructureDefinition/medicalTestResult-eu-core',
+        message: expect.stringContaining('Composition.section.entry references Observation/obs-1 (urn:uuid:obs-1)'),
       }),
       expect.objectContaining({
         code: 'profile-slice-min-cardinality',
@@ -485,7 +467,7 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
       expect.objectContaining({
         code: 'profile-constraint-violation',
         path: 'Bundle.entry[0].resource/*Composition/comp-1*/.section[0].entry[0]',
-        message: 'Unable to find a profile match for urn:uuid:obs-1 among choices: http://hl7.eu/fhir/base/StructureDefinition/medicalTestResult-eu-core',
+        message: expect.stringContaining('Composition.section.entry references Observation/obs-1 (urn:uuid:obs-1)'),
       }),
     ]));
   });
@@ -600,7 +582,7 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
       expect.objectContaining({
         code: 'profile-constraint-violation',
         path: 'Bundle.entry[0].resource/*Composition/comp-1*/.section[0].entry[0]',
-        message: 'Unable to find a profile match for urn:uuid:obs-1 among choices: http://hl7.eu/fhir/base/StructureDefinition/medicalTestResult-eu-core',
+        message: expect.stringContaining('Composition.section.entry references Observation/obs-1 (urn:uuid:obs-1)'),
       }),
     ]));
     expect(profile?.issues.map(issue => issue.message).join('\n')).not.toContain(

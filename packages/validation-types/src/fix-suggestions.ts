@@ -83,6 +83,26 @@ export const FixSuggestions: Record<string, FixSuggestion> = {
         why: 'Could not validate against the ValueSet (lookup failed).',
         fix: 'Check terminology server connectivity. The code may still be valid.',
     },
+    'terminology-code-invalid': {
+        why: 'The code is not valid for the declared code system. For UCUM quantities, the code must be a machine-readable UCUM expression, not just the display text.',
+        fix: 'Replace the code with a valid code from the declared system. If the issue contains a suggestedCode, use that value; for pH this is typically "[pH]".',
+        example: 'For system "http://unitsofmeasure.org", use code "[pH]" instead of "pH".',
+        specUrl: 'https://www.hl7.org/fhir/terminologies.html',
+        patch: { action: 'replace', path: '{{fieldPath}}', value: '{{suggestedCode}}' },
+    },
+    'terminology-display-mismatch': {
+        why: 'The code may be valid, but the display text does not match the terminology server display for that code.',
+        fix: 'Replace the display with an accepted display from the terminology server, or omit display and let consumers render the code.',
+        example: 'Keep system/code stable and update only Coding.display.',
+        specUrl: 'https://www.hl7.org/fhir/datatypes.html#Coding',
+    },
+    'terminology-coding-system-valueset': {
+        why: 'Coding.system must identify the CodeSystem that defines the code. A ValueSet URL describes an allowed set of codes and is not valid as Coding.system.',
+        fix: 'Replace Coding.system with the canonical CodeSystem URL for the selected code. Keep the ValueSet only in profile bindings or documentation.',
+        example: 'Use "http://terminology.hl7.org/CodeSystem/v3-MaritalStatus" instead of "http://hl7.org/fhir/ValueSet/marital-status".',
+        specUrl: 'https://www.hl7.org/fhir/datatypes.html#Coding',
+        patch: { action: 'replace', path: '{{fieldPath}}', value: '(use the code system URL for this code)' },
+    },
 
     // -------------------------------------------------------------------------
     // Structural
@@ -258,7 +278,7 @@ export const FixSuggestions: Record<string, FixSuggestion> = {
         fix: 'Include actual time if available for better precision.',
     },
     'metadata-tag-missing-code': {
-        why: 'Tags require a code to be useful for filtering and categorization.',
+        why: 'Tags are more useful for filtering and categorization when they include a code.',
         fix: 'Add a code value to the tag: { system: "...", code: "my-tag" }',
     },
     'metadata-tag-invalid-system-uri': {
@@ -540,8 +560,8 @@ export const FixSuggestions: Record<string, FixSuggestion> = {
     // Profile
     // -------------------------------------------------------------------------
     'profile-constraint-violation': {
-        why: 'Profile constraints define additional rules beyond the base FHIR specification.',
-        fix: 'Review the constraint expression and adjust your resource to satisfy it.',
+        why: 'Profile constraints define additional rules beyond the base FHIR specification. In document Bundles this can also mean a referenced child resource failed targetProfile matching.',
+        fix: 'Review the path and details. For targetProfile failures, fix the referenced resource so it conforms to one of the allowed targetProfiles, then revalidate the Bundle.',
         patch: { action: 'replace', path: '{{fieldPath}}', value: '(satisfy constraint {{key}}: {{message}})' },
     },
     'profile-mustsupport-missing': {
@@ -550,9 +570,9 @@ export const FixSuggestions: Record<string, FixSuggestion> = {
         specUrl: 'https://www.hl7.org/fhir/conformance-rules.html#mustSupport',
     },
     'profile-slice-min-cardinality': {
-        why: 'The profile requires a minimum number of items matching this slice discriminator.',
-        fix: 'Add more elements that match the slice discriminator (pattern, value, or type).',
-        example: 'For identifier slices: add identifier with matching system URL',
+        why: 'The profile requires at least one item matching this slice discriminator. For document Bundles, the missing slice may be caused by an entry that exists but does not conform to the required profile.',
+        fix: 'Add or repair the element matching the slice. For Bundle.entry:composition, fix the Composition entry and any child targetProfile errors first.',
+        example: 'For Bundle.entry:composition: include a Composition entry that conforms to the document profile.',
         patch: { action: 'add', path: '{{fieldPath}}', value: '(add entry matching slice "{{sliceName}}", min={{min}})' },
     },
     'profile-slice-max-cardinality': {

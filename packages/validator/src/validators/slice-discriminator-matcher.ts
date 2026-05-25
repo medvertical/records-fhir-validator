@@ -40,11 +40,11 @@ export function matchDiscriminator(
     if (conformsToMatch) {
       return toProfileArray(resolvedElement?.meta?.profile).includes(conformsToMatch[1]);
     }
-    return matchValueDiscriminator(element, slice, remainder, matchesPatternFn);
+    return matchValueDiscriminator(element, slice, remainder, matchesPatternFn, codingMatchesBindingCodesFn);
   }
 
   switch (discriminator.type) {
-    case 'value': return matchValueDiscriminator(element, slice, path, matchesPatternFn);
+    case 'value': return matchValueDiscriminator(element, slice, path, matchesPatternFn, codingMatchesBindingCodesFn);
     case 'pattern': return matchPatternDiscriminator(element, slice, path, matchesPatternFn, codingMatchesBindingCodesFn);
     case 'type': return matchTypeDiscriminator(element, slice, path);
     case 'profile': return matchProfileDiscriminator(element, slice, path, referenceResolver, allSlices);
@@ -96,6 +96,7 @@ function matchValueDiscriminator(
   slice: SliceDefinition,
   path: string,
   matchesPatternFn: (value: any, pattern: any) => boolean,
+  codingMatchesBindingCodesFn: (value: any, codes: Set<string>) => boolean,
 ): boolean {
   const elementValue = getValueAtPath(element, path);
   const childPath = normalizeChildConstraintPath(path);
@@ -123,6 +124,10 @@ function matchValueDiscriminator(
 
   const patternValue = slice.pattern ? getValueAtPath(slice.pattern, path) : null;
   if (patternValue !== null && patternValue !== undefined) return matchesPatternFn(elementValue, patternValue);
+
+  if (slice.bindingCodes && slice.bindingCodes.size > 0) {
+    return codingMatchesBindingCodesFn(elementValue, slice.bindingCodes);
+  }
 
   return false;
 }
@@ -166,7 +171,7 @@ function matchPatternDiscriminator(
     return codingMatchesBindingCodesFn(elementValue, slice.bindingCodes);
   }
 
-  return true;
+  return !slice.bindingValueSet;
 }
 
 function matchWholeElementChildConstraints(

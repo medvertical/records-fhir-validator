@@ -54,7 +54,7 @@ export const BusinessRuleCodes = {
     },
     'business-future-birth-date': {
         aspect: 'customRule',
-        severity: 'error',
+        severity: 'warning',
         description: 'Birth date is in the future',
     },
     'business-unreasonable-age': {

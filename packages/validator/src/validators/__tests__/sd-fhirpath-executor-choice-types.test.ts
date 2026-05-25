@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sdFHIRPathExecutor } from '../sd-fhirpath-executor';
 import { MustSupportValidator } from '../must-support-validator';
+import { valueSetCache } from '../valueset-cache';
 import type { StructureDefinition } from '../../core/structure-definition-types';
 
 const bloodPressureObservation = {
@@ -32,6 +33,7 @@ const vitalsProfile = {
       {
         id: 'Observation.component',
         path: 'Observation.component',
+        mustSupport: true,
         type: [{ code: 'BackboneElement' }],
         constraint: [
           {
@@ -43,6 +45,7 @@ const vitalsProfile = {
         ],
       },
       { id: 'Observation.value[x]', path: 'Observation.value[x]', mustSupport: true },
+      { id: 'Observation.dataAbsentReason', path: 'Observation.dataAbsentReason', mustSupport: true },
       { id: 'Observation.component.dataAbsentReason', path: 'Observation.component.dataAbsentReason', mustSupport: true },
     ],
   },
@@ -73,6 +76,47 @@ describe('SD FHIRPath choice-type handling', () => {
     });
 
     expect(issues.some(issue => issue.code === 'constraint-violation-vs-3')).toBe(true);
+  });
+});
+
+describe('SD FHIRPath issue provenance', () => {
+  it('keeps profile URL and constraint key on dynamic constraint violations', async () => {
+    const profile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/StructureDefinition/strict-patient',
+      name: 'StrictPatient',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Patient',
+      snapshot: {
+        element: [
+          {
+            id: 'Patient',
+            path: 'Patient',
+            constraint: [{
+              key: 'example-1',
+              severity: 'warning',
+              human: 'Patient must be marked active',
+              expression: 'active = true',
+            }],
+          },
+        ],
+      },
+    };
+
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: { resourceType: 'Patient', id: 'inactive', active: false },
+      resourceType: 'Patient',
+      structureDef: profile,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'constraint-violation-example-1',
+      profile: profile.url,
+      ruleId: 'example-1',
+    }));
   });
 });
 
@@ -161,6 +205,107 @@ describe('SD FHIRPath array element constraint handling', () => {
   });
 });
 
+describe('SD FHIRPath boolean collection handling', () => {
+  const patientNameProfile = {
+    resourceType: 'StructureDefinition',
+    url: 'http://example.org/StructureDefinition/patient-name-given',
+    name: 'PatientNameGiven',
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type: 'Patient',
+    snapshot: {
+      element: [
+        {
+          id: 'Patient',
+          path: 'Patient',
+          constraint: [
+            {
+              key: 'pat-name-given',
+              severity: 'error',
+              human: 'Every name must have a given value',
+              expression: 'name.select(given.exists())',
+            },
+          ],
+        },
+      ],
+    },
+  } satisfies StructureDefinition;
+
+  it('fails constraints whose FHIRPath result is a boolean collection containing false', async () => {
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Patient',
+        id: 'mixed-names',
+        name: [
+          { given: ['Ada'] },
+          { family: 'Lovelace' },
+        ],
+      },
+      resourceType: 'Patient',
+      structureDef: patientNameProfile,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'constraint-violation-pat-name-given',
+      path: 'Patient',
+    }));
+  });
+});
+
+describe('SD FHIRPath resource-root expression handling', () => {
+  const patientRootExpressionProfile = {
+    resourceType: 'StructureDefinition',
+    url: 'http://example.org/StructureDefinition/patient-root-expression',
+    name: 'PatientRootExpression',
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type: 'Patient',
+    snapshot: {
+      element: [
+        { id: 'Patient', path: 'Patient' },
+        {
+          id: 'Patient.name',
+          path: 'Patient.name',
+          type: [{ code: 'HumanName' }],
+          constraint: [
+            {
+              key: 'root-active',
+              severity: 'error',
+              human: 'Patient must be active',
+              expression: 'Patient.active = true',
+            },
+          ],
+        },
+      ],
+    },
+  } satisfies StructureDefinition;
+
+  it('evaluates absolute resource-root expressions from nested matches once', async () => {
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Patient',
+        active: false,
+        name: [
+          { family: 'Curie' },
+          { family: 'Meitner' },
+        ],
+      },
+      resourceType: 'Patient',
+      structureDef: patientRootExpressionProfile,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues.filter(issue => issue.code === 'constraint-violation-root-active')).toHaveLength(1);
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'constraint-violation-root-active',
+      path: 'Patient.name[0]',
+    }));
+  });
+});
+
 describe('MustSupport choice-type handling', () => {
   it('does not request dataAbsentReason when component valueQuantity is present', async () => {
     const validator = new MustSupportValidator();
@@ -172,5 +317,429 @@ describe('MustSupport choice-type handling', () => {
     );
 
     expect(issues).toHaveLength(0);
+  });
+});
+
+describe('MustSupport contextual applicability', () => {
+  const encounterProfile = {
+    resourceType: 'StructureDefinition',
+    url: 'http://example.org/StructureDefinition/encounter-ms',
+    name: 'EncounterMustSupport',
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type: 'Encounter',
+    snapshot: {
+      element: [
+        { id: 'Encounter', path: 'Encounter' },
+        { id: 'Encounter.hospitalization', path: 'Encounter.hospitalization', mustSupport: true },
+        { id: 'Encounter.reasonCode', path: 'Encounter.reasonCode', mustSupport: true },
+      ],
+    },
+  } satisfies StructureDefinition;
+
+  const patientAddressProfile = {
+    resourceType: 'StructureDefinition',
+    url: 'http://example.org/StructureDefinition/patient-address-ms',
+    name: 'PatientAddressMustSupport',
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type: 'Patient',
+    snapshot: {
+      element: [
+        { id: 'Patient', path: 'Patient' },
+        { id: 'Patient.address', path: 'Patient.address', mustSupport: true },
+        { id: 'Patient.address.period', path: 'Patient.address.period', mustSupport: true },
+      ],
+    },
+  } satisfies StructureDefinition;
+
+  const getValueAtPath = (resource: any, path: string) => {
+    if (path === 'Encounter.hospitalization') return resource.hospitalization;
+    if (path === 'Encounter.reasonCode') return resource.reasonCode;
+    if (path === 'Encounter.type') return resource.type;
+    if (path === 'Patient.address') return resource.address;
+    if (path === 'Patient.address.period') {
+      return resource.address?.flatMap((address: any) => address.period ?? []);
+    }
+    return undefined;
+  };
+
+  it('does not report hospitalization MustSupport missing for ambulatory Encounters', async () => {
+    const validator = new MustSupportValidator();
+
+    const issues = await validator.validateAllMustSupportElements(
+      {
+        resourceType: 'Encounter',
+        status: 'finished',
+        class: {
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+          code: 'AMB',
+        },
+      },
+      encounterProfile,
+      encounterProfile.url,
+      getValueAtPath,
+    );
+
+    expect(issues.filter(issue => issue.path === 'Encounter.hospitalization')).toHaveLength(0);
+  });
+
+  it('still reports hospitalization MustSupport missing for inpatient Encounters', async () => {
+    const validator = new MustSupportValidator();
+
+    const issues = await validator.validateAllMustSupportElements(
+      {
+        resourceType: 'Encounter',
+        status: 'finished',
+        class: {
+          system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+          code: 'IMP',
+        },
+      },
+      encounterProfile,
+      encounterProfile.url,
+      getValueAtPath,
+    );
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-mustsupport-missing',
+      path: 'Encounter.hospitalization',
+    }));
+  });
+
+  it('does not report reasonCode MustSupport missing for typed Encounters', async () => {
+    const validator = new MustSupportValidator();
+
+    const issues = await validator.validateAllMustSupportElements(
+      {
+        resourceType: 'Encounter',
+        status: 'finished',
+        type: [{
+          coding: [{
+            system: 'http://snomed.info/sct',
+            code: '162673000',
+            display: 'General examination of patient',
+          }],
+        }],
+      },
+      encounterProfile,
+      encounterProfile.url,
+      getValueAtPath,
+    );
+
+    expect(issues.filter(issue => issue.path === 'Encounter.reasonCode')).toHaveLength(0);
+  });
+
+  it('still reports reasonCode MustSupport missing when no encounter reason context exists', async () => {
+    const validator = new MustSupportValidator();
+
+    const issues = await validator.validateAllMustSupportElements(
+      {
+        resourceType: 'Encounter',
+        status: 'finished',
+      },
+      encounterProfile,
+      encounterProfile.url,
+      getValueAtPath,
+    );
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-mustsupport-missing',
+      path: 'Encounter.reasonCode',
+    }));
+  });
+
+  it('does not report address.period MustSupport missing for current Patient addresses', async () => {
+    const validator = new MustSupportValidator();
+
+    const issues = await validator.validateAllMustSupportElements(
+      {
+        resourceType: 'Patient',
+        address: [{
+          line: ['513 Schoen Run Apt 62'],
+          city: 'Marshfield',
+          state: 'MA',
+          postalCode: '02050',
+          country: 'US',
+        }],
+      },
+      patientAddressProfile,
+      patientAddressProfile.url,
+      getValueAtPath,
+    );
+
+    expect(issues.filter(issue => issue.path === 'Patient.address.period')).toHaveLength(0);
+  });
+
+  it('still reports address.period MustSupport missing for old Patient addresses', async () => {
+    const validator = new MustSupportValidator();
+
+    const issues = await validator.validateAllMustSupportElements(
+      {
+        resourceType: 'Patient',
+        address: [{
+          use: 'old',
+          line: ['513 Schoen Run Apt 62'],
+          city: 'Marshfield',
+          state: 'MA',
+          postalCode: '02050',
+          country: 'US',
+        }],
+      },
+      patientAddressProfile,
+      patientAddressProfile.url,
+      getValueAtPath,
+    );
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-mustsupport-missing',
+      path: 'Patient.address.period',
+    }));
+  });
+});
+
+describe('SD FHIRPath choice-type casts', () => {
+  it('does not apply dateTime precision constraints to effectivePeriod values', async () => {
+    const observationProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab',
+      name: 'UsCoreObservationLab',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Observation',
+      snapshot: {
+        element: [
+          { id: 'Observation', path: 'Observation' },
+          {
+            id: 'Observation.effective[x]',
+            path: 'Observation.effective[x]',
+            type: [{ code: 'dateTime' }, { code: 'Period' }],
+            constraint: [
+              {
+                key: 'us-core-1',
+                severity: 'error',
+                human: 'Datetime must be at least to day.',
+                expression: '($this as dateTime).toString().length() >= 8',
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Observation',
+        id: 'period-effective',
+        effectivePeriod: {
+          start: '2022-01-25T00:00:00-05:00',
+          end: '2022-01-26T00:00:00-05:00',
+        },
+      },
+      resourceType: 'Observation',
+      structureDef: observationProfile,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues.filter(issue => issue.code === 'constraint-violation-us-core-1')).toHaveLength(0);
+  });
+
+  it('evaluates simple memberOf exists constraints against cached ValueSets', async () => {
+    const valueSetUrl = 'http://example.org/fhir/ValueSet/condition-category';
+    valueSetCache.setValueSetFile(`${valueSetUrl}|R4`, {
+      resourceType: 'ValueSet',
+      url: valueSetUrl,
+      compose: {
+        include: [{
+          system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+          concept: [
+            { code: 'problem-list-item' },
+            { code: 'encounter-diagnosis' },
+          ],
+        }],
+      },
+    } as any);
+
+    const conditionProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/fhir/StructureDefinition/condition',
+      name: 'ConditionProfile',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Condition',
+      snapshot: {
+        element: [
+          {
+            id: 'Condition',
+            path: 'Condition',
+            constraint: [{
+              key: 'cat-1',
+              severity: 'warning',
+              human: 'A category should be from the local category value set.',
+              expression: `where(category.memberOf('${valueSetUrl}')).exists()`,
+            }],
+          },
+        ],
+      },
+    };
+
+    const validIssues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Condition',
+        category: [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+            code: 'encounter-diagnosis',
+          }],
+        }],
+      },
+      resourceType: 'Condition',
+      structureDef: conditionProfile,
+      fhirVersion: 'R4',
+    });
+
+    expect(validIssues.filter(issue => issue.ruleId === 'cat-1')).toHaveLength(0);
+
+    const invalidIssues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Condition',
+        category: [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+            code: 'unsupported-category',
+          }],
+        }],
+      },
+      resourceType: 'Condition',
+      structureDef: conditionProfile,
+      fhirVersion: 'R4',
+    });
+
+    expect(invalidIssues.filter(issue => issue.ruleId === 'cat-1')).toHaveLength(1);
+  });
+
+  it('treats legacy ValueSet in-exists constraints as ValueSet membership checks', async () => {
+    const valueSetUrl = 'http://example.org/fhir/ValueSet/condition-category-in';
+    valueSetCache.setValueSetFile(`${valueSetUrl}|R4`, {
+      resourceType: 'ValueSet',
+      url: valueSetUrl,
+      compose: {
+        include: [{
+          system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+          concept: [
+            { code: 'problem-list-item' },
+            { code: 'encounter-diagnosis' },
+          ],
+        }],
+      },
+    } as any);
+
+    const conditionProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/fhir/StructureDefinition/condition-in',
+      name: 'ConditionProfileIn',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Condition',
+      snapshot: {
+        element: [
+          {
+            id: 'Condition',
+            path: 'Condition',
+            constraint: [{
+              key: 'cat-in-1',
+              severity: 'warning',
+              human: 'A category should be from the local category value set.',
+              expression: `where(category in '${valueSetUrl}').exists()`,
+            }],
+          },
+        ],
+      },
+    };
+
+    const validIssues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Condition',
+        category: [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+            code: 'encounter-diagnosis',
+          }],
+        }],
+      },
+      resourceType: 'Condition',
+      structureDef: conditionProfile,
+      fhirVersion: 'R4',
+    });
+
+    expect(validIssues.filter(issue => issue.ruleId === 'cat-in-1')).toHaveLength(0);
+
+    const invalidIssues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Condition',
+        category: [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+            code: 'unsupported-category',
+          }],
+        }],
+      },
+      resourceType: 'Condition',
+      structureDef: conditionProfile,
+      fhirVersion: 'R4',
+    });
+
+    expect(invalidIssues.filter(issue => issue.ruleId === 'cat-in-1')).toHaveLength(1);
+  });
+
+  it('does not fail simple memberOf constraints when the ValueSet is unavailable', async () => {
+    const missingValueSetUrl = 'http://example.org/fhir/ValueSet/not-installed';
+    valueSetCache.setValueSetFile(`${missingValueSetUrl}|R4`, null);
+
+    const conditionProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/fhir/StructureDefinition/condition-missing-valueset',
+      name: 'ConditionProfileMissingValueSet',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Condition',
+      snapshot: {
+        element: [
+          {
+            id: 'Condition',
+            path: 'Condition',
+            constraint: [{
+              key: 'cat-missing-vs',
+              severity: 'warning',
+              human: 'A category should be from a ValueSet that is not installed.',
+              expression: `where(category in '${missingValueSetUrl}').exists()`,
+            }],
+          },
+        ],
+      },
+    };
+
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Condition',
+        category: [{
+          coding: [{
+            system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+            code: 'encounter-diagnosis',
+          }],
+        }],
+      },
+      resourceType: 'Condition',
+      structureDef: conditionProfile,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues.filter(issue => issue.ruleId === 'cat-missing-vs')).toHaveLength(0);
   });
 });

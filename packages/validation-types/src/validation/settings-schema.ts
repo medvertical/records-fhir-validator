@@ -79,6 +79,16 @@ export const TerminologyAuthConfigSchema = z.object({
     rejectUnauthorized: z.boolean().optional(),
 });
 
+export const MiiTerminologyModeSchema = z.enum(['mii-local-blaze', 'mii-ontoserver', 'mii-hybrid']);
+
+export const MiiValidationSettingsSchema = z.object({
+    preset: z.enum(['mii-2026', 'ehds-2026']),
+    terminologyMode: MiiTerminologyModeSchema,
+    packageLockHash: z.string().optional(),
+    maxOntoserverRequestsPerRun: z.number().int().positive().optional(),
+    allowHighVolumeOntoserver: z.boolean().optional(),
+});
+
 export const TerminologyServerSchema = z.object({
     id: z.string(),
     name: z.string(),
@@ -216,6 +226,7 @@ export const ValidationSettingsSchema = z.object({
 
     // Optional settings
     terminologyServers: z.array(TerminologyServerSchema).optional(),
+    mii: MiiValidationSettingsSchema.optional(),
     terminologyResolution: TerminologyResolutionSchema.optional(),
     circuitBreaker: CircuitBreakerConfigSchema.optional(),
     mode: z.enum(['online', 'offline']).optional(),

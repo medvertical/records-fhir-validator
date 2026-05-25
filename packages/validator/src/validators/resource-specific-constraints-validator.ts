@@ -4,9 +4,9 @@
  * Validates resource-specific FHIRPath constraints that HAPI checks:
  *
  * Condition:
- * - con-3: stage only when clinicalStatus is not inactive/remission/resolved
- * - con-4: evidence only when verificationStatus confirmed/unconfirmed/provisional
- * - con-5: abatement only when clinicalStatus is inactive/remission/resolved
+ * - con-3: problem-list Conditions need clinicalStatus unless entered-in-error
+ * - con-4: abatement only when clinicalStatus is inactive/remission/resolved
+ * - con-5: clinicalStatus SHALL NOT be present if verificationStatus is entered-in-error
  *
  * Patient:
  * - pat-1: contact SHALL have at least one of name, telecom, address, or organization
@@ -37,6 +37,8 @@
 import type { ValidationIssue } from '../types';
 import { createValidationIssue } from '../issues';
 import { logger } from '../logger';
+import { validateGermanMedicationDosage } from './resource-specific-medication-dosage';
+import { validateObservationConstraints } from './resource-specific-observation-constraints';
 
 // ============================================================================
 // Resource-Specific Constraints
@@ -62,11 +64,11 @@ export class ResourceSpecificConstraintsValidator {
             case 'Composition':
                 return this.validateComposition(resource);
             case 'Observation':
-                return this.validateObservation(resource);
+                return validateObservationConstraints(resource);
             case 'MedicationRequest':
             case 'MedicationDispense':
             case 'MedicationStatement':
-                return this.validateGermanMedicationDosage(resource, profileUrl);
+                return validateGermanMedicationDosage(resource, profileUrl);
             default:
                 return [];
         }
@@ -83,19 +85,31 @@ export class ResourceSpecificConstraintsValidator {
 
         const clinicalStatus = this.getClinicalStatusCode(resource);
 
-        // con-3: If condition is abated, then clinicalStatus must be inactive/remission/resolved
-        // (Stage is only when clinicalStatus is not those values)
-        if (resource.stage && Array.isArray(resource.stage) && resource.stage.length > 0) {
-            const inactiveStatuses = ['inactive', 'remission', 'resolved'];
-            if (clinicalStatus && inactiveStatuses.includes(clinicalStatus)) {
-                issues.push(createValidationIssue({
-                    code: 'con-3-violation',
-                    path: 'Condition.stage',
-                    resourceType: 'Condition',
-                    customMessage: 'con-3: Stage is only present when clinicalStatus is not inactive/remission/resolved',
-                    severityOverride: 'error',
-                }));
-            }
+        const verificationStatus = this.getVerificationStatusCode(resource);
+
+        // con-3: Condition.clinicalStatus SHALL be present if
+        // verificationStatus is not entered-in-error and category is
+        // problem-list-item. The published FHIRPath expression is easy to
+        // mis-evaluate in JS because it compares CodeableConcept directly
+        // to a code string.
+        if (
+            this.hasCode(resource.category, 'problem-list-item') &&
+            verificationStatus !== 'entered-in-error' &&
+            !clinicalStatus
+        ) {
+            issues.push(createValidationIssue({
+                code: 'profile-constraint-warning',
+                path: 'Condition.clinicalStatus',
+                resourceType: 'Condition',
+                customMessage: 'Constraint \'con-3\' failed: Condition.clinicalStatus SHALL be present if verificationStatus is not entered-in-error and category is problem-list-item',
+                ruleId: 'con-3',
+                severityOverride: 'warning',
+                aspectOverride: 'profile',
+                details: {
+                    constraintKey: 'con-3',
+                    originalSeverity: 'warning',
+                },
+            }));
         }
 
         // con-4: Evidence SHALL be present when verificationStatus is confirmed/unconfirmed/provisional
@@ -115,19 +129,15 @@ export class ResourceSpecificConstraintsValidator {
             }
         }
 
-        // con-5: Condition.clinicalStatus SHALL be present if verificationStatus is not entered-in-error.
-        // The base FHIRPath expression (`clinicalStatus.exists() or verificationStatus...entered-in-error...exists()`)
-        // fires when BOTH are absent, but the spec intent is: "if verificationStatus IS PRESENT and not
-        // entered-in-error, clinicalStatus is required." When verificationStatus is absent entirely,
-        // the constraint is vacuously satisfied. This matches ISiK/MII administrative diagnoses that
-        // intentionally omit both fields.
-        const verificationStatus = this.getVerificationStatusCode(resource);
-        if (verificationStatus !== null && verificationStatus !== 'entered-in-error' && !clinicalStatus) {
+        // con-5: Condition.clinicalStatus SHALL NOT be present if
+        // verificationStatus is entered-in-error. Presence requirements for
+        // problem-list Conditions are covered by con-3 above.
+        if (verificationStatus === 'entered-in-error' && clinicalStatus) {
             issues.push(createValidationIssue({
                 code: 'con-5-violation',
                 path: 'Condition.clinicalStatus',
                 resourceType: 'Condition',
-                customMessage: 'con-5: clinicalStatus SHALL be present if verificationStatus is not entered-in-error',
+                customMessage: 'con-5: clinicalStatus SHALL NOT be present if verificationStatus is entered-in-error',
                 severityOverride: 'error',
             }));
         }
@@ -141,6 +151,18 @@ export class ResourceSpecificConstraintsValidator {
 
     private getVerificationStatusCode(condition: any): string | null {
         return condition.verificationStatus?.coding?.[0]?.code || null;
+    }
+
+    private hasCode(value: any, code: string): boolean {
+        const values = Array.isArray(value) ? value : value ? [value] : [];
+
+        return values.some(item => {
+            if (item?.code === code) return true;
+            if (Array.isArray(item?.coding)) {
+                return item.coding.some((coding: any) => coding?.code === code);
+            }
+            return false;
+        });
     }
 
     // ===========================================================================
@@ -386,242 +408,6 @@ export class ResourceSpecificConstraintsValidator {
         return issues;
     }
 
-    // ===========================================================================
-    // Observation Constraints
-    // ===========================================================================
-
-    private validateObservation(resource: any): ValidationIssue[] {
-        const issues: ValidationIssue[] = [];
-
-        logger.debug('[ResourceConstraints] Validating Observation constraints');
-
-        // obs-3: referenceRange must have at least a low, high, or text
-        if (resource.referenceRange && Array.isArray(resource.referenceRange)) {
-            for (let i = 0; i < resource.referenceRange.length; i++) {
-                const rr = resource.referenceRange[i];
-                if (!rr.low && !rr.high && !rr.text) {
-                    issues.push(createValidationIssue({
-                        code: 'obs-3-violation',
-                        path: `Observation.referenceRange[${i}]`,
-                        resourceType: 'Observation',
-                        customMessage: 'obs-3: Must have at least a low or a high or text',
-                        severityOverride: 'error',
-                    }));
-                }
-            }
-        }
-
-        // obs-6: dataAbsentReason SHALL only be present if value[x] is not present
-        const hasValue = this.observationHasValue(resource);
-        if (resource.dataAbsentReason && hasValue) {
-            issues.push(createValidationIssue({
-                code: 'obs-6-violation',
-                path: 'Observation.dataAbsentReason',
-                resourceType: 'Observation',
-                customMessage: 'obs-6: dataAbsentReason SHALL only be present if Observation.value[x] is not present',
-                severityOverride: 'error',
-            }));
-        }
-
-        // obs-7: if code matches a component.code, value SHALL NOT be present
-        if (hasValue && resource.component && Array.isArray(resource.component)) {
-            const obsCodes = this.getCodingSet(resource.code);
-            if (obsCodes.size > 0) {
-                for (const comp of resource.component) {
-                    const compCodes = this.getCodingSet(comp.code);
-                    for (const c of compCodes) {
-                        if (obsCodes.has(c)) {
-                            issues.push(createValidationIssue({
-                                code: 'obs-7-violation',
-                                path: 'Observation.value[x]',
-                                resourceType: 'Observation',
-                                customMessage: 'obs-7: If Observation.code is the same as a component.code, the value element SHALL NOT be present',
-                                severityOverride: 'error',
-                            }));
-                            return issues; // One violation is enough
-                        }
-                    }
-                }
-            }
-        }
-
-        // vs-3 (Vital Signs profile): components without value[x] need dataAbsentReason.
-        if (this.isVitalSignsObservation(resource) && Array.isArray(resource.component)) {
-            for (let i = 0; i < resource.component.length; i++) {
-                const component = resource.component[i];
-                if (!this.observationHasValue(component) && !component.dataAbsentReason) {
-                    issues.push(createValidationIssue({
-                        code: 'invariant-vs-3-violation',
-                        path: `Observation.component[${i}]`,
-                        resourceType: 'Observation',
-                        customMessage: 'vs-3: If there is no a value a data absent reason must be present',
-                        severityOverride: 'error',
-                    }));
-                }
-            }
-        }
-
-        return issues;
-    }
-
-    private observationHasValue(resource: any): boolean {
-        return !!(resource.valueQuantity || resource.valueCodeableConcept ||
-            resource.valueString || resource.valueBoolean || resource.valueInteger ||
-            resource.valueRange || resource.valueRatio || resource.valueSampledData ||
-            resource.valueTime || resource.valueDateTime || resource.valuePeriod);
-    }
-
-    private getCodingSet(codeableConcept: any): Set<string> {
-        const codes = new Set<string>();
-        if (codeableConcept?.coding && Array.isArray(codeableConcept.coding)) {
-            for (const coding of codeableConcept.coding) {
-                if (coding.system && coding.code) {
-                    codes.add(`${coding.system}|${coding.code}`);
-                }
-            }
-        }
-        return codes;
-    }
-
-    private isVitalSignsObservation(resource: any): boolean {
-        if (Array.isArray(resource?.category)) {
-            for (const category of resource.category) {
-                for (const coding of category?.coding || []) {
-                    if (
-                        coding?.system === 'http://terminology.hl7.org/CodeSystem/observation-category' &&
-                        coding?.code === 'vital-signs'
-                    ) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return (resource?.meta?.profile || []).some((profile: string) =>
-            typeof profile === 'string' && /vital|oxygen|pulse-ox/i.test(profile)
-        );
-    }
-
-    // ===========================================================================
-    // German Medication Dosage Constraints
-    // ===========================================================================
-
-    private validateGermanMedicationDosage(resource: any, profileUrl?: string): ValidationIssue[] {
-        const issues: ValidationIssue[] = [];
-        if (!this.shouldValidateGermanMedicationDosage(resource, profileUrl)) return issues;
-
-        const dosagePath = resource.resourceType === 'MedicationStatement'
-            ? 'MedicationStatement.dosage'
-            : `${resource.resourceType}.dosageInstruction`;
-        const dosages = resource.resourceType === 'MedicationStatement'
-            ? resource.dosage
-            : resource.dosageInstruction;
-
-        if (!Array.isArray(dosages) || dosages.length === 0) return issues;
-
-        const hasPureFreeTextDosage = dosages.some(dosage =>
-            this.hasText(dosage) && !this.hasTiming(dosage) && !this.hasDoseAndRate(dosage)
-        );
-
-        for (let i = 0; i < dosages.length; i++) {
-            const dosage = dosages[i];
-            const path = `${dosagePath}[${i}]`;
-            const hasText = this.hasText(dosage);
-            const hasTiming = this.hasTiming(dosage);
-            const hasDoseAndRate = this.hasDoseAndRate(dosage);
-            const isPureFreeText = hasText && !hasTiming && !hasDoseAndRate;
-            const isStructuredOrPartial = !hasText && (hasTiming || hasDoseAndRate);
-
-            if (!isPureFreeText && !isStructuredOrPartial) {
-                issues.push(this.createDosageConstraintIssue(
-                    resource.resourceType,
-                    path,
-                    'DosageStructuredOrFreeTextWarning',
-                    'Die Dosierungsangabe darf entweder nur als Freitext oder nur als vollständige strukturierte Information erfolgen — eine Mischung ist nicht erlaubt.',
-                    'warning',
-                ));
-            }
-
-            if ((hasTiming && !hasDoseAndRate) || (!hasTiming && hasDoseAndRate)) {
-                issues.push(this.createDosageConstraintIssue(
-                    resource.resourceType,
-                    path,
-                    'DosageStructuredRequiresBoth',
-                    'Wenn eine strukturierte Dosierungsangabe erfolgt, müssen sowohl timing als auch doseAndRate angegeben werden.',
-                    'error',
-                ));
-            }
-
-            if (hasText && /.*\d+\s*[-–]\s*\d+\s*[-–]\s*\d+\s*[-–]\s*\d+.*/.test(String(dosage.text))) {
-                issues.push(this.createDosageConstraintIssue(
-                    resource.resourceType,
-                    path,
-                    'DosageWarnungViererschemaInText',
-                    'Hinweis: In Dosage.text wurde ein Viererschema (z. B. 1-1-1-1) erkannt. Bitte prüfen, ob dies strukturiert abgebildet werden kann.',
-                    'warning',
-                ));
-            }
-        }
-
-        if (hasPureFreeTextDosage && dosages.length !== 1) {
-            issues.push(this.createDosageConstraintIssue(
-                resource.resourceType,
-                dosagePath,
-                'FreeTextSingleDosageOnlyWarning',
-                'Wenn eine Dosierung als reiner Freitext angegeben ist, soll nur genau ein Dosage-Element existieren.',
-                'warning',
-            ));
-        }
-
-        return issues;
-    }
-
-    private shouldValidateGermanMedicationDosage(resource: any, profileUrl?: string): boolean {
-        const profiles = [
-            profileUrl,
-            ...(Array.isArray(resource?.meta?.profile) ? resource.meta.profile : []),
-        ].filter((profile): profile is string => typeof profile === 'string');
-
-        return profiles.some(profile =>
-            profile.includes('medizininformatik-initiative.de/fhir/core/modul-medikation/') ||
-            profile.includes('ig.fhir.de/igs/medication/StructureDefinition/')
-        );
-    }
-
-    private hasText(dosage: any): boolean {
-        return typeof dosage?.text === 'string' && dosage.text.trim().length > 0;
-    }
-
-    private hasTiming(dosage: any): boolean {
-        return dosage?.timing !== undefined && dosage.timing !== null;
-    }
-
-    private hasDoseAndRate(dosage: any): boolean {
-        return Array.isArray(dosage?.doseAndRate) && dosage.doseAndRate.length > 0;
-    }
-
-    private createDosageConstraintIssue(
-        resourceType: string,
-        path: string,
-        key: string,
-        human: string,
-        severity: 'warning' | 'error',
-    ): ValidationIssue {
-        return createValidationIssue({
-            code: severity === 'warning' ? 'profile-constraint-warning' : 'profile-constraint-violation',
-            path,
-            resourceType,
-            customMessage: `Constraint '${key}' failed: ${human}`,
-            ruleId: key,
-            severityOverride: severity,
-            aspectOverride: 'profile',
-            details: {
-                constraintKey: key,
-                originalSeverity: severity,
-                source: 'http://ig.fhir.de/igs/medication/StructureDefinition/DosageDE',
-            },
-        });
-    }
 }
 
 // Singleton

@@ -10,6 +10,7 @@ import {
     getNestedValue,
     mergeElementConstraints
 } from '../core/executors/structural-executor-helpers';
+import { checkExtensionExt1, checkPeriodPer1 } from './complex-type-invariants';
 
 /**
  * Validator for complex nested types
@@ -49,86 +50,6 @@ export class ComplexTypeValidator {
             this.typeDefinitionCache.set(key, promise);
         }
         return promise;
-    }
-
-    /**
-     * Evaluate the universal Extension constraint **ext-1** on a single
-     * extension object reached via the complex-type walk.
-     *
-     * ext-1 (from Extension StructureDefinition):
-     *   > Must have either extensions or value[x], not both.
-     *
-     * We detect value[x] by looking for any key that starts with `value`
-     * followed by an uppercase letter — the FHIR convention for
-     * polymorphic value slots (`valueString`, `valueQuantity`,
-     * `valueCodeableConcept`, …). Nested extensions live under the
-     * `.extension` array. Returns a single issue or null.
-     */
-    private checkExt1(extValue: any, basePath: string): ValidationIssue | null {
-        if (!extValue || typeof extValue !== 'object') return null;
-
-        const hasNestedExtension = Array.isArray(extValue.extension) && extValue.extension.length > 0;
-        const hasValueX = Object.keys(extValue).some(k => /^value[A-Z]/.test(k));
-
-        if (hasNestedExtension === hasValueX) {
-            // Either both set (illegal) or neither set (also illegal).
-            const detail = hasNestedExtension
-                ? 'both child extensions AND a value[x]'
-                : 'neither child extensions nor a value[x]';
-            return createValidationIssue({
-                code: 'profile-constraint-violation',
-                path: basePath,
-                resourceType: extValue.resourceType || 'Extension',
-                customMessage:
-                    `ext-1 violation at ${basePath}: Extension must have either ` +
-                    `extensions or value[x], not both. Found ${detail}.`,
-                severityOverride: 'error',
-                details: {
-                    constraintKey: 'ext-1',
-                    hasNestedExtension,
-                    hasValueX,
-                },
-            });
-        }
-        return null;
-    }
-
-    /**
-     * Evaluate the **per-1** invariant on a Period value:
-     *   "If present, start SHALL have a lower value than end."
-     *
-     * FHIR policy: comparing a partial date (e.g. `2023-06-21`) with a
-     * precise dateTime (e.g. `2023-06-21T06:20:00Z`) is INDETERMINATE —
-     * the implementation can't prove `start <= end`. Java's reference
-     * validator treats indeterminate as fail, so we match that strictness.
-     * Same-precision values go through the fast lexicographic path.
-     */
-    private checkPer1(period: any, basePath: string): ValidationIssue | null {
-        if (!period || typeof period !== 'object') return null;
-        const { start, end } = period;
-        if (typeof start !== 'string' || typeof end !== 'string') return null;
-        if (start.length === 0 || end.length === 0) return null;
-
-        // Mixed precision (date vs dateTime) is FHIRPath-indeterminate;
-        // Java treats indeterminate as fail — we match.
-        const precisionMismatch = !start.includes('T') !== !end.includes('T');
-        const isBackwards = precisionMismatch || end < start;
-        if (!isBackwards) return null;
-
-        const reason = precisionMismatch ? 'precision-mismatch' : 'backwards';
-        const message = precisionMismatch
-            ? `per-1 violation at ${basePath}: Period.start (${start}) and Period.end (${end}) ` +
-              `have different precision — comparison is indeterminate.`
-            : `per-1 violation at ${basePath}: Period.end (${end}) is before Period.start (${start}).`;
-
-        return createValidationIssue({
-            code: 'business-invalid-period-end',
-            path: basePath,
-            resourceType: period.resourceType || 'Period',
-            customMessage: message,
-            severityOverride: 'error',
-            details: { constraintKey: 'per-1', start, end, reason },
-        });
     }
 
     /**
@@ -215,7 +136,7 @@ export class ComplexTypeValidator {
             // (e.g. `Observation.valueQuantity.extension[0]`) never enter
             // that walk. Handle them here at the point of descent.
             if (primaryType.code === 'Extension') {
-                const ext1Issue = this.checkExt1(value, basePath);
+                const ext1Issue = checkExtensionExt1(value, basePath);
                 if (ext1Issue) issues.push(ext1Issue);
             }
 
@@ -225,7 +146,7 @@ export class ComplexTypeValidator {
             // the Period SD which the generic executor doesn't reach via
             // the parent's snapshot. Handled here at the descent point.
             if (primaryType.code === 'Period') {
-                const per1Issue = this.checkPer1(value, basePath);
+                const per1Issue = checkPeriodPer1(value, basePath);
                 if (per1Issue) issues.push(per1Issue);
             }
 

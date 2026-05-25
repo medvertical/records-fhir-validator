@@ -136,7 +136,16 @@ export function codingMatchesBindingCodes(element: any, bindingCodes: Set<string
   }
   const { system, code } = element;
   if (system && code) {
-    return bindingCodes.has(`${system}|${code}`) || bindingCodes.has(code);
+    if (bindingCodes.has(`${system}|${code}`)) return true;
+
+    // ValueSet expansions in package files historically carried both
+    // `system|code` and bare `code` entries. For a system-qualified Coding,
+    // never let a bare duplicate from another CodeSystem select the slice.
+    for (const bindingCode of bindingCodes) {
+      if (bindingCode.includes('|')) return false;
+    }
+
+    return bindingCodes.has(code);
   }
   if (code) return bindingCodes.has(code);
   return false;

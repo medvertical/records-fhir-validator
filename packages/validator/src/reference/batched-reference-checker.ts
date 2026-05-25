@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 /**
  * Batched Reference Checker
  *
@@ -8,11 +7,22 @@
  * degrades gracefully when a FHIR server is unreachable.
  */
 
-import axios, { AxiosInstance } from 'axios';
-import { Agent } from 'http';
-import { Agent as HttpsAgent } from 'https';
+import type { AxiosInstance } from 'axios';
 import { parseReference, type ReferenceParseResult } from './reference-type-extractor';
+import { extractReferencesFromBundle, extractReferencesFromResource } from './reference-extraction';
+import { asSummaryUrl, buildReferenceProbeUrl, extractUrlHost } from './reference-probe-url';
+import { ReferenceCircuitBreaker } from './reference-circuit-breaker';
+import {
+  createReferenceHttpClient,
+  resolveBatchCheckConfig,
+  type BatchCheckConfig,
+  type ResolvedBatchCheckConfig,
+} from './reference-http-client';
+import { ReferenceCheckCache } from './reference-check-cache';
+import { summarizeReferenceBatch } from './reference-batch-result';
 import { logger } from '../logger';
+
+export type { BatchCheckConfig } from './reference-http-client';
 
 // ============================================================================
 // Types
@@ -35,27 +45,6 @@ export interface ReferenceExistenceCheck {
   fromCache?: boolean;
 }
 
-export interface BatchCheckConfig {
-  /** Maximum concurrent requests (default: 5) */
-  maxConcurrent?: number;
-  /** Timeout per request in milliseconds (default: 5000) */
-  timeoutMs?: number;
-  /** Base URL for FHIR server */
-  baseUrl?: string;
-  /** Whether to use caching (default: true) */
-  enableCache?: boolean;
-  /** Cache TTL in milliseconds (default: 300000 = 5 minutes) */
-  cacheTtlMs?: number;
-  /** Custom headers for requests */
-  headers?: Record<string, string>;
-  /** Whether to follow redirects (default: true) */
-  followRedirects?: boolean;
-  /** Whether absolute references may call arbitrary external hosts (default: false). */
-  allowExternalAbsoluteReferences?: boolean;
-  /** Whether absolute references may call the configured FHIR server origin (default: true). */
-  allowSameOriginAbsoluteReferences?: boolean;
-}
-
 export interface BatchCheckResult {
   /** All check results */
   results: ReferenceExistenceCheck[];
@@ -73,60 +62,20 @@ export interface BatchCheckResult {
   averageResponseTimeMs: number;
 }
 
-interface CacheEntry {
-  exists: boolean;
-  statusCode?: number;
-  timestamp: number;
-}
-
-/**
- * Circuit-breaker state per base URL. When the validator sees consecutive
- * failures talking to the same FHIR server, it opens the circuit and skips
- * all subsequent HEAD/GET probes for that server until a cool-down window
- * elapses. This keeps the validator responsive when the remote server is
- * down and satisfies the PRD §6.1 graceful-degradation requirement.
- */
-interface CircuitState {
-  /** Consecutive failures to this host */
-  failures: number;
-  /** Timestamp at which the circuit will auto-close and retry */
-  openedUntil: number;
-}
-
 // ============================================================================
 // Batched Reference Checker Class
 // ============================================================================
 
 export class BatchedReferenceChecker {
-  private cache: Map<string, CacheEntry> = new Map();
+  private cache = new ReferenceCheckCache();
   private httpClient: AxiosInstance;
-  private config: Required<BatchCheckConfig>;
+  private config: ResolvedBatchCheckConfig;
   private pendingChecks: Map<string, Promise<ReferenceExistenceCheck>> = new Map(); // Task 10.9: Request deduplication
 
-  /** Circuit breaker per host (key: protocol + host). */
-  private circuits: Map<string, CircuitState> = new Map();
-  /** Track which hosts don't support HEAD — fall back straight to GET. */
-  private headUnsupported: Set<string> = new Set();
-  /** Consecutive failures before a host's circuit opens. */
-  private readonly circuitFailureThreshold = 3;
-  /** Cool-down before a host is probed again (ms). */
-  private readonly circuitCooldownMs = 30_000;
+  private circuitBreaker = new ReferenceCircuitBreaker();
 
   constructor(config?: Partial<BatchCheckConfig>) {
-    // Task 10.9: More aggressive defaults for better performance
-    this.config = {
-      maxConcurrent: config?.maxConcurrent || 10, // Increased from 5 to 10
-      timeoutMs: config?.timeoutMs || 3000, // Reduced from 5000 to 3000 (HEAD is fast)
-      baseUrl: config?.baseUrl || '',
-      enableCache: config?.enableCache !== undefined ? config.enableCache : true,
-      cacheTtlMs: config?.cacheTtlMs || 900000, // Increased from 5min to 15min
-      headers: config?.headers || {
-        'Accept': 'application/fhir+json',
-      },
-      followRedirects: config?.followRedirects !== undefined ? config.followRedirects : true,
-      allowExternalAbsoluteReferences: config?.allowExternalAbsoluteReferences ?? false,
-      allowSameOriginAbsoluteReferences: config?.allowSameOriginAbsoluteReferences ?? true,
-    };
+    this.config = resolveBatchCheckConfig(config);
 
     logger.info('[BatchedReferenceChecker] Task 10.9: Initialized with optimized config:', {
       maxConcurrent: this.config.maxConcurrent,
@@ -134,29 +83,7 @@ export class BatchedReferenceChecker {
       cacheTtlMs: `${this.config.cacheTtlMs / 1000 / 60}min`,
     });
 
-    // Task 10.9: HTTP connection pooling for better performance
-    const httpAgent = new Agent({
-      keepAlive: true,
-      keepAliveMsecs: 30000,
-      maxSockets: this.config.maxConcurrent * 2, // Allow 2x sockets for parallel requests
-      maxFreeSockets: this.config.maxConcurrent,
-    });
-
-    const httpsAgent = new HttpsAgent({
-      keepAlive: true,
-      keepAliveMsecs: 30000,
-      maxSockets: this.config.maxConcurrent * 2,
-      maxFreeSockets: this.config.maxConcurrent,
-    });
-
-    this.httpClient = axios.create({
-      timeout: this.config.timeoutMs,
-      headers: this.config.headers,
-      maxRedirects: this.config.followRedirects ? 5 : 0,
-      validateStatus: () => true, // Accept all status codes
-      httpAgent,
-      httpsAgent,
-    });
+    this.httpClient = createReferenceHttpClient(this.config);
   }
 
   /**
@@ -185,7 +112,7 @@ export class BatchedReferenceChecker {
 
     for (const ref of parsedRefs) {
       if (fullConfig.enableCache) {
-        const cached = this.getFromCache(ref.reference, fullConfig.cacheTtlMs);
+        const cached = this.cache.get(ref.reference, fullConfig.cacheTtlMs);
         if (cached) {
           results.push({
             reference: ref.reference,
@@ -212,31 +139,16 @@ export class BatchedReferenceChecker {
 
     results.push(...uncachedResults);
 
-    // Calculate statistics
-    const totalTime = Date.now() - startTime;
-    const existCount = results.filter(r => r.exists).length;
-    const notExistCount = results.filter(r => !r.exists && !r.errorMessage).length;
-    const failedCount = results.filter(r => r.errorMessage).length;
-    const responseTimes = results
-      .filter(r => r.responseTimeMs !== undefined && r.responseTimeMs > 0)
-      .map(r => r.responseTimeMs!);
-    const avgResponseTime = responseTimes.length > 0
-      ? responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length
-      : 0;
+    const summary = summarizeReferenceBatch(results, cacheHits, startTime);
 
     logger.info(
-      `[BatchedReferenceChecker] Complete: ${existCount} exist, ${notExistCount} not found, ` +
-      `${failedCount} failed, ${cacheHits} cached (${totalTime}ms)`
+      `[BatchedReferenceChecker] Complete: ${summary.existCount} exist, ${summary.notExistCount} not found, ` +
+      `${summary.failedCount} failed, ${summary.cacheHitCount} cached (${summary.totalTimeMs}ms)`
     );
 
     return {
       results,
-      existCount,
-      notExistCount,
-      failedCount,
-      cacheHitCount: cacheHits,
-      totalTimeMs: totalTime,
-      averageResponseTimeMs: avgResponseTime,
+      ...summary,
     };
   }
 
@@ -317,7 +229,7 @@ export class BatchedReferenceChecker {
     const startTime = Date.now();
 
     // Build URL
-    const url = this.buildUrl(reference, parseResult, config);
+    const url = buildReferenceProbeUrl(reference, parseResult, config);
     if (!url) {
       return {
         reference,
@@ -327,10 +239,10 @@ export class BatchedReferenceChecker {
       };
     }
 
-    const host = this.extractHost(url);
+    const host = extractUrlHost(url);
 
     // Circuit breaker: short-circuit if the host is currently unreachable
-    if (host && this.isCircuitOpen(host)) {
+    if (host && this.circuitBreaker.isOpen(host)) {
       return {
         reference,
         parseResult,
@@ -341,20 +253,20 @@ export class BatchedReferenceChecker {
       };
     }
 
-    const useHead = !host || !this.headUnsupported.has(host);
+    const useHead = this.circuitBreaker.supportsHead(host);
 
     try {
       // First attempt: HEAD (unless known-unsupported)
       const response = useHead
         ? await this.httpClient.head(url)
-        : await this.httpClient.get(this.asSummaryUrl(url));
+        : await this.httpClient.get(asSummaryUrl(url));
       let finalResponse = response;
       const responseTime = Date.now() - startTime;
 
       // 405 Method Not Allowed → fall back to GET and remember the host
       if (useHead && finalResponse.status === 405) {
-        if (host) this.headUnsupported.add(host);
-        finalResponse = await this.httpClient.get(this.asSummaryUrl(url));
+        this.circuitBreaker.markHeadUnsupported(host);
+        finalResponse = await this.httpClient.get(asSummaryUrl(url));
       }
 
       // 2xx / 3xx are considered success
@@ -363,14 +275,14 @@ export class BatchedReferenceChecker {
       const isServerReachable = finalResponse.status < 500;
 
       if (isServerReachable && host) {
-        this.recordSuccess(host);
+        this.circuitBreaker.recordSuccess(host);
       } else if (!isServerReachable && host) {
-        this.recordFailure(host);
+        this.circuitBreaker.recordFailure(host);
       }
 
       // Cache result
       if (config.enableCache) {
-        this.addToCache(reference, exists, finalResponse.status);
+        this.cache.set(reference, exists, finalResponse.status);
       }
 
       return {
@@ -385,7 +297,7 @@ export class BatchedReferenceChecker {
       const responseTime = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-      if (host) this.recordFailure(host);
+      if (host) this.circuitBreaker.recordFailure(host);
 
       return {
         reference,
@@ -399,144 +311,10 @@ export class BatchedReferenceChecker {
   }
 
   /**
-   * Convert a reference URL to its `_summary=count` form.
-   *
-   * `GET ResourceType/id?_summary=count` is a lightweight, cache-friendly
-   * way to probe for existence on servers that don't support HEAD.
-   */
-  private asSummaryUrl(url: string): string {
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}_summary=count`;
-  }
-
-  /**
-   * Extract the host (scheme + authority) from a URL. Returns null for
-   * relative URLs the parser cannot understand.
-   */
-  private extractHost(url: string): string | null {
-    try {
-      const parsed = new URL(url);
-      return `${parsed.protocol}//${parsed.host}`;
-    } catch {
-      return null;
-    }
-  }
-
-  private isSameOrigin(referenceUrl: string, baseUrl: string): boolean {
-    try {
-      return new URL(referenceUrl).origin === new URL(baseUrl).origin;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Return true when the host's circuit is currently open.
-   * Auto-closes the circuit once `circuitCooldownMs` has elapsed.
-   */
-  private isCircuitOpen(host: string): boolean {
-    const state = this.circuits.get(host);
-    if (!state) return false;
-    if (state.openedUntil === 0) return false;
-    if (Date.now() >= state.openedUntil) {
-      // Cool-down elapsed — half-open: reset failures so the next probe tries
-      state.failures = 0;
-      state.openedUntil = 0;
-      return false;
-    }
-    return true;
-  }
-
-  private recordSuccess(host: string): void {
-    const state = this.circuits.get(host);
-    if (!state) return;
-    state.failures = 0;
-    state.openedUntil = 0;
-  }
-
-  private recordFailure(host: string): void {
-    const state = this.circuits.get(host) ?? { failures: 0, openedUntil: 0 };
-    state.failures += 1;
-    if (state.failures >= this.circuitFailureThreshold) {
-      state.openedUntil = Date.now() + this.circuitCooldownMs;
-      logger.warn(
-        `[BatchedReferenceChecker] Circuit opened for ${host} after ${state.failures} failures`
-      );
-    }
-    this.circuits.set(host, state);
-  }
-
-  /**
    * Reset the circuit-breaker state. Primarily useful in tests.
    */
   public resetCircuits(): void {
-    this.circuits.clear();
-    this.headUnsupported.clear();
-  }
-
-  /**
-   * Build URL from reference
-   */
-  private buildUrl(
-    reference: string,
-    parseResult: ReferenceParseResult,
-    config: Required<BatchCheckConfig>
-  ): string | null {
-    // Absolute URL - only call it when it stays on the configured FHIR server
-    // origin, unless explicitly opted into arbitrary external reference checks.
-    if (parseResult.referenceType === 'absolute') {
-      if (config.allowExternalAbsoluteReferences) {
-        return reference;
-      }
-      if (
-        config.allowSameOriginAbsoluteReferences
-        && config.baseUrl
-        && this.isSameOrigin(reference, config.baseUrl)
-      ) {
-        return reference;
-      }
-      return null;
-    }
-
-    // Relative reference - combine with base URL
-    if (parseResult.referenceType === 'relative' && config.baseUrl) {
-      const cleanBase = config.baseUrl.endsWith('/') ? config.baseUrl.slice(0, -1) : config.baseUrl;
-      const cleanRef = reference.startsWith('/') ? reference.slice(1) : reference;
-      return `${cleanBase}/${cleanRef}`;
-    }
-
-    // Cannot build URL for contained or canonical references
-    return null;
-  }
-
-  /**
-   * Get from cache if available and not expired
-   */
-  private getFromCache(reference: string, ttlMs: number): CacheEntry | null {
-    const entry = this.cache.get(reference);
-
-    if (!entry) {
-      return null;
-    }
-
-    const age = Date.now() - entry.timestamp;
-    if (age > ttlMs) {
-      this.cache.delete(reference);
-      return null;
-    }
-
-    return entry;
-  }
-
-  /**
-   * Add to cache
-   */
-  private addToCache(reference: string, exists: boolean, statusCode?: number): void {
-    this.cache.set(reference, {
-      exists,
-      statusCode,
-      timestamp: Date.now(),
-    });
+    this.circuitBreaker.reset();
   }
 
   /**
@@ -554,47 +332,14 @@ export class BatchedReferenceChecker {
     size: number;
     entries: Array<{ reference: string; exists: boolean; age: number }>;
   } {
-    const now = Date.now();
-    const entries = Array.from(this.cache.entries()).map(([ref, entry]) => ({
-      reference: ref,
-      exists: entry.exists,
-      age: now - entry.timestamp,
-    }));
-
-    return {
-      size: this.cache.size,
-      entries,
-    };
+    return this.cache.getStats();
   }
 
   /**
    * Extract references from a resource
    */
   extractReferences(resource: any): string[] {
-    const references: string[] = [];
-
-    const extractFromObject = (obj: any) => {
-      if (!obj || typeof obj !== 'object') {
-        return;
-      }
-
-      // Check if this is a reference object
-      if (obj.reference && typeof obj.reference === 'string') {
-        references.push(obj.reference);
-      }
-
-      // Recursively check properties
-      for (const value of Object.values(obj)) {
-        if (Array.isArray(value)) {
-          value.forEach(item => extractFromObject(item));
-        } else if (value && typeof value === 'object') {
-          extractFromObject(value);
-        }
-      }
-    };
-
-    extractFromObject(resource);
-    return references;
+    return extractReferencesFromResource(resource);
   }
 
   /**
@@ -615,18 +360,7 @@ export class BatchedReferenceChecker {
     bundle: any,
     config?: Partial<BatchCheckConfig>
   ): Promise<BatchCheckResult> {
-    const allReferences: string[] = [];
-
-    if (bundle.entry && Array.isArray(bundle.entry)) {
-      bundle.entry.forEach((entry: any) => {
-        if (entry.resource) {
-          const refs = this.extractReferences(entry.resource);
-          allReferences.push(...refs);
-        }
-      });
-    }
-
-    return this.checkBatch(allReferences, config);
+    return this.checkBatch(extractReferencesFromBundle(bundle), config);
   }
 
   /**

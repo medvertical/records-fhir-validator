@@ -431,4 +431,47 @@ describe('ValueSetPackageLoader canonical package scan', () => {
         expect(codes).toContain('new');
         expect(codes).not.toContain('urn:oid:1.2.3|old');
     });
+
+    it('uses canonical scan for nested ValueSet includes whose filenames do not match the canonical suffix', async () => {
+        const root = await fs.mkdtemp(path.join(os.tmpdir(), 'valueset-package-loader-'));
+        const packageDir = path.join(root, 'example.fhir#1.0.0', 'package');
+        await fs.mkdir(packageDir, { recursive: true });
+
+        const nestedCanonical = 'https://example.org/fhir/ValueSet/nested-canonical-name';
+        const parentCanonical = 'https://example.org/fhir/ValueSet/parent';
+
+        await fs.writeFile(
+            path.join(packageDir, 'ValueSet-parent.json'),
+            JSON.stringify({
+                resourceType: 'ValueSet',
+                url: parentCanonical,
+                status: 'active',
+                compose: {
+                    include: [{ valueSet: [nestedCanonical] }],
+                },
+            } satisfies ValueSet),
+        );
+        await fs.writeFile(
+            path.join(packageDir, 'ValueSet-FriendlyNestedName.json'),
+            JSON.stringify({
+                resourceType: 'ValueSet',
+                url: nestedCanonical,
+                status: 'active',
+                compose: {
+                    include: [{
+                        system: 'http://loinc.org',
+                        concept: [{ code: '77606-2' }],
+                    }],
+                },
+            } satisfies ValueSet),
+        );
+
+        const loader = new ValueSetPackageLoader();
+        (loader as any).packageDirectories = [root];
+
+        const codes = await loader.loadValueSet(parentCanonical);
+
+        expect(codes).toContain('http://loinc.org|77606-2');
+        expect(codes).toContain('77606-2');
+    });
 });

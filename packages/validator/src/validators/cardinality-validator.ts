@@ -20,6 +20,84 @@ import { logger } from '../logger';
 // Cardinality Validator
 // ============================================================================
 
+const CHOICE_BASES = [
+  'value', 'effective', 'onset', 'abatement', 'deceased', 'multipleBirth',
+  'defaultValue', 'medication', 'reported', 'occurrence', 'timing',
+  'product', 'serviced', 'location', 'allowed', 'used',
+  'rate', 'born', 'age',
+];
+
+function hasChoiceValue(element: any, base: string): boolean {
+  if (!element || typeof element !== 'object') return false;
+  if (element[base] !== undefined && element[base] !== null) return true;
+
+  return Object.keys(element).some(key =>
+    key.startsWith(base) &&
+    key.length > base.length &&
+    key[base.length] === key[base.length].toUpperCase() &&
+    element[key] !== undefined &&
+    element[key] !== null
+  );
+}
+
+function hasAnyChoiceValue(element: any): boolean {
+  return CHOICE_BASES.some(base => hasChoiceValue(element, base));
+}
+
+function shouldSkipObservationAlternativeMustSupport(resource: any, path: string): boolean {
+  if (!resource || resource.resourceType !== 'Observation') return false;
+
+  if (/^Observation\.value\[x\]$/i.test(path)) {
+    return (resource.dataAbsentReason !== undefined && resource.dataAbsentReason !== null) ||
+      (Array.isArray(resource.component) && resource.component.some(hasAnyChoiceValue));
+  }
+
+  if (/^Observation\.component$/i.test(path)) {
+    return hasChoiceValue(resource, 'value') ||
+      (resource.dataAbsentReason !== undefined && resource.dataAbsentReason !== null);
+  }
+
+  if (/^Observation\.dataAbsentReason$/i.test(path)) {
+    return hasChoiceValue(resource, 'value') ||
+      (Array.isArray(resource.component) && resource.component.some(hasAnyChoiceValue));
+  }
+
+  if (/^Observation\.component(?::[^.]+)?\.dataAbsentReason$/i.test(path)) {
+    return Array.isArray(resource.component) &&
+      resource.component.length > 0 &&
+      resource.component.every(hasAnyChoiceValue);
+  }
+
+  return false;
+}
+
+function shouldSkipContextualMustSupport(resource: any, path: string): boolean {
+  if (!resource) return false;
+
+  if (resource.resourceType === 'Encounter' && /^Encounter\.hospitalization$/i.test(path)) {
+    const classCode = resource.class?.code;
+    return typeof classCode === 'string' && classCode !== 'IMP';
+  }
+
+  if (resource.resourceType === 'Encounter' && /^Encounter\.reasonCode$/i.test(path)) {
+    return (Array.isArray(resource.type) && resource.type.length > 0) ||
+      (Array.isArray(resource.reasonReference) && resource.reasonReference.length > 0) ||
+      (Array.isArray(resource.diagnosis) && resource.diagnosis.length > 0);
+  }
+
+  if (resource.resourceType === 'Patient' && /^Patient\.address\.period$/i.test(path)) {
+    return !Array.isArray(resource.address) ||
+      !resource.address.some((address: any) => address?.use === 'old');
+  }
+
+  return false;
+}
+
+function resourceTypeFromPath(path: string): string {
+  const firstSegment = path.split('.')[0]?.replace(/\[[^\]]+\]/g, '');
+  return firstSegment || 'Unknown';
+}
+
 export class CardinalityValidator {
   private mustSupportSeverity: 'error' | 'warning' | 'information' = 'warning';
 
@@ -64,7 +142,7 @@ export class CardinalityValidator {
       issues.push(createValidationIssue({
         code: 'structural-validation-error',
         path,
-        resourceType: 'Unknown',
+        resourceType: resource?.resourceType || resourceTypeFromPath(path),
         profile: profileUrl,
         customMessage: `Element '${elementName}' must be an array (max cardinality is ${max})`,
         messageParams: { element: elementName, max },
@@ -82,7 +160,7 @@ export class CardinalityValidator {
         issues.push(createValidationIssue({
           code: 'structural-cardinality-min',
           path,
-          resourceType: 'Unknown',
+          resourceType: resource?.resourceType || resourceTypeFromPath(path),
           profile: profileUrl,
           messageParams: { element: path, actual: count, min },
         }));
@@ -102,7 +180,7 @@ export class CardinalityValidator {
         issues.push(createValidationIssue({
           code: 'structural-cardinality-max',
           path,
-          resourceType: 'Unknown',
+          resourceType: resource?.resourceType || resourceTypeFromPath(path),
           profile: profileUrl,
           messageParams: { element: path, actual: count, max },
         }));
@@ -113,8 +191,16 @@ export class CardinalityValidator {
     if (elementDef.mustSupport === true) {
       // Only validate mustSupport if parent element exists (conditional mustSupport)
       const shouldValidateMustSupport = resource ? shouldValidateRequired(resource, path) : true;
+      const shouldSkipObservationAlternative =
+        shouldSkipObservationAlternativeMustSupport(resource, path);
+      const shouldSkipContextual =
+        shouldSkipContextualMustSupport(resource, path);
 
-      if (shouldValidateMustSupport) {
+      if (
+        shouldValidateMustSupport &&
+        !shouldSkipObservationAlternative &&
+        !shouldSkipContextual
+      ) {
         // Double-check that element truly doesn't exist before reporting mustSupport-missing
         // The 'value' parameter might be undefined even if the element exists in the resource
         let elementActuallyExists = count > 0;
@@ -149,14 +235,20 @@ export class CardinalityValidator {
           count,
           path,
           profileUrl,
-          elementActuallyExists
+          elementActuallyExists,
+          resource?.resourceType || resourceTypeFromPath(path)
         );
         issues.push(...mustSupportIssues);
-      } else {
+      } else if (!shouldValidateMustSupport) {
         // Parent doesn't exist - child element is not mustSupport required
         logger.debug(
           `[CardinalityValidator] Skipping mustSupport check for '${path}' ` +
           `(parent doesn't exist - conditional mustSupport)`
+        );
+      } else {
+        logger.debug(
+          `[CardinalityValidator] Skipping mustSupport check for '${path}' ` +
+          `(contextual applicability rule matched)`
         );
       }
     }
@@ -172,7 +264,8 @@ export class CardinalityValidator {
     count: number,
     path: string,
     profileUrl?: string,
-    elementActuallyExists?: boolean
+    elementActuallyExists?: boolean,
+    resourceType?: string
   ): ValidationIssue[] {
     const issues: ValidationIssue[] = [];
 
@@ -183,7 +276,7 @@ export class CardinalityValidator {
       issues.push(createValidationIssue({
         code: 'profile-mustsupport-missing',
         path,
-        resourceType: 'Unknown',
+        resourceType: resourceType || resourceTypeFromPath(path),
         profile: profileUrl,
         messageParams: { element: path },
         severityOverride: this.mustSupportSeverity === 'information'

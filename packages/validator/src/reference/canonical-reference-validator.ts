@@ -7,33 +7,20 @@
  * Task 6.9: Add canonical reference validation (e.g., references to profiles, valuesets)
  */
 
-import { parseReference as _parseReference } from './reference-type-extractor';
+import {
+  CANONICAL_RESOURCE_TYPES,
+  CANONICAL_URL_PATTERN,
+  CANONICAL_URN_PATTERN,
+  COMMON_CANONICAL_BASE_URLS,
+  type CanonicalResourceType,
+} from './canonical-reference-definitions';
+import { extractCanonicalUrlsFromResource } from './canonical-url-extraction';
+
+export type { CanonicalResourceType } from './canonical-reference-definitions';
 
 // ============================================================================
 // Types
 // ============================================================================
-
-export type CanonicalResourceType =
-  | 'StructureDefinition'
-  | 'ValueSet'
-  | 'CodeSystem'
-  | 'ConceptMap'
-  | 'SearchParameter'
-  | 'CapabilityStatement'
-  | 'OperationDefinition'
-  | 'NamingSystem'
-  | 'ImplementationGuide'
-  | 'Questionnaire'
-  | 'PlanDefinition'
-  | 'Measure'
-  | 'Library'
-  | 'ActivityDefinition'
-  | 'MessageDefinition'
-  | 'CompartmentDefinition'
-  | 'GraphDefinition'
-  | 'ExampleScenario'
-  | 'ObservationDefinition'
-  | 'SpecimenDefinition';
 
 export interface CanonicalReferenceInfo {
   /** Original canonical URL */
@@ -79,32 +66,6 @@ export interface CanonicalResolutionResult {
 // ============================================================================
 
 export class CanonicalReferenceValidator {
-  private canonicalResourceTypes: Set<CanonicalResourceType> = new Set([
-    'StructureDefinition',
-    'ValueSet',
-    'CodeSystem',
-    'ConceptMap',
-    'SearchParameter',
-    'CapabilityStatement',
-    'OperationDefinition',
-    'NamingSystem',
-    'ImplementationGuide',
-    'Questionnaire',
-    'PlanDefinition',
-    'Measure',
-    'Library',
-    'ActivityDefinition',
-    'MessageDefinition',
-    'CompartmentDefinition',
-    'GraphDefinition',
-    'ExampleScenario',
-    'ObservationDefinition',
-    'SpecimenDefinition',
-  ]);
-
-  private canonicalUrlPattern = /^https?:\/\/.+/;
-  private urnPattern = /^urn:[a-z0-9][a-z0-9-]{0,31}:.+/i;
-
   /**
    * Parse canonical URL information
    */
@@ -196,12 +157,12 @@ export class CanonicalReferenceValidator {
    */
   private isValidCanonicalFormat(url: string): boolean {
     // HTTP(S) URLs
-    if (this.canonicalUrlPattern.test(url)) {
+    if (CANONICAL_URL_PATTERN.test(url)) {
       return true;
     }
 
     // URN format
-    if (this.urnPattern.test(url)) {
+    if (CANONICAL_URN_PATTERN.test(url)) {
       return true;
     }
 
@@ -213,7 +174,7 @@ export class CanonicalReferenceValidator {
    */
   private isConformanceResourceUrl(url: string): boolean {
     // Check if URL contains a conformance resource type
-    for (const resourceType of this.canonicalResourceTypes) {
+    for (const resourceType of CANONICAL_RESOURCE_TYPES) {
       if (url.includes(`/${resourceType}/`)) {
         return true;
       }
@@ -236,7 +197,7 @@ export class CanonicalReferenceValidator {
    * Extract resource type from canonical URL
    */
   extractResourceTypeFromUrl(url: string): CanonicalResourceType | null {
-    for (const resourceType of this.canonicalResourceTypes) {
+    for (const resourceType of CANONICAL_RESOURCE_TYPES) {
       if (url.includes(`/${resourceType}/`)) {
         return resourceType;
       }
@@ -269,65 +230,7 @@ export class CanonicalReferenceValidator {
    * Extract all canonical URLs from a resource
    */
   extractCanonicalUrls(resource: any): CanonicalReferenceInfo[] {
-    const canonicals: CanonicalReferenceInfo[] = [];
-
-    const extractFromObject = (obj: any, path: string = '') => {
-      if (!obj || typeof obj !== 'object') {
-        return;
-      }
-
-      // Check known canonical fields
-      const canonicalFields = [
-        'url',
-        'profile',
-        'targetProfile',
-        'system',
-        'valueSet',
-        'instantiatesCanonical',
-        'instantiatesUri',
-        'derivedFrom',
-        'basedOn',
-        'partOf',
-      ];
-
-      for (const field of canonicalFields) {
-        const value = obj[field];
-
-        // Handle string values
-        if (value && typeof value === 'string') {
-          const canonicalInfo = this.parseCanonicalUrl(value);
-          if (canonicalInfo.isValidFormat) {
-            canonicals.push(canonicalInfo);
-          }
-        }
-
-        // Handle array values (e.g., meta.profile)
-        if (Array.isArray(value)) {
-          value.forEach((item) => {
-            if (typeof item === 'string') {
-              const canonicalInfo = this.parseCanonicalUrl(item);
-              if (canonicalInfo.isValidFormat) {
-                canonicals.push(canonicalInfo);
-              }
-            }
-          });
-        }
-      }
-
-      // Recursively check properties
-      for (const [key, value] of Object.entries(obj)) {
-        if (Array.isArray(value)) {
-          value.forEach((item, index) => {
-            extractFromObject(item, `${path}.${key}[${index}]`);
-          });
-        } else if (value && typeof value === 'object') {
-          extractFromObject(value, path ? `${path}.${key}` : key);
-        }
-      }
-    };
-
-    extractFromObject(resource);
-    return canonicals;
+    return extractCanonicalUrlsFromResource(resource, canonical => this.parseCanonicalUrl(canonical));
   }
 
   /**
@@ -499,15 +402,7 @@ export class CanonicalReferenceValidator {
    * Get common FHIR canonical base URLs
    */
   getCommonBaseUrls(): Record<string, string> {
-    return {
-      'hl7.org': 'http://hl7.org/fhir',
-      'fhir.org': 'http://fhir.org',
-      'nictiz.nl': 'http://nictiz.nl/fhir',
-      'simplifier.net': 'http://simplifier.net',
-      'medizininformatik-initiative.de': 'https://www.medizininformatik-initiative.de/fhir',
-      'gematik.de': 'https://gematik.de/fhir',
-      'kbv.de': 'https://fhir.kbv.de',
-    };
+    return { ...COMMON_CANONICAL_BASE_URLS };
   }
 
   /**
@@ -543,4 +438,3 @@ export function getCanonicalReferenceValidator(): CanonicalReferenceValidator {
 export function resetCanonicalReferenceValidator(): void {
   validatorInstance = null;
 }
-

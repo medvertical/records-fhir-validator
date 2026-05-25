@@ -120,6 +120,7 @@ export async function extractSlicingInfo(
     if (!sliceDef.pattern && !sliceDef.fixed) {
       const binding = element.binding;
       if (binding?.valueSet && valueSetLoader) {
+        sliceDef.bindingValueSet = binding.valueSet;
         try {
           const codes = await valueSetLoader.loadValueSet(binding.valueSet);
           if (codes && codes.length > 0) {

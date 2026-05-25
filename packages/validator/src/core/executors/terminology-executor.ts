@@ -11,46 +11,27 @@
 import type { ValidationIssue } from '../../types';
 import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
 import { ValueSetValidator, type TerminologyResolutionConfig } from '../../validators/valueset-validator';
-import { valueSetCache } from '../../validators/valueset-cache';
 import { shouldValidateRequired } from '../../business-rules';
-import { validateUcumCode, quantityUsesUcum, ucumCodeHasAnnotation } from '../../validators/ucum-validator';
-import { matchesPattern } from '../../validators/slice-utils';
+import { ucumCodeHasAnnotation, validateUcumCode } from '../../validators/ucum-validator';
 import { logger } from '../../logger';
-
-// FHIR types whose `code` field carries a UCUM expression when `system`
-// is `http://unitsofmeasure.org`. Simple- and Money-quantities share the
-// shape via constraints; all of them land in this executor via their
-// element's `type.code`.
-const UCUM_BEARING_TYPES = new Set<string>([
-  'Quantity', 'SimpleQuantity', 'MoneyQuantity',
-  'Age', 'Distance', 'Duration', 'Count',
-]);
-
-const KNOWN_LOINC_DISPLAYS: Record<string, string[]> = {
-  '59408-5': [
-    'Oxygen saturation in Arterial blood by Pulse oximetry',
-    'SaO2 % BldA PulseOx',
-  ],
-  '3151-8': [
-    'Inhaled oxygen flow rate',
-    'Inhaled O2 flow rate',
-  ],
-  '11369-6': [
-    'History of Immunization note',
-    'Hx of Immunization note',
-  ],
-  '30954-2': [
-    'Relevant diagnostic tests/laboratory data note',
-    'Relevant dx tests/lab data note',
-  ],
-  '8716-3': [
-    'Vital signs note',
-  ],
-  '29762-2': [
-    'Social history note',
-    'Social hx note',
-  ],
-};
+import {
+  buildInvalidUcumIssueDetails,
+  buildInvalidUcumMessage,
+  UCUM_BEARING_TYPES,
+  validateUcumAtPath,
+} from './terminology-ucum-rules';
+import {
+  validateKnownLoincDisplays,
+} from './terminology-display-rules';
+import { validateExternalCodeSystems } from './terminology-external-code-system-rules';
+import {
+  effectiveBindingForElement,
+  selectSliceScopedValues,
+  selectValuesForBinding,
+  shouldSuppressNonRequiredBindingForOwnFixedPattern,
+  shouldSuppressValueSetSliceMembershipIssue,
+  shouldValidateBindingForValue,
+} from './terminology-binding-selection';
 
 // ============================================================================
 // Types
@@ -63,282 +44,11 @@ export interface TerminologyValidationContext {
   fhirVersion?: 'R4' | 'R5' | 'R6';
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
-/** Quantity unit bindings: required → extensible. HAPI-aligned — avoids FP on derived profiles
- *  (e.g. Pulse Oximetry L/min vs. Vital Signs ucum-vitals-common). */
-function effectiveBindingForElement(elementDef: { binding?: any; type?: { code: string }[] }): any {
-  const binding = elementDef.binding;
-  if (binding?.strength !== 'required') return binding;
-  const hasQuantityType = elementDef.type?.some(t => UCUM_BEARING_TYPES.has(t.code));
-  return hasQuantityType ? { ...binding, strength: 'extensible' } : binding;
-}
-
-function shouldValidateBindingForValue(
-  elementDef: { path?: string; type?: { code: string }[] },
-  value: unknown,
-): boolean {
-  if (!elementDef.path?.endsWith('[x]')) return true;
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return true;
-
-  const candidate = value as Record<string, unknown>;
-  const quantityLike = typeof candidate.value === 'number' &&
-    typeof candidate.system === 'string' &&
-    typeof candidate.code === 'string';
-
-  return !quantityLike;
-}
-
 function isCodingHygienePath(path: string): boolean {
   return (
     /\.coding\[\d+\]$/.test(path) ||
     /\.(?:value|answer|pattern|fixed)Coding$/.test(path)
   );
-}
-
-function codingMatchesPattern(coding: unknown, pattern: Record<string, unknown>): boolean {
-  if (!coding || typeof coding !== 'object' || Array.isArray(coding)) return false;
-  const candidate = coding as Record<string, unknown>;
-  return Object.entries(pattern).every(([key, value]) => candidate[key] === value);
-}
-
-function codeableConceptMatchesPattern(value: unknown, pattern: Record<string, unknown>): boolean {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const candidate = value as Record<string, unknown>;
-
-  return Object.entries(pattern).every(([key, expected]) => {
-    if (key === 'coding' && Array.isArray(expected)) {
-      const candidateCodings = Array.isArray(candidate.coding) ? candidate.coding : [];
-      return expected.every(patternCoding =>
-        candidateCodings.some(candidateCoding =>
-          codingMatchesPattern(candidateCoding, patternCoding as Record<string, unknown>),
-        ),
-      );
-    }
-
-    return candidate[key] === expected;
-  });
-}
-
-function elementMatchesOwnPattern(elementDef: ElementDefinition, value: unknown): boolean {
-  const patternOrFixed = getPatternOrFixedValue(elementDef);
-  if (patternOrFixed !== undefined) return matchesPattern(value, patternOrFixed);
-
-  const patternCoding = (elementDef as ElementDefinition & { patternCoding?: Record<string, unknown> }).patternCoding;
-  if (patternCoding) return codingMatchesPattern(value, patternCoding);
-
-  const patternCodeableConcept = (
-    elementDef as ElementDefinition & { patternCodeableConcept?: Record<string, unknown> }
-  ).patternCodeableConcept;
-  if (patternCodeableConcept) return codeableConceptMatchesPattern(value, patternCodeableConcept);
-
-  return false;
-}
-
-function getPatternOrFixedValue(elementDef: ElementDefinition): unknown {
-  const candidate = elementDef as ElementDefinition & Record<string, unknown>;
-  if (candidate.pattern !== undefined) return candidate.pattern;
-  if (candidate.fixed !== undefined) return candidate.fixed;
-  for (const key of Object.keys(candidate)) {
-    if ((key.startsWith('pattern') || key.startsWith('fixed')) && key !== 'pattern' && key !== 'fixed') {
-      return candidate[key];
-    }
-  }
-  return undefined;
-}
-
-function getValueAtRelativePath(value: unknown, path: string): unknown {
-  if (!path || path === '$this') return value;
-  if (!value || typeof value !== 'object') return undefined;
-
-  let current: unknown = value;
-  for (const part of path.split('.')) {
-    if (!current || typeof current !== 'object') return undefined;
-    const object = current as Record<string, unknown>;
-    if (part.includes('[x]')) {
-      const choicePrefix = part.replace('[x]', '');
-      current = Object.entries(object).find(([key]) =>
-        key.startsWith(choicePrefix) &&
-        key.length > choicePrefix.length &&
-        key.charAt(choicePrefix.length) === key.charAt(choicePrefix.length).toUpperCase()
-      )?.[1];
-    } else {
-      current = object[part];
-    }
-  }
-  return current;
-}
-
-function getSliceChildConstraints(structureDef: StructureDefinition, elementDef: ElementDefinition): ElementDefinition[] {
-  if (!elementDef.id || !elementDef.sliceName) return [];
-  const prefix = `${elementDef.id}.`;
-  return structureDef.snapshot?.element.filter(candidate =>
-    typeof candidate.id === 'string' &&
-    candidate.id.startsWith(prefix) &&
-    getPatternOrFixedValue(candidate) !== undefined,
-  ) ?? [];
-}
-
-function elementMatchesSliceChildConstraints(
-  value: unknown,
-  elementDef: ElementDefinition,
-  structureDef: StructureDefinition,
-): boolean {
-  const constraints = getSliceChildConstraints(structureDef, elementDef);
-  if (constraints.length === 0) return false;
-
-  return constraints.every(constraint => {
-    const relativePath = constraint.id!.substring(`${elementDef.id}.`.length);
-    return matchesPattern(getValueAtRelativePath(value, relativePath), getPatternOrFixedValue(constraint));
-  });
-}
-
-function getOwningSliceElement(
-  structureDef: StructureDefinition,
-  elementDef: ElementDefinition,
-): ElementDefinition | null {
-  if (!elementDef.id || !elementDef.id.includes(':')) return null;
-  if (elementDef.sliceName) return elementDef;
-
-  const sliceRootEnd = elementDef.id.indexOf('.', elementDef.id.indexOf(':'));
-  if (sliceRootEnd === -1) return null;
-
-  const sliceRootId = elementDef.id.slice(0, sliceRootEnd);
-  return structureDef.snapshot?.element.find(candidate =>
-    candidate.id === sliceRootId && Boolean(candidate.sliceName),
-  ) ?? null;
-}
-
-function getRelativePathWithinSlice(elementDef: ElementDefinition, sliceElement: ElementDefinition): string {
-  if (!elementDef.id || !sliceElement.id || elementDef.id === sliceElement.id) return '';
-  return elementDef.id.substring(`${sliceElement.id}.`.length);
-}
-
-function elementMatchesSlice(
-  value: unknown,
-  sliceElement: ElementDefinition,
-  structureDef: StructureDefinition,
-): boolean {
-  const ownPatternOrFixed = getPatternOrFixedValue(sliceElement);
-  if (ownPatternOrFixed !== undefined) return matchesPattern(value, ownPatternOrFixed);
-  if (elementMatchesOwnPattern(sliceElement, value)) return true;
-
-  const ownChildConstraints = getSliceChildConstraints(structureDef, sliceElement);
-  if (ownChildConstraints.length > 0) {
-    return elementMatchesSliceChildConstraints(value, sliceElement, structureDef);
-  }
-
-  const siblingPatterns = getSiblingSlicePatterns(structureDef, sliceElement);
-  if (siblingPatterns.length > 0) {
-    return !siblingPatterns.some(sibling => elementMatchesOwnPattern(sibling, value));
-  }
-
-  return true;
-}
-
-function selectSliceScopedValues(
-  resource: unknown,
-  elementDef: ElementDefinition,
-  structureDef: StructureDefinition,
-  getValueAtPath: (resource: any, path: string) => any,
-): { hasMatchingSliceElements: boolean; values: unknown[] } | null {
-  const sliceElement = getOwningSliceElement(structureDef, elementDef);
-  if (!sliceElement) return null;
-
-  const sliceParentValue = getValueAtPath(resource, sliceElement.path);
-  const sliceParentValues = Array.isArray(sliceParentValue)
-    ? sliceParentValue
-    : sliceParentValue !== null && sliceParentValue !== undefined
-      ? [sliceParentValue]
-      : [];
-  const matchingSliceValues = sliceParentValues.filter(value =>
-    elementMatchesSlice(value, sliceElement, structureDef),
-  );
-
-  const relativePath = getRelativePathWithinSlice(elementDef, sliceElement);
-  if (!relativePath) {
-    return { hasMatchingSliceElements: matchingSliceValues.length > 0, values: matchingSliceValues };
-  }
-
-  const values = matchingSliceValues
-    .map(value => getValueAtRelativePath(value, relativePath))
-    .filter(value => value !== null && value !== undefined)
-    .flatMap(value => Array.isArray(value) ? value : [value]);
-
-  return { hasMatchingSliceElements: matchingSliceValues.length > 0, values };
-}
-
-function getSiblingSlicePatterns(structureDef: StructureDefinition, elementDef: ElementDefinition): ElementDefinition[] {
-  const elementId = elementDef.id;
-  if (!elementId || !elementDef.sliceName) return [];
-
-  const slicePrefix = elementId.slice(0, elementId.lastIndexOf(':') + 1);
-  return structureDef.snapshot?.element.filter(candidate =>
-    candidate.id !== elementId &&
-    candidate.id?.startsWith(slicePrefix) &&
-    candidate.path === elementDef.path &&
-    Boolean(
-      (candidate as ElementDefinition & { patternCoding?: unknown }).patternCoding ||
-      (candidate as ElementDefinition & { patternCodeableConcept?: unknown }).patternCodeableConcept
-    ),
-  ) ?? [];
-}
-
-function selectValuesForBinding(
-  elementDef: ElementDefinition,
-  value: unknown,
-  structureDef: StructureDefinition,
-): unknown[] {
-  const values = Array.isArray(value) ? value : [value];
-
-  if (!elementDef.sliceName) {
-    return values;
-  }
-
-  const ownPatternOrFixed = getPatternOrFixedValue(elementDef);
-  if (ownPatternOrFixed !== undefined) {
-    return values.filter(item => matchesPattern(item, ownPatternOrFixed));
-  }
-
-  const patternCoding = (elementDef as ElementDefinition & { patternCoding?: Record<string, unknown> }).patternCoding;
-  if (patternCoding) {
-    if (Array.isArray(value)) {
-      return value.filter(item => codingMatchesPattern(item, patternCoding));
-    }
-
-    if (
-      value &&
-      typeof value === 'object' &&
-      !Array.isArray(value) &&
-      Array.isArray((value as Record<string, unknown>).coding)
-    ) {
-      return ((value as Record<string, unknown>).coding as unknown[])
-        .filter(item => codingMatchesPattern(item, patternCoding));
-    }
-
-    return codingMatchesPattern(value, patternCoding) ? [value] : [];
-  }
-
-  const patternCodeableConcept = (
-    elementDef as ElementDefinition & { patternCodeableConcept?: Record<string, unknown> }
-  ).patternCodeableConcept;
-  if (patternCodeableConcept) {
-    return values.filter(item => codeableConceptMatchesPattern(item, patternCodeableConcept));
-  }
-
-  const ownChildConstraints = getSliceChildConstraints(structureDef, elementDef);
-  if (ownChildConstraints.length > 0) {
-    return values.filter(item => elementMatchesSliceChildConstraints(item, elementDef, structureDef));
-  }
-
-  const siblingPatterns = getSiblingSlicePatterns(structureDef, elementDef);
-  if (siblingPatterns.length > 0) {
-    return values.filter(item => !siblingPatterns.some(sibling => elementMatchesOwnPattern(sibling, item)));
-  }
-
-  return [value];
 }
 
 // ============================================================================
@@ -389,98 +99,20 @@ export class TerminologyExecutor {
       const profileUrl = structureDef.url;
       const fhirVersion = context.fhirVersion ?? 'R4';
 
-      // Validate value set bindings
       if (structureDef.snapshot?.element) {
         for (const elementDef of structureDef.snapshot.element) {
-          if (elementDef.binding) {
-            const path = elementDef.path;
-            const sliceSelection = selectSliceScopedValues(resource, elementDef, structureDef, getValueAtPath);
-            if (sliceSelection && !sliceSelection.hasMatchingSliceElements) {
-              continue;
-            }
-
-            const value = sliceSelection
-              ? (sliceSelection.values.length === 0
-                  ? undefined
-                  : sliceSelection.values.length === 1 ? sliceSelection.values[0] : sliceSelection.values)
-              : getValueAtPath(resource, path);
-
-            // For required bindings, check if value is present
-            if (elementDef.binding.strength === 'required') {
-              const isRequired = (elementDef.min !== undefined && elementDef.min > 0);
-
-              if (isRequired && (value === null || value === undefined)) {
-                // Use same parent-exists check as structural validator
-                // This prevents false positives for paths like Patient.communication.language
-                // when Patient.communication doesn't exist
-                if (shouldValidateRequired(resource, path)) {
-                  issues.push({
-                    id: `terminology-required-binding-missing-${Date.now()}`,
-                    aspect: 'terminology',
-                    severity: 'error',
-                    code: 'binding-required-missing',
-                    message: `Required binding for '${path}' is missing (binding strength: required)`,
-                    path: path,
-                    timestamp: new Date(),
-                    profile: profileUrl
-                  });
-                }
-                continue;
-              }
-            }
-
-            // Validate code if value is present
-            if (value !== null && value !== undefined) {
-              if (shouldValidateBindingForValue(elementDef, value)) {
-                // Quantity unit bindings: required → extensible (HAPI-aligned, avoids FP on derived profiles)
-                const effectiveBinding = effectiveBindingForElement(elementDef);
-                for (const candidateValue of selectValuesForBinding(elementDef, value, structureDef)) {
-                  const bindingIssues = await this.valuesetValidator.validateBinding(
-                    candidateValue, effectiveBinding, path, { profileUrl, fhirVersion },
-                  );
-                  issues.push(...bindingIssues);
-                }
-              }
-            }
-          }
-
-          // Validate LOINC/SNOMED codes in Coding elements (external CodeSystems)
-          // This catches invalid codes even without explicit ValueSet bindings
-          const path = elementDef.path;
-
-          // Check if this element is a CodeableConcept or Coding type
-          const elementTypes = elementDef.type?.map(t => t.code) || [];
-          const isCodeableConcept = elementTypes.includes('CodeableConcept');
-          const isCodingType = elementTypes.includes('Coding');
-
-          if (isCodeableConcept || isCodingType) {
-            const value = getValueAtPath(resource, path);
-            if (value) {
-              // For CodeableConcept, extract the coding array
-              // For Coding, use value directly
-              const codings = isCodeableConcept ? value.coding : (Array.isArray(value) ? value : [value]);
-              if (codings && Array.isArray(codings)) {
-                const codingPath = isCodeableConcept ? `${path}.coding` : path;
-                const codeSystemIssues = await this.validateExternalCodeSystems(codings, codingPath);
-                issues.push(...codeSystemIssues);
-              }
-            }
-          }
-
-          // Validate UCUM codes in Quantity-shaped elements. This covers
-          // `Observation.valueQuantity.code`, `Medication.amount.numerator.code`,
-          // etc. — places where FHIR embeds a UCUM expression that neither
-          // CodeableConcept nor Coding validation would ever see.
-          const hasUcumBearingType = elementTypes.some(t => UCUM_BEARING_TYPES.has(t));
-          const isPolymorphicWithQuantity = path.endsWith('[x]') && hasUcumBearingType;
-          if (hasUcumBearingType || isPolymorphicWithQuantity) {
-            const ucumIssues = this.validateUcumAtPath(resource, elementDef, path);
-            issues.push(...ucumIssues);
-          }
+          issues.push(...await this.validateElementDefinition({
+            resource,
+            elementDef,
+            structureDef,
+            getValueAtPath,
+            profileUrl,
+            fhirVersion,
+          }));
         }
       }
 
-      issues.push(...this.validateKnownLoincDisplays(resource));
+      issues.push(...validateKnownLoincDisplays(resource));
       issues.push(...this.validateCodingHygiene(resource, issues));
 
       return issues;
@@ -499,329 +131,115 @@ export class TerminologyExecutor {
     }
   }
 
-  /**
-   * Walk the resource looking for Quantity-shaped values at the given
-   * element definition and validate any UCUM codes they carry.
-   *
-   * Handles:
-   *   - Direct paths (Observation.valueQuantity → `valueQuantity` field)
-   *   - Polymorphic `value[x]` → resolves to `valueQuantity`, `valueAge`,
-   *     `valueDuration`, etc.
-   *   - Array elements (Observation.referenceRange[].low.code)
-   *
-   * The walk is intentionally shallow: it relies on the structural-
-   * executor to have produced the element definition list; we do NOT
-   * re-traverse the resource tree beyond the current element's path.
-   */
-  private validateUcumAtPath(
-    resource: any,
-    elementDef: any,
-    path: string,
-  ): ValidationIssue[] {
+  private async validateElementDefinition(params: {
+    resource: any;
+    elementDef: ElementDefinition;
+    structureDef: StructureDefinition;
+    getValueAtPath: (resource: any, path: string) => any;
+    profileUrl?: string;
+    fhirVersion: 'R4' | 'R5' | 'R6';
+  }): Promise<ValidationIssue[]> {
+    const { resource, elementDef, structureDef, getValueAtPath, profileUrl, fhirVersion } = params;
     const issues: ValidationIssue[] = [];
-    const elementTypes: string[] = elementDef.type?.map((t: any) => t.code) || [];
-    const isPolymorphic = path.endsWith('[x]');
 
-    // The element definition path is dotted and uses FHIR's `[x]`
-    // polymorphic marker on the final segment when applicable. We
-    // walk the resource tree down to the container of the leaf,
-    // then either:
-    //   - probe the concrete polymorphic key (value[x] → valueQuantity)
-    //   - read the leaf directly by name
-    const segments = path.split('.');
-    const leafSeg = segments[segments.length - 1];
-    const parentSegments = segments.slice(1, -1); // drop resource root + leaf
-
-    // Descend to the leaf's containers. Each segment may produce an
-    // array of containers when the intermediate element is repeatable.
-    interface ContainerHit { value: any; path: string; }
-    let containers: ContainerHit[] = [{ value: resource, path: segments[0] || resource?.resourceType || 'Resource' }];
-    for (const seg of parentSegments) {
-      const next: ContainerHit[] = [];
-      for (const c of containers) {
-        if (c.value === null || c.value === undefined) continue;
-        const v = c.value[seg];
-        if (Array.isArray(v)) {
-          v.forEach((item, index) => {
-            if (item !== null && item !== undefined) {
-              next.push({ value: item, path: `${c.path}.${seg}[${index}]` });
-            }
-          });
-        } else if (v !== undefined && v !== null) {
-          next.push({ value: v, path: `${c.path}.${seg}` });
-        }
-      }
-      containers = next;
+    if (elementDef.binding) {
+      issues.push(...await this.validateElementBinding({
+        resource,
+        elementDef,
+        structureDef,
+        getValueAtPath,
+        profileUrl,
+        fhirVersion,
+      }));
     }
 
-    // For each container, resolve the leaf value(s) and their emitted
-    // FHIR path suffix. A polymorphic element can carry multiple
-    // concrete keys on the same container, so we accumulate (value, key)
-    // pairs and then walk them uniformly.
-    interface LeafHit { value: any; leafName: string; basePath: string; }
-    const leaves: LeafHit[] = [];
-    for (const c of containers) {
-      if (isPolymorphic) {
-        const stem = leafSeg.replace('[x]', '');
-        for (const t of elementTypes) {
-          if (!UCUM_BEARING_TYPES.has(t)) continue;
-          const key = stem + t.charAt(0).toUpperCase() + t.slice(1);
-          const v = c.value[key];
-          if (v !== undefined && v !== null) leaves.push({ value: v, leafName: key, basePath: c.path });
-        }
-      } else {
-        const v = c.value[leafSeg];
-        if (v !== undefined && v !== null) leaves.push({ value: v, leafName: leafSeg, basePath: c.path });
-      }
-    }
+    const path = elementDef.path;
+    const elementTypes = elementDef.type?.map(t => t.code) || [];
+    const isCodeableConcept = elementTypes.includes('CodeableConcept');
+    const isCodingType = elementTypes.includes('Coding');
 
-    for (const hit of leaves) {
-      const items = Array.isArray(hit.value) ? hit.value : [hit.value];
-      for (let idx = 0; idx < items.length; idx++) {
-        const q = items[idx];
-        if (!quantityUsesUcum(q)) continue;
-        const result = validateUcumCode(q.code);
-        const arrayPart = Array.isArray(hit.value) ? `[${idx}]` : '';
-        const finalPath = `${hit.basePath}.${hit.leafName}${arrayPart}.code`;
-
-        if (result.valid) {
-          if (ucumCodeHasAnnotation(q.code)) {
-            issues.push({
-              id: `terminology-ucum-annotation-${Date.now()}-${idx}`,
-              aspect: 'terminology',
-              severity: 'warning',
-              code: 'terminology-ucum-annotation',
-              message: `UCUM code '${q.code}' at ${finalPath} contains a human-readable annotation. UCUM annotations are ignored semantically, so validation should not depend on them`,
-              path: finalPath,
-              timestamp: new Date(),
-            });
-          }
+    if (isCodeableConcept) {
+      const value = getValueAtPath(resource, path);
+      const codeableConcepts = Array.isArray(value) ? value : [value];
+      for (let index = 0; index < codeableConcepts.length; index++) {
+        const concept = codeableConcepts[index];
+        if (!concept || typeof concept !== 'object' || !Array.isArray(concept.coding)) {
           continue;
         }
+        const codingPath = Array.isArray(value) ? `${path}[${index}].coding` : `${path}.coding`;
+        issues.push(...await validateExternalCodeSystems(concept.coding, codingPath, this.valuesetValidator));
+      }
+    } else if (isCodingType) {
+      const value = getValueAtPath(resource, path);
+      const codings = Array.isArray(value) ? value : [value];
+      if (Array.isArray(codings)) {
+        issues.push(...await validateExternalCodeSystems(codings, path, this.valuesetValidator));
+      }
+    }
 
-        issues.push({
-          id: `terminology-ucum-invalid-${Date.now()}-${idx}`,
+    const hasUcumBearingType = elementTypes.some(t => UCUM_BEARING_TYPES.has(t));
+    const isPolymorphicWithQuantity = path.endsWith('[x]') && hasUcumBearingType;
+    if (hasUcumBearingType || isPolymorphicWithQuantity) {
+      issues.push(...validateUcumAtPath(resource, elementDef, path));
+    }
+
+    return issues;
+  }
+
+  private async validateElementBinding(params: {
+    resource: any;
+    elementDef: ElementDefinition;
+    structureDef: StructureDefinition;
+    getValueAtPath: (resource: any, path: string) => any;
+    profileUrl?: string;
+    fhirVersion: 'R4' | 'R5' | 'R6';
+  }): Promise<ValidationIssue[]> {
+    const { resource, elementDef, structureDef, getValueAtPath, profileUrl, fhirVersion } = params;
+    const path = elementDef.path;
+    const sliceSelection = selectSliceScopedValues(resource, elementDef, structureDef, getValueAtPath);
+    if (sliceSelection && !sliceSelection.hasMatchingSliceElements) return [];
+
+    const value = sliceSelection
+      ? (sliceSelection.values.length === 0
+          ? undefined
+          : sliceSelection.values.length === 1 ? sliceSelection.values[0] : sliceSelection.values)
+      : getValueAtPath(resource, path);
+
+    if (elementDef.binding?.strength === 'required' && (elementDef.min ?? 0) > 0) {
+      if (sliceSelection && (value === null || value === undefined) && shouldValidateRequired(resource, path)) {
+        return [{
+          id: `terminology-required-binding-missing-${Date.now()}`,
           aspect: 'terminology',
           severity: 'error',
-          // Reuse the generic `terminology-code-invalid` code so downstream
-          // consumers (OperationOutcome converter, defect corpus, fix
-          // suggestions) don't need a new branch — UCUM is just another
-          // external code system from their POV.
-          code: 'terminology-code-invalid',
-          message: `Invalid UCUM code '${q.code}' at ${finalPath}: ${result.message}`,
-          path: finalPath,
+          code: 'binding-required-missing',
+          message: `Required binding for '${path}' is missing (binding strength: required)`,
+          path,
           timestamp: new Date(),
-        });
+          profile: profileUrl,
+        }];
       }
     }
 
-    return issues;
-  }
+    if (value === null || value === undefined || !shouldValidateBindingForValue(elementDef, value)) {
+      return [];
+    }
 
-  /**
-   * Validate codes in external CodeSystems (LOINC, SNOMED, etc.) via tx.fhir.org
-   */
-  private async validateExternalCodeSystems(
-    value: any,
-    path: string
-  ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
-
-    // Handle array of Coding (e.g., code.coding[])
-    const codings = Array.isArray(value) ? value : [value];
-
-    for (let i = 0; i < codings.length; i++) {
-      const coding = codings[i];
-      if (coding && typeof coding === 'object' && coding.code && !coding.system) {
-        const codingPath = Array.isArray(value) ? `${path}[${i}]` : path;
-        issues.push({
-          id: `terminology-coding-missing-system-${Date.now()}-${i}`,
-          aspect: 'terminology',
-          severity: 'warning',
-          code: 'terminology-code-invalid',
-          message: 'Coding has no system. A code with no system has no defined meaning, and it cannot be validated. A system should be provided',
-          path: codingPath,
-          timestamp: new Date()
-        });
+    const effectiveBinding = effectiveBindingForElement(elementDef);
+    for (const candidateValue of selectValuesForBinding(elementDef, value, structureDef)) {
+      if (shouldSuppressNonRequiredBindingForOwnFixedPattern(elementDef, candidateValue)) {
         continue;
       }
-
-      if (coding && typeof coding === 'object' && coding.system && coding.code) {
-        // Detect a common authoring mistake: using a ValueSet canonical URL
-        // (`.../ValueSet/...`) where a CodeSystem URL is expected. Java's
-        // reference validator emits this as an error; Records previously
-        // accepted any HL7-domain URL as a valid CodeSystem URL via regex.
-        if (/\/ValueSet\//i.test(coding.system)) {
-          const systemPath = Array.isArray(value) ? `${path}[${i}].system` : `${path}.system`;
-          issues.push({
-            id: `terminology-codesystem-is-valueset-${Date.now()}-${i}`,
-            aspect: 'terminology',
-            severity: 'error',
-            code: 'invalid',
-            message: `The Coding references a value set, not a code system ('${coding.system}')`,
-            path: systemPath,
-            timestamp: new Date()
-          });
-        }
-
-        // Validate CodeSystem URL is known/valid
-        const systemValidation = this.validateCodeSystemUrl(coding.system);
-        const cacheKnowsIt =
-          valueSetCache.hasCodeSystem(coding.system) ||
-          valueSetCache.hasCodeSystemFile(coding.system);
-        if (!systemValidation.valid && !cacheKnowsIt) {
-          const systemPath = Array.isArray(value) ? `${path}[${i}].system` : `${path}.system`;
-          issues.push({
-            id: `terminology-codesystem-not-found-${Date.now()}-${i}`,
-            aspect: 'terminology',
-            severity: 'warning',
-            code: 'not-found',
-            message: `A definition for CodeSystem '${coding.system}' could not be found, so the code cannot be validated`,
-            path: systemPath,
-            timestamp: new Date()
-          });
-        }
-
-        if (coding.system === 'http://unitsofmeasure.org') {
-          const result = validateUcumCode(coding.code);
-          if (!result.valid) {
-            const codingPath = Array.isArray(value) ? `${path}[${i}].code` : `${path}.code`;
-            issues.push({
-              id: `terminology-ucum-coding-invalid-${Date.now()}-${i}`,
-              aspect: 'terminology',
-              severity: 'error',
-              code: 'terminology-code-invalid',
-              message: `Invalid UCUM code '${coding.code}' at ${codingPath}: ${result.message}`,
-              path: codingPath,
-              timestamp: new Date()
-            });
-          }
-        }
-
-        // Only validate codes in known external code systems (LOINC, SNOMED, etc.)
-        if (this.valuesetValidator.isExternalCodeSystem(coding.system)) {
-          const result = await this.valuesetValidator.validateCodeInCodeSystem(
-            coding.code,
-            coding.system,
-            typeof coding.display === 'string' ? coding.display : undefined,
-          );
-
-          const terminologyServerIssues = result.issues ?? [];
-          const displayIssue = terminologyServerIssues.find(issue => issue.code === 'invalid-display');
-          if (displayIssue) {
-            const displayPath = Array.isArray(value) ? `${path}[${i}].display` : `${path}.display`;
-            const severity = isAuthoritativeValueDisplayPath(path)
-              ? normalizeTerminologyServerSeverity(displayIssue.severity, 'warning')
-              : 'warning';
-            issues.push({
-              id: `terminology-codesystem-display-${Date.now()}-${i}`,
-              aspect: 'terminology',
-              severity,
-              code: 'terminology-display-mismatch',
-              message: displayIssue.message || result.message || `Wrong Display Name '${coding.display}' for ${coding.system}#${coding.code}`,
-              path: displayPath,
-              timestamp: new Date(),
-              details: {
-                code: coding.code,
-                system: coding.system,
-                ...(coding.display ? { display: coding.display } : {}),
-              },
-            });
-          }
-
-          const inactiveIssue = terminologyServerIssues.find(issue =>
-            issue.code === 'code-comment' &&
-            /inactive/i.test(issue.message)
-          );
-          if (result.inactive || inactiveIssue) {
-            const codingPath = Array.isArray(value) ? `${path}[${i}].code` : `${path}.code`;
-            issues.push({
-              id: `terminology-codesystem-inactive-${Date.now()}-${i}`,
-              aspect: 'terminology',
-              severity: 'warning',
-              code: 'terminology-code-inactive',
-              message: inactiveIssue?.message || result.message || `The concept '${coding.code}' is inactive and its use should be reviewed`,
-              path: codingPath,
-              timestamp: new Date(),
-              details: {
-                code: coding.code,
-                system: coding.system,
-                ...(result.display ? { display: result.display } : {}),
-              },
-            });
-          }
-
-          if (!result.valid) {
-            if (result.reason === 'display-mismatch') {
-              continue;
-            }
-            const codingPath = Array.isArray(value) ? `${path}[${i}].code` : `${path}.code`;
-            const isSystemUnresolvable = result.reason === 'system-unresolvable';
-            issues.push({
-              id: `terminology-codesystem-${isSystemUnresolvable ? 'unresolvable' : 'invalid'}-${Date.now()}-${i}`,
-              aspect: 'terminology',
-              severity: isSystemUnresolvable ? 'warning' : 'error',
-              code: isSystemUnresolvable ? 'terminology-codesystem-unresolvable' : 'terminology-code-invalid',
-              message: result.message || `Unknown code '${coding.code}' in CodeSystem '${coding.system}'`,
-              path: codingPath,
-              timestamp: new Date(),
-              details: {
-                code: coding.code,
-                system: coding.system,
-                ...(coding.display ? { display: coding.display } : {}),
-                ...(result.reason ? { reason: result.reason } : {}),
-              },
-            });
-          }
-        }
+      const bindingIssues = await this.valuesetValidator.validateBinding(
+        candidateValue,
+        effectiveBinding,
+        path,
+        { profileUrl, fhirVersion },
+      );
+      if (!shouldSuppressValueSetSliceMembershipIssue(elementDef, structureDef, bindingIssues)) {
+        issues.push(...bindingIssues);
       }
     }
-
-    return issues;
-  }
-
-  private validateKnownLoincDisplays(resource: any): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-    const root = resource?.resourceType || 'Resource';
-
-    const visit = (value: any, path: string): void => {
-      if (Array.isArray(value)) {
-        value.forEach((item, index) => visit(item, `${path}[${index}]`));
-        return;
-      }
-
-      if (!value || typeof value !== 'object') return;
-
-      if (
-        value.system === 'http://loinc.org' &&
-        typeof value.code === 'string' &&
-        typeof value.display === 'string'
-      ) {
-        const allowedDisplays = KNOWN_LOINC_DISPLAYS[value.code];
-        if (allowedDisplays && !allowedDisplays.includes(value.display)) {
-          issues.push({
-            id: `terminology-loinc-display-mismatch-${Date.now()}-${issues.length}`,
-            aspect: 'terminology',
-            severity: 'error',
-            code: 'terminology-display-mismatch',
-            message:
-              `Wrong Display Name '${value.display}' for http://loinc.org#${value.code}. ` +
-              `Valid display is '${allowedDisplays[0]}'`,
-            path: `${path}.display`,
-            timestamp: new Date(),
-          });
-        }
-      }
-
-      for (const [key, child] of Object.entries(value)) {
-        if (root === 'Bundle' && key === 'resource' && /^Bundle\.entry\[\d+\]$/.test(path)) {
-          continue;
-        }
-        visit(child, `${path}.${key}`);
-      }
-    };
-
-    visit(resource, root);
     return issues;
   }
 
@@ -853,7 +271,7 @@ export class TerminologyExecutor {
       if (typeof value.code === 'string' && !value.system && isCodingHygienePath(path)) {
         pushOnce({
           severity: 'warning',
-          code: 'terminology-code-invalid',
+          code: 'terminology-coding-missing-system',
           message: 'Coding has no system. A code with no system has no defined meaning, and it cannot be validated. A system should be provided',
           path,
         });
@@ -863,7 +281,7 @@ export class TerminologyExecutor {
         const result = validateUcumCode(value.code);
         if (result.valid && ucumCodeHasAnnotation(value.code)) {
           pushOnce({
-            severity: 'warning',
+            severity: 'information',
             code: 'terminology-ucum-annotation',
             message: `UCUM code '${value.code}' at ${path}.code contains a human-readable annotation. UCUM annotations are ignored semantically, so validation should not depend on them`,
             path: `${path}.code`,
@@ -872,8 +290,9 @@ export class TerminologyExecutor {
           pushOnce({
             severity: 'error',
             code: 'terminology-code-invalid',
-            message: `Invalid UCUM code '${value.code}' at ${path}.code: ${result.message}`,
+            message: buildInvalidUcumMessage(value.code, `${path}.code`, result.message),
             path: `${path}.code`,
+            details: buildInvalidUcumIssueDetails(value.code, `${path}.code`, result.message),
           });
         }
       }
@@ -890,86 +309,4 @@ export class TerminologyExecutor {
     return issues;
   }
 
-  /**
-   * Validate that a CodeSystem URL is known/valid
-   */
-  private validateCodeSystemUrl(systemUrl: string): { valid: boolean; message?: string } {
-    // Known FHIR CodeSystem URL patterns
-    const knownPatterns = [
-      // HL7 FHIR CodeSystems
-      /^http:\/\/hl7\.org\/fhir\//,
-      /^http:\/\/terminology\.hl7\.org\//,
-      // External standard CodeSystems
-      /^http:\/\/loinc\.org\/?$/,
-      /^http:\/\/snomed\.info\/sct/,
-      /^http:\/\/unitsofmeasure\.org\/?$/,
-      /^http:\/\/www\.nlm\.nih\.gov\/research\/umls\/rxnorm/,
-      /^urn:oid:/,
-      /^urn:iso:/,
-      /^urn:ietf:/,
-      /^urn:uuid:/,
-      // ICD codes
-      /^http:\/\/hl7\.org\/fhir\/sid\/icd/,
-      // WHO ATC, ISO, UN, DICOM, CPT, CVX and other standard registries
-      /^http:\/\/www\.whocc\.no\/atc/,
-      /^http:\/\/unstats\.un\.org\//,
-      /^http:\/\/dicom\.nema\.org\//,
-      /^http:\/\/www\.ama-assn\.org\/go\/cpt/,
-      /^http:\/\/hl7\.org\/fhir\/sid\//,
-      /^http:\/\/www\.iso\.org\//,
-      /^http:\/\/ihe\.net\//,
-      /^http:\/\/ihe-d\.de\//,
-      /^http:\/\/nucc\.org\//,
-      /^http:\/\/fdasis\.nlm\.nih\.gov/,
-      /^http:\/\/ncimeta\.nci\.nih\.gov/,
-      /^http:\/\/varnomen\.hgvs\.org/,
-      /^http:\/\/www\.genenames\.org/,
-      /^http:\/\/clinicaltrials\.gov/,
-      /^http:\/\/www\.ada\.org\/snodent/,
-      /^http:\/\/cts2\.nlm\.nih\.gov/,
-      /^http:\/\/standardterms\.edqm\.eu\/?$/,
-      // Country-specific FHIR registries
-      /^http:\/\/fhir\.de\//,
-      /^http:\/\/fhir\.nl\//,
-      /^http:\/\/fhir\.ch\//,
-      /^https?:\/\/fhir\.ee\//,
-      /^https?:\/\/fhir\.bbmri\.de\//,
-      /^http:\/\/fhir\.fi\//,
-      // Any HL7 domain
-      /^https?:\/\/.*\.hl7\.org\//,
-      // BCP-47 (Language codes) - Critical for language validation
-      /^urn:ietf:bcp:47$/,
-      // Synapxe (Singapore) logic - recognized local system
-      /^http:\/\/fhir\.synapxe\.sg\/CodeSystem\//,
-    ];
-
-    for (const pattern of knownPatterns) {
-      if (pattern.test(systemUrl)) {
-        return { valid: true };
-      }
-    }
-
-    // Check for common invalid patterns
-    if (!systemUrl.startsWith('http://') && !systemUrl.startsWith('https://') && !systemUrl.startsWith('urn:')) {
-      return { valid: false, message: `CodeSystem URL should be an absolute URI: '${systemUrl}'` };
-    }
-
-    // Unknown but potentially valid custom CodeSystem
-    // Only flag as warning for completely unknown patterns
-    return { valid: false, message: `Unknown CodeSystem URL: '${systemUrl}'` };
-  }
-}
-
-function isAuthoritativeValueDisplayPath(path: string): boolean {
-  return /\.value(?:\[x\]|CodeableConcept)\.coding$/.test(path);
-}
-
-function normalizeTerminologyServerSeverity(
-  severity: unknown,
-  fallback: ValidationIssue['severity'],
-): ValidationIssue['severity'] {
-  return severity === 'fatal' || severity === 'error' || severity === 'warning' ||
-    severity === 'information' || severity === 'info'
-    ? severity
-    : fallback;
 }

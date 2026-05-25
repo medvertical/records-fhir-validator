@@ -151,6 +151,8 @@ describe('TagValidator', () => {
       // Should not have missing system-code issue
       const missingIssue = issues.find(i => i.code === 'metadata-tag-missing-system-code');
       expect(missingIssue).toBeUndefined();
+      const missingCodeIssue = issues.find(i => i.code === 'metadata-tag-missing-code');
+      expect(missingCodeIssue).toBeUndefined();
     });
 
     it('should accept tags with only code', () => {

@@ -11,7 +11,7 @@ import { ConstraintValidator } from '../../validators/constraint-validator';
 // Helper to find a constraint violation by key
 const findConstraintIssue = (issues: any[], constraintKey: string) =>
   issues.find(i => (i.ruleId === constraintKey || i.details?.constraintKey === constraintKey) &&
-    (i.code === 'profile-constraint-violation' || i.code === 'profile-constraint-warning' || i.code?.includes('constraint')));
+    (i.code === constraintKey || i.code === 'profile-constraint-violation' || i.code === 'profile-constraint-warning' || i.code?.includes('constraint')));
 
 // Minimal inline element definitions with core FHIR DomainResource constraints
 const PATIENT_ELEMENTS_WITH_CONSTRAINTS = [
@@ -83,6 +83,29 @@ describe('Constraint Validation', () => {
       expect(['error', 'warning']).toContain(dom3Violation?.severity);
     }, 120000);
 
+    it('should pass dom-3 when contained resources are referenced locally', async () => {
+      const resourceWithReferencedContained = {
+        resourceType: 'Patient',
+        id: 'test-patient',
+        contained: [{
+          resourceType: 'Organization',
+          id: 'org1'
+        }],
+        managingOrganization: {
+          reference: '#org1'
+        }
+      };
+
+      const issues = await constraintValidator.validate(
+        resourceWithReferencedContained,
+        PATIENT_ELEMENTS_WITH_CONSTRAINTS,
+        'http://hl7.org/fhir/StructureDefinition/Patient'
+      );
+
+      expect(findConstraintIssue(issues, 'dom-3')).toBeUndefined();
+      expect(issues.find(issue => issue.code === 'profile-constraint-evaluation-error')).toBeUndefined();
+    }, 120000);
+
     it('should evaluate dom-4: contained resources should not have meta.versionId', async () => {
       const resourceWithContainedVersionId = {
         resourceType: 'Patient',
@@ -149,6 +172,8 @@ describe('Constraint Validation', () => {
       expect(dom6Violation).toBeDefined();
       // dom-6 is a warning but may be demoted to info in standard mode
       expect(['warning', 'info']).toContain(dom6Violation?.severity);
+      expect(dom6Violation?.code).toBe('dom-6');
+      expect(dom6Violation?.path).toBe('Patient.text');
     }, 120000);
   });
 

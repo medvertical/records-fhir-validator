@@ -16,6 +16,7 @@
 import type { ValidationIssue } from '../types';
 import type { StructureDefinition, ElementDefinition } from '../core/structure-definition-types';
 import { createValidationIssue } from '../issues';
+import { matchesPattern } from './slice-utils';
 import { logger } from '../logger';
 
 // ============================================================================
@@ -99,7 +100,7 @@ export class DeepProfileValidator {
         // 2. Check pattern values
         const patternValue = this.extractPatternValue(elementDef);
         if (patternValue !== undefined && value !== undefined) {
-            if (!this.matchesPattern(value, patternValue)) {
+            if (!matchesPattern(value, patternValue)) {
                 issues.push(createValidationIssue({
                     code: 'profile-pattern-mismatch',
                     path,
@@ -264,27 +265,6 @@ export class DeepProfileValidator {
             return JSON.stringify(actual) === JSON.stringify(expected);
         }
         return actual === expected;
-    }
-
-    /**
-     * Check if actual value matches pattern
-     */
-    private matchesPattern(actual: any, pattern: any): boolean {
-        if (typeof pattern !== 'object') {
-            return actual === pattern;
-        }
-
-        // Pattern matching: actual must contain all properties from pattern
-        for (const key of Object.keys(pattern)) {
-            if (actual[key] === undefined) {
-                return false;
-            }
-            if (!this.matchesPattern(actual[key], pattern[key])) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     /**

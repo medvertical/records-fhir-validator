@@ -169,6 +169,30 @@ export interface TerminologyServer {
   preferredSystems?: string[];
 }
 
+// ============================================================================
+// MII Preset Metadata
+// ============================================================================
+
+export type MiiTerminologyMode = 'mii-local-blaze' | 'mii-ontoserver' | 'mii-hybrid';
+export type MiiPreset = 'mii-2026' | 'ehds-2026';
+
+export interface MiiValidationSettings {
+  preset: MiiPreset;
+  terminologyMode: MiiTerminologyMode;
+  /**
+   * Optional SHA-256 from the generated .records-lock.json artifact. This is
+   * evidence metadata only; package pins remain the executable source.
+   */
+  packageLockHash?: string;
+  /**
+   * Guardrail for direct MII Ontoserver use. Bulk validation should prefer
+   * mii-hybrid/local-first and only fall back to Ontoserver for the few calls
+   * that cannot be answered locally.
+   */
+  maxOntoserverRequestsPerRun?: number;
+  allowHighVolumeOntoserver?: boolean;
+}
+
 /**
  * Circuit breaker configuration
  */
@@ -325,6 +349,9 @@ export interface ValidationSettings {
 
   /** Multiple Terminology Servers (ordered by priority) */
   terminologyServers?: TerminologyServer[];
+
+  /** MII product preset metadata used in run evidence and quality gates. */
+  mii?: MiiValidationSettings;
 
   /**
    * Terminology Resolution Strategy

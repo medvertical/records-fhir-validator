@@ -369,7 +369,13 @@ export class ProfileExecutor {
             let current: any = item;
             for (const seg of remainingParts) {
               if (current == null) break;
-              current = current[seg];
+              if (seg.endsWith('[x]')) {
+                const prefix = seg.slice(0, -3);
+                const actualKey = Object.keys(current).find(k => k.startsWith(prefix));
+                current = actualKey ? current[actualKey] : undefined;
+              } else {
+                current = current[seg];
+              }
             }
             if (current != null) resolved.push(current);
           }

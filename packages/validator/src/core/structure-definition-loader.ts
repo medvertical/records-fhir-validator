@@ -7,62 +7,25 @@
  * - Remote sources (packages.fhir.org, Simplifier)
  */
 
-import { promises as fs } from 'fs';
-import { createRequire } from 'module';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
 import { PackageDownloader, packageDownloader } from '../package/package-downloader.js';
 import { PackageRegistryClient, packageRegistryClient } from '../package/package-registry-client.js';
 import { logger } from '../logger';
 import type { StructureDefinition } from './structure-definition-types';
 import type { ProfileSourcesConfig } from '../types';
-import { scanCacheDirectory, scanPackageDirectory } from './sd-loader-package-scanner';
 import { loadFromLocalCache, isRelevantPackage as _isRelevantPackage } from './sd-loader-filesystem';
 import { parseAllowedPackages, isPackageAllowed as _isPackageAllowed } from './sd-loader-package-config';
 import { checkDatabaseCache } from './sd-loader-db-cache';
 import { attemptAutoDownload, isPublicProfile } from './sd-loader-auto-download';
-import { getProfileSource } from '../persistence';
-
-function fhirVersionFamily(sd: StructureDefinition): 'R4' | 'R5' | 'R6' | null {
-  const sdFhirVersion = (sd as { fhirVersion?: string }).fhirVersion;
-  if (!sdFhirVersion) return null;
-  if (sdFhirVersion.startsWith('4.')) return 'R4';
-  if (sdFhirVersion.startsWith('5.')) return 'R5';
-  if (sdFhirVersion.startsWith('6.')) return 'R6';
-  return null;
-}
-
-function matchesRequestedFhirVersion(
-  sd: StructureDefinition,
-  fhirVersion: 'R4' | 'R5' | 'R6'
-): boolean {
-  const family = fhirVersionFamily(sd);
-  return !family || family === fhirVersion;
-}
-
-function urlFhirVersionFamily(url: string): 'R4' | 'R5' | 'R6' | null {
-  const match = url.match(/\/fhir\/([456])\.0(?:\.\d+)?\/StructureDefinition\//);
-  if (!match) return null;
-  if (match[1] === '4') return 'R4';
-  if (match[1] === '5') return 'R5';
-  if (match[1] === '6') return 'R6';
-  return null;
-}
-
-function urlMatchesRequestedFhirVersion(
-  url: string,
-  fhirVersion: 'R4' | 'R5' | 'R6'
-): boolean {
-  const family = urlFhirVersionFamily(url);
-  return !family || family === fhirVersion;
-}
-
-function cacheKeyForProfile(
-  url: string,
-  fhirVersion: 'R4' | 'R5' | 'R6'
-): string {
-  return `${url}:${fhirVersion}`;
-}
+import {
+  cacheKeyForProfile,
+  fhirVersionFamily,
+  urlMatchesRequestedFhirVersion,
+} from './sd-loader-version-utils';
+import { resolveDefaultBundledProfilesPath } from './sd-loader-bundled-path';
+import { sanitizeProfile } from './sd-loader-profile-sanitizer';
+import { loadIGPackageIntoAvailableProfiles } from './sd-loader-ig-package';
+import { loadProfilesBatchWithCache } from './sd-loader-batch-loader';
+import { scanProfileSources, warmUpProfilesFromDatabase } from './sd-loader-initialization';
 
 // Re-export types from separate file to break circular dependencies
 export type {
@@ -109,7 +72,7 @@ export class StructureDefinitionLoader {
     }
   ) {
     this.cachePath = cachePath;
-    this.bundledPath = bundledPath ?? this.getDefaultBundledPath();
+    this.bundledPath = bundledPath ?? resolveDefaultBundledProfilesPath();
     this.autoDownload = options?.autoDownload ?? (process.env.FHIR_AUTO_DOWNLOAD_PACKAGES === 'true');
     this.profileSourcesConfig = options?.profileSourcesConfig ?? {
       fhirServer: true,
@@ -166,47 +129,6 @@ export class StructureDefinitionLoader {
   }
 
   /**
-   * Resolve the bundled-profiles directory.
-   *
-   * The bundled FHIR-package directory ships in a separate workspace
-   * package, `@records-fhir/bundled-profiles`, declared as an optional
-   * peer dep. Splitting it out keeps the validator's tarball small for
-   * consumers who only validate against online tx servers.
-   *
-   * Resolution order:
-   *   1. `FHIR_BUNDLED_PROFILES_PATH` env var (operator override).
-   *      `RECORDS_BUNDLED_PROFILES_PATH` is honored as a deprecated alias
-   *      for the 0.1.x line and will be removed in 0.2.
-   *   2. `@records-fhir/bundled-profiles` resolved via npm — works inside
-   *      the monorepo via the workspace symlink, and from a normal
-   *      `npm install` if the consumer opted in to the peer dep.
-   *
-   * Returns `null` when neither resolves; callers fall back to download
-   * from packages.fhir.org / Simplifier or fail loudly depending on
-   * settings. Constructor `bundledPath` arg overrides this default.
-   */
-  private getDefaultBundledPath(): string | null {
-    const fromEnv =
-      process.env.FHIR_BUNDLED_PROFILES_PATH ?? process.env.RECORDS_BUNDLED_PROFILES_PATH;
-    if (fromEnv) {
-      if (process.env.RECORDS_BUNDLED_PROFILES_PATH && !process.env.FHIR_BUNDLED_PROFILES_PATH) {
-        logger.warn(
-          '[SDLoader] RECORDS_BUNDLED_PROFILES_PATH is deprecated; rename to FHIR_BUNDLED_PROFILES_PATH (will be removed in 0.2.x).',
-        );
-      }
-      return fromEnv;
-    }
-
-    try {
-      const require = createRequire(import.meta.url);
-      const pkgEntry = require.resolve('@records-fhir/bundled-profiles');
-      return path.resolve(path.dirname(pkgEntry), 'storage', 'profiles', 'bundled');
-    } catch {
-      return null;
-    }
-  }
-
-  /**
    * Initialize cache with available profiles from all sources
    */
   private async initializeCache(): Promise<void> {
@@ -219,28 +141,16 @@ export class StructureDefinitionLoader {
     const startTime = Date.now();
 
     try {
-      let sourcesFound = 0;
+      await scanProfileSources({
+        packageSources: this.packageSources,
+        availableProfiles: this.availableProfiles,
+        packageVersionPins: this.packageVersionPins,
+      });
 
-      // Scan all package sources in priority order
-      for (const source of this.packageSources) {
-        try {
-          await fs.access(source);
-          logger.info(`[SDLoader] Scanning package source: ${source}`);
-          await scanCacheDirectory(source, this.availableProfiles, {
-            packageVersionPins: this.packageVersionPins
-          });
-          sourcesFound++;
-        } catch {
-          logger.debug(`[SDLoader] Package source not found: ${source}`);
-        }
-      }
-
-      if (sourcesFound === 0) {
-        logger.warn('[SDLoader] No package sources found! Validator will have limited functionality.');
-      }
-
-      // 🔥 Warm-up: Pre-load profiles from database cache
-      await this.warmUpFromDatabase();
+      await warmUpProfilesFromDatabase({
+        cache: this.cache,
+        availableProfiles: this.availableProfiles,
+      });
 
       const elapsed = Date.now() - startTime;
       logger.info(`[SDLoader] ✅ Initialization complete in ${elapsed}ms (bundled: ${this.availableProfiles.size}, cached: ${this.cache.size})`);
@@ -250,46 +160,6 @@ export class StructureDefinitionLoader {
 
     } catch (error) {
       logger.warn('[SDLoader] Error initializing cache:', error);
-    }
-  }
-
-  /**
-   * Warm-up: Pre-load profiles from database cache
-   * This eliminates cold-start penalty for frequently used profiles
-   */
-  private async warmUpFromDatabase(): Promise<void> {
-    const source = getProfileSource();
-    if (!source.loadAllForWarmup) {
-      // No embedder-provided bulk-load implementation; skip silently.
-      // Standalone CLI / npm-package callers hit this path and that's fine.
-      return;
-    }
-
-    try {
-      logger.info('[SDLoader] 🔥 Starting ProfileSource warm-up...');
-      const warmupStart = Date.now();
-
-      const loadedProfiles = await source.loadAllForWarmup();
-
-      // Transfer loaded profiles to SDLoader caches
-      for (const [, result] of loadedProfiles.entries()) {
-        if (result.profile) {
-          const sanitized = this.sanitizeProfile(result.profile);
-          const family = fhirVersionFamily(sanitized);
-          if (family) {
-            this.cache.set(cacheKeyForProfile(result.canonicalUrl, family), sanitized);
-          }
-          this.availableProfiles.add(result.canonicalUrl);
-        }
-      }
-
-      const warmupTime = Date.now() - warmupStart;
-      logger.info(`[SDLoader] 🔥 Warm-up complete: ${loadedProfiles.size} profiles loaded in ${warmupTime}ms`);
-
-    } catch (error: unknown) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      // Don't fail initialization if warm-up fails
-      logger.warn(`[SDLoader] ProfileSource warm-up failed (non-critical): ${err.message}`);
     }
   }
 
@@ -307,66 +177,13 @@ export class StructureDefinitionLoader {
     urls: string[],
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
   ): Promise<Map<string, StructureDefinition>> {
-    const startTime = Date.now();
-    const results = new Map<string, StructureDefinition>();
-
-    logger.info(`[SDLoader] Batch loading ${urls.length} profile(s)`);
-
-    try {
-      // Step 1: Deduplicate URLs
-      const uniqueUrls = Array.from(new Set(urls));
-      logger.debug(`[SDLoader] Deduplicated: ${urls.length} → ${uniqueUrls.length} unique URLs`);
-
-      // Step 2: Check in-memory cache for all profiles
-      const uncachedUrls: string[] = [];
-      for (const url of uniqueUrls) {
-        const resolvedUrl = this.resolvePinnedCanonical(url);
-        const cacheKey = cacheKeyForProfile(resolvedUrl, fhirVersion);
-        const cached = this.cache.get(cacheKey);
-        if (cached && matchesRequestedFhirVersion(cached, fhirVersion)) {
-          results.set(url, cached);
-        } else {
-          uncachedUrls.push(url);
-        }
-      }
-      logger.info(`[SDLoader] Cache hits: ${results.size}/${uniqueUrls.length}, need to load: ${uncachedUrls.length}`);
-
-      // Step 3: Load uncached profiles in parallel with timeout
-      if (uncachedUrls.length > 0) {
-        const loadPromises = uncachedUrls.map(async (url) => {
-          try {
-            // Wrap each loadProfile call with a 30s timeout
-            const sd = await Promise.race([
-              this.loadProfile(url, fhirVersion),
-              new Promise<null>((_, reject) =>
-                setTimeout(() => reject(new Error(`Profile load timeout after 30s: ${url}`)), 30000)
-              )
-            ]);
-            if (sd) {
-              results.set(url, sd);
-            }
-          } catch (error: unknown) {
-            const err = error instanceof Error ? error : new Error(String(error));
-            logger.warn(`[SDLoader] Failed to load profile ${url}:`, err.message || error);
-          }
-        });
-
-        await Promise.all(loadPromises);
-      }
-
-      const totalTime = Date.now() - startTime;
-      const avgTime = totalTime / urls.length;
-      logger.info(
-        `[SDLoader] Batch load complete in ${totalTime}ms ` +
-        `(avg ${avgTime.toFixed(2)}ms/profile, ${results.size}/${uniqueUrls.length} loaded)`
-      );
-
-      return results;
-
-    } catch (error) {
-      logger.error('[SDLoader] Batch load error:', error);
-      return results; // Return partial results
-    }
+    return loadProfilesBatchWithCache({
+      urls,
+      fhirVersion,
+      cache: this.cache,
+      resolvePinnedCanonical: url => this.resolvePinnedCanonical(url),
+      loadProfile: (url, version) => this.loadProfile(url, version),
+    });
   }
 
   /**
@@ -380,8 +197,6 @@ export class StructureDefinitionLoader {
       // OPTIMIZATION: Skip filesystem scanning entirely - rely on DB cache + auto-download
       // Filesystem scans are extremely slow (30s for 36 packages with 1000+ profiles)
       // DB cache is fast (2ms) and auto-download handles missing profiles (20s timeout)
-      let _skipFilesystemCache = true;
-
       // Canonical pinning: if the URL is unversioned and we have a pinned
       // resolution, redirect to the versioned form. This makes runtime
       // resolution deterministic regardless of which packages are loaded.
@@ -411,7 +226,7 @@ export class StructureDefinitionLoader {
       const dbCachedProfile = await checkDatabaseCache(url, this.dbCacheNotFound, fhirVersion);
       if (dbCachedProfile) {
         // Cache it in memory with version-specific key
-        const sanitized = this.sanitizeProfile(dbCachedProfile);
+        const sanitized = sanitizeProfile(dbCachedProfile);
         this.cache.set(cacheKey, sanitized);
         this.availableProfiles.add(url);
         this.profileNotFound.delete(cacheKey);
@@ -421,7 +236,6 @@ export class StructureDefinitionLoader {
       // If profile was not found in DB cache, skip filesystem check
       // (DB is the source of truth for downloaded profiles)
       if (this.dbCacheNotFound.has(url)) {
-        _skipFilesystemCache = true;
         logger.debug(`[SDLoader] Skipping filesystem check for ${url} (in negative cache)`);
       }
 
@@ -449,57 +263,7 @@ export class StructureDefinitionLoader {
         return existingLoad;
       }
 
-      const loadPromise = (async (): Promise<StructureDefinition | null> => {
-        // If profile URL was found during scan, load it from filesystem
-        if (this.availableProfiles.has(url) || this.availableProfiles.has(resolvedUrl)) {
-          logger.debug(`[SDLoader] Profile found in availableProfiles, loading from filesystem: ${url}`);
-          const sd = await loadFromLocalCache(resolvedUrl, this.packageSources, fhirVersion);
-
-          if (sd) {
-            const sanitized = this.sanitizeProfile(sd);
-            this.cache.set(cacheKey, sanitized);
-            this.profileNotFound.delete(cacheKey);
-            return sanitized;
-          } else {
-            logger.warn(`[SDLoader] Profile in availableProfiles but failed to load: ${url}`);
-            this.profileNotFound.add(cacheKey);
-            return null;
-          }
-        }
-
-        // Auto-download if enabled
-        if (this.autoDownload) {
-          const downloadedProfile = await attemptAutoDownload(url, {
-            registryClient: this.registryClient,
-            packageDownloader: this.packageDownloader,
-            allowedPackages: this.allowedPackages,
-            packageVersionPins: this.packageVersionPins,
-            packageSources: this.packageSources,
-            cache: this.cache,
-            availableProfiles: this.availableProfiles,
-            profileSourcesConfig: this.profileSourcesConfig,
-            fhirVersion: fhirVersion
-          });
-
-          if (downloadedProfile) {
-            const sanitized = this.sanitizeProfile(downloadedProfile);
-            this.cache.set(cacheKey, sanitized);
-            this.profileNotFound.delete(cacheKey);
-            return sanitized;
-          }
-
-          logger.warn(`[SDLoader] Profile not found: ${url}`);
-          logger.debug(`[SDLoader] Auto-download was enabled`);
-          this.profileNotFound.add(cacheKey);
-          return null;
-
-        }
-
-        logger.warn(`[SDLoader] Profile not found: ${url}`);
-        logger.debug(`[SDLoader] Auto-download was disabled`);
-        this.profileNotFound.add(cacheKey);
-        return null;
-      })().finally(() => {
+      const loadPromise = this.loadProfileFromKnownSources(url, resolvedUrl, cacheKey, fhirVersion).finally(() => {
         this.profileLoadPromises.delete(cacheKey);
       });
 
@@ -510,6 +274,60 @@ export class StructureDefinitionLoader {
       logger.error(`[SDLoader] Error loading profile ${url}:`, error);
       return null;
     }
+  }
+
+  private async loadProfileFromKnownSources(
+    url: string,
+    resolvedUrl: string,
+    cacheKey: string,
+    fhirVersion: 'R4' | 'R5' | 'R6',
+  ): Promise<StructureDefinition | null> {
+    if (this.availableProfiles.has(url) || this.availableProfiles.has(resolvedUrl)) {
+      logger.debug(`[SDLoader] Profile found in availableProfiles, loading from filesystem: ${url}`);
+      const sd = await loadFromLocalCache(resolvedUrl, this.packageSources, fhirVersion);
+
+      if (sd) {
+        const sanitized = sanitizeProfile(sd);
+        this.cache.set(cacheKey, sanitized);
+        this.profileNotFound.delete(cacheKey);
+        return sanitized;
+      }
+
+      logger.warn(`[SDLoader] Profile in availableProfiles but failed to load: ${url}`);
+      this.profileNotFound.add(cacheKey);
+      return null;
+    }
+
+    if (this.autoDownload) {
+      const downloadedProfile = await attemptAutoDownload(url, {
+        registryClient: this.registryClient,
+        packageDownloader: this.packageDownloader,
+        allowedPackages: this.allowedPackages,
+        packageVersionPins: this.packageVersionPins,
+        packageSources: this.packageSources,
+        cache: this.cache,
+        availableProfiles: this.availableProfiles,
+        profileSourcesConfig: this.profileSourcesConfig,
+        fhirVersion,
+      });
+
+      if (downloadedProfile) {
+        const sanitized = sanitizeProfile(downloadedProfile);
+        this.cache.set(cacheKey, sanitized);
+        this.profileNotFound.delete(cacheKey);
+        return sanitized;
+      }
+
+      logger.warn(`[SDLoader] Profile not found: ${url}`);
+      logger.debug('[SDLoader] Auto-download was enabled');
+      this.profileNotFound.add(cacheKey);
+      return null;
+    }
+
+    logger.warn(`[SDLoader] Profile not found: ${url}`);
+    logger.debug('[SDLoader] Auto-download was disabled');
+    this.profileNotFound.add(cacheKey);
+    return null;
   }
 
   // Filesystem loading methods extracted to sd-loader-filesystem.ts
@@ -568,27 +386,7 @@ export class StructureDefinitionLoader {
     packageId: string,
     version?: string
   ): Promise<void> {
-    try {
-      logger.info(`[SDLoader] Loading IG package: ${packageId}@${version || 'latest'}`);
-
-      const packagePath = path.join(this.cachePath, packageId);
-
-      // Check if package exists
-      try {
-        await fs.access(packagePath);
-      } catch {
-        logger.warn(`[SDLoader] Package not found: ${packageId}`);
-        return;
-      }
-
-      // Scan package directory
-      await scanPackageDirectory(packagePath, this.availableProfiles);
-
-      logger.info(`[SDLoader] Loaded IG package: ${packageId}`);
-
-    } catch (error) {
-      logger.error(`[SDLoader] Error loading IG package ${packageId}:`, error);
-    }
+    return loadIGPackageIntoAvailableProfiles(this.cachePath, this.availableProfiles, packageId, version);
   }
 
   // Package configuration methods extracted to sd-loader-package-config.ts
@@ -703,7 +501,7 @@ export class StructureDefinitionLoader {
       return false;
     }
 
-    const sanitized = this.sanitizeProfile(sd);
+    const sanitized = sanitizeProfile(sd);
     const cacheKey = `${sd.url}:${fhirVersion}`;
 
     this.cache.set(cacheKey, sanitized);
@@ -728,31 +526,4 @@ export class StructureDefinitionLoader {
     logger.info('[SDLoader] Cache cleared');
   }
 
-  /**
-   * Sanitize profile logic to fix known bugs in definitions
-   * e.g., bad FHIRPath expressions in US Core
-   */
-  private sanitizeProfile(sd: StructureDefinition): StructureDefinition {
-    if (!sd || !sd.snapshot || !sd.snapshot.element) return sd;
-
-    let patched = false;
-    for (const element of sd.snapshot.element) {
-      if (element.constraint) {
-        for (const constraint of element.constraint) {
-          // Fix pd-1: "telecom or endpoint" -> "telecom.exists() or endpoint.exists()"
-          // This causes "expected singleton of type Boolean" error in fhirpath.js because collections (0..*) are not booleans
-          if (constraint.expression && constraint.key === 'pd-1' && constraint.expression.includes('telecom or endpoint') && !constraint.expression.includes('exists()')) {
-            constraint.expression = 'telecom.exists() or endpoint.exists()';
-            patched = true;
-          }
-        }
-      }
-    }
-
-    if (patched) {
-      logger.debug(`[SDLoader] Patched constraints in profile: ${sd.url}`);
-    }
-
-    return sd;
-  }
 }

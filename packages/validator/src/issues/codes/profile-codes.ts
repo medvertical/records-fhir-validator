@@ -54,7 +54,7 @@ export const ProfileCodes = {
     },
     'profile-extension-not-found': {
         aspect: 'profile',
-        severity: 'error',
+        severity: 'warning',
         description: 'Extension StructureDefinition could not be resolved',
     },
     'profile-extension-not-in-profile': {

@@ -125,6 +125,15 @@ export interface CodeSystemConcept {
     code: string;
     display?: string;
     definition?: string;
+    designation?: Array<{
+        language?: string;
+        use?: {
+            system?: string;
+            code?: string;
+            display?: string;
+        };
+        value?: string;
+    }>;
     concept?: CodeSystemConcept[];
 }
 

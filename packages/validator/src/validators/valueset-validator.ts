@@ -1,26 +1,9 @@
-/**
- * ValueSet Validator
- * 
- * Validates coded elements against FHIR ValueSets:
- * - Required bindings (ERROR if code not in value set)
- * - Extensible bindings (WARNING if code not in value set)
- * - Preferred bindings (INFORMATION if code not in value set)
- * - Example bindings (no validation)
- * 
- * Refactored for modularity - delegates to:
- * - ValueSetCache: Caching layer
- * - TerminologyApiClient: Remote terminology server operations
- * - ValueSetPackageLoader: Local package loading
- */
-
 import type { ValidationIssue } from '../types';
 import type { Binding } from '../core/structure-definition-types';
-import { createBindingViolation, createValidationIssue } from '../issues';
+import { createBindingViolation } from '../issues';
 import { logger } from '../logger';
 
-// Import modular components
 import type {
-  CodeSystemConcept,
   TerminologyResolutionConfig
 } from './valueset-types';
 import {
@@ -28,134 +11,41 @@ import {
   isExternalCodeSystem,
   EXTERNAL_CODE_SYSTEMS
 } from './valueset-types';
+import { extractCodeInfo, extractCodeInfos } from './valueset-code-info';
+import {
+  displaysEquivalentForCodeInfo,
+  resourceTypeFromElementPath,
+  type BindingStrength,
+  type CodeInfo,
+} from './valueset-display-utils';
+import { type FhirVersion } from './valueset-expansion-cache-key';
+import { validateDisplayMatchesCodeSystem } from './valueset-display-validator';
+import { KNOWN_VALUE_SET_EXPANSIONS } from './valueset-known-expansions';
+import { isLanguageBinding, validateBCP47 } from './valueset-language-utils';
 import { ValueSetCache, valueSetCache } from './valueset-cache';
-import { TerminologyApiClient, type CodeSystemValidationResult } from './terminology-api-client';
+import {
+  TerminologyApiClient,
+  clearSubsumesCache,
+  clearValidateCodeCache,
+  getSubsumesCacheSize,
+  getValidateCodeCacheSize,
+  isSnomedNationalExtensionCode,
+  type CodeSystemValidationResult
+} from './terminology-api-client';
 import { ValueSetPackageLoader } from './valueset-package-loader';
+import {
+  getScopedExpansionCacheKey,
+  hasTerminologyServer,
+  resolveTerminologyServerForSystem,
+} from './valueset-server-routing';
 
-// Re-export types for backwards compatibility
 export type { TerminologyResolutionStrategy, TerminologyResolutionConfig, ValueSet, CodeSystem } from './valueset-types';
 
-type FhirVersion = 'R4' | 'R5' | 'R6';
-
-function versionedExpansionCacheKey(valueSetUrl: string, fhirVersion?: FhirVersion): string {
-  if (valueSetUrl.includes('|')) return valueSetUrl;
-  return fhirVersion ? `${valueSetUrl}|${fhirVersion}` : valueSetUrl;
-}
-
-function displayMismatchSeverityForBinding(
-  bindingStrength?: 'required' | 'extensible' | 'preferred' | 'example',
-): ValidationIssue['severity'] {
-  if (bindingStrength === 'required') return 'error';
-  if (bindingStrength === 'preferred') return 'information';
-  return 'warning';
-}
-
-// ============================================================================
-// Known ValueSet Expansions (Common FHIR R4 ValueSets)
-// ============================================================================
-
-const KNOWN_VALUE_SET_EXPANSIONS: Record<string, string[]> = {
-  // Administrative Gender
-  'http://hl7.org/fhir/ValueSet/administrative-gender': [
-    'http://hl7.org/fhir/administrative-gender|male',
-    'http://hl7.org/fhir/administrative-gender|female',
-    'http://hl7.org/fhir/administrative-gender|other',
-    'http://hl7.org/fhir/administrative-gender|unknown',
-    'male', 'female', 'other', 'unknown'
-  ],
-
-  // Name Use
-  'http://hl7.org/fhir/ValueSet/name-use': [
-    'http://hl7.org/fhir/name-use|usual',
-    'http://hl7.org/fhir/name-use|official',
-    'http://hl7.org/fhir/name-use|temp',
-    'http://hl7.org/fhir/name-use|nickname',
-    'http://hl7.org/fhir/name-use|anonymous',
-    'http://hl7.org/fhir/name-use|old',
-    'http://hl7.org/fhir/name-use|maiden',
-    'usual', 'official', 'temp', 'nickname', 'anonymous', 'old', 'maiden'
-  ],
-
-  // Identifier Use
-  'http://hl7.org/fhir/ValueSet/identifier-use': [
-    'http://hl7.org/fhir/identifier-use|usual',
-    'http://hl7.org/fhir/identifier-use|official',
-    'http://hl7.org/fhir/identifier-use|temp',
-    'http://hl7.org/fhir/identifier-use|secondary',
-    'http://hl7.org/fhir/identifier-use|old',
-    'usual', 'official', 'temp', 'secondary', 'old'
-  ],
-
-  // Contact Point System
-  'http://hl7.org/fhir/ValueSet/contact-point-system': [
-    'http://hl7.org/fhir/contact-point-system|phone',
-    'http://hl7.org/fhir/contact-point-system|fax',
-    'http://hl7.org/fhir/contact-point-system|email',
-    'http://hl7.org/fhir/contact-point-system|pager',
-    'http://hl7.org/fhir/contact-point-system|url',
-    'http://hl7.org/fhir/contact-point-system|sms',
-    'http://hl7.org/fhir/contact-point-system|other',
-    'phone', 'fax', 'email', 'pager', 'url', 'sms', 'other'
-  ],
-
-  // Contact Point Use
-  'http://hl7.org/fhir/ValueSet/contact-point-use': [
-    'http://hl7.org/fhir/contact-point-use|home',
-    'http://hl7.org/fhir/contact-point-use|work',
-    'http://hl7.org/fhir/contact-point-use|temp',
-    'http://hl7.org/fhir/contact-point-use|old',
-    'http://hl7.org/fhir/contact-point-use|mobile',
-    'home', 'work', 'temp', 'old', 'mobile'
-  ],
-
-  // Device Name Type
-  'http://hl7.org/fhir/ValueSet/device-nametype': [
-    'http://hl7.org/fhir/device-nametype|udi-label-name',
-    'http://hl7.org/fhir/device-nametype|user-friendly-name',
-    'http://hl7.org/fhir/device-nametype|patient-reported-name',
-    'http://hl7.org/fhir/device-nametype|manufacturer-name',
-    'http://hl7.org/fhir/device-nametype|model-name',
-    'http://hl7.org/fhir/device-nametype|other',
-    'udi-label-name', 'user-friendly-name', 'patient-reported-name',
-    'manufacturer-name', 'model-name', 'other'
-  ],
-
-  // Observation Status
-  'http://hl7.org/fhir/ValueSet/observation-status': [
-    'http://hl7.org/fhir/observation-status|registered',
-    'http://hl7.org/fhir/observation-status|preliminary',
-    'http://hl7.org/fhir/observation-status|final',
-    'http://hl7.org/fhir/observation-status|amended',
-    'http://hl7.org/fhir/observation-status|corrected',
-    'http://hl7.org/fhir/observation-status|cancelled',
-    'http://hl7.org/fhir/observation-status|entered-in-error',
-    'http://hl7.org/fhir/observation-status|unknown',
-    'registered', 'preliminary', 'final', 'amended', 'corrected',
-    'cancelled', 'entered-in-error', 'unknown'
-  ],
-
-  // Address Use
-  'http://hl7.org/fhir/ValueSet/address-use': [
-    'http://hl7.org/fhir/address-use|home',
-    'http://hl7.org/fhir/address-use|work',
-    'http://hl7.org/fhir/address-use|temp',
-    'http://hl7.org/fhir/address-use|old',
-    'http://hl7.org/fhir/address-use|billing',
-    'home', 'work', 'temp', 'old', 'billing'
-  ],
-
-  // Address Type
-  'http://hl7.org/fhir/ValueSet/address-type': [
-    'http://hl7.org/fhir/address-type|postal',
-    'http://hl7.org/fhir/address-type|physical',
-    'http://hl7.org/fhir/address-type|both',
-    'postal', 'physical', 'both'
-  ]
+type ValidateBindingOptions = {
+  valueSetUrl?: string;
+  profileUrl?: string;
+  fhirVersion?: FhirVersion;
 };
-
-// ============================================================================
-// ValueSet Validator
-// ============================================================================
 
 export class ValueSetValidator {
   private resolutionConfig: TerminologyResolutionConfig;
@@ -163,7 +53,6 @@ export class ValueSetValidator {
   private apiClient: TerminologyApiClient;
   private packageLoader: ValueSetPackageLoader;
 
-  // Expose static for backwards compatibility
   static readonly EXTERNAL_CODE_SYSTEMS = EXTERNAL_CODE_SYSTEMS;
 
   constructor() {
@@ -196,56 +85,16 @@ export class ValueSetValidator {
     return isExternalCodeSystem(system);
   }
 
-  /**
-   * Scope-based routing: pick the best server for a given code system.
-   *
-   * If the active config has a server list (from settings), look for one
-   * whose `preferredSystems` contains the queried system URL. If found,
-   * return a per-call override with that server's URL + auth. Falls back
-   * to `undefined` meaning "use the configured default serverUrl".
-   *
-   * This is the runtime half of the preferredSystems feature — the UI
-   * configures it, the router accepts it, and this resolver ensures
-   * every code lookup actually consults it.
-   */
   private resolveServerForSystem(system?: string): { url: string; auth?: any } | undefined {
-    if (!system) return undefined;
-    const servers = this.resolutionConfig.servers;
-    if (!servers || servers.length === 0) return undefined;
-
-    const match = servers.find(s =>
-      s.enabled
-      && !s.circuitOpen
-      && s.preferredSystems
-      && s.preferredSystems.includes(system),
-    );
-    if (!match) return undefined;
-
-    logger.debug(`[ValueSetValidator] Scope-routed ${system} → ${match.id} (${match.url})`);
-    return {
-      url: match.url,
-      auth: match.authConfig,
-    };
+    return resolveTerminologyServerForSystem(this.resolutionConfig, system);
   }
 
   private hasTerminologyServer(override?: { url: string }): boolean {
-    return Boolean(override?.url || this.resolutionConfig.serverUrl);
+    return hasTerminologyServer(this.resolutionConfig, override);
   }
 
   private getExpansionCacheKey(valueSetUrl: string, fhirVersion?: FhirVersion): string {
-    const baseKey = versionedExpansionCacheKey(valueSetUrl, fhirVersion);
-    const serverScope = [
-      this.resolutionConfig.strategy,
-      this.resolutionConfig.serverUrl ?? 'no-server',
-      ...(this.resolutionConfig.servers ?? []).map(server => [
-        server.id,
-        server.url,
-        server.enabled ? 'on' : 'off',
-        server.authConfig?.type ?? 'none',
-      ].join(':')),
-    ].join('|');
-
-    return `${baseKey}|${serverScope}`;
+    return getScopedExpansionCacheKey(valueSetUrl, this.resolutionConfig, fhirVersion);
   }
 
   private async validateCodeViaTerminologyServer(
@@ -295,6 +144,31 @@ export class ValueSetValidator {
     return false;
   }
 
+  private hasUnsupportedFilterForSystem(
+    filters: Array<{ system: string; property: string; op: string }>,
+    system: string | undefined,
+  ): boolean {
+    return filters.some(filter => {
+      if (system && filter.system !== system) return false;
+      if (filter.property !== 'concept') return true;
+      return filter.op !== '=' && filter.op !== 'is-a' && filter.op !== 'descendent-of';
+    });
+  }
+
+  private isUnresolvableSnomedExtensionFilterCode(
+    system: string | undefined,
+    code: string,
+    filters: Array<{ system: string; property: string; op: string }>,
+  ): boolean {
+    if (system !== 'http://snomed.info/sct') return false;
+    if (!isSnomedNationalExtensionCode(code)) return false;
+    return filters.some(filter =>
+      filter.system === system
+      && filter.property === 'concept'
+      && (filter.op === 'is-a' || filter.op === 'descendent-of')
+    );
+  }
+
   /**
    * Validate a coded element against its binding
    */
@@ -302,11 +176,7 @@ export class ValueSetValidator {
     code: any,
     binding: Binding | undefined,
     elementPath: string,
-    options?: {
-      valueSetUrl?: string;
-      profileUrl?: string;
-      fhirVersion?: FhirVersion;
-    }
+    options?: ValidateBindingOptions,
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
 
@@ -319,48 +189,23 @@ export class ValueSetValidator {
     }
 
     try {
-      const codeInfo = this.extractCodeInfo(code);
-      if (!codeInfo) {
+      const codeInfos = extractCodeInfos(code);
+      if (codeInfos.length === 0) {
         return issues;
       }
 
-      const isValid = await this.isCodeValidForBinding(
-        codeInfo.code,
-        codeInfo.system,
-        options?.valueSetUrl || binding.valueSet,
-        binding.strength as 'required' | 'extensible' | 'preferred' | 'example',
-        options?.fhirVersion,
-      );
-
-      const displayIssue = await this.validateDisplayMatchesCodeSystem(
+      issues.push(...await this.validateExtractedCodeBindings(
         code,
-        codeInfo,
-        options?.valueSetUrl || binding.valueSet,
+        codeInfos,
+        binding,
         elementPath,
-        binding.strength as 'required' | 'extensible' | 'preferred' | 'example' | undefined,
-        options?.profileUrl,
-        options?.fhirVersion,
-      );
-      if (displayIssue) {
-        issues.push(displayIssue);
-      }
-
-      if (!isValid && (binding.strength === 'required' || binding.strength === 'extensible' || binding.strength === 'preferred')) {
-        issues.push(createBindingViolation({
-          strength: binding.strength as 'required' | 'extensible' | 'preferred' | 'example',
-          code: codeInfo.code,
-          system: codeInfo.system,
-          valueSet: binding.valueSet,
-          path: elementPath,
-          resourceType: 'Unknown',
-          profile: options?.profileUrl,
-        }));
-      }
+        options,
+      ));
 
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
       if (binding.strength === 'required') {
-        const codeInfo = this.extractCodeInfo(code);
+        const codeInfo = extractCodeInfo(code);
         if (codeInfo) {
           logger.warn(`[ValueSetValidator] Required binding validation failed, treating as invalid: ${err.message}`);
           issues.push(createBindingViolation({
@@ -369,7 +214,7 @@ export class ValueSetValidator {
             system: codeInfo.system,
             valueSet: binding.valueSet,
             path: elementPath,
-            resourceType: 'Unknown',
+            resourceType: resourceTypeFromElementPath(elementPath),
             profile: options?.profileUrl,
           }));
         }
@@ -381,84 +226,90 @@ export class ValueSetValidator {
     return issues;
   }
 
-  private async validateDisplayMatchesCodeSystem(
+  private async validateExtractedCodeBindings(
     rawCode: any,
-    codeInfo: { code: string; system?: string; display?: string },
-    valueSetUrl: string,
+    codeInfos: CodeInfo[],
+    binding: Binding,
     elementPath: string,
-    bindingStrength?: 'required' | 'extensible' | 'preferred' | 'example',
-    profileUrl?: string,
-    fhirVersion?: FhirVersion,
-  ): Promise<ValidationIssue | null> {
-    if (!codeInfo.system || !codeInfo.display) return null;
+    options?: ValidateBindingOptions,
+  ): Promise<ValidationIssue[]> {
+    const issues: ValidationIssue[] = [];
+    const valueSetUrl = options?.valueSetUrl || binding.valueSet;
+    if (!valueSetUrl) return issues;
 
-    const expectedDisplay = await this.resolveExpectedDisplay(codeInfo, valueSetUrl, fhirVersion);
-    if (!expectedDisplay || displaysEquivalent(expectedDisplay, codeInfo.display)) return null;
+    const validCodeInfos: CodeInfo[] = [];
+    const firstCodeInfo = codeInfos[0];
 
-    const displayPath = this.resolveDisplayPath(rawCode, elementPath);
-    return createValidationIssue({
-      code: 'terminology-display-mismatch',
-      path: displayPath,
-      resourceType: elementPath.split('.')[0] || 'Unknown',
-      profile: profileUrl,
-      customMessage:
-        `Wrong Display Name '${codeInfo.display}' for ${codeInfo.system}#${codeInfo.code}. ` +
-        `Valid display is '${expectedDisplay}'`,
-      severityOverride: displayMismatchSeverityForBinding(bindingStrength),
-      aspectOverride: 'terminology',
-    });
-  }
-
-  private async resolveExpectedDisplay(
-    codeInfo: { code: string; system?: string; display?: string },
-    valueSetUrl: string,
-    fhirVersion?: FhirVersion,
-  ): Promise<string | null> {
-    if (!codeInfo.system) return null;
-
-    const valueSetCacheKey = versionedExpansionCacheKey(valueSetUrl, fhirVersion);
-    const valueSet = this.cache.getValueSetFile(valueSetCacheKey)
-      ?? this.cache.getValueSetFile(valueSetUrl)
-      ?? this.cache.getValueSetFile(valueSetUrl.split('|')[0]);
-    const include = valueSet?.compose?.include?.find(entry =>
-      entry.system === codeInfo.system
-    );
-    const cacheKey = include?.version ? `${codeInfo.system}|${include.version}` : codeInfo.system;
-    let codeSystem = this.cache.getCodeSystem(cacheKey)
-      ?? this.cache.getCodeSystemFile(cacheKey)
-      ?? this.cache.getCodeSystem(codeInfo.system)
-      ?? this.cache.getCodeSystemFile(codeInfo.system);
-    if (!codeSystem) {
-      codeSystem = await this.packageLoader.loadCodeSystem(
+    for (const codeInfo of codeInfos) {
+      const isCodeValid = await this.isCodeValidForBinding(
+        codeInfo.code,
         codeInfo.system,
-        fhirVersion === 'R4' ? '4' : fhirVersion === 'R5' ? '5' : fhirVersion === 'R6' ? '6' : undefined,
-        include?.version,
+        valueSetUrl,
+        binding.strength as BindingStrength,
+        options?.fhirVersion,
       );
-    }
-    if (!codeSystem) return null;
 
-    const concept = this.findCodeSystemConcept(codeSystem.concept, codeInfo.code);
-    return concept?.display ?? null;
+      if (isCodeValid) {
+        validCodeInfos.push(codeInfo);
+      }
+    }
+
+    issues.push(...await this.validateDisplaysForCodeInfos(
+      rawCode,
+      validCodeInfos,
+      valueSetUrl,
+      binding,
+      elementPath,
+      options,
+    ));
+
+    if (
+      validCodeInfos.length === 0
+      && firstCodeInfo
+      && (binding.strength === 'required' || binding.strength === 'extensible' || binding.strength === 'preferred')
+    ) {
+      issues.push(createBindingViolation({
+        strength: binding.strength as 'required' | 'extensible' | 'preferred' | 'example',
+        code: firstCodeInfo.code,
+        system: firstCodeInfo.system,
+        valueSet: valueSetUrl,
+        path: elementPath,
+        resourceType: resourceTypeFromElementPath(elementPath),
+        profile: options?.profileUrl,
+      }));
+    }
+
+    return issues;
   }
 
-  private findCodeSystemConcept(
-    concepts: CodeSystemConcept[] | undefined,
-    code: string,
-  ): CodeSystemConcept | null {
-    if (!concepts) return null;
-    for (const concept of concepts) {
-      if (concept.code === code) return concept;
-      const nested = this.findCodeSystemConcept(concept.concept, code);
-      if (nested) return nested;
+  private async validateDisplaysForCodeInfos(
+    rawCode: any,
+    codeInfos: CodeInfo[],
+    valueSetUrl: string,
+    binding: Binding,
+    elementPath: string,
+    options?: ValidateBindingOptions,
+  ): Promise<ValidationIssue[]> {
+    const issues: ValidationIssue[] = [];
+    for (const codeInfo of codeInfos) {
+      const displayIssue = await validateDisplayMatchesCodeSystem(
+        rawCode,
+        codeInfo,
+        valueSetUrl,
+        elementPath,
+        {
+          bindingStrength: binding.strength as BindingStrength | undefined,
+          profileUrl: options?.profileUrl,
+          fhirVersion: options?.fhirVersion,
+          cache: this.cache,
+          packageLoader: this.packageLoader,
+        },
+      );
+      if (displayIssue) {
+        issues.push(displayIssue);
+      }
     }
-    return null;
-  }
-
-  private resolveDisplayPath(rawCode: any, elementPath: string): string {
-    if (rawCode?.coding && Array.isArray(rawCode.coding)) {
-      return `${elementPath}.coding[0].display`;
-    }
-    return `${elementPath}.display`;
+    return issues;
   }
 
   /**
@@ -468,7 +319,7 @@ export class ValueSetValidator {
     code: string,
     system: string | undefined,
     valueSetUrl: string,
-    bindingStrength: 'required' | 'extensible' | 'preferred' | 'example',
+    bindingStrength: BindingStrength,
     fhirVersion?: FhirVersion,
   ): Promise<boolean> {
     try {
@@ -498,7 +349,97 @@ export class ValueSetValidator {
     // this system, call THAT server instead of the default. Otherwise
     // pass undefined and the api client uses its default serverUrl.
     const override = this.resolveServerForSystem(system);
-    return this.apiClient.validateCodeInCodeSystem(code, system, display, override);
+    const result = await this.apiClient.validateCodeInCodeSystem(code, system, display, override);
+    if (!display || !isDisplayMismatchResult(result)) {
+      return this.validateInactiveCodeWithFallbackServers(code, system, result, override);
+    }
+    if (this.isEquivalentDisplayMismatch(system, display, result)) {
+      return { valid: true };
+    }
+
+    const displayResult = await this.validateDisplayMismatchWithFallbackServers(code, system, display, result, override);
+    return this.validateInactiveCodeWithFallbackServers(code, system, displayResult, override);
+  }
+
+  private isEquivalentDisplayMismatch(
+    system: string,
+    actualDisplay: string,
+    result: CodeSystemValidationResult,
+  ): boolean {
+    const expectedDisplays = [
+      ...extractExpectedDisplaysFromMessage(result.message),
+      ...(result.issues ?? []).flatMap(issue => extractExpectedDisplaysFromMessage(issue.message)),
+    ];
+
+    return expectedDisplays.some(expected =>
+      displaysEquivalentForCodeInfo(expected, actualDisplay, { system }),
+    );
+  }
+
+  private async validateDisplayMismatchWithFallbackServers(
+    code: string,
+    system: string,
+    display: string,
+    primaryResult: CodeSystemValidationResult,
+    primaryOverride: { url: string; auth?: any } | undefined,
+  ): Promise<CodeSystemValidationResult> {
+    const fallbackServers = this.getFallbackTerminologyServers(primaryOverride);
+    if (fallbackServers.length === 0) return primaryResult;
+
+    for (const server of fallbackServers) {
+      const fallbackResult = await this.apiClient.validateCodeInCodeSystem(code, system, display, server);
+      if (fallbackResult.valid) {
+        return {
+          ...fallbackResult,
+          inactive: primaryResult.inactive || fallbackResult.inactive,
+        };
+      }
+    }
+
+    return primaryResult;
+  }
+
+  private async validateInactiveCodeWithFallbackServers(
+    code: string,
+    system: string,
+    primaryResult: CodeSystemValidationResult,
+    primaryOverride: { url: string; auth?: any } | undefined,
+  ): Promise<CodeSystemValidationResult> {
+    if (!isInactiveResult(primaryResult)) return primaryResult;
+
+    const fallbackServers = this.getFallbackTerminologyServers(primaryOverride);
+    if (fallbackServers.length === 0) return primaryResult;
+
+    for (const server of fallbackServers) {
+      // Validate the code status only. Passing the original display here can
+      // turn an otherwise active code into a display-mismatch result.
+      const fallbackResult = await this.apiClient.validateCodeInCodeSystem(code, system, undefined, server);
+      if (fallbackResult.valid && !isInactiveResult(fallbackResult)) {
+        const filteredIssues = primaryResult.issues?.filter(issue => !isInactiveIssue(issue)) ?? [];
+        const { message: _message, issues: _issues, ...activeResult } = primaryResult;
+        return {
+          ...activeResult,
+          inactive: false,
+          ...(filteredIssues.length > 0 ? { issues: filteredIssues } : {}),
+        };
+      }
+    }
+
+    return primaryResult;
+  }
+
+  private getFallbackTerminologyServers(primaryOverride: { url: string } | undefined): Array<{ url: string; auth?: any }> {
+    const skippedUrls = new Set<string>();
+    if (primaryOverride?.url) {
+      skippedUrls.add(primaryOverride.url);
+    } else if (this.resolutionConfig.serverUrl) {
+      skippedUrls.add(this.resolutionConfig.serverUrl);
+    }
+
+    return (this.resolutionConfig.servers || [])
+      .filter(server => server.enabled && !server.circuitOpen && Boolean(server.url))
+      .filter(server => !skippedUrls.has(server.url))
+      .map(server => ({ url: server.url, auth: server.authConfig }));
   }
 
   /**
@@ -511,12 +452,8 @@ export class ValueSetValidator {
     fhirVersion?: FhirVersion,
   ): Promise<boolean> {
     try {
-      // BCP-47 Handling
-      const isAllLanguages = valueSetUrl.includes('all-languages') || valueSetUrl === 'http://hl7.org/fhir/ValueSet/languages';
-      const isBCP47System = system === 'urn:ietf:bcp:47';
-
-      if (isAllLanguages || isBCP47System) {
-        return this.validateBCP47(code);
+      if (isLanguageBinding(valueSetUrl, system)) {
+        return validateBCP47(code);
       }
 
       const expandedCodes = await this.getExpandedValueSet(valueSetUrl, fhirVersion);
@@ -545,6 +482,22 @@ export class ValueSetValidator {
         }
       }
 
+      const filteredIncludes = await this.packageLoader.getIncludeConceptFilters(valueSetUrl, fhirVersion);
+      if (this.hasUnsupportedFilterForSystem(filteredIncludes, system)) {
+        logger.debug(
+          `[ValueSetValidator] Unsupported include filter in ${valueSetUrl} ` +
+          `for '${system ? `${system}|` : ''}${code}' – direct ValueSet membership cannot be verified locally`,
+        );
+        return true;
+      }
+      if (this.isUnresolvableSnomedExtensionFilterCode(system, code, filteredIncludes)) {
+        logger.debug(
+          `[ValueSetValidator] SNOMED national-extension code '${code}' in filtered ` +
+          `${valueSetUrl} cannot be subsumed by an International Edition terminology server – failing open`,
+        );
+        return true;
+      }
+
       return false;
 
     } catch (error: unknown) {
@@ -559,17 +512,26 @@ export class ValueSetValidator {
    */
   clearCache(): void {
     this.cache.clear();
+    clearValidateCodeCache();
+    clearSubsumesCache();
     logger.debug('[ValueSetValidator] Cache cleared');
   }
 
   /**
    * Get cache statistics
    */
-  getCacheStats(): { valueSetCount: number; codeSystemCount: number } {
+  getCacheStats(): {
+    valueSetCount: number;
+    codeSystemCount: number;
+    validateCodeResultCount: number;
+    subsumesResultCount: number;
+  } {
     const stats = this.cache.getStats();
     return {
       valueSetCount: stats.valueSetCount,
-      codeSystemCount: stats.codeSystemCount
+      codeSystemCount: stats.codeSystemCount,
+      validateCodeResultCount: getValidateCodeCacheSize(),
+      subsumesResultCount: getSubsumesCacheSize(),
     };
   }
 
@@ -596,15 +558,11 @@ export class ValueSetValidator {
     code: string,
     system: string | undefined,
     valueSetUrl: string,
-    bindingStrength: 'required' | 'extensible' | 'preferred' | 'example',
+    bindingStrength: BindingStrength,
     fhirVersion?: FhirVersion,
   ): Promise<boolean> {
-    // BCP-47 Handling
-    const isAllLanguages = valueSetUrl.includes('all-languages') || valueSetUrl === 'http://hl7.org/fhir/ValueSet/languages';
-    const isBCP47System = system === 'urn:ietf:bcp:47';
-
-    if (isAllLanguages || isBCP47System) {
-      return this.validateBCP47(code);
+    if (isLanguageBinding(valueSetUrl, system)) {
+      return validateBCP47(code);
     }
 
     const expandedCodes = await this.getExpandedValueSet(valueSetUrl, fhirVersion);
@@ -650,6 +608,32 @@ export class ValueSetValidator {
       }
     }
 
+    // Some IG ValueSets include terminology-server-only filters such as
+    // LOINC CLASSTYPE. Without the CodeSystem's filter metadata, a local
+    // package expansion is necessarily incomplete. If the remote server also
+    // cannot confirm a non-required binding, report "not verified" rather
+    // than a false-positive binding warning.
+    if (
+      bindingStrength !== 'required'
+      && this.hasUnsupportedFilterForSystem(filteredIncludes, system)
+    ) {
+      logger.debug(
+        `[ValueSetValidator] Unsupported include filter in ${valueSetUrl} ` +
+        `for '${system ? `${system}|` : ''}${code}' – skipping non-required binding check`,
+      );
+      return true;
+    }
+    if (
+      bindingStrength !== 'required'
+      && this.isUnresolvableSnomedExtensionFilterCode(system, code, filteredIncludes)
+    ) {
+      logger.debug(
+        `[ValueSetValidator] SNOMED national-extension code '${code}' in filtered ` +
+        `${valueSetUrl} cannot be subsumed by an International Edition terminology server – skipping non-required binding check`,
+      );
+      return true;
+    }
+
     // ValueSet could not be expanded (e.g., German content not available on public servers).
     // Treat as "cannot verify" rather than "definitely invalid" – avoids false positives
     // when terminology servers simply don't carry the relevant content.
@@ -659,10 +643,6 @@ export class ValueSetValidator {
     }
 
     return false;
-  }
-
-  private validateBCP47(code: string): boolean {
-    return /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]+)*$/.test(code);
   }
 
   private async getExpandedValueSet(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<Set<string>> {
@@ -728,38 +708,30 @@ export class ValueSetValidator {
     return expandedCodes;
   }
 
-  private extractCodeInfo(code: any): { code: string; system?: string; display?: string } | null {
-    if (!code) return null;
-
-    if (typeof code === 'string') {
-      return { code };
-    }
-
-    if (code.code) {
-      return {
-        code: code.code,
-        system: code.system,
-        display: code.display
-      };
-    }
-
-    if (code.coding && Array.isArray(code.coding) && code.coding.length > 0) {
-      const firstCoding = code.coding[0];
-      return {
-        code: firstCoding.code,
-        system: firstCoding.system,
-        display: firstCoding.display
-      };
-    }
-
-    return null;
-  }
 }
 
-function displaysEquivalent(expected: string, actual: string): boolean {
-  return normalizeDisplay(expected) === normalizeDisplay(actual);
+function isDisplayMismatchResult(result: CodeSystemValidationResult): boolean {
+  return result.reason === 'display-mismatch'
+    || Boolean(result.issues?.some(issue => issue.code === 'invalid-display'));
 }
 
-function normalizeDisplay(display: string): string {
-  return display.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+function extractExpectedDisplaysFromMessage(message: string | undefined): string[] {
+  if (!message) return [];
+
+  const validDisplayIndex = message.toLocaleLowerCase().indexOf('valid display');
+  if (validDisplayIndex < 0) return [];
+
+  const validDisplayClause = message.slice(validDisplayIndex);
+  return [...validDisplayClause.matchAll(/'([^']+)'/g)]
+    .map(match => match[1])
+    .filter((display): display is string => Boolean(display?.trim()));
+}
+
+function isInactiveResult(result: CodeSystemValidationResult): boolean {
+  return result.inactive === true
+    || Boolean(result.issues?.some(isInactiveIssue));
+}
+
+function isInactiveIssue(issue: { message?: string }): boolean {
+  return /inactive/i.test(issue.message ?? '');
 }

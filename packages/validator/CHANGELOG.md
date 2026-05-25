@@ -10,6 +10,33 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.1.8] — 2026-05-25
+
+Patch release focused on validation precision and EHDS/large-server readiness.
+Released with `@records-fhir/validation-types` 0.1.2.
+
+### Fixes
+
+- Reduced false positives in anomaly, reference, MustSupport, duplicate-event,
+  temporal-gap, and clinical coding checks across large FHIR servers.
+- Improved terminology behavior for SNOMED, UCUM, display variants, unsupported
+  ValueSet filters, inactive-code disagreements, nested ValueSets, and
+  CodeableConcept arrays.
+- Kept display mismatches and profile-fixed binding diagnostics from becoming
+  noisy hard failures when terminology servers disagree or omit optional
+  metadata.
+- Hardened package/profile resolution around cached package scans, Simplifier
+  metadata, Ontoserver responses, and ART-DECOR/HAPI comparison inputs.
+
+### Quality
+
+- Added regression coverage for terminology display variants, inactive fallback
+  behavior, duplicate diagnostic reports, value range units, and contextual
+  MustSupport skips.
+- Reworked validation internals toward explicit resource, issue, pipeline, and
+  terminology payload types so the package/server mirror has fewer broad casts
+  and less drift risk.
+
 ## [0.1.7] — 2026-05-18
 
 Patch release for eHDS document-Bundle conformance and public-package

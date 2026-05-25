@@ -126,15 +126,36 @@ export function createValidationInfoIssue(
  */
 export function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
   const specificBundleInvariantKeys = new Set<string>();
+  const specificConstraintKeys = new Set<string>();
+  const cardinalityMinPaths = new Set<string>();
+  const hasGermanGenderExtensionMissing = issues.some(isGermanGenderExtensionMissingIssue);
   for (const issue of issues) {
     if (issue.code === 'bdl-9-violation') specificBundleInvariantKeys.add('bdl-9');
     if (issue.code === 'bdl-10-violation') specificBundleInvariantKeys.add('bdl-10');
+    const constraintKey = getSpecificConstraintKey(issue);
+    if (constraintKey) {
+      for (const key of getConstraintDedupeKeys(issue, constraintKey)) {
+        specificConstraintKeys.add(key);
+      }
+    }
+    if (issue.code === 'structural-cardinality-min') {
+      cardinalityMinPaths.add(normalizeRequiredElementPath(issue));
+    }
   }
 
   const seen = new Set<string>();
   const out: ValidationIssue[] = [];
   for (const issue of issues) {
     if (isRedundantBundleInvariantIssue(issue, specificBundleInvariantKeys)) {
+      continue;
+    }
+    if (isRedundantGenericConstraintIssue(issue, specificConstraintKeys)) {
+      continue;
+    }
+    if (hasGermanGenderExtensionMissing && isMiiGenderConstraintIssue(issue)) {
+      continue;
+    }
+    if (isRedundantRequiredElementIssue(issue, cardinalityMinPaths)) {
       continue;
     }
 
@@ -145,7 +166,7 @@ export function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
         (details as Record<string, unknown>).sourceProfile,
       ].filter(value => typeof value === 'string' && value.length > 0).join(':')
       : undefined;
-    const ruleKey = [issue.ruleId, detailRuleKey]
+    const ruleKey = [getEffectiveRuleId(issue), detailRuleKey]
       .filter(value => typeof value === 'string' && value.length > 0)
       .join(':');
     const key = `${issue.code}:${normalizeIssuePathForDedupe(issue)}:${issue.severity}:${ruleKey}`;
@@ -157,8 +178,94 @@ export function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
   return out;
 }
 
+function isRedundantRequiredElementIssue(issue: ValidationIssue, cardinalityMinPaths: Set<string>): boolean {
+  if (cardinalityMinPaths.size === 0) return false;
+  if (issue.code !== 'structural-required-element-missing' && issue.code !== 'profile-mustsupport-missing') {
+    return false;
+  }
+  return cardinalityMinPaths.has(normalizeRequiredElementPath(issue));
+}
+
+function normalizeRequiredElementPath(issue: ValidationIssue): string {
+  const details = issue.details;
+  const detailPath = details && typeof details === 'object' && !Array.isArray(details)
+    ? (details as Record<string, unknown>).fieldPath ?? (details as Record<string, unknown>).element
+    : undefined;
+  const path = typeof detailPath === 'string' && detailPath.length > 0
+    ? detailPath
+    : issue.path ?? '';
+
+  return path
+    .replace(/\[\d+\]/g, '')
+    .replace(/:[^.]+/g, '')
+    .replace(/^[A-Z][A-Za-z0-9]*\./, '')
+    .toLowerCase();
+}
+
+function isGermanGenderExtensionMissingIssue(issue: ValidationIssue): boolean {
+  if (issue.code !== 'profile-extension-missing') return false;
+  const details = issue.details;
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return false;
+  return (details as Record<string, unknown>).expectedExtension === 'http://fhir.de/StructureDefinition/gender-amtlich-de';
+}
+
+function isMiiGenderConstraintIssue(issue: ValidationIssue): boolean {
+  if (issue.code === 'constraint-violation-mii-pat-1') return true;
+  if (issue.code !== 'profile-constraint-violation') return false;
+  const details = issue.details;
+  if (!details || typeof details !== 'object' || Array.isArray(details)) return false;
+  return (details as Record<string, unknown>).constraintKey === 'mii-pat-1';
+}
+
+function getSpecificConstraintKey(issue: ValidationIssue): string | null {
+  const prefix = 'constraint-violation-';
+  if (issue.code?.startsWith(prefix)) {
+    const key = issue.code.slice(prefix.length).trim().toLowerCase();
+    return key.length > 0 ? key : null;
+  }
+
+  if (
+    issue.code === 'profile-constraint-violation' ||
+    issue.code === 'profile-constraint-warning'
+  ) {
+    return null;
+  }
+
+  const explicitRule = issue.ruleId?.trim().toLowerCase();
+  if (explicitRule) return explicitRule;
+
+  const code = issue.code?.trim().toLowerCase();
+  return code && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(code) ? code : null;
+}
+
+function getEffectiveRuleId(issue: ValidationIssue): string | null {
+  const explicitRule = issue.ruleId?.trim();
+  if (explicitRule) return explicitRule;
+  return getSpecificConstraintKey(issue);
+}
+
+function isRedundantGenericConstraintIssue(issue: ValidationIssue, specificKeys: Set<string>): boolean {
+  if (
+    issue.code !== 'profile-constraint-violation' &&
+    issue.code !== 'profile-constraint-warning'
+  ) return false;
+  if (specificKeys.size === 0) return false;
+
+  const details = issue.details;
+  const constraintKey = details && typeof details === 'object' && !Array.isArray(details)
+    ? (details as Record<string, unknown>).constraintKey
+    : undefined;
+  if (typeof constraintKey !== 'string' || constraintKey.length === 0) return false;
+
+  return getConstraintDedupeKeys(issue, constraintKey).some(key => specificKeys.has(key));
+}
+
 function isRedundantBundleInvariantIssue(issue: ValidationIssue, specificKeys: Set<string>): boolean {
-  if (issue.code !== 'profile-constraint-violation' || specificKeys.size === 0) return false;
+  if (
+    issue.code !== 'profile-constraint-violation' &&
+    issue.code !== 'profile-constraint-warning'
+  ) return false;
+  if (specificKeys.size === 0) return false;
 
   const details = issue.details;
   const detailConstraint = details && typeof details === 'object' && !Array.isArray(details)
@@ -193,7 +300,45 @@ function normalizeIssuePathForDedupe(issue: ValidationIssue): string {
 
   const prefix = `${resourceType}.`.toLowerCase();
   const lowerPath = path.toLowerCase();
+  if (lowerPath === resourceType.toLowerCase()) return '';
   return lowerPath.startsWith(prefix) ? path.slice(prefix.length) : path;
+}
+
+function getConstraintDedupeKeys(issue: ValidationIssue, constraintKey: string): string[] {
+  return getConstraintPathHierarchy(normalizeIssuePathForDedupe(issue))
+    .map(path => `${path}:${constraintKey.toLowerCase()}`);
+}
+
+function getConstraintPathHierarchy(path: string): string[] {
+  const normalized = path
+    .trim()
+    .toLowerCase()
+    .replace(/\[\d+\]/g, '')
+    .replace(/\.$/, '');
+  const paths = [normalized];
+
+  let current = normalized;
+  while (current.includes('.')) {
+    current = current.slice(0, current.lastIndexOf('.')).replace(/\.$/, '');
+    paths.push(current);
+    if (isBundleEntryResourceRoot(current)) {
+      return paths;
+    }
+  }
+
+  if (!isBundleEntryResourcePath(normalized) && !paths.includes('')) {
+    paths.push('');
+  }
+
+  return paths;
+}
+
+function isBundleEntryResourcePath(path: string): boolean {
+  return path.startsWith('entry.resource/*');
+}
+
+function isBundleEntryResourceRoot(path: string): boolean {
+  return isBundleEntryResourcePath(path) && path.endsWith('*/');
 }
 
 /**

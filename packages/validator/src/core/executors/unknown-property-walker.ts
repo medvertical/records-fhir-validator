@@ -126,10 +126,32 @@ export async function detectUnknownProperties(
   if (index.knownPaths.size <= 1 && index.knownPaths.has(resourceType)) {
     return [];
   }
+  if (hasSparseTopLevelSnapshot(resource, index, resourceType)) {
+    return [];
+  }
 
   const issues: ValidationIssue[] = [];
   await walk(resource, resourceType, index, sdUrl, issues, true, deps);
   return issues;
+}
+
+function hasSparseTopLevelSnapshot(resource: any, index: SnapshotIndex, resourceType: string): boolean {
+  if (!resource || typeof resource !== 'object' || Array.isArray(resource)) return false;
+
+  let knownNonSpecialKeys = 0;
+  let missingNonSpecialKeys = 0;
+
+  for (const key of Object.keys(resource)) {
+    if (SPECIAL_RESOURCE_KEYS.has(key) || key.startsWith('_')) continue;
+    const path = `${resourceType}.${key}`;
+    if (index.knownPaths.has(path)) {
+      knownNonSpecialKeys += 1;
+    } else {
+      missingNonSpecialKeys += 1;
+    }
+  }
+
+  return missingNonSpecialKeys >= 3 && knownNonSpecialKeys <= 1;
 }
 
 async function walk(

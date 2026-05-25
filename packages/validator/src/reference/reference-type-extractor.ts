@@ -7,6 +7,14 @@
  * Task 6.1: Add resource type extraction from reference strings
  */
 
+import {
+  CANONICAL_PATTERNS,
+  KNOWN_FHIR_RESOURCE_TYPES,
+  KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE,
+  getKnownFhirResourceTypes,
+  isFhirVersionPathSegment,
+} from './reference-resource-types';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -45,86 +53,6 @@ export interface ReferenceTypeExtractionOptions {
   /** Whether to validate resource type against known FHIR resources (default: false) */
   validateResourceType?: boolean;
 }
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-/**
- * Known FHIR R4/R5 resource types for validation
- */
-const KNOWN_FHIR_RESOURCE_TYPES = new Set([
-  // Foundation
-  'Resource', 'DomainResource', 'Element', 'BackboneElement', 'Narrative',
-  
-  // Clinical
-  'Patient', 'Practitioner', 'PractitionerRole', 'RelatedPerson', 'Person', 'Group',
-  'Organization', 'OrganizationAffiliation', 'Location', 'HealthcareService', 'Endpoint',
-  'Device', 'DeviceDefinition', 'DeviceMetric', 'DeviceRequest', 'DeviceUseStatement',
-  'Substance', 'SubstanceDefinition', 'SubstanceNucleicAcid', 'SubstancePolymer',
-  'SubstanceProtein', 'SubstanceReferenceInformation', 'SubstanceSourceMaterial',
-  'SubstanceSpecification', 'Medication', 'MedicationAdministration', 'MedicationDispense',
-  'MedicationKnowledge', 'MedicationRequest', 'MedicationStatement', 'MedicationUsage',
-  'Immunization', 'ImmunizationEvaluation', 'ImmunizationRecommendation',
-  
-  // Diagnostics
-  'Observation', 'DiagnosticReport', 'ServiceRequest', 'Specimen', 'SpecimenDefinition',
-  'BodyStructure', 'ImagingStudy', 'Media', 'QuestionnaireResponse',
-  
-  // Care Management
-  'Condition', 'Procedure', 'AllergyIntolerance', 'AdverseEvent', 'DetectedIssue',
-  'ClinicalImpression', 'RiskAssessment', 'FamilyMemberHistory', 'Goal', 'CarePlan',
-  'CareTeam', 'ServiceRequest', 'NutritionOrder', 'VisionPrescription',
-  
-  // Request & Response
-  'Task', 'Appointment', 'AppointmentResponse', 'Schedule', 'Slot', 'Encounter',
-  'EpisodeOfCare', 'Flag', 'List', 'Library', 'Measure', 'MeasureReport',
-  
-  // Foundation
-  'Composition', 'DocumentManifest', 'DocumentReference', 'CatalogEntry',
-  'Basic', 'Binary', 'Bundle', 'Linkage', 'MessageDefinition', 'MessageHeader',
-  'OperationDefinition', 'OperationOutcome', 'Parameters', 'Subscription',
-  'SubscriptionStatus', 'SubscriptionTopic',
-  
-  // Conformance
-  'CapabilityStatement', 'StructureDefinition', 'StructureMap', 'ImplementationGuide',
-  'SearchParameter', 'CompartmentDefinition', 'ExampleScenario', 'GraphDefinition',
-  'TestReport', 'TestScript',
-  
-  // Terminology
-  'CodeSystem', 'ValueSet', 'ConceptMap', 'NamingSystem', 'TerminologyCapabilities',
-  
-  // Security
-  'AuditEvent', 'Consent', 'Provenance', 'Signature',
-  
-  // Financial
-  'Account', 'ChargeItem', 'ChargeItemDefinition', 'Contract', 'Coverage',
-  'CoverageEligibilityRequest', 'CoverageEligibilityResponse', 'EnrollmentRequest',
-  'EnrollmentResponse', 'Claim', 'ClaimResponse', 'Invoice', 'PaymentNotice',
-  'PaymentReconciliation', 'ExplanationOfBenefit', 'InsurancePlan',
-  
-  // Specialized
-  'Citation', 'Evidence', 'EvidenceReport', 'EvidenceVariable', 'ResearchDefinition',
-  'ResearchElementDefinition', 'ResearchStudy', 'ResearchSubject', 'ActivityDefinition',
-  'PlanDefinition', 'Questionnaire', 'Requirements', 'ActorDefinition'
-]);
-
-/**
- * Common FHIR canonical URL patterns (for conformance resources)
- * These are NOT regular resource instance URLs
- */
-const CANONICAL_PATTERNS = [
-  /^https?:\/\/hl7\.org\/fhir\/StructureDefinition\//,
-  /^https?:\/\/hl7\.org\/fhir\/ValueSet\//,
-  /^https?:\/\/hl7\.org\/fhir\/CodeSystem\//,
-  /^https?:\/\/hl7\.org\/fhir\/ConceptMap\//,
-  /^https?:\/\/hl7\.org\/fhir\/ImplementationGuide\//,
-  /^https?:\/\/fhir\.kbv\.de\/StructureDefinition\//,
-  /^https?:\/\/fhir\.de\/StructureDefinition\//,
-  /^https?:\/\/.*\.medizininformatik-initiative\.de\/fhir\//,
-  /^https?:\/\/build\.fhir\.org\/ig\//,
-  /^https?:\/\/simplifier\.net\/.*\/StructureDefinition\//,
-];
 
 // ============================================================================
 // Reference Type Extractor Class
@@ -214,16 +142,19 @@ export class ReferenceTypeExtractor {
       const fhirIndex = pathParts.findIndex(part => part.toLowerCase() === 'fhir');
       
       if (fhirIndex >= 0 && fhirIndex < pathParts.length - 1) {
-        const resourceType = pathParts[fhirIndex + 1];
-        const resourceId = pathParts[fhirIndex + 2];
+        const resourceTypeIndex = isFhirVersionPathSegment(pathParts[fhirIndex + 1])
+          ? fhirIndex + 2
+          : fhirIndex + 1;
+        const resourceType = this.normalizeAbsoluteResourceType(pathParts[resourceTypeIndex]);
+        const resourceId = pathParts[resourceTypeIndex + 1];
         
         // Check for version in path (ResourceType/id/_history/version)
         let version: string | undefined;
-        if (pathParts[fhirIndex + 3] === '_history' && pathParts[fhirIndex + 4]) {
-          version = pathParts[fhirIndex + 4];
+        if (pathParts[resourceTypeIndex + 2] === '_history' && pathParts[resourceTypeIndex + 3]) {
+          version = pathParts[resourceTypeIndex + 3];
         }
 
-        const isValidResourceType = this.isValidResourceType(resourceType);
+        const isValidResourceType = !!resourceType && this.isValidResourceType(resourceType);
         
         return {
           resourceType: isValidResourceType ? resourceType : null,
@@ -231,7 +162,7 @@ export class ReferenceTypeExtractor {
           referenceType: 'absolute',
           isValid: isValidResourceType && !!resourceId,
           originalReference: reference,
-          baseUrl: `${url.protocol}//${url.host}${url.pathname.split('/fhir')[0]}/fhir`,
+          baseUrl: `${url.origin}/${pathParts.slice(0, resourceTypeIndex).join('/')}`.replace(/\/$/, ''),
           version,
           metadata: {
             isHistorical: !!version,
@@ -244,10 +175,10 @@ export class ReferenceTypeExtractor {
       // Public FHIR endpoints often include a version/base segment before the
       // resource type, e.g. /R4/Patient/123/_history/<uuid>.
       if (pathParts.length >= 4 && pathParts[pathParts.length - 2] === '_history') {
-        const resourceType = pathParts[pathParts.length - 4];
+        const resourceType = this.normalizeAbsoluteResourceType(pathParts[pathParts.length - 4]);
         const resourceId = pathParts[pathParts.length - 3];
         const version = pathParts[pathParts.length - 1];
-        const isValidResourceType = this.isValidResourceType(resourceType);
+        const isValidResourceType = !!resourceType && this.isValidResourceType(resourceType);
 
         return {
           resourceType: isValidResourceType ? resourceType : null,
@@ -266,9 +197,9 @@ export class ReferenceTypeExtractor {
 
       // Fallback: try to extract from the last two path segments
       if (pathParts.length >= 2) {
-        const resourceType = pathParts[pathParts.length - 2];
+        const resourceType = this.normalizeAbsoluteResourceType(pathParts[pathParts.length - 2]);
         const resourceId = pathParts[pathParts.length - 1];
-        const isValidResourceType = this.isValidResourceType(resourceType);
+        const isValidResourceType = !!resourceType && this.isValidResourceType(resourceType);
         
         return {
           resourceType: isValidResourceType ? resourceType : null,
@@ -419,12 +350,28 @@ export class ReferenceTypeExtractor {
    * Validate if a string is a known FHIR resource type
    */
   private isValidResourceType(resourceType: string): boolean {
+    if (isFhirVersionPathSegment(resourceType)) {
+      return false;
+    }
+
     if (!this.options.validateResourceType) {
       // If validation is disabled, assume valid if it looks like a resource type
       return /^[A-Z][a-zA-Z0-9]*$/.test(resourceType);
     }
     
     return KNOWN_FHIR_RESOURCE_TYPES.has(resourceType);
+  }
+
+  /**
+   * Absolute Reference.reference values are URLs. Some external endpoints use
+   * lower-case REST path segments (e.g. /practitioner/123) even though FHIR
+   * relative references remain case-sensitive. If the segment is a known FHIR
+   * resource type ignoring case, normalize it so type constraints can still
+   * be evaluated instead of reporting a format error.
+   */
+  private normalizeAbsoluteResourceType(resourceType: string | undefined): string | null {
+    if (!resourceType) return null;
+    return KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE.get(resourceType.toLowerCase()) ?? resourceType;
   }
 
   /**
@@ -519,7 +466,7 @@ export function isValidReference(reference: string): boolean {
  * Get all known FHIR resource types
  */
 export function getKnownResourceTypes(): string[] {
-  return Array.from(KNOWN_FHIR_RESOURCE_TYPES);
+  return getKnownFhirResourceTypes();
 }
 
 // ============================================================================

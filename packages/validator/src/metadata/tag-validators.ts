@@ -58,15 +58,6 @@ export class TagValidator {
           }));
         }
 
-        if (!tag.code) {
-          issues.push(createValidationIssue({
-            code: 'metadata-tag-missing-code',
-            path: `${path}.code`,
-            resourceType,
-            messageParams: { index },
-          }));
-        }
-
         // Validate system
         if (tag.system) {
           if (typeof tag.system !== 'string') {
@@ -174,7 +165,12 @@ export class TagValidator {
       }
 
       // Check if code and display are identical
-      if (tag.code && tag.display && tag.code === tag.display.toUpperCase() && tag.display === tag.code) {
+      if (
+        tag.code &&
+        typeof tag.display === 'string' &&
+        tag.code === tag.display.toUpperCase() &&
+        tag.display === tag.code
+      ) {
         issues.push(createValidationIssue({
           code: 'metadata-tag-code-as-display',
           path: `${path}.display`,

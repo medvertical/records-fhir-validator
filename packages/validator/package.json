@@ -1,6 +1,6 @@
 {
   "name": "@records-fhir/validator",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Pure-TypeScript FHIR R4/R5/R6 validation engine. Validates resources against StructureDefinitions, terminology, references, and custom rules with no database required.",
   "type": "module",
   "license": "Apache-2.0",
@@ -69,6 +69,22 @@
     "./package/package-downloader": {
       "types": "./dist/package/package-downloader.d.ts",
       "import": "./dist/package/package-downloader.js"
+    },
+    "./package-resolver": {
+      "types": "./dist/package-resolver/index.d.ts",
+      "import": "./dist/package-resolver/index.js"
+    },
+    "./reference": {
+      "types": "./dist/reference/index.d.ts",
+      "import": "./dist/reference/index.js"
+    },
+    "./metadata": {
+      "types": "./dist/metadata/index.d.ts",
+      "import": "./dist/metadata/index.js"
+    },
+    "./terminology": {
+      "types": "./dist/terminology/index.d.ts",
+      "import": "./dist/terminology/index.js"
     },
     "./validators/constraint-validator": {
       "types": "./dist/validators/constraint-validator.d.ts",

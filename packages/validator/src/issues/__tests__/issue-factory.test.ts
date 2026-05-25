@@ -13,7 +13,7 @@ import {
     createConstraintViolation,
     createValidationError,
     resetIssueCounter,
-} from '../validation-issue-factory';
+} from '../issue-factory';
 
 describe('validation-issue-factory', () => {
     beforeEach(() => {
@@ -133,6 +133,28 @@ describe('validation-issue-factory', () => {
             expect(issue.code).toBe('unknown-code-xyz');
             expect(issue.aspect).toBe('structural'); // default
             expect(issue.severity).toBe('warning'); // default
+        });
+
+        it('infers resource type from a canonical path when the caller has no context', () => {
+            const issue = createValidationIssue({
+                code: 'structural-cardinality-min',
+                path: 'MedicationRequest.requester',
+                resourceType: 'Unknown',
+            });
+
+            expect(issue.resourceType).toBe('MedicationRequest');
+            expect(issue.details?.resourceType).toBe('MedicationRequest');
+        });
+
+        it('infers resource type from lowercase canonical paths', () => {
+            const issue = createValidationIssue({
+                code: 'profile-extension-min-cardinality',
+                path: 'procedure.extension',
+                resourceType: 'Unknown',
+            });
+
+            expect(issue.resourceType).toBe('Procedure');
+            expect(issue.details?.resourceType).toBe('Procedure');
         });
     });
 

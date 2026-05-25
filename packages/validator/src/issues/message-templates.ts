@@ -104,7 +104,7 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
     'metadata-tag-missing-system-code':
         "Tag at index {index} should have system and/or code",
     'metadata-tag-missing-code':
-        "Tag at index {index} must have a code",
+        "Tag at index {index} should have a code",
     'metadata-tag-invalid-system-type':
         "Tag system must be a string at index {index}",
     'metadata-tag-invalid-system-uri':

@@ -60,6 +60,36 @@ describe('unknown-property-walker', () => {
     expect(issues).toHaveLength(0);
   });
 
+  it('does not flag base resource keys when a profile snapshot is sparse', async () => {
+    const sparsePatientIndex = buildSnapshotIndex({
+      url: 'http://nictiz.nl/fhir/StructureDefinition/nl-core-Patient',
+      snapshot: {
+        element: [
+          { path: 'Patient' },
+          { path: 'Patient.extension', type: [{ code: 'Extension' }] },
+        ],
+      },
+    } as any);
+
+    const issues = await detectUnknownProperties(
+      {
+        resourceType: 'Patient',
+        identifier: [{ system: 'http://fhir.nl/fhir/NamingSystem/bsn', value: '999911120' }],
+        name: [{ family: 'Pietersen' }],
+        telecom: [{ system: 'phone', value: '+31611234567' }],
+        gender: 'female',
+        birthDate: '1998-12-03',
+        deceasedBoolean: false,
+        multipleBirthBoolean: false,
+      },
+      sparsePatientIndex,
+      'Patient',
+      'http://nictiz.nl/fhir/StructureDefinition/nl-core-Patient',
+    );
+
+    expect(issues).toHaveLength(0);
+  });
+
   it('flags unknown top-level keys as error severity', async () => {
     const issues = await detectUnknownProperties(
       { resourceType: 'TestRes', namee: { family: 'Doe' } },

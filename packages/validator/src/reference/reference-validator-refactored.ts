@@ -25,9 +25,8 @@
  * - batched-reference-checker.ts
  */
 
-import type { ValidationIssue } from '../types';
 import type { ValidationResult, ValidationSettings } from '@records-fhir/validation-types';
-import type { IReferenceValidator, ValidationContext } from '../types';
+import type { IReferenceValidator, ValidationContext, ValidationIssue } from '../types';
 import { addR6WarningIfNeeded } from '../utils/r6-support-warnings';
 import { ReferenceTypeExtractor } from './reference-type-extractor';
 import { getReferenceTypeConstraintValidator } from './reference-type-constraint-validator';
@@ -38,10 +37,19 @@ import { getRecursiveReferenceValidator } from './recursive-reference-validator'
 import { getVersionSpecificReferenceValidator } from './version-specific-reference-validator';
 import { getCanonicalReferenceValidator } from './canonical-reference-validator';
 import { getBatchedReferenceChecker } from './batched-reference-checker';
-import { applyStrictnessSeverity as _applyStrictnessSeverity } from '../strictness';
-import { initializeReferenceFields, getReferenceFields as _getReferenceFields } from './reference-field-definitions';
-import { validateReferenceFormat, extractReferences } from './reference-format-validator';
-import { createReferenceValidationIssue, getFieldValue as _getFieldValue } from './reference-utils';
+import { extractReferences } from './reference-format-validator';
+import { parseReference } from './reference-type-extractor';
+import { validateContainedReferenceIssues } from './reference-contained-validation';
+import { validateExtractedReferences } from './reference-extracted-validation';
+import {
+  buildRecursiveReferenceIssues,
+  buildReferencePathsByValue,
+} from './reference-recursive-issues';
+import {
+  getRecursiveValidationConfig,
+  normalizeReferenceValidationArgs,
+} from './reference-validation-args';
+import { createReferenceValidationIssue } from './reference-utils';
 import { logger } from '../logger';
 
 // ============================================================================
@@ -49,7 +57,6 @@ import { logger } from '../logger';
 // ============================================================================
 
 export class ReferenceValidator implements IReferenceValidator {
-  private referenceFields: Map<string, Array<{ path: string, type: string, required?: boolean, targetTypes?: string[] }>>;
   private referenceTypeExtractor: ReferenceTypeExtractor;
   private constraintValidator = getReferenceTypeConstraintValidator();
   private containedResolver = getContainedReferenceResolver();
@@ -61,7 +68,6 @@ export class ReferenceValidator implements IReferenceValidator {
   private batchedChecker = getBatchedReferenceChecker();
 
   constructor() {
-    this.referenceFields = initializeReferenceFields();
     this.referenceTypeExtractor = new ReferenceTypeExtractor({
       allowContained: true,
       allowCanonical: true,
@@ -111,7 +117,6 @@ export class ReferenceValidator implements IReferenceValidator {
   /**
    * Internal validation method (supports multiple signatures for backward compatibility)
    */
-  // eslint-disable-next-line max-lines-per-function
   async validateInternal(
     resource: any,
     resourceType: string,
@@ -119,176 +124,53 @@ export class ReferenceValidator implements IReferenceValidator {
     fhirVersionOrSettings?: 'R4' | 'R5' | 'R6' | ValidationSettings,
     settings?: ValidationSettings
   ): Promise<ValidationIssue[]> {
-    // Determine actual parameters
-    let fhirVersion: 'R4' | 'R5' | 'R6' = 'R4';
-    let actualSettings: ValidationSettings | undefined = settings;
-
-    // Handle different parameter combinations
-    if (typeof fhirVersionOrSettings === 'string') {
-      fhirVersion = fhirVersionOrSettings as 'R4' | 'R5' | 'R6';
-    } else if (fhirVersionOrSettings && typeof fhirVersionOrSettings === 'object') {
-      actualSettings = fhirVersionOrSettings as ValidationSettings;
-    }
-
-    if (typeof fhirClientOrVersion === 'string') {
-      fhirVersion = fhirClientOrVersion as 'R4' | 'R5' | 'R6';
-    }
-    // FhirClient parameter is ignored for now (not used in this implementation)
     let issues: ValidationIssue[] = [];
     const startTime = Date.now();
 
-    // Handle null/undefined resource
     if (!resource) {
       logger.warn(`[ReferenceValidator] Null resource provided`);
       return issues;
     }
 
-    // Handle missing resourceType
-    if (!resourceType) {
-      resourceType = resource.resourceType || 'Unknown';
-    }
+    const { fhirVersion, actualSettings } = normalizeReferenceValidationArgs(
+      fhirClientOrVersion,
+      fhirVersionOrSettings,
+      settings,
+    );
+    resourceType = resourceType || resource.resourceType || 'Unknown';
 
     logger.debug(`[ReferenceValidator] Validating ${resourceType} references...`);
 
     try {
-      // Note: Records validator delegation is handled at the executor layer
-      // (reference-executor.ts), so we don't need to check here to avoid circular dependencies
-
-      // Add R6 warning if needed
       if (fhirVersion === 'R6') {
         issues = addR6WarningIfNeeded(issues, fhirVersion, 'reference');
       }
 
-      // Extract all references from the resource
       const extractedRefs = extractReferences(resource, resourceType);
-
       if (extractedRefs.length === 0) {
         logger.debug(`[ReferenceValidator] No references found in ${resourceType}`);
         return issues;
       }
 
       logger.debug(`[ReferenceValidator] Found ${extractedRefs.length} references to validate`);
-
-      // Validate each reference
-      for (const { path, reference } of extractedRefs) {
-        // Validate format
-        const formatResult = validateReferenceFormat(reference);
-        issues.push(...formatResult.issues);
-
-        if (!formatResult.isValid) {
-          continue;
-        }
-
-        // Type constraint validation
-        if (formatResult.resourceType && formatResult.resourceId) {
-          // Normalize the path for type constraint lookup
-          // e.g., "Observation.subject[0]" -> "subject"
-          const pathParts = path.split('.');
-          const fieldName = pathParts.length > 1
-            ? pathParts[pathParts.length - 1].replace(/\[\d+\]$/, '') // Remove array index
-            : path;
-
-          // Validate type constraint using the existing validator
-          const constraintResult = this.constraintValidator.validateReferenceType(
-            reference,
-            resourceType,
-            fieldName
-          );
-
-          // Only add issues for actual errors or warnings (not info messages about no constraints)
-          if (!constraintResult.isValid && (constraintResult.severity === 'error' || constraintResult.severity === 'warning')) {
-            issues.push(createReferenceValidationIssue({
-              code: constraintResult.code || 'reference-type-mismatch',
-              severity: constraintResult.severity,
-              message: constraintResult.message,
-              humanReadable: `Reference at ${path} points to ${constraintResult.actualType || 'unknown'} but expected ${constraintResult.expectedTypes?.join(' or ') || 'different type'}`,
-              path,
-              details: {
-                reference,
-                actualType: constraintResult.actualType,
-                expectedTypes: constraintResult.expectedTypes,
-                fieldPath: fieldName
-              },
-              resourceType
-            }));
-          }
-        }
-      }
-
-      // Validate contained references: #id refs must resolve to a contained resource.
-      // This runs even without a contained[] array — a #-ref without contained
-      // is a ref-1 violation.
-      const containedIssues = await this.validateContainedReferences(resource, resourceType);
-      issues.push(...containedIssues);
-
-      // Recursive reference validation (opt-in via settings)
-      const recursiveConfig = this.getRecursiveValidationConfig(actualSettings);
-      if (recursiveConfig.enabled) {
-        logger.info(`[ReferenceValidator] Recursive validation enabled (maxDepth: ${recursiveConfig.maxDepth})`);
-        try {
-          const recursiveResult = await this.recursiveValidator.validateRecursively(
-            resource,
-            recursiveConfig
-          );
-
-          // Convert circular references to validation issues
-          for (const chain of recursiveResult.circularReferences) {
-            issues.push(createReferenceValidationIssue({
-              code: 'reference-circular',
-              severity: 'warning',
-              message: `Circular reference chain detected: ${chain.join(' → ')}`,
-              humanReadable: `Circular reference detected in chain: ${chain.join(' → ')}`,
-              path: '',
-              details: { chain, resourceType },
-              resourceType
-            }));
-          }
-
-          // Convert unresolved references to validation issues
-          for (const ref of recursiveResult.unresolvedReferences) {
-            issues.push(createReferenceValidationIssue({
-              code: 'reference-unresolved',
-              severity: 'info',
-              message: `Referenced resource could not be resolved: ${ref}`,
-              humanReadable: `Could not resolve reference: ${ref}`,
-              path: '',
-              details: { reference: ref, resourceType },
-              resourceType
-            }));
-          }
-
-          if (recursiveResult.timedOut) {
-            issues.push(createReferenceValidationIssue({
-              code: 'reference-recursive-timeout',
-              severity: 'warning',
-              message: `Recursive reference validation timed out after ${recursiveResult.validationTimeMs}ms`,
-              humanReadable: `Recursive validation timed out (limit: ${recursiveConfig.timeoutMs}ms)`,
-              path: '',
-              details: { timeoutMs: recursiveConfig.timeoutMs, resourceType },
-              resourceType
-            }));
-          }
-
-          logger.info(
-            `[ReferenceValidator] Recursive validation: ${recursiveResult.totalResourcesValidated} resources, ` +
-            `depth ${recursiveResult.maxDepthReached}, ${recursiveResult.referencesFollowed} refs followed` +
-            (recursiveResult.timedOut ? ' (TIMED OUT)' : '')
-          );
-        } catch (recursiveError) {
-          logger.error('[ReferenceValidator] Recursive validation error:', recursiveError);
-          // Non-fatal — recursive is opt-in, don't fail the entire validation
-        }
-      }
+      const referencePathsByValue = buildReferencePathsByValue(extractedRefs);
+      issues.push(...validateExtractedReferences(extractedRefs, resourceType, this.constraintValidator));
+      issues.push(...await this.validateContainedReferences(resource, resourceType));
+      issues.push(...await this.validateRecursiveReferences(
+        resource,
+        resourceType,
+        actualSettings,
+        referencePathsByValue,
+        createResourceFetcher(fhirClientOrVersion),
+      ));
 
       const validationTime = Date.now() - startTime;
-      // Strictness moved to ValidationEnginePerAspect
-      const adjustedIssues = issues;
       logger.info(
         `[ReferenceValidator] Validated ${resourceType} references in ${validationTime}ms ` +
-        `(${adjustedIssues.length} issues)`
+        `(${issues.length} issues)`
       );
 
-      return adjustedIssues;
+      return issues;
 
     } catch (error) {
       logger.error('[ReferenceValidator] Error validating references:', error);
@@ -309,68 +191,38 @@ export class ReferenceValidator implements IReferenceValidator {
     }
   }
 
+  private async validateRecursiveReferences(
+    resource: any,
+    resourceType: string,
+    settings: ValidationSettings | undefined,
+    referencePathsByValue: Map<string, string[]>,
+    resourceFetcher?: (reference: string) => Promise<any>,
+  ): Promise<ValidationIssue[]> {
+    const recursiveConfig = getRecursiveValidationConfig(settings);
+    if (!recursiveConfig.enabled) return [];
+
+    logger.info(`[ReferenceValidator] Recursive validation enabled (maxDepth: ${recursiveConfig.maxDepth})`);
+    try {
+      const recursiveResult = await this.recursiveValidator.validateRecursively(resource, recursiveConfig, resourceFetcher);
+      const issues = buildRecursiveReferenceIssues(recursiveResult, recursiveConfig.timeoutMs, resourceType, referencePathsByValue);
+
+      logger.info(
+        `[ReferenceValidator] Recursive validation: ${recursiveResult.totalResourcesValidated} resources, ` +
+        `depth ${recursiveResult.maxDepthReached}, ${recursiveResult.referencesFollowed} refs followed` +
+        (recursiveResult.timedOut ? ' (TIMED OUT)' : '')
+      );
+      return issues;
+    } catch (recursiveError) {
+      logger.error('[ReferenceValidator] Recursive validation error:', recursiveError);
+      return [];
+    }
+  }
+
   /**
    * Validate contained references
    */
   private async validateContainedReferences(resource: any, resourceType: string): Promise<ValidationIssue[]> {
-    const issues: ValidationIssue[] = [];
-
-    // Build set of contained ids (empty if no contained array — #-refs are
-    // still validated so we catch "ref-1 violated" even when contained is absent)
-    const containedIds = new Set(
-      (Array.isArray(resource.contained) ? resource.contained : [])
-        .filter((r: any) => r.id)
-        .map((r: any) => r.id)
-    );
-
-    // Find all contained references (#id). Skip refs that live inside a
-    // contained resource — those resolve in the parent's contained scope
-    // and are checked from there (see sync variant for rationale).
-    // Also skip refs that live inside a Bundle entry's resource: those
-    // resolve against the entry resource's own contained[], not the
-    // Bundle's. The entry resource is validated separately (full
-    // validate() pipeline recurses into Bundle.entry[].resource), so
-    // nesting check fires at the right scope there.
-    // Parameters.parameter[].resource is the same scoping pattern: the
-    // embedded resource owns its contained[] namespace.
-    const refs = extractReferences(resource, resourceType);
-    const containedRefs = refs.filter(
-      r =>
-        r.reference.startsWith('#')
-        && !/(?:^|\.)contained\[/.test(r.path)
-        && !/(?:^|\.)entry\[\d+\]\.resource\./.test(r.path)
-        && !/(?:^|\.)parameter\[\d+\]\.resource\./.test(r.path),
-    );
-
-    for (const { path, reference } of containedRefs) {
-      const containedId = reference.substring(1);
-
-      // Bare `#` self-reference to the host resource is valid FHIR.
-      if (containedId === '') continue;
-
-      if (!containedIds.has(containedId)) {
-        issues.push(createReferenceValidationIssue({
-          code: 'reference-contained-unresolved',
-          severity: 'error',
-          message: `Unable to resolve resource with reference '${reference}'`,
-          humanReadable: `The referenced contained resource '${containedId}' does not exist in the resource`,
-          path,
-          details: { reference, containedId, availableIds: Array.from(containedIds) },
-          resourceType
-        }));
-        issues.push(createReferenceValidationIssue({
-          code: 'reference-ref1-invariant',
-          severity: 'error',
-          message: `Constraint failed: ref-1: 'SHALL have a contained resource if a local reference is provided' (url: ${containedId})`,
-          humanReadable: `ref-1: contained resource '${containedId}' not found`,
-          path,
-          details: { reference, containedId, constraint: 'ref-1' },
-          resourceType
-        }));
-      }
-    }
-
-    return issues;
+    return validateContainedReferenceIssues(resource, resourceType);
   }
 
   /**
@@ -430,75 +282,7 @@ export class ReferenceValidator implements IReferenceValidator {
    * Validate contained references in resource synchronously (public method for tests)
    */
   public validateContainedReferencesSync(resource: any) {
-    const issues: ValidationIssue[] = [];
-
-    if (!resource) {
-      return [];
-    }
-
-    // This method validates that all contained references (#id) point to valid contained resources.
-    // Even if there is no contained[] array, any #-reference is still invalid
-    // (ref-1: SHALL have a contained resource if a local reference is provided).
-    const containedIds = new Set(
-      (Array.isArray(resource.contained) ? resource.contained : [])
-        .filter((r: any) => r.id)
-        .map((r: any) => r.id)
-    );
-
-    // Find all contained references (#id). References that live INSIDE a
-    // contained resource (path matches `…contained[N].…`) are addressed by
-    // the FHIR self-reference + sibling-resolution rules and validated
-    // when the parent resource is processed — checking them again here
-    // produces false positives because the contained child has no
-    // contained[] array of its own (see bundle-with-contained baseline,
-    // where `#usagent` and bare `#` are emitted as siblings/self-refs).
-    // Also skip refs that live inside Bundle.entry[].resource — those
-    // resolve against the entry resource's own contained[], and the
-    // entry resource is validated separately by the engine recursion.
-    // Parameters.parameter[].resource has the same resource-local contained
-    // scope and must not be checked against Parameters.contained.
-    const refs = extractReferences(resource, resource.resourceType || 'Unknown');
-    const containedRefs = refs.filter(
-      r =>
-        r.reference.startsWith('#')
-        && !/(?:^|\.)contained\[/.test(r.path)
-        && !/(?:^|\.)entry\[\d+\]\.resource\./.test(r.path)
-        && !/(?:^|\.)parameter\[\d+\]\.resource\./.test(r.path),
-    );
-
-    for (const { path, reference } of containedRefs) {
-      const containedId = reference.substring(1);
-
-      // Bare `#` is a self-reference to the host resource (FHIR spec). It is
-      // not a contained-id lookup, so don't flag it as ref-1.
-      if (containedId === '') continue;
-
-      if (!containedIds.has(containedId)) {
-        // Emit two issues matching Java's behavior:
-        // 1) "Unable to resolve resource with reference #..." → HL7 code=structure
-        issues.push(createReferenceValidationIssue({
-          code: 'reference-contained-unresolved',
-          severity: 'error',
-          message: `Unable to resolve resource with reference '${reference}'`,
-          humanReadable: `The referenced contained resource '${containedId}' does not exist`,
-          path,
-          details: { reference, containedId, availableIds: Array.from(containedIds) },
-          resourceType: resource.resourceType || 'Unknown'
-        }));
-        // 2) ref-1 invariant failure → HL7 code=invariant
-        issues.push(createReferenceValidationIssue({
-          code: 'reference-ref1-invariant',
-          severity: 'error',
-          message: `Constraint failed: ref-1: 'SHALL have a contained resource if a local reference is provided' (url: ${containedId})`,
-          humanReadable: `ref-1: contained resource '${containedId}' not found`,
-          path,
-          details: { reference, containedId, constraint: 'ref-1' },
-          resourceType: resource.resourceType || 'Unknown'
-        }));
-      }
-    }
-
-    return issues;
+    return validateContainedReferenceIssues(resource);
   }
 
   /**
@@ -535,17 +319,7 @@ export class ReferenceValidator implements IReferenceValidator {
    * Get recursive validation config from settings or defaults
    */
   public getRecursiveValidationConfig(settings?: ValidationSettings) {
-    const cfg = settings?.recursiveReferenceValidation;
-    return {
-      enabled: cfg?.enabled ?? false,
-      maxDepth: cfg?.maxDepth ?? 1,
-      validateExternal: cfg?.validateExternal ?? false,
-      validateContained: cfg?.validateContained ?? true,
-      validateBundleEntries: cfg?.validateBundleEntries ?? true,
-      excludeResourceTypes: cfg?.excludeResourceTypes,
-      maxReferencesPerResource: cfg?.maxReferencesPerResource ?? 10,
-      timeoutMs: cfg?.timeoutMs ?? 30000,
-    };
+    return getRecursiveValidationConfig(settings);
   }
 
   /**
@@ -680,4 +454,15 @@ export class ReferenceValidator implements IReferenceValidator {
   public filterExistingReferences(references: string[], config?: any) {
     return this.batchedChecker.filterExistingReferences(references, config);
   }
+}
+
+function createResourceFetcher(fhirClientOrVersion: any): ((reference: string) => Promise<any>) | undefined {
+  if (!fhirClientOrVersion || typeof fhirClientOrVersion !== 'object') return undefined;
+  if (typeof fhirClientOrVersion.getResource !== 'function') return undefined;
+
+  return async (reference: string) => {
+    const parsed = parseReference(reference);
+    if (!parsed.isValid || !parsed.resourceType || !parsed.resourceId) return null;
+    return fhirClientOrVersion.getResource(parsed.resourceType, parsed.resourceId);
+  };
 }

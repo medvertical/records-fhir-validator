@@ -5,18 +5,26 @@
  * Extracted from valueset-validator.ts for modularity.
  */
 
-import { promises as fs, Dirent } from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import type {
     ValueSet,
     CodeSystem,
-    CodeSystemConcept,
     ValueSetComposeInclude,
     ValueSetComposeExclude,
 } from './valueset-types';
 import { ValueSetCache, valueSetCache } from './valueset-cache';
 import { logger } from '../logger';
+import { applyConceptFilter, extractCodesFromCodeSystem } from './valueset-concept-utils';
+import {
+    type FhirVersion,
+    preferredMajorFor,
+    versionedCacheKey,
+} from './valueset-package-utils';
+import {
+    findResourceByCanonicalScan,
+    findResourceInPackages,
+} from './valueset-package-search';
 
 export interface ValueSetConceptFilter {
     system: string;
@@ -24,18 +32,6 @@ export interface ValueSetConceptFilter {
     op: string;
     value: string;
     version?: string;
-}
-
-type FhirVersion = 'R4' | 'R5' | 'R6';
-
-function preferredMajorFor(fhirVersion?: FhirVersion): string | undefined {
-    if (!fhirVersion) return undefined;
-    return fhirVersion === 'R4' ? '4' : fhirVersion === 'R5' ? '5' : '6';
-}
-
-function versionedCacheKey(canonical: string, requestedVersion?: string, fhirVersion?: FhirVersion): string {
-    if (requestedVersion) return `${canonical}|${requestedVersion}`;
-    return fhirVersion ? `${canonical}|${fhirVersion}` : canonical;
 }
 
 // ============================================================================
@@ -80,58 +76,6 @@ export class ValueSetPackageLoader {
         return [...this.packageDirectories];
     }
 
-    private extractPackageVersion(packageName: string): string | undefined {
-        const hashIndex = packageName.lastIndexOf('#');
-        return hashIndex >= 0 ? packageName.slice(hashIndex + 1) : undefined;
-    }
-
-    private comparePackageVersions(candidate: string | undefined, current: string | undefined): number {
-        if (!candidate && !current) return 0;
-        if (candidate && !current) return 1;
-        if (!candidate && current) return -1;
-
-        const parse = (version: string): { parts: number[]; prerelease: boolean } => {
-            const [core, prerelease] = version.split('-', 2);
-            return {
-                parts: core.split('.').map(part => {
-                    const numeric = part.match(/^\d+/)?.[0];
-                    return numeric ? Number(numeric) : 0;
-                }),
-                prerelease: Boolean(prerelease),
-            };
-        };
-
-        const left = parse(candidate!);
-        const right = parse(current!);
-        const length = Math.max(left.parts.length, right.parts.length);
-        for (let i = 0; i < length; i++) {
-            const diff = (left.parts[i] ?? 0) - (right.parts[i] ?? 0);
-            if (diff !== 0) return diff;
-        }
-
-        if (left.prerelease !== right.prerelease) {
-            return left.prerelease ? -1 : 1;
-        }
-        return 0;
-    }
-
-    private isBetterPackageMatch(
-        packageName: string,
-        isPreferredFhirMajor: boolean,
-        currentPackageName: string | null,
-        currentIsPreferredFhirMajor: boolean,
-    ): boolean {
-        if (!currentPackageName) return true;
-        if (isPreferredFhirMajor !== currentIsPreferredFhirMajor) {
-            return isPreferredFhirMajor;
-        }
-
-        return this.comparePackageVersions(
-            this.extractPackageVersion(packageName),
-            this.extractPackageVersion(currentPackageName),
-        ) > 0;
-    }
-
     /**
      * Scan all package directories for a FHIR resource matching the given
      * canonical URL. When `preferredFhirMajor` is set, prefer packages whose
@@ -145,38 +89,13 @@ export class ValueSetPackageLoader {
         preferredFhirMajor?: string,
         requestedVersion?: string,
     ): Promise<T | null> {
-        let bestMatch: T | null = null;
-        let bestIsPreferred = false;
-        let bestPackageName: string | null = null;
-        for (const rootDir of this.packageDirectories) {
-            let packageDirs: Dirent[];
-            try {
-                packageDirs = await fs.readdir(rootDir, { withFileTypes: true });
-            } catch { continue; }
-            for (const entry of packageDirs) {
-                if (!entry.isDirectory()) continue;
-                for (const fileName of candidateFiles) {
-                    const filePath = path.join(rootDir, entry.name, 'package', fileName);
-                    try {
-                        const content = await fs.readFile(filePath, 'utf8');
-                        const parsed = JSON.parse(content) as T;
-                        if (!parsed?.url || parsed.url.split('|')[0] !== canonical) continue;
-                        if (requestedVersion && parsed.version === requestedVersion) return parsed;
-                        const dirName = entry.name.toLowerCase();
-                        const isPreferred = preferredFhirMajor
-                            ? dirName.includes(`.r${preferredFhirMajor}.`) || dirName.includes(`r${preferredFhirMajor}.core`)
-                            : false;
-                        if (this.isBetterPackageMatch(entry.name, isPreferred, bestPackageName, bestIsPreferred)) {
-                            bestMatch = parsed;
-                            bestIsPreferred = isPreferred;
-                            bestPackageName = entry.name;
-                        }
-                        break;
-                    } catch { /* keep searching */ }
-                }
-            }
-        }
-        return bestMatch;
+        return findResourceInPackages(
+            this.packageDirectories,
+            canonical,
+            candidateFiles,
+            preferredFhirMajor,
+            requestedVersion,
+        );
     }
 
     private async findByCanonicalScan<T extends { url?: string; version?: string }>(
@@ -185,50 +104,13 @@ export class ValueSetPackageLoader {
         preferredFhirMajor?: string,
         requestedVersion?: string,
     ): Promise<T | null> {
-        let bestMatch: T | null = null;
-        let bestIsPreferred = false;
-        let bestPackageName: string | null = null;
-
-        for (const rootDir of this.packageDirectories) {
-            let packageDirs: Dirent[];
-            try {
-                packageDirs = await fs.readdir(rootDir, { withFileTypes: true });
-            } catch { continue; }
-
-            for (const entry of packageDirs) {
-                if (!entry.isDirectory()) continue;
-
-                const packagePath = path.join(rootDir, entry.name, 'package');
-                let packageFiles: Dirent[];
-                try {
-                    packageFiles = await fs.readdir(packagePath, { withFileTypes: true });
-                } catch { continue; }
-
-                for (const fileEntry of packageFiles) {
-                    if (!fileEntry.isFile()) continue;
-                    if (!fileEntry.name.startsWith(filePrefix) || !fileEntry.name.endsWith('.json')) continue;
-
-                    try {
-                        const content = await fs.readFile(path.join(packagePath, fileEntry.name), 'utf8');
-                        const parsed = JSON.parse(content) as T;
-                        if (!parsed?.url || parsed.url.split('|')[0] !== canonical) continue;
-                        if (requestedVersion && parsed.version === requestedVersion) return parsed;
-
-                        const dirName = entry.name.toLowerCase();
-                        const isPreferred = preferredFhirMajor
-                            ? dirName.includes(`.r${preferredFhirMajor}.`) || dirName.includes(`r${preferredFhirMajor}.core`)
-                            : false;
-                        if (this.isBetterPackageMatch(entry.name, isPreferred, bestPackageName, bestIsPreferred)) {
-                            bestMatch = parsed;
-                            bestIsPreferred = isPreferred;
-                            bestPackageName = entry.name;
-                        }
-                    } catch { /* keep searching */ }
-                }
-            }
-        }
-
-        return bestMatch;
+        return findResourceByCanonicalScan(
+            this.packageDirectories,
+            canonical,
+            filePrefix,
+            preferredFhirMajor,
+            requestedVersion,
+        );
     }
 
     /**
@@ -502,7 +384,7 @@ export class ValueSetPackageLoader {
             const codeSystem = await this.loadCodeSystem(system, preferredFhirMajor, entry.version);
             if (codeSystem) {
                 for (const filter of (entry as ValueSetComposeInclude).filter ?? []) {
-                    const filtered = this.applyConceptFilter(codeSystem, filter);
+                    const filtered = applyConceptFilter(codeSystem, filter);
                     for (const code of filtered) {
                         codes.push(`${system}|${code}`);
                         codes.push(code);
@@ -525,15 +407,23 @@ export class ValueSetPackageLoader {
             return this.cache.getValueSetFile(cacheKey) ?? null;
         }
         const lastSegment = canonical.split('/').pop();
-        if (!lastSegment) return null;
+        if (!lastSegment) {
+            this.cache.setValueSetFile(cacheKey, null);
+            return null;
+        }
         const preferredMajor = requestedVersion ? requestedVersion.split('.')[0] : preferredMajorFor(fhirVersion);
         const result = await this.findInPackages<ValueSet>(
             canonical,
             [`ValueSet-${lastSegment}.json`, `${lastSegment}.json`],
             preferredMajor,
             requestedVersion,
+        ) ?? await this.findByCanonicalScan<ValueSet>(
+            canonical,
+            'ValueSet',
+            preferredMajor,
+            requestedVersion,
         );
-        if (result) this.cache.setValueSetFile(cacheKey, result);
+        this.cache.setValueSetFile(cacheKey, result ?? null);
         return result;
     }
 
@@ -576,65 +466,6 @@ export class ValueSetPackageLoader {
     }
 
     /**
-     * Apply a simple CodeSystem filter. Supports `concept is-a <code>` and
-     * `concept = <code>` which together cover the vast majority of real-world
-     * FHIR ValueSet definitions. Returns the plain code strings (without
-     * system prefix — callers add that).
-     */
-    private applyConceptFilter(
-        codeSystem: CodeSystem,
-        filter: { property: string; op: string; value: string },
-    ): string[] {
-        if (filter.property !== 'concept') return [];
-
-        // Find the matching concept (depth-first)
-        const find = (
-            concepts: CodeSystemConcept[] | undefined,
-            code: string,
-        ): CodeSystemConcept | null => {
-            if (!concepts) return null;
-            for (const concept of concepts) {
-                if (concept.code === code) return concept;
-                const nested = find(concept.concept, code);
-                if (nested) return nested;
-            }
-            return null;
-        };
-
-        if (filter.op === '=') {
-            const match = find(codeSystem.concept, filter.value);
-            return match ? [match.code] : [];
-        }
-
-        if (filter.op === 'is-a') {
-            const root = find(codeSystem.concept, filter.value);
-            if (!root) return [];
-            return this.collectDescendants(root);
-        }
-
-        if (filter.op === 'descendent-of') {
-            const root = find(codeSystem.concept, filter.value);
-            if (!root) return [];
-            // Same semantics as is-a but without the root code
-            return this.collectDescendants(root).filter(c => c !== root.code);
-        }
-
-        return [];
-    }
-
-    private collectDescendants(root: CodeSystemConcept): string[] {
-        const out: string[] = [];
-        const walk = (concept: CodeSystemConcept): void => {
-            if (concept.code) out.push(concept.code);
-            if (concept.concept) {
-                for (const child of concept.concept) walk(child);
-            }
-        };
-        walk(root);
-        return out;
-    }
-
-    /**
      * Extract all codes from a CodeSystem (including nested concepts).
      *
      * Supplements are ignored here — per FHIR semantics, a supplement adds
@@ -642,28 +473,6 @@ export class ValueSetPackageLoader {
      * new codes. The base CodeSystem should be loaded separately.
      */
     extractCodesFromCodeSystem(codeSystem: CodeSystem): string[] {
-        if (codeSystem.content === 'supplement') {
-            logger.debug(
-                `[ValueSetPackageLoader] Skipping supplement CodeSystem ${codeSystem.url} — codes must come from base system ${codeSystem.supplements}`,
-            );
-            return [];
-        }
-
-        const codes: string[] = [];
-
-        const extractNested = (concepts: CodeSystemConcept[] | undefined): void => {
-            if (!concepts) return;
-            for (const concept of concepts) {
-                if (concept.code) {
-                    codes.push(concept.code);
-                }
-                if (concept.concept) {
-                    extractNested(concept.concept);
-                }
-            }
-        };
-
-        extractNested(codeSystem.concept);
-        return codes;
+        return extractCodesFromCodeSystem(codeSystem);
     }
 }

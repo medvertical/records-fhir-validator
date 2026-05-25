@@ -198,6 +198,59 @@ describe('ExtensionValidator', () => {
         i.code === 'profile-extension-min-cardinality' && i.severity === 'error'
       );
       expect(requiredErrors.length).toBeGreaterThan(0);
+      expect(requiredErrors[0]).toMatchObject({
+        resourceType: 'Patient',
+        details: expect.objectContaining({ resourceType: 'Patient' }),
+      });
+    });
+
+    it('matches required extension slices declared with versioned profile canonicals', async () => {
+      const profileWithVersionedExtension: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://example.org/profile/patient-versioned-extension',
+        name: 'PatientWithVersionedExtension',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Patient',
+        snapshot: {
+          element: [
+            { id: 'Patient', path: 'Patient', min: 0, max: '*' },
+            {
+              id: 'Patient.name.given.extension:qualifier',
+              path: 'Patient.name.given.extension',
+              sliceName: 'qualifier',
+              min: 1,
+              max: '1',
+              type: [{
+                code: 'Extension',
+                profile: ['http://hl7.org/fhir/StructureDefinition/iso21090-EN-qualifier|5.2.0'],
+              }],
+            } as ElementDefinition,
+          ],
+        },
+      };
+      const resource = {
+        resourceType: 'Patient',
+        id: 'p1',
+        name: [{
+          given: ['Hendrik'],
+          _given: [{
+            extension: [{
+              url: 'http://hl7.org/fhir/StructureDefinition/iso21090-EN-qualifier',
+              valueCode: 'BR',
+            }],
+          }],
+        }],
+      };
+
+      const issues = await validator.validateExtensions(
+        resource,
+        profileWithVersionedExtension,
+        makeContext(resource, profileWithVersionedExtension),
+      );
+
+      expect(issues.filter(i => i.code === 'profile-extension-min-cardinality')).toHaveLength(0);
     });
 
     it('should validate extension cardinality', async () => {
@@ -495,6 +548,64 @@ describe('ExtensionValidator', () => {
           {
             url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationStatement.renderedDosageInstruction',
             valueMarkdown: 'Taken as directed',
+          },
+        ],
+      };
+
+      const issues = await validator.validateExtensions(
+        resource, minimalPatientProfile, makeContext(resource, minimalPatientProfile),
+      );
+      expect(issues.filter(i => i.code === 'profile-extension-not-found')).toHaveLength(0);
+    });
+
+    it('does not flag the R5 planned start date backport extension as not found', async () => {
+      const resource = {
+        resourceType: 'Encounter',
+        id: 'enc1',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/5.0/StructureDefinition/extension-Encounter.plannedStartDate',
+            valueDateTime: '2026-05-23T10:00:00+02:00',
+          },
+        ],
+      };
+      const encounterProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://hl7.org/fhir/StructureDefinition/Encounter',
+        name: 'Encounter',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Encounter',
+        snapshot: { element: [{ id: 'Encounter', path: 'Encounter', min: 0, max: '*' } as ElementDefinition] },
+      };
+
+      const issues = await validator.validateExtensions(
+        resource, encounterProfile, makeContext(resource, encounterProfile),
+      );
+      expect(issues.filter(i => i.code === 'profile-extension-not-found')).toHaveLength(0);
+    });
+
+    it('does not flag known HL7 extensions IG canonicals as not found', async () => {
+      const resource = {
+        resourceType: 'Patient',
+        id: 'p1',
+        extension: [
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/individual-genderIdentity',
+            valueCodeableConcept: { text: 'nonbinary' },
+          },
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/individual-pronouns',
+            valueCodeableConcept: { text: 'they/them' },
+          },
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/patient-occupation',
+            valueCodeableConcept: { text: 'engineer' },
+          },
+          {
+            url: 'http://hl7.org/fhir/StructureDefinition/instance-name',
+            valueString: 'Example name',
           },
         ],
       };

@@ -48,6 +48,8 @@ export interface SandboxResult {
   };
 }
 
+type SandboxMetrics = SandboxResult['metrics'];
+
 const DEFAULT_LIMITS: Required<SandboxLimits> = {
   expressionLength: 4096,
   functionCallCount: 64,
@@ -98,81 +100,79 @@ export function checkFhirpathSandbox(
     };
   }
 
-  let i = 0;
-  let depth = 0;
-  let maxDepth = 0;
-  let calls = 0;
+  Object.assign(metrics, scanExpressionMetrics(expression));
 
-  while (i < expression.length) {
-    const ch = expression[i];
-
-    // Skip string literals (single or double quoted, backslash-escape aware).
-    if (ch === "'" || ch === '"') {
-      const quote = ch;
-      i++;
-      while (i < expression.length) {
-        const c = expression[i];
-        if (c === '\\') {
-          i += 2;
-          continue;
-        }
-        if (c === quote) {
-          i++;
-          break;
-        }
-        i++;
-      }
-      continue;
-    }
-
-    if (ch === '(') {
-      depth++;
-      if (depth > maxDepth) maxDepth = depth;
-      i++;
-      continue;
-    }
-    if (ch === ')') {
-      depth = Math.max(0, depth - 1);
-      i++;
-      continue;
-    }
-
-    // Identifier-followed-by-`(` = function call.
-    if (/[A-Za-z_]/.test(ch)) {
-      const start = i;
-      while (i < expression.length && /[A-Za-z0-9_]/.test(expression[i])) i++;
-      // Allow one optional space between identifier and `(` per the
-      // FHIRPath grammar's whitespace tolerance.
-      let j = i;
-      while (j < expression.length && expression[j] === ' ') j++;
-      if (expression[j] === '(') {
-        calls++;
-      }
-      // Don't consume `(` here — the next loop iteration will and bump depth.
-      if (i === start) i++;
-      continue;
-    }
-
-    i++;
-  }
-
-  metrics.functionCallCount = calls;
-  metrics.nestingDepth = maxDepth;
-
-  if (calls > max.functionCallCount) {
+  if (metrics.functionCallCount > max.functionCallCount) {
     return {
       ok: false,
-      reason: `Function-call count ${calls} exceeds limit ${max.functionCallCount}`,
+      reason: `Function-call count ${metrics.functionCallCount} exceeds limit ${max.functionCallCount}`,
       metrics,
     };
   }
-  if (maxDepth > max.nestingDepth) {
+  if (metrics.nestingDepth > max.nestingDepth) {
     return {
       ok: false,
-      reason: `Nesting depth ${maxDepth} exceeds limit ${max.nestingDepth}`,
+      reason: `Nesting depth ${metrics.nestingDepth} exceeds limit ${max.nestingDepth}`,
       metrics,
     };
   }
 
   return { ok: true, metrics };
+}
+
+function scanExpressionMetrics(expression: string): Pick<SandboxMetrics, 'functionCallCount' | 'nestingDepth'> {
+  let i = 0;
+  let depth = 0;
+  let nestingDepth = 0;
+  let functionCallCount = 0;
+
+  while (i < expression.length) {
+    const ch = expression[i];
+    if (ch === "'" || ch === '"') {
+      i = skipQuotedString(expression, i, ch);
+    } else if (ch === '(') {
+      depth++;
+      nestingDepth = Math.max(nestingDepth, depth);
+      i++;
+    } else if (ch === ')') {
+      depth = Math.max(0, depth - 1);
+      i++;
+    } else if (/[A-Za-z_]/.test(ch)) {
+      const result = scanIdentifier(expression, i);
+      functionCallCount += result.isFunctionCall ? 1 : 0;
+      i = result.nextIndex;
+    } else {
+      i++;
+    }
+  }
+
+  return { functionCallCount, nestingDepth };
+}
+
+function skipQuotedString(expression: string, start: number, quote: string): number {
+  let i = start + 1;
+  while (i < expression.length) {
+    const ch = expression[i];
+    if (ch === '\\') {
+      i += 2;
+    } else if (ch === quote) {
+      return i + 1;
+    } else {
+      i++;
+    }
+  }
+  return i;
+}
+
+function scanIdentifier(expression: string, start: number): { isFunctionCall: boolean; nextIndex: number } {
+  let i = start;
+  while (i < expression.length && /[A-Za-z0-9_]/.test(expression[i])) i++;
+
+  let nextToken = i;
+  while (nextToken < expression.length && expression[nextToken] === ' ') nextToken++;
+
+  return {
+    isFunctionCall: expression[nextToken] === '(',
+    nextIndex: i === start ? i + 1 : i,
+  };
 }

@@ -87,7 +87,10 @@ export {
   // Default settings
   DEFAULT_VALIDATION_SETTINGS_R4,
   DEFAULT_VALIDATION_SETTINGS_R5,
+  createEhds2026ValidationSettings,
   createMii2026ValidationSettings,
+  HL7_EU_EHDS_2026_PACKAGE_SET,
+  HL7_EU_EHDS_2026_PACKAGE_VERSIONS,
   MII_2026_PACKAGE_SET,
   MII_2026_PACKAGE_VERSIONS,
   type FhirPackagePin,

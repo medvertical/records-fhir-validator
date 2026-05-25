@@ -9,7 +9,15 @@
  */
 
 import { getCircularReferenceDetector } from './circular-reference-detector';
-import { parseReference } from './reference-type-extractor';
+import {
+  extractReferencesToValidate,
+  filterReferences,
+  getResourceIdentifier,
+  isTimeoutReached,
+  resolveBundleReference,
+  resolveContainedReference,
+  type ReferenceToValidate,
+} from './recursive-reference-helpers';
 import { logger } from '../logger';
 
 // ============================================================================
@@ -63,21 +71,6 @@ export interface RecursiveValidationResult {
   validationTimeMs: number;
   /** Whether timeout was reached */
   timedOut: boolean;
-}
-
-export interface ReferenceToValidate {
-  /** The reference string */
-  reference: string;
-  /** Resource type if known */
-  resourceType?: string;
-  /** Resource ID if known */
-  resourceId?: string;
-  /** Field path where reference was found */
-  fieldPath: string;
-  /** Parent resource ID */
-  parentResourceId: string;
-  /** Depth in validation chain */
-  depth: number;
 }
 
 // ============================================================================
@@ -176,7 +169,7 @@ export class RecursiveReferenceValidator {
     }
 
     // Check timeout
-    if (this.isTimeoutReached(context)) {
+    if (isTimeoutReached(context)) {
       logger.warn('[RecursiveReferenceValidator] Timeout reached');
       result.timedOut = true;
       return;
@@ -189,7 +182,7 @@ export class RecursiveReferenceValidator {
     }
 
     // Track resource
-    const resourceId = this.getResourceIdentifier(resource);
+    const resourceId = getResourceIdentifier(resource);
     if (context.validatedResources.has(resourceId)) {
       return; // Already validated
     }
@@ -206,199 +199,120 @@ export class RecursiveReferenceValidator {
     const currentChain = [...context.referenceChain, resourceId];
 
     // Extract references from this resource
-    const references = this.extractReferencesToValidate(resource, resourceId, context.currentDepth);
+    const references = extractReferencesToValidate(resource, resourceId, context.currentDepth);
 
     // Filter and limit references
-    const filteredReferences = this.filterReferences(references, context);
+    const filteredReferences = filterReferences(references, context);
 
     // Validate each reference
     for (const ref of filteredReferences) {
-      // Check timeout again before processing each reference
-      if (this.isTimeoutReached(context)) {
-        result.timedOut = true;
-        return;
-      }
-
-      // Check if this would create a circular reference
-      // Use the actual resource identifier for the check
-      const refIdentifier = ref.resourceType && ref.resourceId
-        ? `${ref.resourceType}/${ref.resourceId}`
-        : ref.reference;
-
-      const wouldBeCircular = this.circularDetector.wouldCreateCircularReference(
+      const shouldContinue = await this.processReference(
+        ref,
+        resource,
+        context,
         currentChain,
-        refIdentifier
+        result,
+        resourceFetcher,
       );
-
-      if (wouldBeCircular) {
-        logger.warn(`[RecursiveReferenceValidator] Circular reference detected: ${refIdentifier}`);
-        result.circularReferences.push([...currentChain, refIdentifier]);
-        continue;
-      }
-
-      // Try to resolve and validate the referenced resource
-      if (resourceFetcher) {
-        try {
-          const referencedResource = await resourceFetcher(ref.reference);
-
-          if (referencedResource) {
-            result.referencesFollowed++;
-
-            // Create new context for recursive call
-            const childContext: RecursiveValidationContext = {
-              ...context,
-              currentDepth: context.currentDepth + 1,
-              referenceChain: currentChain, // Use current chain which includes this resource
-            };
-
-            // Recursively validate
-            await this.validateResourceRecursively(
-              referencedResource,
-              childContext,
-              result,
-              resourceFetcher
-            );
-          } else {
-            result.unresolvedReferences.push(ref.reference);
-          }
-        } catch (error) {
-          logger.error(`[RecursiveReferenceValidator] Failed to fetch ${ref.reference}:`, error);
-          result.unresolvedReferences.push(ref.reference);
-        }
-      } else {
-        // No fetcher provided, just track as unresolved
-        result.unresolvedReferences.push(ref.reference);
-      }
+      if (!shouldContinue) return;
     }
   }
 
-  /**
-   * Extract references that should be validated from a resource
-   */
-  private extractReferencesToValidate(
+  private async processReference(
+    ref: ReferenceToValidate,
     resource: any,
-    parentResourceId: string,
-    depth: number
-  ): ReferenceToValidate[] {
-    const references: ReferenceToValidate[] = [];
-
-    if (!resource || typeof resource !== 'object') {
-      return references;
+    context: RecursiveValidationContext,
+    currentChain: string[],
+    result: RecursiveValidationResult,
+    resourceFetcher?: (reference: string) => Promise<any>,
+  ): Promise<boolean> {
+    if (isTimeoutReached(context)) {
+      result.timedOut = true;
+      return false;
     }
 
-    this.extractReferencesFromObject(resource, '', parentResourceId, depth, references);
+    const refIdentifier = ref.resourceType && ref.resourceId
+      ? `${ref.resourceType}/${ref.resourceId}`
+      : ref.reference;
 
-    return references;
+    if (this.circularDetector.wouldCreateCircularReference(currentChain, refIdentifier)) {
+      logger.warn(`[RecursiveReferenceValidator] Circular reference detected: ${refIdentifier}`);
+      result.circularReferences.push([...currentChain, refIdentifier]);
+      return true;
+    }
+
+    if (ref.reference.startsWith('#')) {
+      if (ref.reference === '#') return true;
+      const referencedResource = resolveContainedReference(resource, ref.reference);
+      await this.validateResolvedReference(ref, referencedResource, context, currentChain, result, resourceFetcher);
+      return true;
+    }
+
+    const bundleReferencedResource = resolveBundleReference(resource, ref.reference);
+    if (bundleReferencedResource) {
+      await this.validateResolvedReference(ref, bundleReferencedResource, context, currentChain, result, resourceFetcher);
+      return true;
+    }
+
+    await this.fetchAndValidateReference(ref, context, currentChain, result, resourceFetcher);
+    return true;
   }
 
-  /**
-   * Recursively extract references from an object
-   */
-  private extractReferencesFromObject(
-    obj: any,
-    path: string,
-    parentResourceId: string,
-    depth: number,
-    references: ReferenceToValidate[]
-  ): void {
-    if (!obj || typeof obj !== 'object') {
+  private async validateResolvedReference(
+    ref: ReferenceToValidate,
+    referencedResource: any | null,
+    context: RecursiveValidationContext,
+    currentChain: string[],
+    result: RecursiveValidationResult,
+    resourceFetcher?: (reference: string) => Promise<any>,
+  ): Promise<void> {
+    if (!referencedResource) {
+      result.unresolvedReferences.push(ref.reference);
       return;
     }
 
-    // Check if this is a reference object
-    if (obj.reference && typeof obj.reference === 'string') {
-      const parseResult = parseReference(obj.reference);
+    result.referencesFollowed++;
+    await this.validateResourceRecursively(
+      referencedResource,
+      this.createChildContext(context, currentChain),
+      result,
+      resourceFetcher,
+    );
+  }
 
-      references.push({
-        reference: obj.reference,
-        resourceType: parseResult.resourceType || undefined,
-        resourceId: parseResult.resourceId || undefined,
-        fieldPath: path || 'reference',
-        parentResourceId,
-        depth,
-      });
-    }
-
-    // Recursively check properties
-    for (const [key, value] of Object.entries(obj)) {
-      const newPath = path ? `${path}.${key}` : key;
-
-      if (Array.isArray(value)) {
-        value.forEach((item, index) => {
-          this.extractReferencesFromObject(
-            item,
-            `${newPath}[${index}]`,
-            parentResourceId,
-            depth,
-            references
-          );
-        });
-      } else if (value && typeof value === 'object') {
-        this.extractReferencesFromObject(value, newPath, parentResourceId, depth, references);
+  private async fetchAndValidateReference(
+    ref: ReferenceToValidate,
+    context: RecursiveValidationContext,
+    currentChain: string[],
+    result: RecursiveValidationResult,
+    resourceFetcher?: (reference: string) => Promise<any>,
+  ): Promise<void> {
+    if (!resourceFetcher) {
+      if (!context.config.validateExternal) {
+        return;
       }
+      result.unresolvedReferences.push(ref.reference);
+      return;
+    }
+
+    try {
+      const referencedResource = await resourceFetcher(ref.reference);
+      await this.validateResolvedReference(ref, referencedResource, context, currentChain, result, resourceFetcher);
+    } catch (error) {
+      logger.error(`[RecursiveReferenceValidator] Failed to fetch ${ref.reference}:`, error);
+      result.unresolvedReferences.push(ref.reference);
     }
   }
 
-  /**
-   * Filter references based on configuration
-   */
-  private filterReferences(
-    references: ReferenceToValidate[],
-    context: RecursiveValidationContext
-  ): ReferenceToValidate[] {
-    let filtered = references;
-
-    // Filter by excluded resource types
-    if (context.config.excludeResourceTypes && context.config.excludeResourceTypes.length > 0) {
-      filtered = filtered.filter(
-        ref => !ref.resourceType || !context.config.excludeResourceTypes!.includes(ref.resourceType)
-      );
-    }
-
-    // Filter external references if not enabled
-    if (!context.config.validateExternal) {
-      filtered = filtered.filter(ref => {
-        const parseResult = parseReference(ref.reference);
-        return parseResult.referenceType !== 'absolute' && parseResult.referenceType !== 'canonical';
-      });
-    }
-
-    // Limit number of references per resource
-    const maxRefs = context.config.maxReferencesPerResource || 10;
-    if (filtered.length > maxRefs) {
-      logger.warn(
-        `[RecursiveReferenceValidator] Limiting references from ${filtered.length} to ${maxRefs}`
-      );
-      filtered = filtered.slice(0, maxRefs);
-    }
-
-    return filtered;
-  }
-
-  /**
-   * Get resource identifier for tracking
-   */
-  private getResourceIdentifier(resource: any): string {
-    if (!resource || typeof resource !== 'object') {
-      return `unknown-${Date.now()}-${Math.random()}`;
-    }
-    if (resource.resourceType && resource.id) {
-      return `${resource.resourceType}/${resource.id}`;
-    }
-    if (resource.id) {
-      return resource.id;
-    }
-    // Fallback: use resource hash or random ID
-    return `unknown-${Date.now()}-${Math.random()}`;
-  }
-
-  /**
-   * Check if timeout has been reached
-   */
-  private isTimeoutReached(context: RecursiveValidationContext): boolean {
-    const elapsed = Date.now() - context.startTime;
-    const timeout = context.config.timeoutMs || 30000;
-    return elapsed >= timeout;
+  private createChildContext(
+    context: RecursiveValidationContext,
+    currentChain: string[],
+  ): RecursiveValidationContext {
+    return {
+      ...context,
+      currentDepth: context.currentDepth + 1,
+      referenceChain: currentChain,
+    };
   }
 
   /**
@@ -419,7 +333,7 @@ export class RecursiveReferenceValidator {
     };
 
     // Simple estimation based on reference count
-    const references = this.extractReferencesToValidate(resource, 'root', 0);
+    const references = extractReferencesToValidate(resource, 'root', 0);
     const estimatedResources = Math.min(
       references.length * fullConfig.maxDepth,
       100 // Cap estimate
@@ -474,4 +388,3 @@ export function getRecursiveReferenceValidator(): RecursiveReferenceValidator {
 export function resetRecursiveReferenceValidator(): void {
   validatorInstance = null;
 }
-

@@ -119,62 +119,22 @@ export class EarlyTerminationValidator {
 
         // 1. Check if resource is null/undefined
         if (resource === null || resource === undefined) {
-            return {
-                shouldContinue: false,
-                issues: [createValidationIssue({
-                    code: 'early-termination-null-resource',
-                    path: '',
-                    resourceType: 'Unknown',
-                    customMessage: 'Resource is null or undefined',
-                    severityOverride: 'fatal',
-                })],
-                reason: 'null-resource'
-            };
+            return this.fatalResult('early-termination-null-resource', '', 'Unknown', 'Resource is null or undefined', 'null-resource');
         }
 
         // 2. Check if resource is an object
         if (typeof resource !== 'object' || Array.isArray(resource)) {
-            return {
-                shouldContinue: false,
-                issues: [createValidationIssue({
-                    code: 'early-termination-not-object',
-                    path: '',
-                    resourceType: 'Unknown',
-                    customMessage: 'Resource must be a JSON object, not an array or primitive',
-                    severityOverride: 'fatal',
-                })],
-                reason: 'not-object'
-            };
+            return this.fatalResult('early-termination-not-object', '', 'Unknown', 'Resource must be a JSON object, not an array or primitive', 'not-object');
         }
 
         // 3. Check for empty object
         if (this.config.rejectEmpty && Object.keys(resource).length === 0) {
-            return {
-                shouldContinue: false,
-                issues: [createValidationIssue({
-                    code: 'early-termination-empty-resource',
-                    path: '',
-                    resourceType: 'Unknown',
-                    customMessage: 'Resource is an empty object',
-                    severityOverride: 'fatal',
-                })],
-                reason: 'empty-object'
-            };
+            return this.fatalResult('early-termination-empty-resource', '', 'Unknown', 'Resource is an empty object', 'empty-object');
         }
 
         // 4. Check resourceType presence
         if (this.config.requireResourceType && !resource.resourceType) {
-            return {
-                shouldContinue: false,
-                issues: [createValidationIssue({
-                    code: 'early-termination-missing-resourcetype',
-                    path: 'resourceType',
-                    resourceType: 'Unknown',
-                    customMessage: 'Missing required field: resourceType',
-                    severityOverride: 'fatal',
-                })],
-                reason: 'missing-resourceType'
-            };
+            return this.fatalResult('early-termination-missing-resourcetype', 'resourceType', 'Unknown', 'Missing required field: resourceType', 'missing-resourceType');
         }
 
         // 5. Check resourceType validity
@@ -204,40 +164,59 @@ export class EarlyTerminationValidator {
         if (this.config.maxResourceSize) {
             const size = JSON.stringify(resource).length;
             if (size > this.config.maxResourceSize) {
-                return {
-                    shouldContinue: false,
-                    issues: [createValidationIssue({
-                        code: 'early-termination-resource-too-large',
-                        path: '',
-                        resourceType: resource.resourceType || 'Unknown',
-                        customMessage: `Resource exceeds maximum size (${(size / 1024 / 1024).toFixed(2)}MB > ${(this.config.maxResourceSize / 1024 / 1024).toFixed(2)}MB)`,
-                        severityOverride: 'fatal',
-                    })],
-                    reason: 'size-exceeded'
-                };
+                const actualSize = (size / 1024 / 1024).toFixed(2);
+                const maxSize = (this.config.maxResourceSize / 1024 / 1024).toFixed(2);
+                return this.fatalResult(
+                    'early-termination-resource-too-large',
+                    '',
+                    resource.resourceType || 'Unknown',
+                    `Resource exceeds maximum size (${actualSize}MB > ${maxSize}MB)`,
+                    'size-exceeded'
+                );
             }
         }
 
         // 8. Check required fields
-        if (this.config.requiredFields) {
-            for (const field of this.config.requiredFields) {
-                if (resource[field] === undefined || resource[field] === null) {
-                    issues.push(createValidationIssue({
-                        code: 'early-termination-missing-required',
-                        path: field,
-                        resourceType: resource.resourceType || 'Unknown',
-                        customMessage: `Missing required field: ${field}`,
-                        severityOverride: 'error',
-                    }));
-                }
-            }
-        }
+        issues.push(...this.checkRequiredFields(resource));
 
         // All checks passed
         return {
             shouldContinue: true,
             issues
         };
+    }
+
+    private fatalResult(
+        code: string,
+        path: string,
+        resourceType: string,
+        customMessage: string,
+        reason: string,
+    ): EarlyTerminationResult {
+        return {
+            shouldContinue: false,
+            issues: [createValidationIssue({
+                code,
+                path,
+                resourceType,
+                customMessage,
+                severityOverride: 'fatal',
+            })],
+            reason
+        };
+    }
+
+    private checkRequiredFields(resource: any): ValidationIssue[] {
+        return (this.config.requiredFields ?? []).flatMap(field => {
+            if (resource[field] !== undefined && resource[field] !== null) return [];
+            return [createValidationIssue({
+                code: 'early-termination-missing-required',
+                path: field,
+                resourceType: resource.resourceType || 'Unknown',
+                customMessage: `Missing required field: ${field}`,
+                severityOverride: 'error',
+            })];
+        });
     }
 
     /**

@@ -118,4 +118,42 @@ describe('MustSupport Strictness', () => {
         const mustSupportIssue = issues.find(i => i.code === 'profile-mustsupport-missing');
         expect(mustSupportIssue).toBeDefined();
     });
+
+    it('applies contextual MustSupport skips on the direct snapshot path', async () => {
+        const resource = {
+            resourceType: 'Encounter',
+            id: 'ambulatory',
+            status: 'finished',
+            class: {
+                system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
+                code: 'AMB'
+            }
+        };
+        const structureDef = {
+            resourceType: 'StructureDefinition',
+            url: 'http://example.org/StructureDefinition/TestEncounter',
+            snapshot: {
+                element: [
+                    { path: 'Encounter' },
+                    { path: 'Encounter.hospitalization', min: 0, max: '1', mustSupport: true }
+                ]
+            }
+        };
+
+        const issues = await executor.validate(resource, {
+            resource,
+            resourceType: 'Encounter',
+            structureDef,
+            fhirVersion: 'R4',
+            getValueAtPath,
+            settings: {
+                validationStrictness: 'standard'
+            }
+        });
+
+        expect(issues).not.toContainEqual(expect.objectContaining({
+            code: 'profile-mustsupport-missing',
+            path: 'Encounter.hospitalization'
+        }));
+    });
 });

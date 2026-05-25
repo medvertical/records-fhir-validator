@@ -94,15 +94,33 @@ export const MII_2026_PACKAGE_SET: FhirPackagePin[] = Object.entries(
   MII_2026_PACKAGE_VERSIONS
 ).map(([id, version]) => ({ id, version }));
 
+export const HL7_EU_EHDS_2026_PACKAGE_VERSIONS = {
+  'hl7.fhir.eu.extensions.r4': '1.3.0',
+  'hl7.fhir.eu.base': '2.0.0',
+  'hl7.fhir.eu.laboratory': '2.0.0',
+  'hl7.fhir.eu.eps': '1.0.0-alpha',
+  'hl7.fhir.eu.hdr': '0.1.0-ballot',
+  'hl7.fhir.eu.imaging': '1.0.0-ballot',
+  'hl7.fhir.eu.health-data-api': '1.0.0-ballot',
+} as const;
+
+export const HL7_EU_EHDS_2026_PACKAGE_SET: FhirPackagePin[] = Object.entries(
+  HL7_EU_EHDS_2026_PACKAGE_VERSIONS
+).map(([id, version]) => ({ id, version }));
+
 const MII_2026_IG_PACKAGES = MII_2026_PACKAGE_SET.map(({ id, version }) => `${id}#${version}`);
+const HL7_EU_EHDS_2026_IG_PACKAGES = HL7_EU_EHDS_2026_PACKAGE_SET.map(
+  ({ id, version }) => `${id}#${version}`
+);
 
 export type Mii2026ValidationSettingsOverrides = Omit<
   Partial<ValidationSettings>,
-  'packageDownload' | 'profileSources' | 'hapiConfig'
+  'packageDownload' | 'profileSources' | 'hapiConfig' | 'mii'
 > & {
   packageDownload?: Partial<NonNullable<ValidationSettings['packageDownload']>>;
   profileSources?: Partial<NonNullable<ValidationSettings['profileSources']>>;
   hapiConfig?: Partial<NonNullable<ValidationSettings['hapiConfig']>>;
+  mii?: Partial<NonNullable<ValidationSettings['mii']>>;
 };
 
 /**
@@ -527,7 +545,7 @@ export const DEFAULT_VALIDATION_SETTINGS_R5: ValidationSettings = {
 };
 
 /**
- * Create an R4 validation settings preset for the MII 2026 package set.
+ * Create an R4 validation settings object for the MII 2026 package set.
  *
  * The preset keeps the standard Records validator behavior but pins every
  * MII package version used by the 2026 conformance target so automatic package
@@ -568,10 +586,20 @@ export function createMii2026ValidationSettings(
     cachePath: settings.hapiConfig?.cachePath ?? '/tmp/fhir-packages',
     enableBestPractice: settings.hapiConfig?.enableBestPractice ?? true
   };
+  settings.mii = {
+    preset: 'mii-2026',
+    terminologyMode: 'mii-local-blaze',
+    maxOntoserverRequestsPerRun: 250,
+    allowHighVolumeOntoserver: false
+  };
 
   return {
     ...settings,
     ...overrides,
+    mii: {
+      ...settings.mii,
+      ...overrides.mii
+    },
     packageDownload: {
       ...settings.packageDownload,
       ...overrides.packageDownload,
@@ -584,6 +612,81 @@ export function createMii2026ValidationSettings(
     profileSources: {
       ...settings.profileSources,
       ...overrides.profileSources
+    },
+    hapiConfig: {
+      ...settings.hapiConfig,
+      ...overrides.hapiConfig
+    }
+  };
+}
+
+/**
+ * Create an R4 validation settings object for EHDS-oriented data tests.
+ *
+ * The EHDS lane builds on the MII 2026 baseline because German EHDS pilots
+ * need the same local terminology and KDS package behavior, then adds the
+ * HL7 Europe package pins used by cross-border EHDS scenarios.
+ */
+export function createEhds2026ValidationSettings(
+  overrides: Mii2026ValidationSettingsOverrides = {}
+): ValidationSettings {
+  const settings = createMii2026ValidationSettings();
+  const approvedPackages = new Set([
+    ...(settings.packageDownload?.approvedPackages ?? []),
+    ...HL7_EU_EHDS_2026_PACKAGE_SET.map(({ id }) => id)
+  ]);
+
+  settings.packageDownload = {
+    versionPolicy: settings.packageDownload?.versionPolicy ?? 'prefer-stable',
+    pinnedVersions: {
+      ...(settings.packageDownload?.pinnedVersions ?? {}),
+      ...HL7_EU_EHDS_2026_PACKAGE_VERSIONS
+    },
+    approvedPackages: Array.from(approvedPackages),
+    requireApproval: settings.packageDownload?.requireApproval ?? false,
+    autoDownload: settings.packageDownload?.autoDownload ?? true
+  };
+
+  settings.hapiConfig = {
+    enabled: settings.hapiConfig?.enabled ?? false,
+    timeout: settings.hapiConfig?.timeout ?? 30000,
+    igPackages: [...MII_2026_IG_PACKAGES, ...HL7_EU_EHDS_2026_IG_PACKAGES],
+    useProcessPool: settings.hapiConfig?.useProcessPool ?? true,
+    poolSize: settings.hapiConfig?.poolSize ?? 3,
+    cachePath: settings.hapiConfig?.cachePath ?? '/tmp/fhir-packages',
+    enableBestPractice: settings.hapiConfig?.enableBestPractice ?? true
+  };
+
+  settings.mii = {
+    preset: 'ehds-2026',
+    terminologyMode: settings.mii?.terminologyMode ?? 'mii-local-blaze',
+    packageLockHash: settings.mii?.packageLockHash,
+    maxOntoserverRequestsPerRun: settings.mii?.maxOntoserverRequestsPerRun,
+    allowHighVolumeOntoserver: settings.mii?.allowHighVolumeOntoserver
+  };
+
+  return {
+    ...settings,
+    ...overrides,
+    mii: {
+      ...settings.mii,
+      ...overrides.mii,
+      terminologyMode: overrides.mii?.terminologyMode ?? settings.mii.terminologyMode,
+      preset: 'ehds-2026'
+    },
+    packageDownload: {
+      ...settings.packageDownload,
+      ...overrides.packageDownload,
+      pinnedVersions: {
+        ...settings.packageDownload.pinnedVersions,
+        ...overrides.packageDownload?.pinnedVersions
+      },
+      approvedPackages: overrides.packageDownload?.approvedPackages ?? settings.packageDownload.approvedPackages
+    },
+    profileSources: {
+      fhirServer: overrides.profileSources?.fhirServer ?? settings.profileSources?.fhirServer ?? true,
+      simplifier: overrides.profileSources?.simplifier ?? settings.profileSources?.simplifier ?? true,
+      packageRegistry: overrides.profileSources?.packageRegistry ?? settings.profileSources?.packageRegistry ?? true
     },
     hapiConfig: {
       ...settings.hapiConfig,

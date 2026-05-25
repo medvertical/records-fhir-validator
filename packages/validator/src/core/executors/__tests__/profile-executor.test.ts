@@ -184,7 +184,9 @@ describe('ProfileExecutor', () => {
       expect(validateSlicingSpy).toHaveBeenCalledWith(
         ['not-an-array'],
         'Patient.identifier',
-        expect.anything()
+        expect.anything(),
+        undefined,
+        undefined
       );
     });
 
@@ -276,7 +278,9 @@ describe('ProfileExecutor', () => {
       expect(validateSlicingSpy).toHaveBeenCalledWith(
         mockContext.resource.component,
         'Observation.component',
-        expect.anything()
+        expect.anything(),
+        undefined,
+        'Observation.component'
       );
     });
 
@@ -320,13 +324,79 @@ describe('ProfileExecutor', () => {
         1,
         [{ value: 120 }],
         'Observation.component.value[x]',
-        expect.anything()
+        expect.anything(),
+        undefined,
+        'Observation.component.value[x]'
       );
       expect(validateSlicingSpy).toHaveBeenNthCalledWith(
         2,
         [{ value: 80 }],
         'Observation.component.value[x]',
-        expect.anything()
+        expect.anything(),
+        undefined,
+        'Observation.component.value[x]'
+      );
+    });
+
+    it('should validate choice child slicing per parent item', async () => {
+      mockContext.resource = {
+        resourceType: 'Medication',
+        ingredient: [
+          {
+            itemCodeableConcept: {
+              coding: [{ system: 'http://fhir.de/CodeSystem/ifa/pzn', code: '00266040' }],
+            },
+          },
+          {
+            itemCodeableConcept: {
+              coding: [{ system: 'http://fhir.de/CodeSystem/ifa/pzn', code: '01126111' }],
+            },
+          },
+        ],
+      };
+      mockContext.resourceType = 'Medication';
+      mockContext.structureDef.type = 'Medication';
+      mockStructureDef.type = 'Medication';
+      mockStructureDef.snapshot!.element = [
+        {
+          id: 'Medication.ingredient',
+          path: 'Medication.ingredient',
+          min: 0,
+          max: '*',
+        } as ElementDefinition,
+        {
+          id: 'Medication.ingredient.item[x].coding',
+          path: 'Medication.ingredient.item[x].coding',
+          min: 0,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'pattern', path: '$this' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+      ];
+
+      const validateSlicingSpy = vi.fn().mockResolvedValue([]);
+      mockSlicingValidator.validateSlicing = validateSlicingSpy;
+
+      await executor.validate(mockContext);
+
+      expect(validateSlicingSpy).toHaveBeenCalledTimes(2);
+      expect(validateSlicingSpy).toHaveBeenNthCalledWith(
+        1,
+        [{ system: 'http://fhir.de/CodeSystem/ifa/pzn', code: '00266040' }],
+        'Medication.ingredient.item[x].coding',
+        expect.anything(),
+        undefined,
+        'Medication.ingredient.item[x].coding'
+      );
+      expect(validateSlicingSpy).toHaveBeenNthCalledWith(
+        2,
+        [{ system: 'http://fhir.de/CodeSystem/ifa/pzn', code: '01126111' }],
+        'Medication.ingredient.item[x].coding',
+        expect.anything(),
+        undefined,
+        'Medication.ingredient.item[x].coding'
       );
     });
 
@@ -356,7 +426,9 @@ describe('ProfileExecutor', () => {
       expect(validateSlicingSpy).toHaveBeenCalledWith(
         [],
         'Encounter.type',
-        expect.anything()
+        expect.anything(),
+        undefined,
+        undefined
       );
     });
 

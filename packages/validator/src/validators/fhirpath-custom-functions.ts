@@ -24,6 +24,7 @@
  */
 
 import { valueSetCache } from './valueset-cache';
+import { getCachedSubsumesOutcome } from './terminology-api-client';
 
 // ============================================================================
 // ISO Country Code Sets for memberOf validation
@@ -253,14 +254,18 @@ export const subsumesFunction = {
         if (inputs.length === 0) return [];
 
         const codeA = extractCodeForMemberOf(inputs[0]);
-        const codeB = args && args.length > 0 ? extractCodeForMemberOf(args[0]) : null;
+        const codeBArg = Array.isArray(args) ? args[0] : args;
+        const codeB = extractCodeForMemberOf(codeBArg);
         if (!codeA || !codeB) return [];
 
-        // We cannot call the async hierarchy validator here. Return
-        // undetermined — the evaluator will emit a profile-constraint-
-        // evaluation-error warning. In a future version this will use a
-        // pre-warmed subsumption cache.
-        return [];
+        const system = codeA.system ?? codeB.system;
+        if (!system || (codeA.system && codeB.system && codeA.system !== codeB.system)) {
+            return [];
+        }
+
+        const outcome = getCachedSubsumesOutcome(system, codeA.code, codeB.code);
+        if (outcome === undefined || outcome === 'unknown') return [];
+        return [outcome === 'subsumes' || outcome === 'equivalent'];
     },
     arity: { 1: ['Coding'] },
 };

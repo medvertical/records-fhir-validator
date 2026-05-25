@@ -179,7 +179,7 @@ describe('single validate vs multi-aspect validateBatch parity', () => {
     ).toHaveLength(1);
   }, 120_000);
 
-  it('reports document-context targetProfile failures in both single and multi-aspect paths', async () => {
+  it('does not report document-context targetProfile failures for display-only child issues', async () => {
     const singleIssues = await validator.validate(
       DOCUMENT_BUNDLE_WITH_INVALID_SECTION_TARGET,
       'http://hl7.org/fhir/StructureDefinition/Bundle',
@@ -199,20 +199,12 @@ describe('single validate vs multi-aspect validateBatch parity', () => {
     expect(multiResult).toBeDefined();
 
     const multiIssues = flattenMultiAspectIssues(multiResult);
-    const expectedParentPath = 'Bundle.entry[0].resource/*Composition/comp-1*/.section[0].entry[0]';
-
-    expect(singleIssues).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        ruleId: 'profile-targetprofile-match-failed',
-        path: expectedParentPath,
-      }),
-    ]));
-    expect(multiIssues).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        ruleId: 'profile-targetprofile-match-failed',
-        path: expectedParentPath,
-      }),
-    ]));
+    expect(
+      singleIssues.filter(issue => issue.ruleId === 'profile-targetprofile-match-failed'),
+    ).toHaveLength(0);
+    expect(
+      multiIssues.filter(issue => issue.ruleId === 'profile-targetprofile-match-failed'),
+    ).toHaveLength(0);
   }, 120_000);
 
   it('reports Bundle.entry slice conformance failures in both single and multi-aspect paths', async () => {

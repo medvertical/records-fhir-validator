@@ -1,5 +1,3 @@
-/* eslint-disable max-lines */
-
 /**
  * Constraint Validator
  *
@@ -10,54 +8,31 @@
 import type { ValidationIssue } from '../types';
 import { createValidationIssue } from '../issues';
 import type { ElementDefinition, Constraint } from '../core/structure-definition-types';
-import fhirpath from 'fhirpath';
 import { getValidationTargets } from '../business-rules';
-import { getFhirPathModel } from './fhirpath-model-resolver';
 import { logger } from '../logger';
 import { buildUserInvocationTable } from './fhirpath-custom-functions';
 import { getSDFHIRPathCacheStats } from './sd-fhirpath-executor';
 import { preprocessTypeLiterals, resolveElementType } from './fhirpath-type-preprocessor';
-
-/** LRU Cache for compiled FHIRPath expressions (version-aware) */
-class FHIRPathExpressionCache {
-  private cache: Map<string, any> = new Map();
-  private maxSize: number = 500;
-  private hits: number = 0;
-  private misses: number = 0;
-
-  getOrCompile(expression: string, fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'): any {
-    const cacheKey = `${fhirVersion}|${expression}`;
-    if (this.cache.has(cacheKey)) {
-      this.hits++;
-      const compiled = this.cache.get(cacheKey);
-      this.cache.delete(cacheKey);
-      this.cache.set(cacheKey, compiled);
-      return compiled;
-    }
-    this.misses++;
-    const compiled = fhirpath.compile(expression, getFhirPathModel(fhirVersion));
-    if (this.cache.size >= this.maxSize) {
-      const oldestKey = this.cache.keys().next().value;
-      if (oldestKey) this.cache.delete(oldestKey);
-    }
-    this.cache.set(cacheKey, compiled);
-    return compiled;
-  }
-
-  getStats(): { hits: number; misses: number; hitRate: string; size: number } {
-    const total = this.hits + this.misses;
-    const hitRate = total > 0 ? ((this.hits / total) * 100).toFixed(1) + '%' : '0%';
-    return { hits: this.hits, misses: this.misses, hitRate, size: this.cache.size };
-  }
-
-  clear(): void {
-    this.cache.clear();
-    this.hits = 0;
-    this.misses = 0;
-  }
-}
-
-const expressionCache = new FHIRPathExpressionCache();
+import {
+  clearConstraintExpressionCache,
+  getConstraintExpressionCacheStats,
+  getOrCompileFHIRPathExpression,
+} from './constraint-expression-cache';
+import { validateDom3Constraint } from './constraint-dom-rules';
+import {
+  elementExistsInResource,
+  getEvaluationContext,
+  hasEmptyBackboneElement,
+} from './constraint-path-utils';
+import { targetMatchesSliceDefinition } from './constraint-slice-targets';
+import {
+  choiceContextHasOnlyOtherTypes,
+  expressionStartsAtResourceRoot,
+  getThisCastType,
+  hasUnresolvableChoiceTypes,
+} from './constraint-choice-context';
+import { evaluateSimpleMemberOfExists } from './fhirpath-memberof-precheck';
+import { ValueSetPackageLoader } from './valueset-package-loader';
 
 
 export class ConstraintValidator {
@@ -66,6 +41,7 @@ export class ConstraintValidator {
   private strictnessMode: 'compatibility' | 'standard' | 'strict' = 'standard';
   private fhirVersion: 'R4' | 'R5' | 'R6' = 'R4';
   private cachedUserInvocationTable: any = null;
+  private memberOfValueSetLoader = new ValueSetPackageLoader();
   async validate(
     resource: any,
     elements: ElementDefinition[],
@@ -80,13 +56,7 @@ export class ConstraintValidator {
     // Build user invocation table once per validate() call (not per constraint)
     this.cachedUserInvocationTable = buildUserInvocationTable(resource);
 
-    // Log expected core constraints for debugging
-    const rootElement = elements.find(el => el.path === resource.resourceType);
-    if (rootElement && rootElement.constraint) {
-      const coreConstraints = ['dom-2', 'dom-3', 'dom-4', 'dom-5', 'dom-6'];
-      const foundCoreConstraints = rootElement.constraint.filter(c => coreConstraints.includes(c.key));
-      logger.debug(`[ConstraintValidator] Found ${foundCoreConstraints.length} core constraints on ${resource.resourceType}: ${foundCoreConstraints.map(c => c.key).join(', ')}`);
-    }
+    this.logRootCoreConstraints(resource, elements);
 
     // Collect all constraints from all elements
     for (const element of elements) {
@@ -98,7 +68,7 @@ export class ConstraintValidator {
         let elementExists = true;
         if (!isRootElement) {
           const isOptional = (element.min === undefined || element.min === 0);
-          elementExists = this.elementExistsInResource(resource, element.path);
+          elementExists = elementExistsInResource(resource, element.path);
 
           // Special handling for backbone elements (like Patient.contact)
           // Even if the element "exists" as an empty object/array, we should still
@@ -116,7 +86,7 @@ export class ConstraintValidator {
           // If so, we should still evaluate constraints
           if (isBackboneElement && !elementExists) {
             // Check if the backbone element exists as an empty array or with empty objects
-            const backboneExists = this.hasEmptyBackboneElement(resource, element.path);
+            const backboneExists = hasEmptyBackboneElement(resource, element.path);
             if (!backboneExists) {
               continue;
             }
@@ -133,25 +103,23 @@ export class ConstraintValidator {
         const elementType = resolveElementType(element as any);
 
         for (const constraint of element.constraint) {
-          // NOTE: we do NOT skip InvariantRegistry-specialised keys
-          // here. A naive skip regressed tx/vs-canonical-bad (the
-          // generic path was the only one reaching contained.url).
-          // Double-reports are handled by dedup in validator-engine.
+          if (this.shouldSkipGenericConstraint(constraint)) continue;
 
-          // ext-1's FHIRPath expression `extension.exists() != value.exists()`
-          // uses polymorphic `value` which fhirpath.js can't resolve on raw JS
-          // objects (it needs typed Extension context). The hand-coded checkExt1
-          // in complex-type-validator correctly covers all Extension paths.
-          if (constraint.key === 'ext-1') continue;
-
-          // ele-1's expression `hasValue() or (children().count() > id.count())`
-          // relies on fhirpath's typed `children()` semantics. fhirpath.js can't
-          // evaluate that over raw JS objects, so it reports false positives on
-          // every sub-element that has children. universal-constraints-validator
-          // provides the correct implementation (only truly empty objects).
-          // Previously we demoted these to info, which still produced one noise
-          // entry per element — skip them outright instead.
-          if (constraint.key === 'ele-1') continue;
+          // Absolute FHIRPath roots (`Patient...`, `Observation...`) must be
+          // evaluated from the resource root even when the constraint is
+          // attached to a nested element. Evaluating once also avoids one
+          // duplicate issue per array item.
+          if (expressionStartsAtResourceRoot(constraint.expression, resource.resourceType)) {
+            const constraintIssues = await this.validateConstraint(
+              resource,
+              element.path,
+              constraint,
+              profileUrl,
+              elementType,
+            );
+            issues.push(...constraintIssues);
+            continue;
+          }
 
           // Get validation targets to handle array elements (e.g., Patient.link[0].other, Patient.link[1].other)
           const validationTargets = getValidationTargets(resource, element.path);
@@ -174,7 +142,7 @@ export class ConstraintValidator {
           } else {
             // Validate constraint for each array element separately
             for (const target of validationTargets) {
-              if (!this.targetMatchesSliceDefinition(target.value, element, elements)) {
+              if (!targetMatchesSliceDefinition(target.value, element, elements)) {
                 continue;
               }
               const constraintIssues = await this.validateConstraint(
@@ -195,92 +163,16 @@ export class ConstraintValidator {
     return issues;
   }
 
-  private targetMatchesSliceDefinition(value: any, element: ElementDefinition, elements: ElementDefinition[]): boolean {
-    if (!element.sliceName) {
-      return true;
-    }
+  private logRootCoreConstraints(resource: any, elements: ElementDefinition[]): void {
+    const rootElement = elements.find(el => el.path === resource.resourceType);
+    if (!rootElement?.constraint) return;
 
-    const patternEntries = Object.entries(element)
-      .filter(([key]) => key.startsWith('pattern') || key.startsWith('fixed'));
-
-    if (patternEntries.length > 0) {
-      return patternEntries.every(([, expected]) => this.matchesPattern(value, expected));
-    }
-
-    const childPatternEntries = this.getSliceChildPatternEntries(element, elements);
-    if (childPatternEntries.length === 0) {
-      return true;
-    }
-
-    return childPatternEntries.every(({ relativePath, expected }) =>
-      this.matchesPattern(this.getValueAtRelativePath(value, relativePath), expected)
+    const coreConstraints = ['dom-2', 'dom-3', 'dom-4', 'dom-5', 'dom-6'];
+    const foundCoreConstraints = rootElement.constraint.filter(c => coreConstraints.includes(c.key));
+    logger.debug(
+      `[ConstraintValidator] Found ${foundCoreConstraints.length} core constraints on ${resource.resourceType}: ` +
+      foundCoreConstraints.map(c => c.key).join(', ')
     );
-  }
-
-  private matchesPattern(actual: any, expected: any): boolean {
-    if (expected === undefined) return true;
-    if (Array.isArray(actual) && !Array.isArray(expected)) {
-      return actual.some(item => this.matchesPattern(item, expected));
-    }
-    if (expected === null || typeof expected !== 'object') {
-      return actual === expected;
-    }
-    if (!actual || typeof actual !== 'object') {
-      return false;
-    }
-    if (Array.isArray(expected)) {
-      if (!Array.isArray(actual)) return false;
-      return expected.every((expectedItem, index) => this.matchesPattern(actual[index], expectedItem));
-    }
-    return Object.entries(expected).every(([key, value]) =>
-      this.matchesPattern(actual[key], value)
-    );
-  }
-
-  private getSliceChildPatternEntries(
-    element: ElementDefinition,
-    elements: ElementDefinition[],
-  ): Array<{ relativePath: string; expected: any }> {
-    if (!element.id) return [];
-    const prefix = `${element.id}.`;
-
-    return elements.flatMap(candidate => {
-      if (!candidate.id?.startsWith(prefix)) return [];
-      const expected = this.getPatternOrFixedValue(candidate);
-      if (expected === undefined) return [];
-      return [{ relativePath: candidate.id.substring(prefix.length), expected }];
-    });
-  }
-
-  private getPatternOrFixedValue(element: ElementDefinition): any {
-    const candidate = element as ElementDefinition & Record<string, unknown>;
-    if (candidate.pattern !== undefined) return candidate.pattern;
-    if (candidate.fixed !== undefined) return candidate.fixed;
-    for (const key of Object.keys(candidate)) {
-      if ((key.startsWith('pattern') || key.startsWith('fixed')) && key !== 'pattern' && key !== 'fixed') {
-        return candidate[key];
-      }
-    }
-    return undefined;
-  }
-
-  private getValueAtRelativePath(value: any, relativePath: string): any {
-    if (!relativePath || relativePath === '$this') return value;
-
-    let current = value;
-    for (const segment of relativePath.split('.')) {
-      if (Array.isArray(current)) {
-        current = current
-          .map(item => item?.[segment])
-          .filter(item => item !== undefined && item !== null);
-        continue;
-      }
-
-      if (!current || typeof current !== 'object') return undefined;
-      current = current[segment];
-    }
-
-    return current;
   }
 
   /**
@@ -300,6 +192,10 @@ export class ConstraintValidator {
       return issues;
     }
 
+    if (constraint.key === 'dom-3') {
+      return validateDom3Constraint(resource, elementPath, constraint, profileUrl);
+    }
+
     // Pre-substitute `%context.type().name` / `%resource.type().name` /
     // `%rootResource.type().name` literals with booleans derived from SD
     // type info. fhirpath.js can't resolve `.type()` on raw JS values —
@@ -311,6 +207,20 @@ export class ConstraintValidator {
     });
 
     try {
+      const memberOfPassed = await evaluateSimpleMemberOfExists(
+        preprocessedExpression,
+        resource,
+        resource.resourceType,
+        this.memberOfValueSetLoader,
+        this.fhirVersion,
+      );
+      if (memberOfPassed !== null) {
+        if (!memberOfPassed) {
+          issues.push(this.buildConstraintViolationIssue(resource, elementPath, constraint, profileUrl));
+        }
+        return issues;
+      }
+
       const { context: evaluationContext, expression } =
         this.resolveConstraintContext(resource, elementPath, preprocessedExpression);
 
@@ -331,46 +241,7 @@ export class ConstraintValidator {
       }
 
       if (!passed) {
-        // Determine severity: in strict mode, escalate warnings to errors
-        const escalateToError = this.strictnessMode === 'strict' && constraint.severity === 'warning';
-
-        // Determine what should be demoted to info:
-        // - Warning-level constraints EXCEPT dom-* (HAPI treats dom-* as errors), unless specifically allowed
-        // - dom-6 (narrative) should be INFO unless in strict mode
-        // (ele-1 is skipped entirely above — universal-constraints-validator handles it)
-        const isDomConstraint = constraint.key?.startsWith('dom-');
-        const isDom6 = constraint.key === 'dom-6';
-        const isWarningConstraint = constraint.severity === 'warning' && !escalateToError;
-
-        // Allow demotion if:
-        // 1. It's a warning AND not a DOM constraint (standard rule)
-        // 2. OR it's dom-6 AND we are NOT in strict mode (user requirement)
-        const shouldDemoteToInfo = (isWarningConstraint && !isDomConstraint) || (isDom6 && this.strictnessMode !== 'strict');
-
-        // Issue code: dom-* always use 'violation' (HAPI treats them as errors), others use 'warning' if warning-level
-        // Exception: dom-6 when demoted should treat as warning/info
-        const issueCode = (isWarningConstraint && (!isDomConstraint || (isDom6 && shouldDemoteToInfo)))
-          ? 'profile-constraint-warning'
-          : 'profile-constraint-violation';
-
-        const escalationNote = escalateToError ? ' [escalated from warning in strict mode]' : '';
-
-        issues.push(createValidationIssue({
-          code: issueCode,
-          path: elementPath,
-          resourceType: resource.resourceType,
-          profile: profileUrl,
-          customMessage: `Constraint '${constraint.key}' failed: ${constraint.human}${escalationNote}`,
-          ruleId: constraint.key,
-          details: {
-            expression: constraint.expression,
-            constraintKey: constraint.key,
-            originalSeverity: constraint.severity,
-            escalated: escalateToError
-          },
-          // Override severity to info for demoted constraints
-          severityOverride: shouldDemoteToInfo ? 'info' : undefined
-        }));
+        issues.push(this.buildConstraintViolationIssue(resource, elementPath, constraint, profileUrl));
       }
 
     } catch (error) {
@@ -409,34 +280,49 @@ export class ConstraintValidator {
     return issues;
   }
 
-  /** Get evaluation context for a constraint, navigating to the target element. */
-  private getEvaluationContext(resource: any, elementPath: string): any {
-    const segments = elementPath.split('.');
-    if (segments.length > 1 && segments[0] === resource.resourceType) segments.shift();
-    if (segments.length === 0) return resource;
+  private shouldSkipGenericConstraint(constraint: Constraint): boolean {
+    return constraint.key === 'con-3' || constraint.key === 'ext-1' || constraint.key === 'ele-1';
+  }
 
-    let current: any = resource;
-    for (const segment of segments) {
-      if (!current || typeof current !== 'object') return resource;
-      const arrayMatch = segment.match(/^(.+)\[(\d+)\]$/);
-      if (arrayMatch) {
-        const fieldName = arrayMatch[1];
-        const index = parseInt(arrayMatch[2], 10);
-        if (!current[fieldName] || !Array.isArray(current[fieldName])) return resource;
-        if (index >= current[fieldName].length) return resource;
-        current = current[fieldName][index];
-      } else {
-        let value = current[segment];
-        // Handle FHIR choice types (e.g. effective[x] → effectiveDateTime)
-        if (value === undefined && segment.endsWith('[x]')) {
-          const prefix = segment.slice(0, -3);
-          const actualKey = Object.keys(current).find(k => k.startsWith(prefix) && k !== prefix);
-          if (actualKey) value = current[actualKey];
-        }
-        current = value;
-      }
-    }
-    return current || resource;
+  private buildConstraintViolationIssue(
+    resource: any,
+    elementPath: string,
+    constraint: Constraint,
+    profileUrl: string,
+  ): ValidationIssue {
+    const escalateToError = this.strictnessMode === 'strict' && constraint.severity === 'warning';
+    const isDomConstraint = constraint.key?.startsWith('dom-');
+    const isDom6 = constraint.key === 'dom-6';
+    const isWarningConstraint = constraint.severity === 'warning' && !escalateToError;
+    const shouldDemoteToInfo = (isWarningConstraint && !isDomConstraint) || (isDom6 && this.strictnessMode !== 'strict');
+    const issueCode = isDom6
+      ? 'dom-6'
+      : ((isWarningConstraint && (!isDomConstraint || (isDom6 && shouldDemoteToInfo)))
+        ? 'profile-constraint-warning'
+        : 'profile-constraint-violation');
+    const issuePath = isDom6 ? `${elementPath.replace(/\.$/, '')}.text` : elementPath;
+    const escalationNote = escalateToError ? ' [escalated from warning in strict mode]' : '';
+    const severityOverride = isDom6
+      ? (escalateToError ? 'error' : 'info')
+      : (shouldDemoteToInfo ? 'info' : undefined);
+
+    return createValidationIssue({
+      code: issueCode,
+      path: issuePath,
+      resourceType: resource.resourceType,
+      profile: profileUrl,
+      customMessage: isDom6
+        ? `${constraint.human}${escalationNote}`
+        : `Constraint '${constraint.key}' failed: ${constraint.human}${escalationNote}`,
+      ruleId: constraint.key,
+      details: {
+        expression: constraint.expression,
+        constraintKey: constraint.key,
+        originalSeverity: constraint.severity,
+        escalated: escalateToError
+      },
+      severityOverride
+    });
   }
 
   /**
@@ -461,17 +347,25 @@ export class ConstraintValidator {
     elementPath: string,
     rawExpression: string,
   ): { context: any; expression: string } {
+    if (expressionStartsAtResourceRoot(rawExpression, resource.resourceType)) {
+      return { context: resource, expression: rawExpression };
+    }
+
     const lastSegment = elementPath.split('.').pop() ?? '';
     if (lastSegment.endsWith('[x]')) {
       const choiceElementName = lastSegment.slice(0, -3);
       const parentPath = elementPath.split('.').slice(0, -1).join('.');
       const ctx = parentPath
-        ? this.getEvaluationContext(resource, parentPath)
+        ? getEvaluationContext(resource, parentPath)
         : resource;
+      const castType = getThisCastType(rawExpression);
+      if (castType && choiceContextHasOnlyOtherTypes(ctx, choiceElementName, castType)) {
+        return { context: ctx, expression: 'true' };
+      }
       return { context: ctx, expression: `${choiceElementName}.all(${rawExpression})` };
     }
 
-    const ctx = this.getEvaluationContext(resource, elementPath);
+    const ctx = getEvaluationContext(resource, elementPath);
 
     // Backbone elements (no `resourceType`) lose FHIR model context,
     // so fhirpath.js can't resolve choice-type children like `value`
@@ -480,7 +374,7 @@ export class ConstraintValidator {
     // (e.g. `valueQuantity`, `effectiveDateTime`) that match names
     // used in the expression.
     if (Array.isArray(ctx) && ctx.some(item =>
-      item && typeof item === 'object' && !item.resourceType && this.hasUnresolvableChoiceTypes(item, rawExpression)
+      item && typeof item === 'object' && !item.resourceType && hasUnresolvableChoiceTypes(item, rawExpression)
     )) {
       const segments = elementPath.split('.');
       if (segments.length > 1 && segments[0] === resource.resourceType) {
@@ -490,7 +384,7 @@ export class ConstraintValidator {
     }
 
     if (ctx && typeof ctx === 'object' && !Array.isArray(ctx) && !ctx.resourceType && ctx !== resource) {
-      if (this.hasUnresolvableChoiceTypes(ctx, rawExpression)) {
+      if (hasUnresolvableChoiceTypes(ctx, rawExpression)) {
         const segments = elementPath.split('.');
         if (segments.length > 1 && segments[0] === resource.resourceType) {
           const fhirPathNav = segments.slice(1).join('.');
@@ -508,7 +402,7 @@ export class ConstraintValidator {
     rootResource?: any
   ): any {
     // Use compiled expression cache — avoids re-parsing on every call
-    const compiled = expressionCache.getOrCompile(expression, this.fhirVersion);
+    const compiled = getOrCompileFHIRPathExpression(expression, this.fhirVersion);
 
     // Evaluate compiled expression synchronously (fhirpath.js is sync;
     // wrapping in Promise + setTimeout was dead code — a setTimeout
@@ -524,25 +418,6 @@ export class ConstraintValidator {
     );
   }
 
-  /** True when ctx has resolved choice-type properties (e.g. `valueQuantity`)
-   *  whose base name (`value`) appears in the expression but not as a key. */
-  private hasUnresolvableChoiceTypes(ctx: any, expression: string): boolean {
-    const CHOICE_BASES = [
-      'value', 'effective', 'onset', 'abatement', 'deceased', 'multipleBirth',
-      'defaultValue', 'medication', 'reported', 'occurrence', 'timing',
-      'product', 'serviced', 'location', 'allowed', 'used',
-      'rate', 'born', 'age',
-    ];
-    const keys = Object.keys(ctx);
-    for (const base of CHOICE_BASES) {
-      if (!new RegExp(`\\b${base}\\b`).test(expression)) continue;
-      if (ctx[base] !== undefined) continue;
-      if (keys.some(k => k.startsWith(base) && k.length > base.length && k[base.length] === k[base.length].toUpperCase()))
-        return true;
-    }
-    return false;
-  }
-
   /** Check if FHIRPath constraint result indicates success */
   private checkConstraintResult(result: any): boolean {
     if (result === true) return true;
@@ -553,7 +428,9 @@ export class ConstraintValidator {
       // element being checked is absent. FHIR spec: "If there is no value,
       // the constraint is satisfied." Matches HAPI behaviour.
       if (result.length === 0) return true;
-      if (result.length === 1 && typeof result[0] === 'boolean') return result[0];
+      if (result.every(item => typeof item === 'boolean')) {
+        return result.every(Boolean);
+      }
       return result.some(item => item === true || (item !== false && item != null));
     }
     if (result === null || result === undefined) return false;
@@ -562,119 +439,16 @@ export class ConstraintValidator {
     return true;
   }
 
-  /** Check if an element exists in the resource */
-  private elementExistsInResource(resource: any, elementPath: string): boolean {
-    if (!resource || !elementPath) return false;
-    const segments = elementPath.split('.');
-    const resourceType = resource.resourceType;
-    if (segments.length > 1 && segments[0] === resourceType) segments.shift();
-    if (segments.length === 0) {
-      return true;
-    }
-
-    // Navigate through the object to check if the field exists
-    let current: any = resource;
-    for (const segment of segments) {
-      // Handle array indices (e.g., "contact[0]")
-      const arrayMatch = segment.match(/^(.+)\[(\d+)\]$/);
-      if (arrayMatch) {
-        const fieldName = arrayMatch[1];
-        const index = parseInt(arrayMatch[2], 10);
-
-        if (!current[fieldName] || !Array.isArray(current[fieldName])) {
-          return false;
-        }
-        if (index >= current[fieldName].length) {
-          return false;
-        }
-        current = current[fieldName][index];
-      } else {
-        // Regular field access
-        let value = current[segment];
-        // Handle FHIR choice types (e.g. effective[x] → effectiveDateTime)
-        if ((value === undefined || value === null) && segment.endsWith('[x]')) {
-          const prefix = segment.slice(0, -3);
-          const actualKey = Object.keys(current).find(k => k.startsWith(prefix) && k !== prefix);
-          if (actualKey) value = current[actualKey];
-        }
-        if (value === undefined || value === null) {
-          return false;
-        }
-        current = value;
-      }
-    }
-
-    return true;
-  }
-
   setTimeout(timeout: number): void {
     this.timeout = timeout;
   }
 
-  /** Check if a backbone element exists but is empty (e.g., contact: [{}]) */
-  private hasEmptyBackboneElement(resource: any, elementPath: string): boolean {
-    if (!resource || !elementPath) return false;
-    const segments = elementPath.split('.');
-    if (segments.length > 1 && segments[0] === resource.resourceType) segments.shift();
-    if (segments.length === 0) return false;
-
-    let current: any = resource;
-    for (let i = 0; i < segments.length - 1; i++) {
-      const segment = segments[i];
-      const arrayMatch = segment.match(/^(.+)\[(\d+)\]$/);
-
-      if (arrayMatch) {
-        const fieldName = arrayMatch[1];
-        const index = parseInt(arrayMatch[2], 10);
-        if (!current[fieldName] || !Array.isArray(current[fieldName]) || index >= current[fieldName].length) {
-          return false;
-        }
-        current = current[fieldName][index];
-      } else {
-        if (current[segment] === undefined || current[segment] === null) {
-          return false;
-        }
-        current = current[segment];
-      }
-    }
-
-    // Check the final segment
-    const lastSegment = segments[segments.length - 1];
-    const value = current[lastSegment];
-
-    if (value === undefined || value === null) {
-      return false;
-    }
-
-    // Check for empty arrays with empty objects
-    if (Array.isArray(value)) {
-      return value.some(item => {
-        if (item === null || item === undefined) return false;
-        if (typeof item !== 'object') return false;
-        // Check if object is empty or has only empty values
-        const keys = Object.keys(item);
-        return keys.length === 0 || keys.every(k =>
-          item[k] === undefined || item[k] === null ||
-          (typeof item[k] === 'object' && Object.keys(item[k]).length === 0)
-        );
-      });
-    }
-
-    // Check for empty object
-    if (typeof value === 'object') {
-      const keys = Object.keys(value);
-      return keys.length === 0;
-    }
-
-    return false;
-  }
-
   static getCacheStats(): { hits: number; misses: number; hitRate: string; size: number } {
-    return expressionCache.getStats();
+    return getConstraintExpressionCacheStats();
   }
 
   static clearCache(): void {
-    expressionCache.clear();
+    clearConstraintExpressionCache();
   }
 }
 
@@ -691,7 +465,7 @@ export function clearFHIRPathCache() {
  * Returns per-cache and aggregate hit rates.
  */
 export function getCombinedFHIRPathCacheStats() {
-  const constraint = expressionCache.getStats();
+  const constraint = getConstraintExpressionCacheStats();
   const sd = getSDFHIRPathCacheStats();
   const totalHits = constraint.hits + sd.hits;
   const totalMisses = constraint.misses + sd.misses;

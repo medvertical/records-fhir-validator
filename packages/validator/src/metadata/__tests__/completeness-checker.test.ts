@@ -51,11 +51,9 @@ describe('Metadata Completeness Checker', () => {
       };
       const issues = validateRequiredMetadata(resource, 'Observation');
       
-      // Observation requires lastUpdated (warning) and security (info)
-      // lastUpdated is present, security is missing
+      // Security labels are policy/profile-specific, not a universal requirement.
       const securityIssue = issues.find(i => i.code === 'required-metadata-missing-security');
-      expect(securityIssue).toBeDefined();
-      expect(securityIssue?.severity).toBe('info');
+      expect(securityIssue).toBeUndefined();
     });
 
     it('should validate MedicationRequest requirements', () => {
@@ -65,8 +63,8 @@ describe('Metadata Completeness Checker', () => {
       };
       const issues = validateRequiredMetadata(resource, 'MedicationRequest');
       
-      // MedicationRequest requires lastUpdated (warning), versionId (warning), security (info)
-      expect(issues.length).toBeGreaterThanOrEqual(3);
+      // MedicationRequest requires lastUpdated and versionId.
+      expect(issues.length).toBeGreaterThanOrEqual(2);
       
       const lastUpdatedIssue = issues.find(i => i.code === 'required-metadata-missing-lastUpdated');
       const versionIdIssue = issues.find(i => i.code === 'required-metadata-missing-versionId');
@@ -74,11 +72,10 @@ describe('Metadata Completeness Checker', () => {
       
       expect(lastUpdatedIssue).toBeDefined();
       expect(versionIdIssue).toBeDefined();
-      expect(securityIssue).toBeDefined();
+      expect(securityIssue).toBeUndefined();
       
       expect(['info', 'warning']).toContain(lastUpdatedIssue?.severity);
       expect(['info', 'warning']).toContain(versionIdIssue?.severity);
-      expect(securityIssue?.severity).toBe('info');
     });
 
     it('should validate AllergyIntolerance requirements', () => {
@@ -88,8 +85,8 @@ describe('Metadata Completeness Checker', () => {
       };
       const issues = validateRequiredMetadata(resource, 'AllergyIntolerance');
       
-      // AllergyIntolerance requires lastUpdated (warning), versionId (warning), security (info)
-      expect(issues.length).toBeGreaterThanOrEqual(3);
+      // AllergyIntolerance requires lastUpdated and versionId.
+      expect(issues.length).toBeGreaterThanOrEqual(2);
     });
 
     it('should validate Consent requirements', () => {
@@ -99,11 +96,11 @@ describe('Metadata Completeness Checker', () => {
       };
       const issues = validateRequiredMetadata(resource, 'Consent');
       
-      // Consent requires lastUpdated (warning), versionId (warning), security (warning)
-      expect(issues.length).toBeGreaterThanOrEqual(3);
+      // Consent requires lastUpdated and versionId by the generic checker.
+      expect(issues.length).toBeGreaterThanOrEqual(2);
       
       const securityIssue = issues.find(i => i.code === 'required-metadata-missing-security');
-      expect(['info', 'warning']).toContain(securityIssue?.severity);
+      expect(securityIssue).toBeUndefined();
     });
 
     it('should validate profile field presence', () => {
@@ -173,19 +170,18 @@ describe('Metadata Completeness Checker', () => {
       expect(issues.every(i => i.path.startsWith('meta.'))).toBe(true);
     });
 
-    it('should validate empty arrays correctly', () => {
+    it('should not require security labels by default', () => {
       const resource = {
         resourceType: 'Observation',
         meta: {
           lastUpdated: '2024-01-01T00:00:00Z',
-          security: [], // Empty array should be treated as missing
+          security: [],
         },
       };
       const issues = validateRequiredMetadata(resource, 'Observation');
       
-      // Empty array should be treated as missing
       const securityIssue = issues.find(i => i.code === 'required-metadata-missing-security');
-      expect(securityIssue).toBeDefined();
+      expect(securityIssue).toBeUndefined();
     });
 
     it('should include proper issue details', () => {
@@ -206,6 +202,5 @@ describe('Metadata Completeness Checker', () => {
     });
   });
 });
-
 
 

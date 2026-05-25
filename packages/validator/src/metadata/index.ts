@@ -2,11 +2,8 @@
  * Metadata Validator Boundary
  *
  * Re-exports the metadata-aspect validators. The implementations
- * live next to this file — physical extraction from
- * `server/services/validation/engine/metadata/` happened during the
- * engine-extraction work. This index file is what other engine
- * modules and a few external server consumers (validation barrels,
- * MetadataValidator) import.
+ * live next to this file. This index file is the public boundary for
+ * package, server, and tests that compose metadata validation.
  */
 
 export {

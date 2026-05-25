@@ -145,8 +145,8 @@ export const MetadataCodes = {
     },
     'metadata-tag-missing-code': {
         aspect: 'metadata',
-        severity: 'error',
-        description: 'Tag must have a code',
+        severity: 'warning',
+        description: 'Tag should have a code',
     },
     'metadata-tag-invalid-system-type': {
         aspect: 'metadata',

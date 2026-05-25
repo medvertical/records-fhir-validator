@@ -182,7 +182,7 @@ export const R5_ALL_RESOURCE_TYPES = [
 // R4 Default included resource types (most important for validation)
 export const R4_DEFAULT_INCLUDED_RESOURCE_TYPES = [
   // Core Clinical Resources (R4)
-  'Patient', 'Observation', 'Condition', 'Encounter', 'Procedure',
+  'Bundle', 'Patient', 'Observation', 'Condition', 'Encounter', 'Procedure',
   'Medication', 'MedicationRequest', 'DiagnosticReport', 'AllergyIntolerance',
   'Immunization', 'CarePlan', 'Goal', 'ServiceRequest',
 
@@ -194,7 +194,7 @@ export const R4_DEFAULT_INCLUDED_RESOURCE_TYPES = [
 // R5 Default included resource types (most important for validation)
 export const R5_DEFAULT_INCLUDED_RESOURCE_TYPES = [
   // Core Clinical Resources (R5 - includes new types)
-  'Patient', 'Observation', 'Condition', 'Encounter', 'Procedure',
+  'Bundle', 'Patient', 'Observation', 'Condition', 'Encounter', 'Procedure',
   'Medication', 'MedicationRequest', 'DiagnosticReport', 'AllergyIntolerance',
   'Immunization', 'CarePlan', 'Goal', 'ServiceRequest',
 
@@ -242,4 +242,3 @@ export const VALIDATION_ASPECT_DESCRIPTIONS: Record<ValidationAspect, string> = 
   metadata: 'Validates resource metadata and provenance',
   anomaly: 'Cross-resource batch analysis: duplicates, orphan references, value-range outliers, temporal gaps'
 };
-
