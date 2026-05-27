@@ -33,8 +33,8 @@
  */
 
 export type { ValidationIssue, ValidationSettings, ProfileSourcesConfig } from '@records-fhir/validation-types';
-export type { TerminologyServer } from '@records-fhir/validation-types/validation-settings';
-export type { ValidationAspectType } from '@records-fhir/validation-types/validation/aspect-enums';
+export type { TerminologyServer } from '@records-fhir/validation-types';
+export type { ValidationAspectType } from '@records-fhir/validation-types';
 
 // Validator-side interfaces: ValidationContext + per-aspect IValidator
 // contracts. Vendored from server/services/validation/interfaces/ during

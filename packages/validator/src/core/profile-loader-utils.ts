@@ -11,70 +11,11 @@ import { StructureDefinitionLoader } from './structure-definition-loader';
 import { ProfileCache } from '../cache/profile-cache';
 import { SnapshotGenerator } from './snapshot-generator';
 import { logger } from '../logger';
+import { getIncompatibleProfileResourceType } from './profile-resource-type';
 
 /** Minimal interface for FHIR client to avoid circular dependencies */
 export interface FhirClientLike {
   searchResources(resourceType: string, params: Record<string, string>, count?: number, options?: Record<string, unknown>): Promise<{ entry?: Array<{ resource: StructureDefinition }> }>;
-}
-
-function matchesFhirVersion(structureDef: StructureDefinition, fhirVersion?: 'R4' | 'R5' | 'R6'): boolean {
-  const sdFhirVersion = (structureDef as { fhirVersion?: string }).fhirVersion;
-  if (!fhirVersion || !sdFhirVersion) return true;
-
-  const expectedPrefix = fhirVersion === 'R4' ? '4.' : fhirVersion === 'R5' ? '5.' : '6.';
-  return sdFhirVersion.startsWith(expectedPrefix);
-}
-
-function isCoreFhirStructureDefinition(profileUrl: string): boolean {
-  return profileUrl.startsWith('http://hl7.org/fhir/StructureDefinition/') &&
-    !profileUrl.includes('/us/') &&
-    !profileUrl.includes('/uv/') &&
-    !profileUrl.includes('/extensions/');
-}
-
-/**
- * Load a profile with snapshot generation if needed
- */
-/**
- * Attempt to load a profile from the FHIR client (high priority)
- */
-async function loadProfileFromClient(
-  profileUrl: string,
-  fhirClient?: FhirClientLike,
-  _fhirVersion?: 'R4' | 'R5' | 'R6'
-): Promise<StructureDefinition | null> {
-  if (!fhirClient) return null;
-  if (isCoreFhirStructureDefinition(profileUrl)) return null;
-
-  try {
-    logger.debug(`[RecordsValidator] ⚡ Fetching profile from FHIR Client (Priority 1): ${profileUrl}`);
-
-    // Use search to find by canonical URL with high priority
-    const bundle = await fhirClient.searchResources(
-      'StructureDefinition',
-      { url: profileUrl },
-      1,
-      { priority: 1 }
-    );
-
-    if (bundle.entry && bundle.entry.length > 0) {
-      const resource = bundle.entry[0].resource;
-      if (!matchesFhirVersion(resource, _fhirVersion)) {
-        logger.warn(
-          `[RecordsValidator] Ignoring profile ${profileUrl} from FHIR Client: fhirVersion ` +
-          `${(resource as { fhirVersion?: string }).fhirVersion || 'unknown'} does not match ${_fhirVersion}`
-        );
-        return null;
-      }
-      logger.info(`[RecordsValidator] ✅ Loaded profile from FHIR Client: ${profileUrl}`);
-      return resource;
-    }
-  } catch (error: unknown) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    logger.warn(`[RecordsValidator] Failed to fetch profile from FHIR Client ${profileUrl}:`, err.message);
-  }
-
-  return null;
 }
 
 /**
@@ -86,7 +27,7 @@ export async function loadProfileWithSnapshot(
   snapshotGenerator: SnapshotGenerator,
   profileUrl: string,
   fhirVersion: 'R4' | 'R5' | 'R6',
-  fhirClient?: FhirClientLike
+  _fhirClient?: FhirClientLike
 ): Promise<StructureDefinition | null> {
   const cacheKey = `${profileUrl}:${fhirVersion}:snapshot`;
 
@@ -97,13 +38,10 @@ export async function loadProfileWithSnapshot(
     return cached as StructureDefinition;
   }
 
-  // 2. Try FHIR Client (L2 - Network Priority)
-  let structureDef = await loadProfileFromClient(profileUrl, fhirClient, fhirVersion);
-
-  // 3. Fallback to standard Loader (L3 - Disk/Package Registry)
-  if (!structureDef) {
-    structureDef = await sdLoader.loadProfile(profileUrl, fhirVersion);
-  }
+  // 2. Load through the configured profile loader. It checks local cache,
+  // bundled packages, Simplifier, and the package registry; it does not query
+  // the selected resource FHIR server for StructureDefinitions.
+  let structureDef = await sdLoader.loadProfile(profileUrl, fhirVersion);
 
   if (!structureDef) {
     return null;
@@ -140,6 +78,7 @@ export interface ProfileLoadResult {
   structureDef: StructureDefinition | null;
   declaredProfileUrl: string;
   usedBaseFallback: boolean;
+  incompatibleProfileType?: string;
 }
 
 /**
@@ -169,6 +108,26 @@ export async function loadProfileOrBase(
     fhirClient
   );
   if (declared) {
+    const incompatibleProfileType = getIncompatibleProfileResourceType(declared, resourceType);
+    if (incompatibleProfileType) {
+      const baseUrl = `http://hl7.org/fhir/StructureDefinition/${resourceType}`;
+      const base = declaredProfileUrl === baseUrl
+        ? null
+        : await loadProfileForValidation(
+          sdLoader,
+          snapshotGenerator,
+          baseUrl,
+          fhirVersion,
+          profileCache,
+          fhirClient
+        );
+      return {
+        structureDef: base,
+        declaredProfileUrl,
+        usedBaseFallback: base !== null,
+        incompatibleProfileType,
+      };
+    }
     return { structureDef: declared, declaredProfileUrl, usedBaseFallback: false };
   }
   const baseUrl = `http://hl7.org/fhir/StructureDefinition/${resourceType}`;
@@ -210,6 +169,8 @@ export function createProfileFallbackIssue(
   };
 }
 
+export { createProfileResourceTypeMismatchIssue } from './profile-resource-type';
+
 /**
  * Load a profile and ensure snapshot exists (for validate method)
  */
@@ -219,7 +180,7 @@ export async function loadProfileForValidation(
   profileUrl: string,
   fhirVersion: 'R4' | 'R5' | 'R6',
   profileCache?: ProfileCache, // Optional for backward compat, but recommended
-  fhirClient?: FhirClientLike
+  _fhirClient?: FhirClientLike
 ): Promise<StructureDefinition | null> {
   const cacheKey = `${profileUrl}:${fhirVersion}:snapshot`;
 
@@ -231,13 +192,9 @@ export async function loadProfileForValidation(
     }
   }
 
-  // 2. Try FHIR Client (Priority)
-  let structureDef = await loadProfileFromClient(profileUrl, fhirClient, fhirVersion);
-
-  // 3. Fallback to Loader
-  if (!structureDef) {
-    structureDef = await sdLoader.loadProfile(profileUrl, fhirVersion);
-  }
+  // 2. Load through the configured profile loader. The resource FHIR client is
+  // intentionally not a profile source.
+  let structureDef = await sdLoader.loadProfile(profileUrl, fhirVersion);
 
   if (!structureDef) {
     return null;

@@ -443,34 +443,6 @@ export class BatchedReferenceChecker {
     };
   }
 
-  /**
-   * Get comprehensive statistics (alias for getCacheStats with more info)
-   */
-  getStats(): {
-    size: number;
-    hits: number;
-    misses: number;
-    hitRate: number;
-    evictions: number;
-  } {
-    const cacheStats = this.getCacheStats();
-
-    // Estimate hit rate based on cache size. This is a coarse heuristic —
-    // accurate per-entry hit/miss counts would require wrapping every cache
-    // lookup, which is more instrumentation than the PR budget allows.
-    const totalAccesses = this.cache.size;
-    const estimatedHits = this.cache.size;
-    const estimatedMisses = Math.max(0, totalAccesses - estimatedHits);
-    const hitRate = totalAccesses > 0 ? (estimatedHits / totalAccesses) * 100 : 0;
-
-    return {
-      size: cacheStats.size,
-      hits: estimatedHits,
-      misses: estimatedMisses,
-      hitRate,
-      evictions: 0, // Not currently tracked
-    };
-  }
 }
 
 // ============================================================================

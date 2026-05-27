@@ -186,7 +186,8 @@ describe('ProfileExecutor', () => {
         'Patient.identifier',
         expect.anything(),
         undefined,
-        undefined
+        undefined,
+        'R4'
       );
     });
 
@@ -280,7 +281,166 @@ describe('ProfileExecutor', () => {
         'Observation.component',
         expect.anything(),
         undefined,
-        'Observation.component'
+        'Observation.component',
+        'R4'
+      );
+    });
+
+    it('should scope sub-extension slicing to the matching parent extension slice', async () => {
+      const qualificationExtension = {
+        url: 'http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/qualification',
+        extension: [
+          { url: 'identifier', valueIdentifier: { value: 'qualification-1' } },
+          { url: 'code', valueCodeableConcept: { text: 'Mental Health Counselor' } },
+        ],
+      };
+      const newPatientsExtension = {
+        url: 'http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/newpatients',
+        extension: [
+          { url: 'acceptingPatients', valueCodeableConcept: { text: 'new patients' } },
+        ],
+      };
+
+      mockContext.resource = {
+        resourceType: 'PractitionerRole',
+        extension: [
+          newPatientsExtension,
+          {
+            url: 'http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/network-reference',
+            valueReference: { reference: 'Organization/network' },
+          },
+          qualificationExtension,
+        ],
+      };
+      mockContext.resourceType = 'PractitionerRole';
+      mockContext.structureDef.type = 'PractitionerRole';
+      mockStructureDef.type = 'PractitionerRole';
+      mockStructureDef.snapshot!.element = [
+        {
+          id: 'PractitionerRole.extension',
+          path: 'PractitionerRole.extension',
+          min: 0,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'value', path: 'url' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'PractitionerRole.extension:qualification',
+          path: 'PractitionerRole.extension',
+          sliceName: 'qualification',
+          min: 0,
+          max: '*',
+        } as ElementDefinition,
+        {
+          id: 'PractitionerRole.extension:qualification.url',
+          path: 'PractitionerRole.extension.url',
+          fixedUri: 'http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/qualification',
+        } as ElementDefinition,
+        {
+          id: 'PractitionerRole.extension:qualification.extension',
+          path: 'PractitionerRole.extension.extension',
+          min: 0,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'value', path: 'url' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+      ];
+
+      const validateSlicingSpy = vi.fn().mockResolvedValue([]);
+      mockSlicingValidator.validateSlicing = validateSlicingSpy;
+
+      await executor.validate(mockContext);
+
+      expect(validateSlicingSpy).toHaveBeenCalledTimes(2);
+      expect(validateSlicingSpy).toHaveBeenNthCalledWith(
+        1,
+        mockContext.resource.extension,
+        'PractitionerRole.extension',
+        expect.anything(),
+        undefined,
+        'PractitionerRole.extension',
+        'R4',
+      );
+      expect(validateSlicingSpy).toHaveBeenNthCalledWith(
+        2,
+        qualificationExtension.extension,
+        'PractitionerRole.extension.extension',
+        expect.anything(),
+        undefined,
+        'PractitionerRole.extension:qualification.extension',
+        'R4',
+      );
+    });
+
+    it('should not apply nested sliced extension rules to a different single parent extension', async () => {
+      const newPatientsExtension = {
+        url: 'http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/newpatients',
+        extension: [
+          { url: 'acceptingPatients', valueCodeableConcept: { text: 'new patients' } },
+          { url: 'fromNetwork', valueReference: { reference: 'Organization/network' } },
+          { url: 'characteristics', valueString: 'John Doe' },
+        ],
+      };
+
+      mockContext.resource = {
+        resourceType: 'PractitionerRole',
+        extension: [newPatientsExtension],
+      };
+      mockContext.resourceType = 'PractitionerRole';
+      mockContext.structureDef.type = 'PractitionerRole';
+      mockStructureDef.type = 'PractitionerRole';
+      mockStructureDef.snapshot!.element = [
+        {
+          id: 'PractitionerRole.extension',
+          path: 'PractitionerRole.extension',
+          min: 0,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'value', path: 'url' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'PractitionerRole.extension:qualification',
+          path: 'PractitionerRole.extension',
+          sliceName: 'qualification',
+          min: 0,
+          max: '*',
+        } as ElementDefinition,
+        {
+          id: 'PractitionerRole.extension:qualification.url',
+          path: 'PractitionerRole.extension.url',
+          fixedUri: 'http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/qualification',
+        } as ElementDefinition,
+        {
+          id: 'PractitionerRole.extension:qualification.extension',
+          path: 'PractitionerRole.extension.extension',
+          min: 0,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'value', path: 'url' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+      ];
+
+      const validateSlicingSpy = vi.fn().mockResolvedValue([]);
+      mockSlicingValidator.validateSlicing = validateSlicingSpy;
+
+      await executor.validate(mockContext);
+
+      expect(validateSlicingSpy).toHaveBeenCalledTimes(1);
+      expect(validateSlicingSpy).toHaveBeenCalledWith(
+        mockContext.resource.extension,
+        'PractitionerRole.extension',
+        expect.anything(),
+        undefined,
+        'PractitionerRole.extension',
+        'R4',
       );
     });
 
@@ -326,7 +486,8 @@ describe('ProfileExecutor', () => {
         'Observation.component.value[x]',
         expect.anything(),
         undefined,
-        'Observation.component.value[x]'
+        'Observation.component.value[x]',
+        'R4'
       );
       expect(validateSlicingSpy).toHaveBeenNthCalledWith(
         2,
@@ -334,7 +495,8 @@ describe('ProfileExecutor', () => {
         'Observation.component.value[x]',
         expect.anything(),
         undefined,
-        'Observation.component.value[x]'
+        'Observation.component.value[x]',
+        'R4'
       );
     });
 
@@ -388,7 +550,8 @@ describe('ProfileExecutor', () => {
         'Medication.ingredient.item[x].coding',
         expect.anything(),
         undefined,
-        'Medication.ingredient.item[x].coding'
+        'Medication.ingredient.item[x].coding',
+        'R4'
       );
       expect(validateSlicingSpy).toHaveBeenNthCalledWith(
         2,
@@ -396,7 +559,8 @@ describe('ProfileExecutor', () => {
         'Medication.ingredient.item[x].coding',
         expect.anything(),
         undefined,
-        'Medication.ingredient.item[x].coding'
+        'Medication.ingredient.item[x].coding',
+        'R4'
       );
     });
 
@@ -428,7 +592,8 @@ describe('ProfileExecutor', () => {
         'Encounter.type',
         expect.anything(),
         undefined,
-        undefined
+        undefined,
+        'R4'
       );
     });
 

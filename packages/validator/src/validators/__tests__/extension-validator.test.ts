@@ -204,6 +204,46 @@ describe('ExtensionValidator', () => {
       });
     });
 
+    it('does not enforce required extension slices from another FHIR version', async () => {
+      const r4ProfileWithR5Extension: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://example.org/profile/procedure-with-r5-extension',
+        name: 'ProcedureWithR5Extension',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Procedure',
+        snapshot: {
+          element: [
+            { id: 'Procedure', path: 'Procedure', min: 0, max: '*' },
+            {
+              id: 'Procedure.extension:recorded',
+              path: 'Procedure.extension',
+              sliceName: 'recorded',
+              min: 1,
+              max: '1',
+              type: [{
+                code: 'Extension',
+                profile: ['http://hl7.org/fhir/5.0/StructureDefinition/extension-Procedure.recorded'],
+              }],
+            } as ElementDefinition,
+          ],
+        },
+      };
+      const resource = {
+        resourceType: 'Procedure',
+        id: 'procedure-without-r5-recorded',
+      };
+
+      const issues = await validator.validateExtensions(
+        resource,
+        r4ProfileWithR5Extension,
+        makeContext(resource, r4ProfileWithR5Extension),
+      );
+
+      expect(issues.filter(i => i.code === 'profile-extension-min-cardinality')).toHaveLength(0);
+    });
+
     it('matches required extension slices declared with versioned profile canonicals', async () => {
       const profileWithVersionedExtension: StructureDefinition = {
         resourceType: 'StructureDefinition',

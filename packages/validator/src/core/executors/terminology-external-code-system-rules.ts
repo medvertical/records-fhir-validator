@@ -129,6 +129,7 @@ async function validateExternalCoding(
   isArrayInput: boolean,
   valuesetValidator: ValueSetValidator,
 ): Promise<ValidationIssue[]> {
+  if (/\/ValueSet\//i.test(coding.system)) return [];
   if (!valuesetValidator.isExternalCodeSystem(coding.system)) return [];
 
   const result = await valuesetValidator.validateCodeInCodeSystem(

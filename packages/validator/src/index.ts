@@ -56,6 +56,8 @@ async function getRecordsValidator() {
         'hl7.fhir.uk.*',
         'uk.core',
         'uk.core.r4.v2',
+        // Australian realm packages
+        'hl7.fhir.au.*',
         // Dutch (Nictiz, IKNL)
         'nictiz.*',
         'iknl.*',

@@ -68,6 +68,21 @@ export const TerminologyCodes = {
         severity: 'warning',
         description: 'CodeSystem concept is inactive',
     },
+    'terminology-coding-system-valueset': {
+        aspect: 'terminology',
+        severity: 'error',
+        description: 'Coding.system references a ValueSet instead of a CodeSystem',
+    },
+    'terminology-codesystem-unresolvable': {
+        aspect: 'terminology',
+        severity: 'warning',
+        description: 'CodeSystem is not available in configured terminology sources',
+    },
+    'terminology-server-failure': {
+        aspect: 'terminology',
+        severity: 'warning',
+        description: 'Terminology server failed or timed out while validating the code',
+    },
 } as const satisfies Record<string, ValidationCodeMetadata>;
 
 export type TerminologyCode = keyof typeof TerminologyCodes;

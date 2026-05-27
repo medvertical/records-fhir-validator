@@ -48,6 +48,13 @@ describe('Reference parsing', () => {
   it('normalizes known resource type segments in absolute lowercase URLs', () => {
     const reference = 'https://server.fire.ly/practitioner/639d8b80-ec81-3647-9b23-f4563c23b0b8';
 
+    expect(validateReferenceFormat(reference)).toMatchObject({
+      isValid: true,
+      referenceType: 'absolute',
+      resourceType: 'Practitioner',
+      resourceId: '639d8b80-ec81-3647-9b23-f4563c23b0b8',
+    });
+
     expect(parseReference(reference)).toMatchObject({
       isValid: true,
       referenceType: 'absolute',
@@ -61,6 +68,26 @@ describe('Reference parsing', () => {
     expect(result).toMatchObject({
       isValid: true,
       actualType: 'Practitioner',
+    });
+  });
+
+  it('normalizes lowercase versioned absolute reference paths', () => {
+    const reference = 'https://server.fire.ly/r4/patient/43355a34-d174-466e-a7bf-ee08db1bf597/_history/e4149b5f-4052-43bb-a6c9-66058e5a9ae3';
+
+    expect(validateReferenceFormat(reference)).toMatchObject({
+      isValid: true,
+      referenceType: 'absolute',
+      resourceType: 'Patient',
+      resourceId: '43355a34-d174-466e-a7bf-ee08db1bf597',
+      version: 'e4149b5f-4052-43bb-a6c9-66058e5a9ae3',
+    });
+
+    expect(parseReference(reference)).toMatchObject({
+      isValid: true,
+      referenceType: 'absolute',
+      resourceType: 'Patient',
+      resourceId: '43355a34-d174-466e-a7bf-ee08db1bf597',
+      version: 'e4149b5f-4052-43bb-a6c9-66058e5a9ae3',
     });
   });
 

@@ -13,6 +13,7 @@ vi.mock('../profile-loader-utils', () => ({
     usedBaseFallback: false,
   }),
   createProfileFallbackIssue: vi.fn(),
+  createProfileResourceTypeMismatchIssue: vi.fn(),
 }));
 
 vi.mock('../validators/deep-profile-validator', () => ({

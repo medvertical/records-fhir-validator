@@ -198,7 +198,7 @@ function mapHl7CodeToAspect(code: string): string {
     case 'extension':
       return 'profile';
     case 'business-rule':
-      return 'customRule';
+      return 'custom_rule';
     case 'value':
     case 'invalid':
     default:

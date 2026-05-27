@@ -15,6 +15,7 @@ import type { ValidationIssue } from '../types';
 import { createValidationIssue } from '../issues';
 import type { StructureDefinition } from '../core/structure-definition-types';
 import { StructureDefinitionLoader } from '../core/structure-definition-loader';
+import { urlMatchesRequestedFhirVersion, type FhirVersionFamily } from '../core/sd-loader-version-utils';
 import { logger } from '../logger';
 import { TypeValidator } from './type-validator';
 import { ValueSetValidator } from './valueset-validator';
@@ -100,7 +101,10 @@ export class ExtensionValidator {
     const issues: ValidationIssue[] = [];
 
     try {
-      const definitionContext = extractExtensionDefinitions(profileSD);
+      const definitionContext = this.filterDefinitionContextForFhirVersion(
+        extractExtensionDefinitions(profileSD),
+        context.fhirVersion,
+      );
       const knownUrls = new Set<string>(definitionContext.byUrl.keys());
       const visited = new Set<string>();
 
@@ -417,6 +421,10 @@ export class ExtensionValidator {
           this.subExtensionDefinitionsCache,
         )
         : new Map<string, ExtensionDefinition>();
+      const compatibleSubDefinitions = this.filterDefinitionsForFhirVersion(
+        subDefinitions,
+        context.fhirVersion,
+      );
 
       // Track counts for cardinality enforcement per sub-extension URL
       const nestedCounts = new Map<string, number>();
@@ -426,7 +434,7 @@ export class ExtensionValidator {
         const normalizedNestedUrl = typeof nestedUrl === 'string'
           ? normalizeExtensionUrlForMatching(nestedUrl)
           : undefined;
-        const nestedDef = normalizedNestedUrl ? subDefinitions.get(normalizedNestedUrl) : undefined;
+        const nestedDef = normalizedNestedUrl ? compatibleSubDefinitions.get(normalizedNestedUrl) : undefined;
 
         if (nestedUrl) {
           const countKey = normalizeExtensionUrlForMatching(nestedUrl);
@@ -445,11 +453,11 @@ export class ExtensionValidator {
       }
 
       // Enforce min/max cardinality on the sub-extension slices.
-      if (subDefinitions.size > 0) {
+      if (compatibleSubDefinitions.size > 0) {
         issues.push(
           ...checkExtensionPathCardinality(
             `${extensionPath}.extension`,
-            subDefinitions,
+            compatibleSubDefinitions,
             nestedCounts,
             extDef?.profileUrl ?? context.profileUrl,
             resourceType,
@@ -459,6 +467,49 @@ export class ExtensionValidator {
     }
 
     return issues;
+  }
+
+  private filterDefinitionContextForFhirVersion(
+    definitionContext: ReturnType<typeof extractExtensionDefinitions>,
+    fhirVersion: FhirVersionFamily,
+  ): ReturnType<typeof extractExtensionDefinitions> {
+    const byUrl = this.filterDefinitionsForFhirVersion(definitionContext.byUrl, fhirVersion);
+    const byPath = new Map<string, Map<string, ExtensionDefinition>>();
+
+    for (const [path, definitions] of definitionContext.byPath.entries()) {
+      const filtered = this.filterDefinitionsForFhirVersion(definitions, fhirVersion);
+      if (filtered.size > 0) {
+        byPath.set(path, filtered);
+      }
+    }
+
+    return { byUrl, byPath };
+  }
+
+  private filterDefinitionsForFhirVersion(
+    definitions: Map<string, ExtensionDefinition>,
+    fhirVersion: FhirVersionFamily,
+  ): Map<string, ExtensionDefinition> {
+    const filtered = new Map<string, ExtensionDefinition>();
+
+    for (const [url, definition] of definitions.entries()) {
+      if (!this.isExtensionDefinitionCompatible(definition, fhirVersion)) {
+        logger.debug(`[ExtensionValidator] Skipping FHIR-version-incompatible extension definition: ${definition.profileUrl ?? definition.url} (${fhirVersion})`);
+        continue;
+      }
+      filtered.set(url, definition);
+    }
+
+    return filtered;
+  }
+
+  private isExtensionDefinitionCompatible(
+    definition: ExtensionDefinition,
+    fhirVersion: FhirVersionFamily,
+  ): boolean {
+    return [definition.url, definition.profileUrl]
+      .filter((url): url is string => typeof url === 'string' && url.length > 0)
+      .every(url => urlMatchesRequestedFhirVersion(url, fhirVersion));
   }
 
 }

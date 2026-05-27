@@ -73,6 +73,11 @@ export interface TerminologyResolutionConfig {
         cacheResults: boolean;
         cacheTTLSeconds: number;
     };
+    twoPhaseExpansion?: {
+        enabled: boolean;
+        mode: 'shadow' | 'enforce';
+        logMismatches?: boolean;
+    };
 }
 
 // ============================================================================

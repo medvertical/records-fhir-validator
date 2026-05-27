@@ -74,6 +74,46 @@ describe('dedupeIssues', () => {
     expect(deduped).toHaveLength(1);
   });
 
+  it('dedupes generic and concrete choice-type paths on resources', () => {
+    const deduped = dedupeIssues([
+      issue({
+        code: 'terminology-coding-missing-system',
+        path: 'MedicationRequest.medication[x].coding',
+        resourceType: 'MedicationRequest',
+        message: 'Coding has no system',
+      }),
+      issue({
+        code: 'terminology-coding-missing-system',
+        path: 'MedicationRequest.medicationCodeableConcept.coding',
+        resourceType: 'MedicationRequest',
+        message: 'Coding has no system',
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].path).toBe('MedicationRequest.medication[x].coding');
+  });
+
+  it('dedupes generic and concrete choice-type paths in bundle entries', () => {
+    const deduped = dedupeIssues([
+      issue({
+        code: 'terminology-coding-missing-system',
+        path: 'Bundle.entry.resource/*MedicationDispense/d1*/.medication[x].coding',
+        resourceType: 'Bundle',
+        message: 'Coding has no system',
+      }),
+      issue({
+        code: 'terminology-coding-missing-system',
+        path: 'Bundle.entry.resource/*MedicationDispense/d1*/.medicationCodeableConcept.coding',
+        resourceType: 'Bundle',
+        message: 'Coding has no system',
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].path).toBe('Bundle.entry.resource/*MedicationDispense/d1*/.medication[x].coding');
+  });
+
   it('suppresses generic constraint issues when a specific constraint issue exists', () => {
     const deduped = dedupeIssues([
       issue({
@@ -262,5 +302,27 @@ describe('dedupeIssues', () => {
 
     expect(deduped).toHaveLength(1);
     expect(deduped[0].code).toBe('structural-cardinality-min');
+  });
+
+  it('prefers profile extension minimum issues over generic structural extension cardinality', () => {
+    const deduped = dedupeIssues([
+      issue({
+        aspect: 'structural',
+        code: 'structural-cardinality-min',
+        path: 'ServiceRequest.extension',
+        resourceType: 'ServiceRequest',
+        details: { fieldPath: 'ServiceRequest.extension' },
+      }),
+      issue({
+        aspect: 'profile',
+        code: 'profile-extension-min-cardinality',
+        path: 'ServiceRequest.extension',
+        resourceType: 'ServiceRequest',
+        message: "extension 'http://hl7.org.au/fhir/ereq/StructureDefinition/au-erequesting-displaysequence' requires at least 1 instance(s), found 0",
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].code).toBe('profile-extension-min-cardinality');
   });
 });

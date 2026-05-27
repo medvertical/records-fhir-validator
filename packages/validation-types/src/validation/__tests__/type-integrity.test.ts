@@ -18,6 +18,8 @@ import type {
   ValidationProgress,
   ValidationSettingsUpdate
 } from '../index';
+import { normalizeValidationAspect, normalizeValidationSettings } from '../index';
+import { safeParseSettingsUpdate } from '../settings-schema';
 
 describe('Type Integrity - DTO Serialization', () => {
   describe('ValidationIssue', () => {
@@ -139,7 +141,7 @@ describe('Type Integrity - DTO Serialization', () => {
           terminology: { enabled: true, severity: 'warning' },
           reference: { enabled: true, severity: 'error' },
           invariant: { enabled: true, severity: 'error' },
-          customRule: { enabled: true, severity: 'error' },
+          custom_rule: { enabled: true, severity: 'error' },
           metadata: { enabled: true, severity: 'error' },
           anomaly: { enabled: true, severity: 'info' }
         },
@@ -172,7 +174,7 @@ describe('Type Integrity - DTO Serialization', () => {
           terminology: { enabled: true, severity: 'inherit' },
           reference: { enabled: true, severity: 'inherit' },
           invariant: { enabled: true, severity: 'inherit' },
-          customRule: { enabled: true, severity: 'inherit' },
+          custom_rule: { enabled: true, severity: 'inherit' },
           metadata: { enabled: true, severity: 'inherit' },
           anomaly: { enabled: true, severity: 'inherit' }
         },
@@ -213,6 +215,34 @@ describe('Type Integrity - DTO Serialization', () => {
       expect(deserialized.aspects?.structural?.enabled).toBe(false);
       expect(deserialized.performance?.maxConcurrent).toBe(20);
     });
+
+    it('leaves unknown aspect aliases untouched instead of accepting legacy customRule updates', () => {
+      const legacyUpdate = {
+        aspects: {
+          customRule: { enabled: false, severity: 'warning' }
+        }
+      };
+
+      const normalized = normalizeValidationSettings(legacyUpdate) as { aspects: Record<string, unknown> };
+      expect(normalized.aspects.custom_rule).toBeUndefined();
+      expect(normalized.aspects.customRule).toEqual({ enabled: false, severity: 'warning' });
+    });
+
+    it('rejects legacy customRule settings update payloads in the Zod parser', () => {
+      const result = safeParseSettingsUpdate({
+        aspects: {
+          customRule: { enabled: false }
+        }
+      });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('does not normalize business rule aliases to custom_rule', () => {
+      expect(normalizeValidationAspect('businessRule')).toBe('businessRule');
+      expect(normalizeValidationAspect('business-rules')).toBe('business-rules');
+      expect(normalizeValidationAspect('custom_rule')).toBe('custom_rule');
+    });
   });
 
   describe('ValidationProgress', () => {
@@ -250,7 +280,7 @@ describe('Type Integrity - DTO Serialization', () => {
         'terminology',
         'reference',
         'invariant',
-        'customRule',
+        'custom_rule',
         'metadata',
         'anomaly'
       ];
@@ -313,7 +343,7 @@ describe('Type Integrity - DTO Serialization', () => {
           terminology: { enabled: true, severity: 'warning' },
           reference: { enabled: true, severity: 'error' },
           invariant: { enabled: true, severity: 'error' },
-          customRule: { enabled: true, severity: 'error' },
+          custom_rule: { enabled: true, severity: 'error' },
           metadata: { enabled: true, severity: 'error' },
           anomaly: { enabled: true, severity: 'info' }
         },
@@ -398,4 +428,3 @@ describe('Type Integrity - DTO Serialization', () => {
     });
   });
 });
-

@@ -7,6 +7,10 @@ import type { ProfileCache } from '../cache/profile-cache';
 import type { SnapshotGenerator } from './snapshot-generator';
 import type { StructuralExecutor } from './executors';
 import type { QuestionnaireContextRegistry } from './questionnaire-context-registry';
+import {
+  createProfileResourceTypeMismatchIssue,
+  getIncompatibleProfileResourceType,
+} from './profile-resource-type';
 
 interface ValidateStructureDeps {
   sdLoader: StructureDefinitionLoader;
@@ -93,6 +97,20 @@ async function validateStructureProfile(
 
   if (!loadedStructureDef.snapshot?.element) {
     return [];
+  }
+
+  const incompatibleProfileType = getIncompatibleProfileResourceType(
+    loadedStructureDef,
+    resource.resourceType,
+  );
+  if (incompatibleProfileType) {
+    return [
+      createProfileResourceTypeMismatchIssue(
+        profileUrl,
+        resource.resourceType,
+        incompatibleProfileType,
+      ),
+    ];
   }
 
   const requiredFieldIssues = await deps.structuralExecutor.validateRequiredFields(

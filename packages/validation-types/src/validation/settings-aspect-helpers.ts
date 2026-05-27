@@ -8,6 +8,7 @@
 import type { ValidationSettings } from './settings';
 import type { ValidationAspect, ValidationSeverity } from './enums';
 import { VALIDATION_ASPECTS } from './settings-types';
+import { normalizeValidationAspect, normalizeValidationAspects } from './aspect-aliases';
 
 /**
  * Get all enabled validation aspects from settings
@@ -17,8 +18,9 @@ export function getEnabledAspects(settings: ValidationSettings): ValidationAspec
         return [];
     }
 
+    const aspects = normalizeValidationAspects(settings.aspects);
     return VALIDATION_ASPECTS.filter((aspect: ValidationAspect) => {
-        const aspectConfig = settings.aspects[aspect];
+        const aspectConfig = aspects[aspect];
         return aspectConfig?.enabled === true;
     });
 }
@@ -31,7 +33,8 @@ export function isAspectEnabled(settings: ValidationSettings, aspect: Validation
         return false;
     }
 
-    const aspectConfig = settings.aspects[aspect];
+    const normalizedAspect = normalizeValidationAspect(aspect) as ValidationAspect;
+    const aspectConfig = normalizeValidationAspects(settings.aspects)[normalizedAspect];
     return aspectConfig?.enabled === true;
 }
 
@@ -43,6 +46,7 @@ export function getAspectSeverity(settings: ValidationSettings, aspect: Validati
         return 'warning'; // Default severity
     }
 
-    const aspectConfig = settings.aspects[aspect];
+    const normalizedAspect = normalizeValidationAspect(aspect) as ValidationAspect;
+    const aspectConfig = normalizeValidationAspects(settings.aspects)[normalizedAspect];
     return aspectConfig?.severity || 'warning';
 }

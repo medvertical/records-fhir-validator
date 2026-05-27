@@ -9,14 +9,16 @@ import {
   getParentPath,
   isRootElement,
   getAncestorPaths,
-  getValueAtPath,
   hasParentElement,
   hasAllAncestors as _hasAllAncestors,
   shouldValidateRequired,
+} from '../element-path-resolver';
+import {
+  getValueAtPath,
   isArrayAtPath,
   expandPathWithArrayIndex,
   getValidationTargets
-} from '../element-path-resolver';
+} from '..';
 
 describe('Element Path Resolver', () => {
 
@@ -503,4 +505,3 @@ describe('Element Path Resolver', () => {
     });
   });
 });
-

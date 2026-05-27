@@ -38,7 +38,7 @@ export async function validatePatientAge(resource: any, resourceType: string): P
     if (!birthDate || !isValid(birthDate)) {
       issues.push({
         id: `patient-invalid-birth-date-${Date.now()}`,
-        aspect: 'business-rules',
+        aspect: 'invariant',
         severity: 'error',
         code: 'invalid-birth-date',
         message: `Invalid birth date format: ${resource.birthDate}`,
@@ -65,7 +65,7 @@ export async function validatePatientAge(resource: any, resourceType: string): P
     if (ageInYears < 0) {
       issues.push({
         id: `patient-future-birth-date-${Date.now()}`,
-        aspect: 'business-rules',
+        aspect: 'invariant',
         severity: 'error',
         code: 'future-birth-date',
         message: `Birth date is in the future: ${resource.birthDate}`,
@@ -86,7 +86,7 @@ export async function validatePatientAge(resource: any, resourceType: string): P
     } else if (ageInYears > 150) {
       issues.push({
         id: `patient-unreasonable-age-${Date.now()}`,
-        aspect: 'business-rules',
+        aspect: 'invariant',
         severity: 'warning',
         code: 'unreasonable-age',
         message: `Patient age is unreasonable: ${ageInYears} years`,

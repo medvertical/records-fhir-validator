@@ -5,7 +5,7 @@
  * Validation Results and Progress
  *
  * Types related to validation results, progress tracking, and metrics.
- * Extracted from shared/types/validation.ts
+ * Extracted from the former shared validation type module.
  */
 
 import type { ValidationStatus } from './enums';
@@ -19,6 +19,7 @@ import type { ValidationIssue } from './messages';
  * Validation result for UI display
  */
 export interface ValidationResult {
+  [key: string]: unknown;
   resourceId: string;
   resourceType: string;
   isValid: boolean;
@@ -59,7 +60,6 @@ export interface ValidationResult {
     invariantTimeMs?: number;
     customRuleTimeMs?: number;
     metadataTimeMs?: number;
-    businessRuleTimeMs?: number;
   };
 
   // Settings and context
@@ -84,7 +84,7 @@ export interface EnhancedValidationSummary {
     terminology: { score: number; confidence: number; issues: number };
     reference: { score: number; confidence: number; issues: number };
     invariant: { score: number; confidence: number; issues: number };
-    customRule: { score: number; confidence: number; issues: number };
+    custom_rule: { score: number; confidence: number; issues: number };
     metadata: { score: number; confidence: number; issues: number };
   };
   totalIssues: number;
@@ -210,19 +210,6 @@ export interface ValidationAccuracyMetrics {
   recall: number; // 0-1
   f1Score: number; // 0-1
   confidence: number; // 0-100
-  // Legacy properties for backward compatibility
-  overallAccuracy?: number; // 0-100
-  aspectAccuracies?: {
-    structural: number;
-    profile: number;
-    terminology: number;
-    reference: number;
-    invariant: number;
-    customRule: number;
-    metadata: number;
-  };
-  validatedResources?: number;
-  totalResources?: number;
 }
 
 /**
@@ -286,12 +273,6 @@ export interface ValidationAspectQuality {
     throughput: number;
   };
   trends: any[]; // Historical trend data
-  // Legacy properties for backward compatibility
-  score?: number; // 0-100 (deprecated, use qualityScore)
-  confidence?: number; // 0-100
-  errorCount?: number;
-  warningCount?: number;
-  infoCount?: number;
 }
 
 /**
@@ -307,18 +288,6 @@ export interface ValidationQualityTrend {
   reliabilityScore: number; // 0-100
   resourcesValidated: number;
   duration: number; // milliseconds
-  // Legacy properties for backward compatibility
-  date?: Date;
-  overallScore?: number;
-  aspectScores?: {
-    structural: number;
-    profile: number;
-    terminology: number;
-    reference: number;
-    invariant: number;
-    customRule: number;
-    metadata: number;
-  };
 }
 
 /**
@@ -364,15 +333,6 @@ export interface ValidationQualityConfig {
   trendAnalysisWindow: number; // days
   enableRecommendations: boolean;
   monitoringInterval: number; // minutes
-  // Legacy properties for backward compatibility
-  enableQualityTracking?: boolean;
-  qualityThresholds?: {
-    minimumScore: number;
-    minimumConfidence: number;
-    maximumVariance: number;
-  };
-  trackingInterval?: number; // milliseconds
-  retentionPeriod?: number; // days
 }
 
 /**
@@ -397,19 +357,6 @@ export interface ValidationQualityReport {
   };
   resourceTypeQuality: Record<string, ValidationQualityMetrics>;
   qualityHistory: ValidationQualityTrend[];
-  // Legacy properties for backward compatibility
-  overallScore?: number;
-  confidence?: number;
-  aspectQualities?: ValidationAspectQuality[];
-  trends?: ValidationQualityTrend[];
-  recommendations?: ValidationQualityRecommendation[];
-  metrics?: {
-    quality: ValidationQualityMetrics;
-    accuracy: ValidationAccuracyMetrics;
-    consistency: ValidationConsistencyMetrics;
-    performance: ValidationPerformanceMetrics;
-    reliability: ValidationReliabilityMetrics;
-  };
 }
 
 // ============================================================================
@@ -463,7 +410,7 @@ export interface ValidationConfidenceMetrics {
     terminology: number;
     reference: number;
     invariant: number;
-    customRule: number;
+    custom_rule: number;
     metadata: number;
   };
   averageConfidence: number;
@@ -524,7 +471,7 @@ export interface ValidationCoverageMetrics {
     terminology: number;
     reference: number;
     invariant: number;
-    customRule: number;
+    custom_rule: number;
     metadata: number;
   };
   resourceTypeCoverages: Record<string, number>;
@@ -564,19 +511,6 @@ export interface ValidationCompletenessMetrics {
   optionalFieldCoverage: number; // 0-100
   validationGaps: number;
   missingAreas: string[];
-  // Legacy properties for backward compatibility
-  overallCompleteness?: number; // 0-100
-  aspectCompleteness?: {
-    structural: number;
-    profile: number;
-    terminology: number;
-    reference: number;
-    invariant: number;
-    customRule: number;
-    metadata: number;
-  };
-  coverage?: ValidationCoverageMetrics;
-  gaps?: ValidationGap[];
 }
 
 /**
@@ -597,5 +531,3 @@ export interface ValidationCompletenessAction {
   message: string;
   expectedImprovement: number; // percentage points
 }
-
-

@@ -149,9 +149,12 @@ describe('R6 Support Warnings (Task 2.10)', () => {
       expect(shouldAddR6Warning('R6', 'metadata')).toBe(false);
     });
 
-    it('should not add warning for R6 businessRule', () => {
-      // Business rules work fine for R6
-      expect(shouldAddR6Warning('R6', 'businessRule')).toBe(false);
+    it('should not add warning for R6 invariant', () => {
+      expect(shouldAddR6Warning('R6', 'invariant')).toBe(false);
+    });
+
+    it('should not add warning for R6 custom_rule', () => {
+      expect(shouldAddR6Warning('R6', 'custom_rule')).toBe(false);
     });
 
     it('should not add warning for R4 terminology', () => {
@@ -343,4 +346,3 @@ describe('R6 Support Warnings (Task 2.10)', () => {
     });
   });
 });
-

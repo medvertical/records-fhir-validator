@@ -11,6 +11,16 @@ captures changes that affect type-package consumers directly.
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-05-26
+
+Released alongside `@records-fhir/validator` 0.1.9.
+
+### Fixes
+
+- Added explicit package exports for `/fix-suggestions` and selected
+  `/validation/*` subpaths so downstream package builds can resolve the
+  documented public type entry points.
+
 ## [0.1.2] — 2026-05-18
 
 Released alongside `@records-fhir/validator` 0.1.7.

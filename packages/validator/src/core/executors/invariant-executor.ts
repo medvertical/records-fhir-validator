@@ -1,9 +1,8 @@
 /**
- * Business Rule Executor
+ * Invariant Executor
  * 
- * Validates business rules and constraints:
+ * Validates standard invariant constraints:
  * - FHIRPath constraint validation
- * - Custom business rules
  * - Element rules validation
  */
 
@@ -24,7 +23,7 @@ export interface InvariantValidationContext {
 }
 
 // ============================================================================
-// Business Rule Executor
+// Invariant Executor
 // ============================================================================
 
 export class InvariantExecutor {

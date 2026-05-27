@@ -7,6 +7,7 @@
 
 import type { ValidationIssue } from '../types';
 import type { ReferenceFormatValidation } from './reference-types';
+import { KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE } from './reference-resource-types';
 
 function extractInstanceReferenceFromPath(pathname: string): {
   resourceType?: string;
@@ -18,16 +19,21 @@ function extractInstanceReferenceFromPath(pathname: string): {
 
   if (pathParts.length >= 4 && pathParts[pathParts.length - 2] === '_history') {
     return {
-      resourceType: pathParts[pathParts.length - 4],
+      resourceType: normalizeResourceType(pathParts[pathParts.length - 4]),
       resourceId: pathParts[pathParts.length - 3],
       version: pathParts[pathParts.length - 1],
     };
   }
 
   return {
-    resourceType: pathParts[pathParts.length - 2],
+    resourceType: normalizeResourceType(pathParts[pathParts.length - 2]),
     resourceId: pathParts[pathParts.length - 1],
   };
+}
+
+function normalizeResourceType(resourceType: string | undefined): string | undefined {
+  if (!resourceType) return undefined;
+  return KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE.get(resourceType.toLowerCase()) ?? resourceType;
 }
 
 // ============================================================================

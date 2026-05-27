@@ -28,6 +28,8 @@ export interface BatchValidationOptions {
   aspects?: ValidationAspectType[];
   settings?: ValidationSettings;
   fhirClient?: FhirClientLike;
+  organizationId?: number;
+  onResourceValidated?: (resource: any, result: unknown) => void | Promise<void>;
 }
 
 export interface BatchValidatorContext<T = ValidationIssue[]> {
@@ -36,6 +38,14 @@ export interface BatchValidatorContext<T = ValidationIssue[]> {
   snapshotGenerator: SnapshotGenerator;
   validateResource: (resource: any, profileUrl: string, fhirVersion: 'R4' | 'R5' | 'R6') => Promise<T>;
 }
+
+type AspectTimingResult = {
+  aspects?: Array<{
+    aspect?: string;
+    validationTime?: number;
+    issues?: unknown[];
+  }>;
+};
 
 /**
  * Execute batch validation
@@ -100,10 +110,17 @@ export async function executeBatchValidation<T = ValidationIssue[]>(
           const resourceTime = Date.now() - resourceStart;
 
           if (resourceTime > 500) {
-            logger.warn(`[RecordsValidator] ⚠️  Slow validation: ${resource.resourceType}/${resource.id} took ${resourceTime}ms`);
+            const aspectBreakdown = formatAspectTimingBreakdown(result);
+            logger.warn(
+              `[RecordsValidator] ⚠️  Slow validation: ${resource.resourceType}/${resource.id} took ${resourceTime}ms` +
+              (aspectBreakdown ? ` (${aspectBreakdown})` : '')
+            );
           }
 
           resultsMap.set(resource, result);
+          if (options.onResourceValidated) {
+            await options.onResourceValidated(resource, result);
+          }
         });
 
         await Promise.all(chunkPromises);
@@ -175,4 +192,21 @@ export async function executeBatchValidation<T = ValidationIssue[]>(
 
     return resultsMap;
   }
+}
+
+function formatAspectTimingBreakdown(result: unknown): string | null {
+  if (!result || typeof result !== 'object') return null;
+  const aspects = (result as AspectTimingResult).aspects;
+  if (!Array.isArray(aspects) || aspects.length === 0) return null;
+
+  return aspects
+    .map((aspect) => ({
+      name: aspect.aspect || 'unknown',
+      time: Number(aspect.validationTime ?? 0),
+      issues: Array.isArray(aspect.issues) ? aspect.issues.length : 0,
+    }))
+    .sort((a, b) => b.time - a.time)
+    .slice(0, 4)
+    .map((aspect) => `${aspect.name}=${aspect.time}ms/${aspect.issues} issues`)
+    .join(', ');
 }

@@ -5,7 +5,7 @@ export const ValidationAspect = {
   TERMINOLOGY: 'terminology',
   REFERENCE: 'reference',
   INVARIANT: 'invariant',
-  CUSTOM_RULE: 'customRule',
+  CUSTOM_RULE: 'custom_rule',
   METADATA: 'metadata',
   ANOMALY: 'anomaly',
 } as const;

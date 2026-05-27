@@ -257,7 +257,7 @@ export class TerminologyExecutor {
         aspect: 'terminology',
         timestamp: new Date(),
         ...issue,
-      });
+      } as ValidationIssue);
     };
 
     const visit = (value: any, path: string): void => {

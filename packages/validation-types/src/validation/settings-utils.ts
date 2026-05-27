@@ -52,6 +52,13 @@ import {
   DEFAULT_VALIDATION_SETTINGS_R5
 } from './settings-defaults';
 
+export {
+  CANONICAL_CUSTOM_RULE_ASPECT,
+  normalizeValidationAspect,
+  normalizeValidationAspects,
+  normalizeValidationSettings
+} from './aspect-aliases';
+
 // Re-export validators
 export {
   validatePerformanceSettings,

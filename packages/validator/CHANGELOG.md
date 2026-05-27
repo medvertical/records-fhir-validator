@@ -10,6 +10,34 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.1.9] — 2026-05-26
+
+Patch release focused on reducing profile/slicing false positives found in
+large Firely/ART-DECOR validation runs. Released with
+`@records-fhir/validation-types` 0.1.3.
+
+### Fixes
+
+- Preserved inherited slice cardinality correctly when generating snapshots
+  from differential-only profiles. This fixes false
+  `profile-slice-min-cardinality` errors where a base element minimum leaked
+  into an inherited named slice such as `Observation.code.coding:IEEE-11073`.
+- Scoped nested extension slice validation so child extension rules only apply
+  to the matching parent extension slice.
+- Ignored extension slices whose type profiles target another FHIR version,
+  avoiding R5 extension requirements during R4 validation.
+- Deduplicated profiled extension cardinality and coding-system/value-set
+  diagnostics so equivalent constraints do not produce repeated issue rows.
+- Improved package detection for Da Vinci Plan-Net, US, UK, AU, Dutch, IHE,
+  and universal realm IGs used by large public FHIR servers.
+
+### Quality
+
+- Added regression coverage for inherited slice cardinality during snapshot
+  generation and the affected nested/profiled slicing cases.
+- Refactored public validator imports and strictness filtering to reduce
+  package/server drift without changing the public API.
+
 ## [0.1.8] — 2026-05-25
 
 Patch release focused on validation precision and EHDS/large-server readiness.

@@ -14,10 +14,14 @@ import { logger } from '../logger';
 import { CircuitBreaker } from '../terminology';
 import type { CodeSystemValidationResult, SubsumptionOutcome } from './terminology-api-types';
 import {
+    clearCodeSystemValidateCodeCache,
+    getFromCodeSystemValidateCodeCache,
     getFromSubsumesCache,
     getFromValidateCodeCache,
+    makeCodeSystemValidateCodeCacheKey,
     makeSubsumesCacheKey,
     makeValidateCodeCacheKey,
+    storeInCodeSystemValidateCodeCache,
     storeInSubsumesCache,
     storeInValidateCodeCache,
 } from './terminology-api-cache';
@@ -39,6 +43,7 @@ export type {
 } from './terminology-api-types';
 export {
     clearSubsumesCache,
+    clearCodeSystemValidateCodeCache,
     clearValidateCodeCache,
     getCachedSubsumesOutcome,
     getSubsumesCacheSize,
@@ -52,6 +57,9 @@ const codeSystemCircuitBreaker = new CircuitBreaker('codesystem-validation', {
     resetTimeout: 30000,    // Try again after 30 seconds
     successThreshold: 1,    // Close after 1 success
 });
+const pendingValidateCodeRequests = new Map<string, Promise<boolean>>();
+const pendingSubsumesRequests = new Map<string, Promise<SubsumptionOutcome>>();
+const pendingCodeSystemValidateCodeRequests = new Map<string, Promise<CodeSystemValidationResult>>();
 
 // ============================================================================
 // Terminology API Client
@@ -304,56 +312,18 @@ export class TerminologyApiClient {
             return cached;
         }
 
+        const pending = pendingValidateCodeRequests.get(cacheKey);
+        if (pending) {
+            logger.debug(`[TerminologyApiClient] validate-code in-flight HIT: ${code} in ${valueSetUrl}`);
+            return pending;
+        }
+
+        const request = this.executeValidateCodeRequest(cacheKey, code, system, valueSetUrl, bindingStrength, override);
+        pendingValidateCodeRequests.set(cacheKey, request);
         try {
-            const params: Record<string, string> = {
-                url: valueSetUrl,
-                code: code,
-                _format: 'json'
-            };
-            if (system) {
-                params.system = system;
-            }
-
-            const response = await axios.get(`${serverUrl}/ValueSet/$validate-code`, {
-                ...(await this.buildRequestConfig(override?.auth, 5000, params)),
-            });
-
-            if (validateCodeSucceeded(response.data)) {
-                logger.debug(`[TerminologyApiClient] Server $validate-code CONFIRMED ${code} in ${valueSetUrl}`);
-                storeInValidateCodeCache(cacheKey, true);
-                return true;
-            }
-
-            storeInValidateCodeCache(cacheKey, false);
-            return false;
-
-        } catch (error: unknown) {
-            const err = error instanceof Error ? error : new Error(String(error));
-            const axiosResp = isAxiosError(error) ? error.response : undefined;
-            if (axiosResp?.data) {
-                logger.debug(`[TerminologyApiClient] Server $validate-code failed with data: ${JSON.stringify(axiosResp.data)}`);
-            } else {
-                logger.debug(`[TerminologyApiClient] Server $validate-code failed: ${err.message}`);
-            }
-
-            // For 422/404: distinguish "ValueSet/CodeSystem not resolvable" (server limitation)
-            // from "code is genuinely invalid". Java's reference validator fails open when the
-            // server can't resolve the binding target — emitting an error in that case produces
-            // false positives (e.g. core ValueSets not present on a generic tx server).
-            if (axiosResp?.status === 422 || axiosResp?.status === 404) {
-                const cantResolve = operationOutcomeCannotResolveBinding(axiosResp.data);
-                if (cantResolve || bindingStrength !== 'required') {
-                    logger.warn(`[TerminologyApiClient] Server returned ${axiosResp.status} (${cantResolve ? 'not-resolvable' : 'non-required binding'}). Failing open (assuming valid).`);
-                    storeInValidateCodeCache(cacheKey, true);
-                    return true;
-                }
-                logger.warn(`[TerminologyApiClient] Server returned ${axiosResp.status} for required binding validation. Failing closed.`);
-                storeInValidateCodeCache(cacheKey, false);
-                return false;
-            }
-
-            // Network / timeout / 5xx — don't cache, may be transient.
-            return false;
+            return await request;
+        } finally {
+            pendingValidateCodeRequests.delete(cacheKey);
         }
     }
 
@@ -376,12 +346,42 @@ export class TerminologyApiClient {
             return { valid: true };
         }
 
+        const cacheKey = makeCodeSystemValidateCodeCacheKey(serverUrl, system, code, display);
+        const cached = getFromCodeSystemValidateCodeCache<CodeSystemValidationResult>(cacheKey);
+        if (cached) {
+            logger.debug(`[TerminologyApiClient] CodeSystem validate-code cache HIT: ${system}|${code}`);
+            return cached;
+        }
+
+        const pending = pendingCodeSystemValidateCodeRequests.get(cacheKey);
+        if (pending) {
+            logger.debug(`[TerminologyApiClient] CodeSystem validate-code in-flight HIT: ${system}|${code}`);
+            return pending;
+        }
+
         // Circuit breaker: fail fast if server is down
         if (codeSystemCircuitBreaker.isOpen()) {
             logger.debug(`[TerminologyApiClient] Circuit breaker OPEN, skipping CodeSystem validation for ${system}`);
             return { valid: true }; // Fail open when server unavailable
         }
 
+        const request = this.executeCodeSystemValidateCodeRequest(cacheKey, serverUrl, code, system, display, override);
+        pendingCodeSystemValidateCodeRequests.set(cacheKey, request);
+        try {
+            return await request;
+        } finally {
+            pendingCodeSystemValidateCodeRequests.delete(cacheKey);
+        }
+    }
+
+    private async executeCodeSystemValidateCodeRequest(
+        cacheKey: string,
+        serverUrl: string,
+        code: string,
+        system: string,
+        display?: string,
+        override?: TerminologyServerOverride,
+    ): Promise<CodeSystemValidationResult> {
         try {
             const params = {
                 url: system,
@@ -397,9 +397,16 @@ export class TerminologyApiClient {
             });
 
             codeSystemCircuitBreaker.recordSuccess();
-            return parseCodeSystemValidationParameters(response.data, code, system);
+            const result = parseCodeSystemValidationParameters(response.data, code, system);
+            storeInCodeSystemValidateCodeCache(cacheKey, result);
+            return result;
         } catch (error: unknown) {
-            return this.handleCodeSystemValidationError(error, code, system);
+            const result = this.handleCodeSystemValidationError(error, code, system);
+            const axiosResp = isAxiosError(error) ? error.response : undefined;
+            if (axiosResp?.status === 422 || axiosResp?.status === 404) {
+                storeInCodeSystemValidateCodeCache(cacheKey, result);
+            }
+            return result;
         }
     }
 
@@ -446,6 +453,86 @@ export class TerminologyApiClient {
             return cached;
         }
 
+        const pending = pendingSubsumesRequests.get(cacheKey);
+        if (pending) {
+            logger.debug(`[TerminologyApiClient] $subsumes in-flight HIT: ${system}|${codeA} → ${codeB}`);
+            return pending;
+        }
+
+        const request = this.executeSubsumesRequest(cacheKey, system, codeA, codeB, override);
+        pendingSubsumesRequests.set(cacheKey, request);
+        try {
+            return await request;
+        } finally {
+            pendingSubsumesRequests.delete(cacheKey);
+        }
+    }
+
+    private async executeValidateCodeRequest(
+        cacheKey: string,
+        code: string,
+        system: string | undefined,
+        valueSetUrl: string,
+        bindingStrength?: 'required' | 'extensible' | 'preferred' | 'example',
+        override?: TerminologyServerOverride,
+    ): Promise<boolean> {
+        const serverUrl = override?.url ?? this.config.serverUrl;
+        try {
+            const params: Record<string, string> = {
+                url: valueSetUrl,
+                code: code,
+                _format: 'json'
+            };
+            if (system) {
+                params.system = system;
+            }
+
+            const response = await axios.get(`${serverUrl}/ValueSet/$validate-code`, {
+                ...(await this.buildRequestConfig(override?.auth, 5000, params)),
+            });
+
+            if (validateCodeSucceeded(response.data)) {
+                logger.debug(`[TerminologyApiClient] Server $validate-code CONFIRMED ${code} in ${valueSetUrl}`);
+                storeInValidateCodeCache(cacheKey, true);
+                return true;
+            }
+
+            storeInValidateCodeCache(cacheKey, false);
+            return false;
+        } catch (error: unknown) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            const axiosResp = isAxiosError(error) ? error.response : undefined;
+            if (axiosResp?.data) {
+                logger.debug(`[TerminologyApiClient] Server $validate-code failed with data: ${JSON.stringify(axiosResp.data)}`);
+            } else {
+                logger.debug(`[TerminologyApiClient] Server $validate-code failed: ${err.message}`);
+            }
+
+            if (axiosResp?.status === 422 || axiosResp?.status === 404) {
+                const cantResolve = operationOutcomeCannotResolveBinding(axiosResp.data);
+                if (cantResolve || bindingStrength !== 'required') {
+                    logger.warn(`[TerminologyApiClient] Server returned ${axiosResp.status} (${cantResolve ? 'not-resolvable' : 'non-required binding'}). Failing open (assuming valid).`);
+                    storeInValidateCodeCache(cacheKey, true);
+                    return true;
+                }
+                logger.warn(`[TerminologyApiClient] Server returned ${axiosResp.status} for required binding validation. Failing closed.`);
+                storeInValidateCodeCache(cacheKey, false);
+                return false;
+            }
+
+            // Network / timeout / 5xx — don't cache, may be transient.
+            return false;
+        }
+    }
+
+    private async executeSubsumesRequest(
+        cacheKey: string,
+        system: string,
+        codeA: string,
+        codeB: string,
+        override?: TerminologyServerOverride,
+    ): Promise<SubsumptionOutcome> {
+        const serverUrl = override?.url ?? this.config.serverUrl;
         try {
             const response = await axios.get(`${serverUrl}/CodeSystem/$subsumes`, {
                 ...(await this.buildRequestConfig(override?.auth, 5000, {

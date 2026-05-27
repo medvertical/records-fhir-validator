@@ -47,7 +47,7 @@ export async function validateConditionOnsetDate(resource: any, resourceType: st
     if (!onsetDateTime) {
       issues.push({
         id: `condition-invalid-onset-date-${Date.now()}`,
-        aspect: 'business-rules',
+        aspect: 'invariant',
         severity: 'error',
         code: 'invalid-onset-date',
         message: `Invalid onset date format: ${onsetDate}`,
@@ -74,7 +74,7 @@ export async function validateConditionOnsetDate(resource: any, resourceType: st
     if (daysDiff < -1) { // Allow 1 day in future for rounding
       issues.push({
         id: `condition-future-onset-date-${Date.now()}`,
-        aspect: 'business-rules',
+        aspect: 'invariant',
         severity: 'warning',
         code: 'future-onset-date',
         message: `Condition onset date is in the future: ${onsetDate}`,

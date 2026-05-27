@@ -48,7 +48,7 @@ export async function validateEncounterPeriod(resource: any, resourceType: strin
       if (!startDate) {
         issues.push({
           id: `encounter-invalid-period-start-${Date.now()}`,
-          aspect: 'business-rules',
+          aspect: 'invariant',
           severity: 'error',
           code: 'invalid-period-start',
           message: `Invalid encounter period start: ${resource.period.start}`,
@@ -75,7 +75,7 @@ export async function validateEncounterPeriod(resource: any, resourceType: strin
       if (!endDate) {
         issues.push({
           id: `encounter-invalid-period-end-${Date.now()}`,
-          aspect: 'business-rules',
+          aspect: 'invariant',
           severity: 'error',
           code: 'invalid-period-end',
           message: `Invalid encounter period end: ${resource.period.end}`,
@@ -99,7 +99,7 @@ export async function validateEncounterPeriod(resource: any, resourceType: strin
     if (startDate && endDate && isBefore(endDate, startDate)) {
       issues.push({
         id: `encounter-end-before-start-${Date.now()}`,
-        aspect: 'business-rules',
+        aspect: 'invariant',
         severity: 'error',
         code: 'end-before-start',
         message: `Encounter period end is before start: ${resource.period.end} < ${resource.period.start}`,
@@ -132,7 +132,7 @@ export async function validateEncounterStatusPeriodConsistency(resource: any, re
   if (resource.status === 'finished' && (!resource.period || !resource.period.end)) {
     issues.push({
       id: `encounter-finished-no-end-${Date.now()}`,
-      aspect: 'business-rules',
+      aspect: 'invariant',
       severity: 'warning',
       code: 'finished-status-no-end',
       message: 'Encounter has finished status but no end period',

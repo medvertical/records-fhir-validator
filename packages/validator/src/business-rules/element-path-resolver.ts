@@ -27,6 +27,7 @@
 // Types
 // ============================================================================
 
+import { getValueAtPath } from '../core/validation-utils';
 import { logger } from '../logger';
 
 export interface PathComponents {
@@ -176,16 +177,6 @@ export function getAncestorPaths(path: string): string[] {
 // ============================================================================
 // Element Existence Checking
 // ============================================================================
-
-// Import from canonical source and re-export for backwards compatibility
-import { getValueAtPath } from '../core/validation-utils';
-export { getValueAtPath };
-export {
-  expandPathWithArrayIndex,
-  getValidationTargets,
-  isArrayAtPath,
-  type ValidationTarget,
-} from './element-validation-targets';
 
 /**
  * Check if parent element exists in resource

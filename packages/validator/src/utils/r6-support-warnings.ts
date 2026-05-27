@@ -13,6 +13,8 @@
 
 import type { ValidationIssue } from '../types';
 
+type R6ValidationAspect = 'structural' | 'profile' | 'terminology' | 'reference' | 'metadata' | 'invariant' | 'custom_rule';
+
 // Inlined from server/config/fhir-package-versions.ts during S-3
 // engine-extraction. The engine only needs the support-status +
 // limitations of each version family; the full server-side config
@@ -67,7 +69,7 @@ export function isR6(fhirVersion: string | undefined): boolean {
  * @returns ValidationIssue with R6 warning
  */
 export function createR6Warning(
-  aspect: 'structural' | 'profile' | 'terminology' | 'reference' | 'metadata' | 'businessRule',
+  aspect: R6ValidationAspect,
   warningType: R6WarningType = 'general',
   additionalContext?: string
 ): ValidationIssue {
@@ -139,7 +141,7 @@ export function createR6Warning(
  */
 export function shouldAddR6Warning(
   fhirVersion: string | undefined,
-  aspect: 'structural' | 'profile' | 'terminology' | 'reference' | 'metadata' | 'businessRule'
+  aspect: R6ValidationAspect
 ): boolean {
   if (!isR6(fhirVersion)) {
     return false;
@@ -168,7 +170,7 @@ export function shouldAddR6Warning(
 export function addR6WarningIfNeeded(
   issues: ValidationIssue[],
   fhirVersion: string | undefined,
-  aspect: 'structural' | 'profile' | 'terminology' | 'reference' | 'metadata' | 'businessRule',
+  aspect: R6ValidationAspect,
   warningType?: R6WarningType
 ): ValidationIssue[] {
   if (!shouldAddR6Warning(fhirVersion, aspect)) {
@@ -221,4 +223,3 @@ export function getR6SupportSummary(): {
     limitations: config.limitations || [],
   };
 }
-

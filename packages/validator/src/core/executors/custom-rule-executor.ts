@@ -20,6 +20,7 @@ export interface CustomRuleValidationContext {
     resource: any;
     structureDef: StructureDefinition; // Optional/Unused for now, but kept for consistency
     fhirVersion?: 'R4' | 'R5' | 'R6';
+    organizationId?: number;
 }
 
 export class CustomRuleExecutor {
@@ -27,14 +28,19 @@ export class CustomRuleExecutor {
     private static readonly RULE_CACHE_TTL_MS = 30_000;
     private static readonly RULE_LOAD_TIMEOUT_MS = 250;
 
-    private async loadRules(resourceType: string): Promise<EngineCustomRule[]> {
+    private async loadRules(resourceType: string, organizationId?: number): Promise<EngineCustomRule[]> {
+        if (organizationId === undefined) {
+            return [];
+        }
+
         const now = Date.now();
-        const cached = this.ruleCache.get(resourceType);
+        const cacheKey = `${organizationId}:${resourceType}`;
+        const cached = this.ruleCache.get(cacheKey);
         if (cached && cached.expiresAt > now) {
             return cached.promise;
         }
 
-        const sourcePromise = getCustomRulesSource().getRulesByResourceType(resourceType);
+        const sourcePromise = getCustomRulesSource().getRulesByResourceType(resourceType, { organizationId });
         const timeoutPromise = new Promise<EngineCustomRule[]>((resolve) => {
             setTimeout(() => {
                 logger.warn(
@@ -57,7 +63,7 @@ export class CustomRuleExecutor {
                 return [];
             });
 
-        this.ruleCache.set(resourceType, {
+        this.ruleCache.set(cacheKey, {
             expiresAt: now + CustomRuleExecutor.RULE_CACHE_TTL_MS,
             promise,
         });
@@ -78,7 +84,7 @@ export class CustomRuleExecutor {
             // Fetch enabled rules for this resource type. The source is
             // embedder-provided and defaults to a noop (returns []) when
             // no host has wired up a backing store.
-            const rules = await this.loadRules(resource.resourceType);
+            const rules = await this.loadRules(resource.resourceType, context.organizationId);
 
             if (rules.length === 0) {
                 return issues;

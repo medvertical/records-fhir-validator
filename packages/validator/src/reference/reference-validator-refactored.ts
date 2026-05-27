@@ -165,7 +165,8 @@ export class ReferenceValidator implements IReferenceValidator {
       ));
 
       const validationTime = Date.now() - startTime;
-      logger.info(
+      const logReferenceResult = validationTime > 100 ? logger.info.bind(logger) : logger.debug.bind(logger);
+      logReferenceResult(
         `[ReferenceValidator] Validated ${resourceType} references in ${validationTime}ms ` +
         `(${issues.length} issues)`
       );
@@ -201,12 +202,12 @@ export class ReferenceValidator implements IReferenceValidator {
     const recursiveConfig = getRecursiveValidationConfig(settings);
     if (!recursiveConfig.enabled) return [];
 
-    logger.info(`[ReferenceValidator] Recursive validation enabled (maxDepth: ${recursiveConfig.maxDepth})`);
+    logger.debug(`[ReferenceValidator] Recursive validation enabled (maxDepth: ${recursiveConfig.maxDepth})`);
     try {
       const recursiveResult = await this.recursiveValidator.validateRecursively(resource, recursiveConfig, resourceFetcher);
       const issues = buildRecursiveReferenceIssues(recursiveResult, recursiveConfig.timeoutMs, resourceType, referencePathsByValue);
 
-      logger.info(
+      logger.debug(
         `[ReferenceValidator] Recursive validation: ${recursiveResult.totalResourcesValidated} resources, ` +
         `depth ${recursiveResult.maxDepthReached}, ${recursiveResult.referencesFollowed} refs followed` +
         (recursiveResult.timedOut ? ' (TIMED OUT)' : '')

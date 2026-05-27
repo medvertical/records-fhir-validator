@@ -21,7 +21,7 @@ export const VALIDATION_CONFIGS = {
       terminology: { enabled: true, severity: 'error' as const, engine: 'server' },
       reference: { enabled: true, severity: 'error' as const, engine: 'internal' },
       invariant: { enabled: true, severity: 'error' as const, engine: 'fhirpath' },
-      customRule: { enabled: true, severity: 'error' as const, engine: 'custom' },
+      custom_rule: { enabled: true, severity: 'error' as const, engine: 'custom' },
       metadata: { enabled: true, severity: 'error' as const, engine: 'schema' },
       anomaly: { enabled: true, severity: 'warning' as const, engine: 'records' }
     },
@@ -39,7 +39,7 @@ export const VALIDATION_CONFIGS = {
       terminology: { enabled: true, severity: 'warning' as const, engine: 'server' },
       reference: { enabled: true, severity: 'error' as const, engine: 'internal' },
       invariant: { enabled: true, severity: 'warning' as const, engine: 'fhirpath' },
-      customRule: { enabled: true, severity: 'warning' as const, engine: 'custom' },
+      custom_rule: { enabled: true, severity: 'warning' as const, engine: 'custom' },
       metadata: { enabled: true, severity: 'error' as const, engine: 'schema' },
       anomaly: { enabled: true, severity: 'info' as const, engine: 'records' }
     },
@@ -57,7 +57,7 @@ export const VALIDATION_CONFIGS = {
       terminology: { enabled: false, severity: 'warning' as const, engine: 'server' },
       reference: { enabled: true, severity: 'error' as const, engine: 'internal' },
       invariant: { enabled: false, severity: 'warning' as const, engine: 'fhirpath' },
-      customRule: { enabled: true, severity: 'warning' as const, engine: 'custom' },
+      custom_rule: { enabled: true, severity: 'warning' as const, engine: 'custom' },
       metadata: { enabled: false, severity: 'info' as const, engine: 'schema' },
       anomaly: { enabled: false, severity: 'info' as const, engine: 'records' }
     },
@@ -98,7 +98,7 @@ export const HL7_EU_EHDS_2026_PACKAGE_VERSIONS = {
   'hl7.fhir.eu.extensions.r4': '1.3.0',
   'hl7.fhir.eu.base': '2.0.0',
   'hl7.fhir.eu.laboratory': '2.0.0',
-  'hl7.fhir.eu.eps': '1.0.0-alpha',
+  'hl7.fhir.eu.eps.r4': '1.0.0-xtehr',
   'hl7.fhir.eu.hdr': '0.1.0-ballot',
   'hl7.fhir.eu.imaging': '1.0.0-ballot',
   'hl7.fhir.eu.health-data-api': '1.0.0-ballot',
@@ -360,7 +360,7 @@ export const DEFAULT_VALIDATION_SETTINGS_R4: ValidationSettings = {
     terminology: { enabled: true, severity: 'inherit', engine: 'records' },
     reference: { enabled: true, severity: 'inherit', engine: 'records' },
     invariant: { enabled: true, severity: 'inherit', engine: 'fhirpath' },
-    customRule: { enabled: true, severity: 'inherit', engine: 'custom' },
+    custom_rule: { enabled: true, severity: 'inherit', engine: 'custom' },
     metadata: { enabled: true, severity: 'inherit', engine: 'records' },
     anomaly: { enabled: true, severity: 'inherit', engine: 'records' }
   },
@@ -375,6 +375,14 @@ export const DEFAULT_VALIDATION_SETTINGS_R4: ValidationSettings = {
     excludedTypes: []
   },
   terminologyServers: DEFAULT_TERMINOLOGY_SERVERS,
+  terminologyResolution: {
+    strategy: 'local-first',
+    twoPhaseExpansion: {
+      enabled: false,
+      mode: 'shadow',
+      logMismatches: true,
+    },
+  },
   circuitBreaker: DEFAULT_CIRCUIT_BREAKER_CONFIG,
   mode: 'online',
   terminologyFallback: {
@@ -386,7 +394,6 @@ export const DEFAULT_VALIDATION_SETTINGS_R4: ValidationSettings = {
     profileCachePath: '/opt/fhir/igs/'
   },
   profileSources: {
-    fhirServer: true,
     simplifier: true,
     packageRegistry: true
   },
@@ -464,7 +471,7 @@ export const DEFAULT_VALIDATION_SETTINGS_R5: ValidationSettings = {
     terminology: { enabled: true, severity: 'inherit', engine: 'records' },
     reference: { enabled: true, severity: 'inherit', engine: 'records' },
     invariant: { enabled: true, severity: 'inherit', engine: 'fhirpath' },
-    customRule: { enabled: true, severity: 'inherit', engine: 'custom' },
+    custom_rule: { enabled: true, severity: 'inherit', engine: 'custom' },
     metadata: { enabled: true, severity: 'inherit', engine: 'records' },
     anomaly: { enabled: true, severity: 'inherit', engine: 'records' }
   },
@@ -479,6 +486,14 @@ export const DEFAULT_VALIDATION_SETTINGS_R5: ValidationSettings = {
     excludedTypes: []
   },
   terminologyServers: DEFAULT_TERMINOLOGY_SERVERS,
+  terminologyResolution: {
+    strategy: 'local-first',
+    twoPhaseExpansion: {
+      enabled: false,
+      mode: 'shadow',
+      logMismatches: true,
+    },
+  },
   circuitBreaker: DEFAULT_CIRCUIT_BREAKER_CONFIG,
   mode: 'online',
   terminologyFallback: {
@@ -490,7 +505,6 @@ export const DEFAULT_VALIDATION_SETTINGS_R5: ValidationSettings = {
     profileCachePath: '/opt/fhir/igs/'
   },
   profileSources: {
-    fhirServer: true,
     simplifier: true,
     packageRegistry: true
   },
@@ -572,7 +586,6 @@ export function createMii2026ValidationSettings(
   };
 
   settings.profileSources = {
-    fhirServer: settings.profileSources?.fhirServer ?? true,
     simplifier: true,
     packageRegistry: true
   };
@@ -684,7 +697,6 @@ export function createEhds2026ValidationSettings(
       approvedPackages: overrides.packageDownload?.approvedPackages ?? settings.packageDownload.approvedPackages
     },
     profileSources: {
-      fhirServer: overrides.profileSources?.fhirServer ?? settings.profileSources?.fhirServer ?? true,
       simplifier: overrides.profileSources?.simplifier ?? settings.profileSources?.simplifier ?? true,
       packageRegistry: overrides.profileSources?.packageRegistry ?? settings.profileSources?.packageRegistry ?? true
     },

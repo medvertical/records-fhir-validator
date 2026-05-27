@@ -30,6 +30,7 @@ import {
   validateSliceContentConstraints,
 } from './slicing-content-rules';
 import { validateSliceOrdering } from './slicing-ordering';
+import { urlMatchesRequestedFhirVersion, type FhirVersionFamily } from '../core/sd-loader-version-utils';
 
 // ============================================================================
 // Types
@@ -131,6 +132,7 @@ export class SlicingValidator {
     profileSD: StructureDefinition,
     referenceResolverOverride?: ReferenceResolver | null,
     slicingElementId?: string,
+    fhirVersion: FhirVersionFamily = 'R4',
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
 
@@ -142,8 +144,12 @@ export class SlicingValidator {
         // No slicing defined for this element
         return issues;
       }
+      const compatibleSlices = slicingInfo.slices.filter(slice => this.isSliceCompatibleWithFhirVersion(slice, fhirVersion));
+      if (compatibleSlices.length === 0) {
+        return issues;
+      }
 
-      logger.debug(`[SlicingValidator] Validating ${elements.length} elements for path ${elementPath} with ${slicingInfo.slices.length} slices`);
+      logger.debug(`[SlicingValidator] Validating ${elements.length} elements for path ${elementPath} with ${compatibleSlices.length} slices`);
 
       // Match each element to its slice
       const sliceMatches = new Map<string, any[]>(); // sliceName -> elements
@@ -153,7 +159,7 @@ export class SlicingValidator {
         const element = elements[index];
         const matchedSlice = this.matchElementToSlice(
           element,
-          slicingInfo.slices,
+          compatibleSlices,
           slicingInfo.slicing,
           referenceResolverOverride,
         );
@@ -169,7 +175,7 @@ export class SlicingValidator {
       }
 
       // Validate cardinality for each slice
-      for (const slice of slicingInfo.slices) {
+      for (const slice of compatibleSlices) {
         const matchedElements = sliceMatches.get(slice.sliceName) || [];
         const count = matchedElements.length;
         const resourceType = resourceTypeFromPath(elementPath);
@@ -245,7 +251,7 @@ export class SlicingValidator {
       if (unmatchedElements.length > 0) {
         issues.push(...this.emitMissingDiscriminatorIssues(
           unmatchedElements,
-          slicingInfo.slices,
+          compatibleSlices,
           slicingInfo.slicing,
           elementPath,
           profileSD,
@@ -256,11 +262,11 @@ export class SlicingValidator {
       if (slicingInfo.slicing.ordered && sliceMatches.size > 1) {
         const orderIssues = validateSliceOrdering(
           elements,
-          slicingInfo.slices,
+          compatibleSlices,
           element => this.matchElementToSlice(
             element,
-            slicingInfo.slices,
-            { discriminator: slicingInfo.slices[0].discriminator },
+            compatibleSlices,
+            { discriminator: compatibleSlices[0].discriminator },
           ),
           elementPath,
         );
@@ -319,6 +325,21 @@ export class SlicingValidator {
       (discriminator.type === 'pattern' || discriminator.type === 'value') &&
       (!discriminator.path || discriminator.path === '$this'),
     );
+  }
+
+  private isSliceCompatibleWithFhirVersion(slice: SliceDefinition, fhirVersion: FhirVersionFamily): boolean {
+    const urls: string[] = [];
+    for (const typeSpec of slice.type ?? []) {
+      urls.push(...(typeSpec.profile ?? []), ...(typeSpec.targetProfile ?? []));
+    }
+
+    for (const typeSpecs of slice.childTypes?.values() ?? []) {
+      for (const typeSpec of typeSpecs) {
+        urls.push(...(typeSpec.profile ?? []), ...(typeSpec.targetProfile ?? []));
+      }
+    }
+
+    return urls.every(url => urlMatchesRequestedFhirVersion(url, fhirVersion));
   }
 
   /**

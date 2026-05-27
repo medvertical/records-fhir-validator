@@ -163,7 +163,7 @@ describe('single validate vs multi-aspect validateBatch parity', () => {
         'terminology',
         'reference',
         'invariant',
-        'customRule',
+        'custom_rule',
         'metadata',
       ],
       settings: { validationStrictness: 'standard', aspects: {} },

@@ -29,12 +29,23 @@ export type {
   FHIRVersion
 } from './enums';
 
+export type {
+  ValidationAspectType
+} from './aspect-enums';
+
 export {
   DEFAULT_VALIDATION_STRICTNESS,
   VALIDATION_ASPECTS,
   VALIDATION_ASPECT_LABELS,
   VALIDATION_ASPECT_DESCRIPTIONS
 } from './enums';
+
+export {
+  CANONICAL_CUSTOM_RULE_ASPECT,
+  normalizeValidationAspect,
+  normalizeValidationAspects,
+  normalizeValidationSettings
+} from './aspect-aliases';
 
 // ============================================================================
 // Messages and Issues
@@ -90,11 +101,13 @@ export type {
   ProfileSourcesConfig,
   ValidationAspectConfig,
   TerminologyServer,
+  TerminologyAuthConfig,
   CircuitBreakerConfig,
   ValidationSettings,
   ValidationSettingsUpdate,
   ValidationSettingsValidationResult,
   FHIRResourceTypeConfig,
+  AdvancedTerminologyConfig,
   AdvisorRule,
   AdvisorRuleMatch,
   AdvisorRuleTransform
@@ -103,6 +116,23 @@ export type {
 export { PERFORMANCE_LIMITS } from './settings';
 
 export {
+  COMMON_FHIR_RESOURCE_TYPES,
+  CONFORMANCE_RESOURCE_TYPES,
+  R4_ALL_RESOURCE_TYPES,
+  R5_ALL_RESOURCE_TYPES,
+  R4_DEFAULT_INCLUDED_RESOURCE_TYPES,
+  R5_DEFAULT_INCLUDED_RESOURCE_TYPES,
+  type CommonFhirResourceType,
+} from './settings-types';
+
+export {
+  DEFAULT_VALIDATION_SETTINGS_R4,
+  DEFAULT_VALIDATION_SETTINGS_R5,
+  DEFAULT_ADVANCED_TERMINOLOGY,
+  VALIDATION_CONFIGS,
+  DEFAULT_TERMINOLOGY_SERVERS,
+  DEFAULT_CIRCUIT_BREAKER_CONFIG,
+  DEFAULT_CACHE_CONFIG,
   createEhds2026ValidationSettings,
   createMii2026ValidationSettings,
   HL7_EU_EHDS_2026_PACKAGE_SET,
@@ -113,6 +143,41 @@ export {
   type Mii2026ValidationSettingsOverrides,
   type MiiTerminologyMode
 } from './settings-defaults';
+
+export {
+  validatePerformanceSettings,
+  validateResourceTypeSettings,
+  validateResourceTypeSettingsForVersion,
+  validateValidationSettings,
+} from './settings-validators';
+
+export {
+  safeParseSettingsUpdate
+} from './settings-schema';
+
+export {
+  getAllResourceTypesForVersion,
+  getDefaultIncludedTypesForVersion,
+  isResourceTypeAvailableInVersion,
+  getUnavailableResourceTypes,
+  getR5SpecificResourceTypes,
+  migrateResourceTypesForVersion,
+  getEffectiveResourceTypes,
+  shouldValidateResourceType,
+} from './settings-transformers';
+
+export {
+  getDefaultPerformanceSettings,
+  getDefaultResourceTypeSettings,
+  getDefaultValidationSettingsForVersion,
+  getDefaultValidationSettings,
+  createDefaultValidationSettings,
+  resetToDefaultSettings,
+  isDefaultSettings,
+  getEnabledAspects,
+  isAspectEnabled,
+  getAspectSeverity,
+} from './settings-utils';
 
 // ============================================================================
 // DTOs and Utility Functions

@@ -1373,9 +1373,13 @@ export const ASPECT_FALLBACKS: Record<string, FixSuggestion> = {
         why: 'Profile errors indicate the resource does not conform to declared constraints.',
         fix: 'Check that the resource meets all profile requirements.',
     },
-    businessRule: {
-        why: 'Business rule errors indicate domain-specific constraint violations.',
-        fix: 'Review the business logic requirements for this element.',
+    invariant: {
+        why: 'Invariant errors indicate standard FHIR or profile constraint violations.',
+        fix: 'Review the invariant expression and adjust the resource to satisfy the constraint.',
+    },
+    custom_rule: {
+        why: 'Custom rule errors indicate user-defined domain constraint violations.',
+        fix: 'Review the custom rule requirements for this element.',
     },
 };
 

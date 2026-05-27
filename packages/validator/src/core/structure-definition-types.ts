@@ -6,6 +6,7 @@
  */
 
 export interface StructureDefinition {
+  [key: string]: unknown;
   resourceType: 'StructureDefinition';
   id?: string;
   url: string;
@@ -26,6 +27,7 @@ export interface StructureDefinition {
 }
 
 export interface ElementDefinition {
+  [key: string]: unknown;
   id?: string;
   path: string;
   short?: string;
@@ -82,4 +84,3 @@ export interface Binding {
   valueSet?: string;
   description?: string;
 }
-

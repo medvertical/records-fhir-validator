@@ -22,7 +22,7 @@ export function parseAllowedPackages(): string[] {
       'de.gematik.isik-basismodul',
       'kbv.basis',
       'uk.core',
-      'hl7.fhir.au.base',
+      'hl7.fhir.au.*',
       'hl7.fhir.ca.baseline'
     ];
   }
@@ -62,4 +62,3 @@ export function isPackageAllowed(packageId: string, allowedPackages: string[]): 
     return false;
   });
 }
-

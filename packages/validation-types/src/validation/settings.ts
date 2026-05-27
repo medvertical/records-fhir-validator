@@ -20,6 +20,7 @@ import type {
  * Configuration for a single validation aspect
  */
 export interface ValidationAspectConfig {
+  [key: string]: unknown;
   /** Whether this validation aspect is enabled */
   enabled: boolean;
 
@@ -27,7 +28,7 @@ export interface ValidationAspectConfig {
    * - 'inherit': Use the original severity from validation messages (default)
    * - 'error'/'warning'/'info': Override all messages from this aspect to this severity
    */
-  severity: ValidationSeverity;
+  severity: ValidationSeverity | 'inherit';
 
   /** Validation engine to use for this aspect (optional - defaults per aspect type) */
   engine?: string;
@@ -42,9 +43,6 @@ export interface ValidationAspectConfig {
  * Local sources (bundled, DB cache) are always enabled
  */
 export interface ProfileSourcesConfig {
-  /** Use connected FHIR server to fetch profiles */
-  fhirServer: boolean;
-
   /** Use Simplifier.net API to fetch profiles */
   simplifier: boolean;
 
@@ -320,6 +318,7 @@ export interface AdvisorRule {
  * Main validation settings interface
  */
 export interface ValidationSettings {
+  [key: string]: unknown;
   /** 8 Validation Aspects (Structural, Profile, Terminology, Reference, Invariant, Custom Rules, Metadata, Anomaly) */
   aspects: {
     structural: ValidationAspectConfig;
@@ -327,7 +326,7 @@ export interface ValidationSettings {
     terminology: ValidationAspectConfig;
     reference: ValidationAspectConfig;
     invariant: ValidationAspectConfig;
-    customRule: ValidationAspectConfig;
+    custom_rule: ValidationAspectConfig;
     metadata: ValidationAspectConfig;
     anomaly: ValidationAspectConfig;
   };
@@ -378,6 +377,17 @@ export interface ValidationSettings {
       cacheResults: boolean;
       /** Cache expiration in seconds (default: 3600) */
       cacheTTLSeconds: number;
+    };
+
+    /**
+     * Experimental two-phase terminology expansion.
+     * Shadow mode measures local expansion coverage without changing results.
+     * Enforce mode may use complete local expansions as the validation result.
+     */
+    twoPhaseExpansion?: {
+      enabled: boolean;
+      mode: 'shadow' | 'enforce';
+      logMismatches?: boolean;
     };
 
     /**

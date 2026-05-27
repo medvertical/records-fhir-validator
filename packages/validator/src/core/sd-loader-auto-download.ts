@@ -16,15 +16,12 @@ export interface AutoDownloadContext {
   availableProfiles: Set<string>;
   /** Profile sources settings (optional - defaults to all enabled) */
   profileSourcesConfig?: ProfileSourcesConfig;
-  /** FHIR client for loading profiles from connected server (optional) */
-  fhirClient?: any;
   /** FHIR version for package filtering (defaults to R4) */
   fhirVersion?: 'R4' | 'R5' | 'R6';
 }
 
-/** Default profile sources - all enabled */
+/** Default remote profile sources. Local cache and bundled profiles are always enabled. */
 const DEFAULT_PROFILE_SOURCES: ProfileSourcesConfig = {
-  fhirServer: true,
   simplifier: true,
   packageRegistry: true
 };
@@ -153,40 +150,13 @@ async function executeAutoDownload(
 
   const config = context.profileSourcesConfig || DEFAULT_PROFILE_SOURCES;
   logger.info(`[SDLoader] Profile not found locally, trying remote sources for: ${url}`);
-  logger.debug(`[SDLoader] Enabled sources: FHIR=${config.fhirServer}, Simplifier=${config.simplifier}, Registry=${config.packageRegistry}`);
+  logger.debug(`[SDLoader] Enabled sources: Simplifier=${config.simplifier}, Registry=${config.packageRegistry}`);
 
   try {
     // Wrap auto-download in a timeout to prevent indefinite hangs
     const result = await Promise.race([
       (async () => {
-        // Step 1: Try FHIR Server if enabled and client available
-        if (config.fhirServer && context.fhirClient && !isCoreFhirStructureDefinition(url)) {
-          try {
-            logger.info(`[SDLoader] Trying FHIR Server for: ${url}`);
-            const bundle = await context.fhirClient.searchResources(
-              'StructureDefinition',
-              { url },
-              1,
-              { priority: 1 }
-            );
-
-            if (bundle?.entry?.[0]?.resource) {
-              const sd = bundle.entry[0].resource as StructureDefinition;
-              if (!matchesRequestedFhirVersion(sd, requestedFhirVersion)) {
-                logger.warn(`[SDLoader] Ignoring FHIR Server profile with mismatched fhirVersion: ${url}`);
-              } else {
-                cacheDownloadedProfile(url, sd, context);
-                logger.info(`[SDLoader] ✅ Profile fetched from FHIR Server: ${url}`);
-                return sd;
-              }
-            }
-            logger.debug(`[SDLoader] Profile not found on FHIR Server`);
-          } catch (fhirError: any) {
-            logger.debug(`[SDLoader] FHIR Server fetch failed:`, fhirError.message);
-          }
-        }
-
-        // Step 2: Try the embedder's external-fetch fallback (server
+        // Step 1: Try the embedder's external-fetch fallback (server
         // wires Simplifier.net here; standalone callers skip).
         if (config.simplifier) {
           try {
@@ -211,7 +181,7 @@ async function executeAutoDownload(
           }
         }
 
-        // Step 3: Try package registry if enabled
+        // Step 2: Try package registry if enabled
         if (config.packageRegistry) {
           const packageId = await context.registryClient.detectPackageForProfile(url);
           if (packageId && isPackageAllowed(packageId, context.allowedPackages)) {

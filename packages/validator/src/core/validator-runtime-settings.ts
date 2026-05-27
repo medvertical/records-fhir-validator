@@ -56,5 +56,6 @@ export function buildTerminologyResolutionConfig(settings: ValidationSettings): 
       authConfig: server.authConfig,
     })),
     serverDelegation: settings.terminologyResolution?.serverDelegation,
+    twoPhaseExpansion: settings.terminologyResolution?.twoPhaseExpansion,
   };
 }

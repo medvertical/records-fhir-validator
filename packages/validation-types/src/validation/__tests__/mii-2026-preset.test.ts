@@ -78,8 +78,8 @@ describe('HL7 Europe EHDS 2026 package lane', () => {
       version: '2.0.0'
     });
     expect(HL7_EU_EHDS_2026_PACKAGE_SET).toContainEqual({
-      id: 'hl7.fhir.eu.eps',
-      version: '1.0.0-alpha'
+      id: 'hl7.fhir.eu.eps.r4',
+      version: '1.0.0-xtehr'
     });
   });
 

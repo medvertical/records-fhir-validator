@@ -102,12 +102,14 @@ describe('loadProfileWithSnapshot', () => {
     expect(mocks.snapshotGenerator.generateSnapshot).not.toHaveBeenCalled();
   });
 
-  it('uses FHIR client (L2) when available before falling to loader', async () => {
+  it('ignores FHIR client as a profile source and uses loader', async () => {
     const clientSd = makeSD({ id: 'from-client' });
+    const loaderSd = makeSD({ id: 'from-loader' });
     mocks.profileCache.get.mockReturnValue(null);
     mocks.fhirClient.searchResources.mockResolvedValue({
       entry: [{ resource: clientSd }],
     });
+    mocks.sdLoader.loadProfile.mockResolvedValue(loaderSd);
 
     const result = await loadProfileWithSnapshot(
       mocks.sdLoader as any,
@@ -118,8 +120,9 @@ describe('loadProfileWithSnapshot', () => {
       mocks.fhirClient as any,
     );
 
-    expect(result).toBe(clientSd);
-    expect(mocks.sdLoader.loadProfile).not.toHaveBeenCalled();
+    expect(result).toBe(loaderSd);
+    expect(mocks.fhirClient.searchResources).not.toHaveBeenCalled();
+    expect(mocks.sdLoader.loadProfile).toHaveBeenCalledWith(PROFILE_URL, FHIR_VERSION);
   });
 
   it('does not load core FHIR StructureDefinitions from the target server', async () => {
@@ -335,11 +338,13 @@ describe('loadProfileForValidation', () => {
     expect(result).toBeNull();
   });
 
-  it('uses FHIR client before loader', async () => {
+  it('ignores FHIR client as a profile source during validation loading', async () => {
     const clientSd = makeSD({ id: 'from-client' });
+    const loaderSd = makeSD({ id: 'from-loader' });
     mocks.fhirClient.searchResources.mockResolvedValue({
       entry: [{ resource: clientSd }],
     });
+    mocks.sdLoader.loadProfile.mockResolvedValue(loaderSd);
 
     const result = await loadProfileForValidation(
       mocks.sdLoader as any,
@@ -350,8 +355,9 @@ describe('loadProfileForValidation', () => {
       mocks.fhirClient as any,
     );
 
-    expect(result).toBe(clientSd);
-    expect(mocks.sdLoader.loadProfile).not.toHaveBeenCalled();
+    expect(result).toBe(loaderSd);
+    expect(mocks.fhirClient.searchResources).not.toHaveBeenCalled();
+    expect(mocks.sdLoader.loadProfile).toHaveBeenCalledWith(PROFILE_URL, FHIR_VERSION);
   });
 
   it('falls back to loader when FHIR client returns wrong FHIR version', async () => {

@@ -88,6 +88,7 @@ export interface SDElement {
 }
 
 export interface StructureDefinition {
+  [key: string]: unknown;
   url: string;
   name: string;
   type: string;

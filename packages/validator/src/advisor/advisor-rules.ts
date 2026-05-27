@@ -11,13 +11,13 @@
  * results are persisted.
  *
  * Rules are loaded from:
- *   1. ValidationSettings.advisorRules (DB, managed via UI)
+ *   1. ValidationSettings.advisorRules (loaded from advisor_rules, managed via UI)
  *   2. .records-advisor.yaml (project-local file)
  *   3. CLI --advisor-rules flag
  */
 
 import type { ValidationIssue } from '@records-fhir/validation-types';
-import type { AdvisorRule, AdvisorRuleMatch, AdvisorRuleTransform } from '@records-fhir/validation-types/validation-settings';
+import type { AdvisorRule, AdvisorRuleMatch, AdvisorRuleTransform } from '@records-fhir/validation-types';
 import { logger } from '../logger';
 
 // Re-export shared types so existing server imports continue to work

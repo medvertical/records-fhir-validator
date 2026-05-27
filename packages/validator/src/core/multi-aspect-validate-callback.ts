@@ -23,7 +23,11 @@ import type {
 } from './executors';
 import type { BestPracticeValidator } from '../validators/best-practice-validator';
 import { createValidationErrorIssue, getValueAtPath } from './validation-utils';
-import { loadProfileOrBase, createProfileFallbackIssue } from './profile-loader-utils';
+import {
+  createProfileFallbackIssue,
+  createProfileResourceTypeMismatchIssue,
+  loadProfileOrBase,
+} from './profile-loader-utils';
 import { deepProfileValidator } from '../validators/deep-profile-validator';
 import { deepBindingValidator } from '../validators/deep-binding-validator';
 import { sdFHIRPathExecutor } from '../validators/sd-fhirpath-executor';
@@ -62,7 +66,8 @@ const BUNDLE_ENTRY_MAX_DEPTH = 3;
 export function buildMultiAspectValidateCallback(
   deps: MultiAspectDeps,
   aspects: string[],
-  settings: unknown
+  settings: unknown,
+  organizationId?: number,
 ): (resource: unknown, profileUrl: string, fhirVersion: 'R4' | 'R5' | 'R6') => Promise<MultiAspectValidateResult> {
   // Resolve once per batch, not per resource — strictness, aspect
   // severity caps, and advisor rules don't change between resources.
@@ -145,9 +150,15 @@ export function buildMultiAspectValidateCallback(
     // Declared profile was unresolvable but base SD loaded — surface a warning
     // and keep running all other aspects. Without this, callers got back a
     // single info issue and no structural/invariant/reference feedback.
-    const profileFallbackIssue: ValidationIssue | null = loadResult.usedBaseFallback
-      ? createProfileFallbackIssue(profileUrl, res.resourceType as string)
-      : null;
+    const profileFallbackIssue: ValidationIssue | null = loadResult.incompatibleProfileType
+      ? createProfileResourceTypeMismatchIssue(
+        profileUrl,
+        res.resourceType as string,
+        loadResult.incompatibleProfileType,
+      )
+      : loadResult.usedBaseFallback
+        ? createProfileFallbackIssue(profileUrl, res.resourceType as string)
+        : null;
 
     const ctx = {
       resource: res,
@@ -269,9 +280,14 @@ export function buildMultiAspectValidateCallback(
       }));
     }
 
-    if (aspects.includes('customRule')) {
-      parallelAspects.push(runAspect('customRule', () =>
-        deps.customRuleExecutor.validate({ resource: ctx.resource, structureDef: ctx.structureDef, fhirVersion: ctx.fhirVersion })
+    if (aspects.includes('custom_rule')) {
+      parallelAspects.push(runAspect('custom_rule', () =>
+        deps.customRuleExecutor.validate({
+          resource: ctx.resource,
+          structureDef: ctx.structureDef,
+          fhirVersion: ctx.fhirVersion,
+          organizationId,
+        })
       ));
     }
 

@@ -75,7 +75,6 @@ export class StructureDefinitionLoader {
     this.bundledPath = bundledPath ?? resolveDefaultBundledProfilesPath();
     this.autoDownload = options?.autoDownload ?? (process.env.FHIR_AUTO_DOWNLOAD_PACKAGES === 'true');
     this.profileSourcesConfig = options?.profileSourcesConfig ?? {
-      fhirServer: true,
       simplifier: true,
       packageRegistry: true
     };
@@ -406,7 +405,7 @@ export class StructureDefinitionLoader {
     this.profileSourcesConfig = config;
     logger.info(
       `[SDLoader] Profile sources updated: ` +
-      `FHIR=${config.fhirServer}, Simplifier=${config.simplifier}, Registry=${config.packageRegistry}`
+      `Simplifier=${config.simplifier}, Registry=${config.packageRegistry}`
     );
   }
 

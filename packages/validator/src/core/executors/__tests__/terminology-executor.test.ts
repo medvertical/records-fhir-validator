@@ -1008,6 +1008,17 @@ describe('TerminologyExecutor', () => {
         return undefined;
       };
 
+      const validatorInstance = (executor as any).valuesetValidator;
+      validatorInstance.isExternalCodeSystem.mockReturnValue(true);
+      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
+        valid: false,
+        issues: [{
+          severity: 'error',
+          code: 'invalid',
+          message: "The Coding references a value set, not a code system ('http://hl7.org/fhir/ValueSet/marital-status')",
+        }],
+      });
+
       const issues = await executor.validate(mockContext);
 
       expect(issues).toEqual([
@@ -1020,6 +1031,7 @@ describe('TerminologyExecutor', () => {
           }),
         }),
       ]);
+      expect(validatorInstance.validateCodeInCodeSystem).not.toHaveBeenCalled();
     });
 
     it('keeps inactive CodeSystem warnings even when the terminology server returns result=true', async () => {

@@ -133,7 +133,7 @@ export class SnapshotGenerator {
     // Create a map of base elements by path for quick lookup
     const baseElementMap = new Map<string, number>();
     mergedElements.forEach((element, index) => {
-      if (element.path) {
+      if (element.path && !element.sliceName && !this.isSliceScopedElement(element)) {
         baseElementMap.set(element.path, index);
       }
     });
@@ -151,8 +151,7 @@ export class SnapshotGenerator {
       // same path — doing so leaks slice-scoped cardinality / type
       // constraints to every occurrence at that path. Detect them by
       // looking for a `:` in the id segments.
-      const isSliceScopedChild =
-        typeof diffElement.id === 'string' && diffElement.id.includes(':');
+      const isSliceScopedChild = this.isSliceScopedElement(diffElement);
 
       if (baseElementMap.has(path) && !isSliceInstance && !isSliceScopedChild) {
         // Element exists in base AND is not a named slice or slice-scoped
@@ -197,6 +196,10 @@ export class SnapshotGenerator {
     });
 
     return mergedElements;
+  }
+
+  private isSliceScopedElement(element: ElementDefinition): boolean {
+    return typeof element.id === 'string' && element.id.includes(':');
   }
 
   /**

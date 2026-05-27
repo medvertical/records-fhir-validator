@@ -56,6 +56,54 @@ describe('SlicingValidator', () => {
     expect(issues.some(i => i.code === 'profile-slice-min-cardinality')).toBe(false);
   });
 
+  it('does not enforce required slices whose type profile is for another FHIR version', async () => {
+    const r4ProfileWithR5ExtensionSlice: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/StructureDefinition/r4-procedure',
+      name: 'R4Procedure',
+      status: 'draft',
+      kind: 'resource',
+      abstract: false,
+      type: 'Procedure',
+      snapshot: {
+        element: [
+          {
+            id: 'Procedure.extension',
+            path: 'Procedure.extension',
+            min: 0,
+            max: '*',
+            slicing: {
+              discriminator: [{ type: 'value', path: 'url' }],
+              rules: 'open',
+            },
+          },
+          {
+            id: 'Procedure.extension:recorded',
+            path: 'Procedure.extension',
+            sliceName: 'recorded',
+            min: 1,
+            max: '1',
+            type: [{
+              code: 'Extension',
+              profile: ['http://hl7.org/fhir/5.0/StructureDefinition/extension-Procedure.recorded'],
+            }],
+          },
+        ],
+      },
+    } as any;
+
+    const issues = await validator.validateSlicing(
+      [],
+      'Procedure.extension',
+      r4ProfileWithR5ExtensionSlice,
+      null,
+      'Procedure.extension',
+      'R4',
+    );
+
+    expect(issues.filter(i => i.code === 'profile-slice-min-cardinality')).toHaveLength(0);
+  });
+
   it('matches value $this slices using child patterns from a Coding type profile', async () => {
     const profileUrl = 'http://example.org/StructureDefinition/BodyTempCoding';
     const validatorWithResolver = new SlicingValidator();
@@ -112,6 +160,58 @@ describe('SlicingValidator', () => {
     } as any;
 
     const issues = await validatorWithResolver.validateSlicing(
+      [{ system: 'http://loinc.org', code: '8310-5', display: 'Body temperature' }],
+      'Observation.code.coding',
+      bodyTemperatureProfile,
+    );
+
+    expect(issues.some(i => i.code === 'profile-slice-min-cardinality')).toBe(false);
+  });
+
+  it('matches value discriminators backed by fixed child values on Coding', async () => {
+    const bodyTemperatureProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://hl7.org/fhir/StructureDefinition/bodytemp',
+      name: 'ObservationBodyTemperature',
+      status: 'draft',
+      kind: 'resource',
+      abstract: false,
+      type: 'Observation',
+      snapshot: {
+        element: [
+          {
+            id: 'Observation.code.coding',
+            path: 'Observation.code.coding',
+            slicing: {
+              discriminator: [
+                { type: 'value', path: 'code' },
+                { type: 'value', path: 'system' },
+              ],
+              rules: 'open',
+            },
+          },
+          {
+            id: 'Observation.code.coding:BodyTempCode',
+            path: 'Observation.code.coding',
+            sliceName: 'BodyTempCode',
+            min: 1,
+            max: '1',
+          },
+          {
+            id: 'Observation.code.coding:BodyTempCode.system',
+            path: 'Observation.code.coding.system',
+            fixedUri: 'http://loinc.org',
+          },
+          {
+            id: 'Observation.code.coding:BodyTempCode.code',
+            path: 'Observation.code.coding.code',
+            fixedCode: '8310-5',
+          },
+        ],
+      },
+    } as any;
+
+    const issues = await validator.validateSlicing(
       [{ system: 'http://loinc.org', code: '8310-5', display: 'Body temperature' }],
       'Observation.code.coding',
       bodyTemperatureProfile,

@@ -39,6 +39,3 @@ export {
     getCodeMetadata,
     isKnownCode,
 } from './codes/index';
-
-// Re-export aliases for backwards compatibility
-export { CodeAliases } from './codes/code-aliases';

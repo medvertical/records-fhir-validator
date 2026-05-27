@@ -65,7 +65,7 @@ describe('Barrel Export (shared/validation/index.ts)', () => {
         terminology: { enabled: true, severity: 'warning' },
         reference: { enabled: true, severity: 'error' },
         invariant: { enabled: true, severity: 'error' },
-        customRule: { enabled: true, severity: 'error' },
+        custom_rule: { enabled: true, severity: 'error' },
         metadata: { enabled: true, severity: 'error' },
         anomaly: { enabled: true, severity: 'info' }
       },

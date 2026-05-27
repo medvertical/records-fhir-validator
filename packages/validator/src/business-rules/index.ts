@@ -9,18 +9,22 @@
  */
 
 export {
-    getValidationTargets,
     shouldValidateRequired,
     parseElementPath,
     getParentPath,
     isRootElement,
     getAncestorPaths,
-    getValueAtPath,
     hasParentElement,
     hasAllAncestors,
     getPathDebugInfo,
-    isArrayAtPath,
-    expandPathWithArrayIndex,
 } from './element-path-resolver';
 
-export type { PathComponents, ValidationTarget } from './element-path-resolver';
+export {
+    getValidationTargets,
+    isArrayAtPath,
+    expandPathWithArrayIndex,
+} from './element-validation-targets';
+
+export { getValueAtPath } from '../core/validation-utils';
+export type { PathComponents } from './element-path-resolver';
+export type { ValidationTarget } from './element-validation-targets';

@@ -68,7 +68,7 @@ export function filterReferences(
 
   const maxRefs = context.config.maxReferencesPerResource || 10;
   if (filtered.length > maxRefs) {
-    logger.warn(
+    logger.debug(
       `[RecursiveReferenceValidator] Limiting references from ${filtered.length} to ${maxRefs}`,
     );
     filtered = filtered.slice(0, maxRefs);

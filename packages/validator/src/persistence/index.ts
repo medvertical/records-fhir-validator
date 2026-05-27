@@ -167,7 +167,10 @@ export interface EngineCustomRule {
  * it once per resource validation; default returns no rules.
  */
 export interface CustomRulesSource {
-    getRulesByResourceType(resourceType: string): Promise<EngineCustomRule[]>;
+    getRulesByResourceType(
+        resourceType: string,
+        context?: { organizationId?: number },
+    ): Promise<EngineCustomRule[]>;
 }
 
 const NOOP_CUSTOM_RULES_SOURCE: CustomRulesSource = {

@@ -129,7 +129,7 @@ export class RecursiveReferenceValidator {
 
     // Check if recursive validation is enabled
     if (!fullConfig.enabled) {
-      logger.info('[RecursiveReferenceValidator] Recursive validation disabled');
+      logger.debug('[RecursiveReferenceValidator] Recursive validation disabled');
       return result;
     }
 
@@ -143,7 +143,8 @@ export class RecursiveReferenceValidator {
 
     result.validationTimeMs = Date.now() - context.startTime;
 
-    logger.info(
+    const logCompletion = result.validationTimeMs > 100 ? logger.info.bind(logger) : logger.debug.bind(logger);
+    logCompletion(
       `[RecursiveReferenceValidator] Completed: ` +
       `${result.totalResourcesValidated} resources, ` +
       `${result.referencesFollowed} references, ` +
@@ -177,7 +178,7 @@ export class RecursiveReferenceValidator {
 
     // Check depth limit
     if (context.currentDepth >= context.config.maxDepth) {
-      logger.info(`[RecursiveReferenceValidator] Max depth ${context.config.maxDepth} reached`);
+      logger.debug(`[RecursiveReferenceValidator] Max depth ${context.config.maxDepth} reached`);
       return;
     }
 
@@ -191,7 +192,7 @@ export class RecursiveReferenceValidator {
     result.totalResourcesValidated++;
     result.maxDepthReached = Math.max(result.maxDepthReached, context.currentDepth);
 
-    logger.info(
+    logger.debug(
       `[RecursiveReferenceValidator] [Depth ${context.currentDepth}] Validating ${resource.resourceType}/${resource.id || 'unknown'}`
     );
 

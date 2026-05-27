@@ -2,7 +2,7 @@
  * Validation Messages and Issues
  * 
  * Types related to validation issues, messages, and error reporting.
- * Extracted from shared/types/validation.ts
+ * Extracted from the former shared validation type module.
  */
 
 import type { ValidationSeverity } from './enums';
@@ -15,6 +15,7 @@ import type { ValidationSeverity } from './enums';
  * A single validation issue/error/warning
  */
 export interface ValidationIssue {
+  [key: string]: unknown;
   id?: string;
   aspect: string;
   severity: ValidationSeverity;
@@ -79,5 +80,3 @@ export interface ValidationRetryAttempt {
   error?: ValidationError;
   duration: number;
 }
-
-

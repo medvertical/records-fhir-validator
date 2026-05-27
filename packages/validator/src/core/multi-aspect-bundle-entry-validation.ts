@@ -6,7 +6,8 @@ import {
 } from './bundle-document-context';
 import type { AspectResult, MultiAspectValidateResult, ValidateOneFn } from './multi-aspect-types';
 
-const BUNDLE_ENTRY_VALIDATION_CONCURRENCY = 8;
+const DEFAULT_BUNDLE_ENTRY_VALIDATION_CONCURRENCY = 8;
+const MAX_BUNDLE_ENTRY_VALIDATION_CONCURRENCY = 64;
 
 interface BundleChildValidationResult {
   index: number;
@@ -51,9 +52,10 @@ export async function appendBundleEntryValidationResults(
     } => target !== null);
 
   const childResults: BundleChildValidationResult[] = [];
+  const concurrency = resolveBundleEntryValidationConcurrency();
 
-  for (let i = 0; i < validationTargets.length; i += BUNDLE_ENTRY_VALIDATION_CONCURRENCY) {
-    const chunk = validationTargets.slice(i, i + BUNDLE_ENTRY_VALIDATION_CONCURRENCY);
+  for (let i = 0; i < validationTargets.length; i += concurrency) {
+    const chunk = validationTargets.slice(i, i + concurrency);
     const chunkResults = await Promise.all(chunk.map(async target => ({
       index: target.index,
       entryResource: target.entryResource,
@@ -78,6 +80,18 @@ export async function appendBundleEntryValidationResults(
   if (documentContextIssues.length > 0) {
     appendIssuesToAspect(parentAspects, 'profile', documentContextIssues);
   }
+}
+
+function resolveBundleEntryValidationConcurrency(): number {
+  const rawValue = process.env.VALIDATION_BUNDLE_ENTRY_CONCURRENCY;
+  if (!rawValue) return DEFAULT_BUNDLE_ENTRY_VALIDATION_CONCURRENCY;
+
+  const parsed = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return DEFAULT_BUNDLE_ENTRY_VALIDATION_CONCURRENCY;
+  }
+
+  return Math.min(parsed, MAX_BUNDLE_ENTRY_VALIDATION_CONCURRENCY);
 }
 
 function toDocumentContextChildResult(

@@ -12,13 +12,14 @@
  */
 
 import { z } from 'zod';
+import { normalizeValidationSettings } from './aspect-aliases';
 
 // ============================================================================
 // Enum Schemas
 // ============================================================================
 
 export const ValidationAspectSchema = z.enum([
-    'structural', 'profile', 'terminology', 'reference', 'invariant', 'customRule', 'metadata', 'anomaly'
+    'structural', 'profile', 'terminology', 'reference', 'invariant', 'custom_rule', 'metadata', 'anomaly'
 ]);
 
 export const ValidationSeveritySchema = z.enum([
@@ -55,7 +56,6 @@ export const ValidationAspectConfigSchema = z.object({
 });
 
 export const ProfileSourcesConfigSchema = z.object({
-    fhirServer: z.boolean(),
     simplifier: z.boolean(),
     packageRegistry: z.boolean(),
 });
@@ -139,6 +139,11 @@ export const TerminologyResolutionSchema = z.object({
         cacheResults: z.boolean(),
         cacheTTLSeconds: z.number(),
     }).optional(),
+    twoPhaseExpansion: z.object({
+        enabled: z.boolean(),
+        mode: z.enum(['shadow', 'enforce']),
+        logMismatches: z.boolean().optional(),
+    }).optional(),
     unknownCodeBehavior: z.enum(['required-closed', 'all-open', 'all-closed']).optional(),
 });
 
@@ -205,10 +210,10 @@ export const ValidationSettingsSchema = z.object({
         terminology: ValidationAspectConfigSchema,
         reference: ValidationAspectConfigSchema,
         invariant: ValidationAspectConfigSchema,
-        customRule: ValidationAspectConfigSchema,
+        custom_rule: ValidationAspectConfigSchema,
         metadata: ValidationAspectConfigSchema,
         anomaly: ValidationAspectConfigSchema,
-    }),
+    }).strict(),
 
     // Performance
     performance: z.object({
@@ -301,14 +306,14 @@ export type TerminologyServerZod = z.infer<typeof TerminologyServerSchema>;
  * Throws ZodError if validation fails.
  */
 export function parseSettingsUpdate(data: unknown): ValidationSettingsUpdateZod {
-    return ValidationSettingsUpdateSchema.parse(data);
+    return ValidationSettingsUpdateSchema.parse(normalizeValidationSettings(data as Record<string, unknown>));
 }
 
 /**
  * Safe parse that returns success/error instead of throwing.
  */
 export function safeParseSettingsUpdate(data: unknown) {
-    return ValidationSettingsUpdateSchema.safeParse(data);
+    return ValidationSettingsUpdateSchema.safeParse(normalizeValidationSettings(data as Record<string, unknown>));
 }
 
 /**
@@ -317,7 +322,7 @@ export function safeParseSettingsUpdate(data: unknown) {
  */
 export function hasValidSettingsFields(data: unknown): boolean {
     if (!data || typeof data !== 'object') return false;
-    const result = ValidationSettingsUpdateSchema.safeParse(data);
+    const result = ValidationSettingsUpdateSchema.safeParse(normalizeValidationSettings(data as Record<string, unknown>));
     if (!result.success) return false;
     // Check if at least one field was provided
     return Object.keys(result.data).length > 0;

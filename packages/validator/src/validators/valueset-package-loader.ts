@@ -400,7 +400,7 @@ export class ValueSetPackageLoader {
      * Load a ValueSet resource (not just its codes) for use in recursive
      * composition. Uses the same package search path as `loadValueSet`.
      */
-    private async loadValueSetResource(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<ValueSet | null> {
+    async loadValueSetResource(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<ValueSet | null> {
         const [canonical, requestedVersion] = valueSetUrl.split('|');
         const cacheKey = versionedCacheKey(canonical, requestedVersion, fhirVersion);
         if (this.cache.hasValueSetFile(cacheKey)) {

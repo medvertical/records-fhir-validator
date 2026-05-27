@@ -34,9 +34,6 @@ import type {
   BundleValidationResult
 } from './bundle-reference-types';
 
-// Re-export types for backwards compatibility
-export type { BundleEntry, BundleReferenceResolutionResult, BundleValidationResult };
-
 // ============================================================================
 // Bundle Reference Resolver Class
 // ============================================================================

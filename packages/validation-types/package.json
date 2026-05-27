@@ -1,6 +1,6 @@
 {
   "name": "@records-fhir/validation-types",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Validation-domain TypeScript types for the Records FHIR validator: ValidationIssue, ValidationSettings, ValidationResult, advisor rules, fix suggestions. No runtime code, no DB coupling.",
   "type": "module",
   "license": "Apache-2.0",
@@ -27,9 +27,25 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js"
+    "./fix-suggestions": {
+      "types": "./dist/fix-suggestions.d.ts",
+      "import": "./dist/fix-suggestions.js"
+    },
+    "./validation": {
+      "types": "./dist/validation/index.d.ts",
+      "import": "./dist/validation/index.js"
+    },
+    "./validation/aspect-enums": {
+      "types": "./dist/validation/aspect-enums.d.ts",
+      "import": "./dist/validation/aspect-enums.js"
+    },
+    "./validation/settings": {
+      "types": "./dist/validation/settings.d.ts",
+      "import": "./dist/validation/settings.js"
+    },
+    "./validation/settings-defaults": {
+      "types": "./dist/validation/settings-defaults.d.ts",
+      "import": "./dist/validation/settings-defaults.js"
     }
   },
   "scripts": {

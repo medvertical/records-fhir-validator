@@ -83,7 +83,7 @@ export class ProfileExecutor {
       // 2. Validate slicing (check for sliced elements like Patient.identifier)
       if (structureDef.snapshot?.element) {
         const slicingIssues = await this.validateAllSlicing(
-          resource, structureDef, getValueAtPath, referenceResolver,
+          resource, structureDef, getValueAtPath, referenceResolver, fhirVersion,
         );
         issues.push(...this.suppressDuplicateExtensionSliceMinimum(extensionIssues, slicingIssues));
 
@@ -142,15 +142,25 @@ export class ProfileExecutor {
     structureDef: StructureDefinition,
     getValueAtPath: (resource: any, path: string) => any,
     referenceResolver?: ReferenceResolver | null,
+    fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
     for (const elementDef of structureDef.snapshot!.element!) {
       if (!elementDef.slicing) continue;
       const path = elementDef.path;
-      const parentItems = this.resolveParentArrayItems(resource, path, structureDef, getValueAtPath);
+      const nestedSliceParentItems = this.resolveNestedSliceParentItems(
+        resource,
+        elementDef,
+        structureDef,
+        getValueAtPath,
+      );
+      const parentItems = nestedSliceParentItems
+        ?? this.resolveParentArrayItems(resource, path, structureDef, getValueAtPath);
 
       if (parentItems) {
-        const scopedParents = this.scopeParentItemsToNestedSlice(parentItems, elementDef, structureDef) ?? parentItems;
+        const scopedParents = nestedSliceParentItems
+          ?? this.scopeParentItemsToNestedSlice(parentItems, elementDef, structureDef)
+          ?? parentItems;
         for (const parentItem of scopedParents) {
           const leafKey = path.split('.').pop()!;
           let childVal = parentItem[leafKey];
@@ -160,7 +170,7 @@ export class ProfileExecutor {
             if (actualKey) childVal = parentItem[actualKey];
           }
           issues.push(...await this.slicingValidator.validateSlicing(
-            this.coerceToArray(childVal), path, structureDef, referenceResolver, elementDef.id
+            this.coerceToArray(childVal), path, structureDef, referenceResolver, elementDef.id, fhirVersion
           ));
         }
       } else {
@@ -174,7 +184,7 @@ export class ProfileExecutor {
         // Pass an empty array when the element is absent so required
         // slices still produce profile-slice-min-cardinality + ghost children.
         issues.push(...await this.slicingValidator.validateSlicing(
-          slicedValue, path, structureDef, referenceResolver, elementDef.id
+          slicedValue, path, structureDef, referenceResolver, elementDef.id, fhirVersion
         ));
       }
     }
@@ -189,6 +199,29 @@ export class ProfileExecutor {
     return segments.length >= pathDepth && segments.slice(0, -1).some(segment => segment.includes(':'));
   }
 
+  private resolveNestedSliceParentItems(
+    resource: any,
+    elementDef: { id?: string; path?: string },
+    structureDef: StructureDefinition,
+    getValueAtPath: (resource: any, path: string) => any,
+  ): any[] | null {
+    const id = elementDef.id;
+    if (!id || !elementDef.path || !this.isSlicingNestedUnderSlice(elementDef)) return null;
+
+    const parentIdEnd = id.lastIndexOf('.');
+    if (parentIdEnd < 0) return null;
+
+    const parentSliceElementId = id.slice(0, parentIdEnd);
+    const parentSlice = structureDef.snapshot?.element?.find(e => e.id === parentSliceElementId);
+    if (!parentSlice?.path) return null;
+
+    const parentValue = getValueAtPath(resource, parentSlice.path);
+    const parentItems = this.coerceToArray(parentValue);
+    if (parentItems.length === 0) return [];
+
+    return this.scopeParentItemsToNestedSlice(parentItems, elementDef, structureDef);
+  }
+
   private scopeParentItemsToNestedSlice(
     parentItems: any[],
     elementDef: { id?: string; path?: string },
@@ -197,11 +230,12 @@ export class ProfileExecutor {
     const id = elementDef.id;
     if (!id || !elementDef.path || !this.isSlicingNestedUnderSlice(elementDef)) return null;
 
-    const nestedStart = id.lastIndexOf(':');
     const parentPathEnd = elementDef.path.lastIndexOf('.');
-    if (nestedStart < 0 || parentPathEnd < 0) return null;
+    const parentIdEnd = id.lastIndexOf('.');
+    if (parentIdEnd < 0 || parentPathEnd < 0) return null;
 
-    const parentSliceElementId = id.slice(0, nestedStart);
+    const parentSliceElementId = id.slice(0, parentIdEnd);
+    if (!parentSliceElementId.includes(':')) return null;
     const parentSlice = structureDef.snapshot?.element?.find(e => e.id === parentSliceElementId);
     if (!parentSlice?.sliceName || !parentSlice.path) return null;
 

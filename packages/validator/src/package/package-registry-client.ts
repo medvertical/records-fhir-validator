@@ -58,13 +58,8 @@ export class PackageRegistryClient {
   private cacheTTL: number = 60 * 60 * 1000; // 1 hour
 
   constructor(
-    baseUrl?: string,
     timeout: number = 10000  // Reduced from 30s to 10s to prevent hangs
   ) {
-    // If baseUrl provided, use it as fhirRegistryUrl for backwards compatibility
-    if (baseUrl) {
-      this.fhirRegistryUrl = baseUrl;
-    }
     this.timeout = timeout;
   }
 
@@ -299,11 +294,28 @@ export class PackageRegistryClient {
       return 'hl7.fhir.us.core';
     }
 
+    // Da Vinci PDEX Plan-Net: http://hl7.org/fhir/us/davinci-pdex-plan-net/StructureDefinition/...
+    if (profileUrl.includes('hl7.org/fhir/us/davinci-pdex-plan-net')) {
+      logger.info(`[PackageRegistry] ✓ Pattern match: Da Vinci PDEX Plan-Net → hl7.fhir.us.davinci-pdex-plan-net`);
+      return 'hl7.fhir.us.davinci-pdex-plan-net';
+    }
+
+    // Da Vinci PDEX: http://hl7.org/fhir/us/davinci-pdex/StructureDefinition/...
+    if (profileUrl.includes('hl7.org/fhir/us/davinci-pdex')) {
+      logger.info(`[PackageRegistry] ✓ Pattern match: Da Vinci PDEX → hl7.fhir.us.davinci-pdex`);
+      return 'hl7.fhir.us.davinci-pdex';
+    }
+
     // UK Core: https://fhir.hl7.org.uk/StructureDefinition/...
     // Note: UK Core packages are on Simplifier.net
     if (profileUrl.includes('fhir.hl7.org.uk') || profileUrl.includes('fhir.uk')) {
       // UK Core package name on Simplifier: uk.core.r4.v2
       return 'uk.core.r4.v2';
+    }
+
+    // Nictiz NL R4 profiles: http://nictiz.nl/fhir/StructureDefinition/...
+    if (profileUrl.includes('nictiz.nl/fhir')) {
+      return 'nictiz.fhir.nl.r4.nl-core';
     }
 
     // German Basisprofile: http://fhir.de/StructureDefinition/...
@@ -388,6 +400,11 @@ export class PackageRegistryClient {
     // KBV: https://fhir.kbv.de/StructureDefinition/...
     if (profileUrl.includes('fhir.kbv.de')) {
       return 'kbv.basis';
+    }
+
+    // Australian eRequesting: http://hl7.org.au/fhir/ereq/StructureDefinition/...
+    if (profileUrl.includes('hl7.org.au/fhir/ereq')) {
+      return 'hl7.fhir.au.ereq';
     }
 
     // Australian Base: http://hl7.org.au/fhir/StructureDefinition/...

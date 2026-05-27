@@ -243,4 +243,6 @@ export function applyFixPatch(
       return { applied: true, resource: cloned };
     }
   }
+
+  return { applied: false, resource, reason: `Unknown patch action: ${String(patch.action)}` };
 }

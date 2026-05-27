@@ -216,7 +216,7 @@ export const VALIDATION_ASPECTS: ValidationAspect[] = [
   'terminology',
   'reference',
   'invariant',
-  'customRule',
+  'custom_rule',
   'metadata',
   'anomaly'
 ];
@@ -227,7 +227,7 @@ export const VALIDATION_ASPECT_LABELS: Record<ValidationAspect, string> = {
   terminology: 'Terminology Validation',
   reference: 'Reference Validation',
   invariant: 'Invariants',
-  customRule: 'Custom Rules',
+  custom_rule: 'Custom Rules',
   metadata: 'Metadata Validation',
   anomaly: 'Anomaly Detection'
 };
@@ -238,7 +238,7 @@ export const VALIDATION_ASPECT_DESCRIPTIONS: Record<ValidationAspect, string> = 
   terminology: 'Validates codes against code systems, value sets, and terminology bindings',
   reference: 'Verifies that references to other resources are valid and resolvable',
   invariant: 'Validates standard FHIR invariants and profile constraints (e.g. ele-1)',
-  customRule: 'Validates user-defined business logic and custom constraints',
+  custom_rule: 'Validates user-defined business logic and custom constraints',
   metadata: 'Validates resource metadata and provenance',
   anomaly: 'Cross-resource batch analysis: duplicates, orphan references, value-range outliers, temporal gaps'
 };

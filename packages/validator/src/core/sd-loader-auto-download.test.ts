@@ -32,7 +32,6 @@ describe('attemptAutoDownload package pins', () => {
       cache: new Map(),
       availableProfiles: new Set(),
       profileSourcesConfig: {
-        fhirServer: false,
         simplifier: false,
         packageRegistry: true
       },
@@ -65,7 +64,6 @@ describe('attemptAutoDownload package pins', () => {
         cache: new Map(),
         availableProfiles: new Set(),
         profileSourcesConfig: {
-          fhirServer: false,
           simplifier: false,
           packageRegistry: true,
         },

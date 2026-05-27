@@ -25,6 +25,7 @@ import { isLanguageBinding, validateBCP47 } from './valueset-language-utils';
 import { ValueSetCache, valueSetCache } from './valueset-cache';
 import {
   TerminologyApiClient,
+  clearCodeSystemValidateCodeCache,
   clearSubsumesCache,
   clearValidateCodeCache,
   getSubsumesCacheSize,
@@ -38,6 +39,10 @@ import {
   hasTerminologyServer,
   resolveTerminologyServerForSystem,
 } from './valueset-server-routing';
+import {
+  TwoPhaseTerminologyExpansion,
+  type TwoPhaseLookupResult,
+} from './terminology-two-phase-expansion';
 
 export type { TerminologyResolutionStrategy, TerminologyResolutionConfig, ValueSet, CodeSystem } from './valueset-types';
 
@@ -52,14 +57,26 @@ export class ValueSetValidator {
   private cache: ValueSetCache;
   private apiClient: TerminologyApiClient;
   private packageLoader: ValueSetPackageLoader;
+  private twoPhaseExpansion: TwoPhaseTerminologyExpansion;
+  private twoPhaseStats = {
+    lookups: 0,
+    hits: 0,
+    misses: 0,
+    unknown: 0,
+    mismatches: 0,
+    enforced: 0,
+  };
+  private twoPhaseMismatchLogs = 0;
 
   static readonly EXTERNAL_CODE_SYSTEMS = EXTERNAL_CODE_SYSTEMS;
+  private static readonly TWO_PHASE_MISMATCH_LOG_LIMIT = 20;
 
   constructor() {
     this.resolutionConfig = { ...DEFAULT_RESOLUTION_CONFIG };
     this.cache = valueSetCache;
     this.apiClient = new TerminologyApiClient(this.resolutionConfig, this.cache);
     this.packageLoader = new ValueSetPackageLoader(this.cache);
+    this.twoPhaseExpansion = new TwoPhaseTerminologyExpansion(this.packageLoader);
   }
 
   /**
@@ -68,7 +85,10 @@ export class ValueSetValidator {
   setResolutionConfig(config: Partial<TerminologyResolutionConfig>): void {
     this.resolutionConfig = { ...this.resolutionConfig, ...config };
     this.apiClient.setConfig(this.resolutionConfig);
-    logger.info(`[ValueSetValidator] Resolution config updated: strategy=${this.resolutionConfig.strategy}`);
+    const twoPhase = this.resolutionConfig.twoPhaseExpansion?.enabled
+      ? this.resolutionConfig.twoPhaseExpansion.mode
+      : 'off';
+    logger.info(`[ValueSetValidator] Resolution config updated: strategy=${this.resolutionConfig.strategy}, twoPhase=${twoPhase}`);
   }
 
   /**
@@ -95,6 +115,59 @@ export class ValueSetValidator {
 
   private getExpansionCacheKey(valueSetUrl: string, fhirVersion?: FhirVersion): string {
     return getScopedExpansionCacheKey(valueSetUrl, this.resolutionConfig, fhirVersion);
+  }
+
+  private async lookupTwoPhaseExpansion(
+    code: string,
+    system: string | undefined,
+    valueSetUrl: string,
+    fhirVersion?: FhirVersion,
+  ): Promise<TwoPhaseLookupResult | undefined> {
+    if (!this.resolutionConfig.twoPhaseExpansion?.enabled) return undefined;
+
+    const result = await this.twoPhaseExpansion.lookup(code, system, valueSetUrl, fhirVersion);
+    this.twoPhaseStats.lookups++;
+    if (result.status === 'hit') this.twoPhaseStats.hits++;
+    if (result.status === 'miss') this.twoPhaseStats.misses++;
+    if (result.status === 'unknown') this.twoPhaseStats.unknown++;
+    return result;
+  }
+
+  private getEnforcedTwoPhaseResult(result: TwoPhaseLookupResult | undefined): boolean | undefined {
+    if (!result) return undefined;
+    if (this.resolutionConfig.twoPhaseExpansion?.mode !== 'enforce') return undefined;
+    if (result.coverage !== 'complete') return undefined;
+
+    this.twoPhaseStats.enforced++;
+    return result.status === 'hit';
+  }
+
+  private finishTwoPhaseLookup(
+    result: TwoPhaseLookupResult | undefined,
+    finalResult: boolean,
+    context: { code: string; system?: string; valueSetUrl: string },
+  ): boolean {
+    if (!result || result.status === 'unknown') return finalResult;
+    const twoPhaseResult = result.status === 'hit';
+    if (twoPhaseResult !== finalResult) {
+      this.twoPhaseStats.mismatches++;
+      if (this.resolutionConfig.twoPhaseExpansion?.logMismatches !== false) {
+        if (this.twoPhaseMismatchLogs < ValueSetValidator.TWO_PHASE_MISMATCH_LOG_LIMIT) {
+          logger.warn(
+            `[TwoPhaseTerminology] Shadow mismatch for ` +
+            `${context.system ? `${context.system}|` : ''}${context.code} in ${context.valueSetUrl}: ` +
+            `twoPhase=${twoPhaseResult}, validator=${finalResult}, coverage=${result.coverage}, source=${result.source}`,
+          );
+        } else if (this.twoPhaseMismatchLogs === ValueSetValidator.TWO_PHASE_MISMATCH_LOG_LIMIT) {
+          logger.warn(
+            `[TwoPhaseTerminology] Further shadow mismatches suppressed; ` +
+            `current mismatch count=${this.twoPhaseStats.mismatches}`,
+          );
+        }
+        this.twoPhaseMismatchLogs++;
+      }
+    }
+    return finalResult;
   }
 
   private async validateCodeViaTerminologyServer(
@@ -456,13 +529,19 @@ export class ValueSetValidator {
         return validateBCP47(code);
       }
 
+      const twoPhaseLookup = await this.lookupTwoPhaseExpansion(code, system, valueSetUrl, fhirVersion);
+      const enforcedTwoPhaseResult = this.getEnforcedTwoPhaseResult(twoPhaseLookup);
+      if (enforcedTwoPhaseResult !== undefined) {
+        return this.finishTwoPhaseLookup(twoPhaseLookup, enforcedTwoPhaseResult, { code, system, valueSetUrl });
+      }
+
       const expandedCodes = await this.getExpandedValueSet(valueSetUrl, fhirVersion);
 
       const fullCode = system ? `${system}|${code}` : code;
       const isInExpansion = expandedCodes.has(fullCode) || expandedCodes.has(code);
 
       if (isInExpansion) {
-        return true;
+        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
       }
 
       // Try server validation as fallback
@@ -478,7 +557,7 @@ export class ValueSetValidator {
           fhirVersion,
         );
         if (isValidOnServer) {
-          return true;
+          return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
         }
       }
 
@@ -488,17 +567,17 @@ export class ValueSetValidator {
           `[ValueSetValidator] Unsupported include filter in ${valueSetUrl} ` +
           `for '${system ? `${system}|` : ''}${code}' – direct ValueSet membership cannot be verified locally`,
         );
-        return true;
+        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
       }
       if (this.isUnresolvableSnomedExtensionFilterCode(system, code, filteredIncludes)) {
         logger.debug(
           `[ValueSetValidator] SNOMED national-extension code '${code}' in filtered ` +
           `${valueSetUrl} cannot be subsumed by an International Edition terminology server – failing open`,
         );
-        return true;
+        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
       }
 
-      return false;
+      return this.finishTwoPhaseLookup(twoPhaseLookup, false, { code, system, valueSetUrl });
 
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -513,7 +592,9 @@ export class ValueSetValidator {
   clearCache(): void {
     this.cache.clear();
     clearValidateCodeCache();
+    clearCodeSystemValidateCodeCache();
     clearSubsumesCache();
+    this.twoPhaseExpansion.clear();
     logger.debug('[ValueSetValidator] Cache cleared');
   }
 
@@ -525,6 +606,14 @@ export class ValueSetValidator {
     codeSystemCount: number;
     validateCodeResultCount: number;
     subsumesResultCount: number;
+    twoPhaseExpansion?: {
+      lookups: number;
+      hits: number;
+      misses: number;
+      unknown: number;
+      mismatches: number;
+      enforced: number;
+    };
   } {
     const stats = this.cache.getStats();
     return {
@@ -532,6 +621,7 @@ export class ValueSetValidator {
       codeSystemCount: stats.codeSystemCount,
       validateCodeResultCount: getValidateCodeCacheSize(),
       subsumesResultCount: getSubsumesCacheSize(),
+      twoPhaseExpansion: { ...this.twoPhaseStats },
     };
   }
 
@@ -565,6 +655,12 @@ export class ValueSetValidator {
       return validateBCP47(code);
     }
 
+    const twoPhaseLookup = await this.lookupTwoPhaseExpansion(code, system, valueSetUrl, fhirVersion);
+    const enforcedTwoPhaseResult = this.getEnforcedTwoPhaseResult(twoPhaseLookup);
+    if (enforcedTwoPhaseResult !== undefined) {
+      return this.finishTwoPhaseLookup(twoPhaseLookup, enforcedTwoPhaseResult, { code, system, valueSetUrl });
+    }
+
     const expandedCodes = await this.getExpandedValueSet(valueSetUrl, fhirVersion);
 
     const fullCode = system ? `${system}|${code}` : code;
@@ -572,13 +668,13 @@ export class ValueSetValidator {
     // Strict matching for required bindings when system is provided
     if (bindingStrength === 'required' && system) {
       if (expandedCodes.has(fullCode)) {
-        return true;
+        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
       }
       logger.debug(`[ValueSetValidator] Required binding: system|code '${fullCode}' not in expansion.`);
     } else {
       const isInExpansion = expandedCodes.has(fullCode) || expandedCodes.has(code);
       if (isInExpansion) {
-        return true;
+        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
       }
     }
 
@@ -604,7 +700,7 @@ export class ValueSetValidator {
         fhirVersion,
       );
       if (isValidOnServer) {
-        return true;
+        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
       }
     }
 
@@ -621,7 +717,7 @@ export class ValueSetValidator {
         `[ValueSetValidator] Unsupported include filter in ${valueSetUrl} ` +
         `for '${system ? `${system}|` : ''}${code}' – skipping non-required binding check`,
       );
-      return true;
+      return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
     }
     if (
       bindingStrength !== 'required'
@@ -631,7 +727,7 @@ export class ValueSetValidator {
         `[ValueSetValidator] SNOMED national-extension code '${code}' in filtered ` +
         `${valueSetUrl} cannot be subsumed by an International Edition terminology server – skipping non-required binding check`,
       );
-      return true;
+      return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
     }
 
     // ValueSet could not be expanded (e.g., German content not available on public servers).
@@ -639,10 +735,10 @@ export class ValueSetValidator {
     // when terminology servers simply don't carry the relevant content.
     if (expandedCodes.size === 0) {
       logger.debug(`[ValueSetValidator] Empty expansion for ${valueSetUrl} – skipping binding check for '${code}'`);
-      return true;
+      return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
     }
 
-    return false;
+    return this.finishTwoPhaseLookup(twoPhaseLookup, false, { code, system, valueSetUrl });
   }
 
   private async getExpandedValueSet(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<Set<string>> {

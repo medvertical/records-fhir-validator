@@ -5,7 +5,7 @@
  * Regression test for the bug where the multi-aspect batch validator
  * early-returned with a single `profile-not-found` info issue when the
  * declared profile URL couldn't be resolved. All other aspects (structural,
- * invariant, reference, metadata, customRule, terminology) were skipped,
+ * invariant, reference, metadata, custom_rule, terminology) were skipped,
  * which meant a typo in `meta.profile` silently suppressed real validation
  * errors.
  *
@@ -35,6 +35,7 @@ vi.mock('../profile-loader-utils', () => ({
     timestamp: new Date(),
     details: { profile: profileUrl },
   }),
+  createProfileResourceTypeMismatchIssue: vi.fn(),
 }));
 
 vi.mock('../validators/deep-profile-validator', () => ({

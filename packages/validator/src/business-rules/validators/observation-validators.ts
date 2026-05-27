@@ -48,7 +48,7 @@ export async function validateObservationValueRange(resource: any, resourceType:
         if (value < 50 || value > 300) {
           issues.push({
             id: `observation-blood-pressure-range-${Date.now()}`,
-            aspect: 'business-rules',
+            aspect: 'invariant',
             severity: 'warning',
             code: 'value-out-of-range',
             message: `Blood pressure value ${value} ${unit} is outside normal range (50-300 mmHg)`,
@@ -75,7 +75,7 @@ export async function validateObservationValueRange(resource: any, resourceType:
         if (value < 30 || value > 300) {
           issues.push({
             id: `observation-heart-rate-range-${Date.now()}`,
-            aspect: 'business-rules',
+            aspect: 'invariant',
             severity: 'warning',
             code: 'value-out-of-range',
             message: `Heart rate value ${value} ${unit} is outside normal range (30-300 /min)`,
@@ -102,7 +102,7 @@ export async function validateObservationValueRange(resource: any, resourceType:
         if (value < 25 || value > 45) {
           issues.push({
             id: `observation-temperature-range-${Date.now()}`,
-            aspect: 'business-rules',
+            aspect: 'invariant',
             severity: 'warning',
             code: 'value-out-of-range',
             message: `Temperature value ${value} ${unit} is outside normal range (25-45°C)`,
@@ -128,7 +128,7 @@ export async function validateObservationValueRange(resource: any, resourceType:
       else if (value < 0 && unit !== 'kg' && unit !== 'g' && unit !== 'mg') { // Negative values (except weights)
         issues.push({
           id: `observation-negative-value-${Date.now()}`,
-          aspect: 'business-rules',
+          aspect: 'invariant',
           severity: 'warning',
           code: 'negative-value',
           message: `Observation value ${value} ${unit} is negative`,
@@ -168,7 +168,7 @@ export async function validateObservationEffectiveDate(resource: any, resourceTy
     if (!effectiveDateTime) {
       issues.push({
         id: `observation-invalid-effective-date-${Date.now()}`,
-        aspect: 'business-rules',
+        aspect: 'invariant',
         severity: 'error',
         code: 'invalid-effective-date',
         message: `Invalid effective date format: ${effectiveDate}`,
@@ -195,7 +195,7 @@ export async function validateObservationEffectiveDate(resource: any, resourceTy
     if (daysDiff < -1) { // Allow 1 day in future for rounding
       issues.push({
         id: `observation-future-effective-date-${Date.now()}`,
-        aspect: 'business-rules',
+        aspect: 'invariant',
         severity: 'warning',
         code: 'future-effective-date',
         message: `Observation effective date is in the future: ${effectiveDate}`,
@@ -229,7 +229,7 @@ export async function validateObservationStatusValueConsistency(resource: any, r
   if (resource.status === 'final' && !hasValue) {
     issues.push({
       id: `observation-final-no-value-${Date.now()}`,
-      aspect: 'business-rules',
+      aspect: 'invariant',
       severity: 'warning',
       code: 'final-status-no-value',
       message: 'Observation has final status but no value',

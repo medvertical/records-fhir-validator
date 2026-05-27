@@ -16,7 +16,7 @@ export type {
     BundleEntry,
     BundleReferenceResolutionResult,
     BundleValidationResult,
-} from './bundle-reference-resolver';
+} from './bundle-reference-types';
 
 // Lower-level validators / helpers for callers that compose the
 // reference subsystem at a finer grain than `ReferenceValidator`.

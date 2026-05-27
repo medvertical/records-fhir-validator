@@ -144,7 +144,7 @@ export interface ValidationMessageGroupDTO {
     serverId?: number; // Server ID (for single-server queries, or first seen for multi-server)
     resourceType?: string; // Primary resource type for this issue group
     resourceTypeCounts?: Record<string, number>; // Per-type resource counts (e.g. { Patient: 5, Encounter: 3 })
-    validationEngineVersion?: string; // Engine version observed for the affected resource/aspect results
+    validationRulesetVersion?: string; // Ruleset version observed for the affected resource/aspect results
 }
 
 /**
@@ -181,7 +181,7 @@ export interface ResourceMessagesDTO {
             text: string;
             signature: string;
             createdAt: Date;
-            validationEngineVersion?: string;
+            validationRulesetVersion?: string;
         }[];
     }[];
 }
@@ -194,15 +194,16 @@ export interface ResourceMessagesDTO {
  * Settings snapshot for validation (canonical format)
  */
 export interface ValidationSettingsSnapshot {
+    [key: string]: any; // Allow additional settings
     aspects: {
-        structural: { enabled: boolean; severity: 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
-        profile: { enabled: boolean; severity: 'warning' | 'information'; timeoutMs: number; engine?: string };
-        terminology: { enabled: boolean; severity: 'warning' | 'information'; timeoutMs: number; engine?: string };
-        reference: { enabled: boolean; severity: 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
-        invariant: { enabled: boolean; severity: 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
-        customRule: { enabled: boolean; severity: 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
-        metadata: { enabled: boolean; severity: 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
-        anomaly: { enabled: boolean; severity: 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
+        structural: { enabled: boolean; severity: 'inherit' | 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
+        profile: { enabled: boolean; severity: 'inherit' | 'warning' | 'information'; timeoutMs: number; engine?: string };
+        terminology: { enabled: boolean; severity: 'inherit' | 'warning' | 'information'; timeoutMs: number; engine?: string };
+        reference: { enabled: boolean; severity: 'inherit' | 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
+        invariant: { enabled: boolean; severity: 'inherit' | 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
+        custom_rule: { enabled: boolean; severity: 'inherit' | 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
+        metadata: { enabled: boolean; severity: 'inherit' | 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
+        anomaly: { enabled: boolean; severity: 'inherit' | 'error' | 'warning' | 'information'; timeoutMs: number; engine?: string };
     };
     // Additional settings
     validationStrictness?: 'compatibility' | 'standard' | 'strict';
@@ -211,7 +212,6 @@ export interface ValidationSettingsSnapshot {
         enabled: boolean;
         timeout?: number;
     };
-    [key: string]: any; // Allow additional settings
 }
 
 // ============================================================================

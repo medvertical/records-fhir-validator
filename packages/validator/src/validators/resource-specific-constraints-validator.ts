@@ -201,10 +201,10 @@ export class ResourceSpecificConstraintsValidator {
         // timezone-shift bugs produce future dates in real customer data.
         //
         // aspectOverride='invariant' is necessary because the code's
-        // metadata declares aspect='customRule' but this validator runs
+        // metadata declares aspect='custom_rule' but this validator runs
         // inside the invariant aspect group (see multi-aspect-validate-
         // callback.ts). Without the override the issue ends up in the
-        // wrong bucket and gets filtered out when customRule execution
+        // wrong bucket and gets filtered out when custom_rule execution
         // is disabled by the caller's settings.
         if (typeof resource.birthDate === 'string' && resource.birthDate.length > 0) {
             const bd = new Date(resource.birthDate);

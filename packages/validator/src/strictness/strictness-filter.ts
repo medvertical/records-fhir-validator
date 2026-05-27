@@ -22,7 +22,7 @@ export type ValidationStrictness = 'compatibility' | 'standard' | 'strict';
 /**
  * Resolve the strictness level and per-aspect severity-cap lookup from
  * a settings object. Centralises the cast-and-default dance so both the
- * single-aspect engine (`validation-engine-per-aspect`) and the
+ * single-aspect engine (`validation-engine-single-aspect`) and the
  * multi-aspect records-validator callback converge on the same logic.
  */
 export function resolveStrictnessConfig(settings: ValidationSettings | undefined | null): {

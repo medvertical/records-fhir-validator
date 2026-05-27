@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { buildMultiAspectValidateCallback } from '../multi-aspect-validate-callback';
+import { appendBundleEntryValidationResults } from '../multi-aspect-bundle-entry-validation';
 import { loadProfileOrBase } from '../profile-loader-utils';
 import type { ValidationIssue } from '../../types';
 
@@ -37,6 +38,7 @@ vi.mock('../profile-loader-utils', () => ({
     usedBaseFallback: false,
   })),
   createProfileFallbackIssue: vi.fn(),
+  createProfileResourceTypeMismatchIssue: vi.fn(),
 }));
 
 vi.mock('../validators/deep-profile-validator', () => ({
@@ -126,6 +128,10 @@ function makeDeps(options: {
 }
 
 describe('multi-aspect-validate-callback — Bundle entry resources', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('validates embedded entry resources and rewrites their issue paths under the parent Bundle', async () => {
     const callback = buildMultiAspectValidateCallback(
       makeDeps(),
@@ -173,6 +179,43 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
       undefined,
       undefined,
     );
+  });
+
+  it('honors configured embedded Bundle entry validation concurrency', async () => {
+    vi.stubEnv('VALIDATION_BUNDLE_ENTRY_CONCURRENCY', '2');
+
+    let inFlight = 0;
+    let peakConcurrency = 0;
+
+    await appendBundleEntryValidationResults(
+      {
+        resourceType: 'Bundle',
+        entry: Array.from({ length: 5 }, (_, index) => ({
+          resource: {
+            resourceType: 'Observation',
+            id: `obs-${index}`,
+          },
+        })),
+      },
+      'R4',
+      0,
+      async () => {
+        inFlight++;
+        peakConcurrency = Math.max(peakConcurrency, inFlight);
+        await new Promise(resolve => setTimeout(resolve, 5));
+        inFlight--;
+
+        return {
+          isValid: true,
+          aspects: [],
+        };
+      },
+      [],
+      undefined,
+      issues => issues,
+    );
+
+    expect(peakConcurrency).toBe(2);
   });
 
   it('does not turn display mismatches into Composition targetProfile match failures', async () => {

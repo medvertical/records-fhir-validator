@@ -6,6 +6,7 @@ import type { StructureDefinitionLoader } from './structure-definition-loader';
 import type { SnapshotGenerator } from './snapshot-generator';
 import {
   createProfileFallbackIssue,
+  createProfileResourceTypeMismatchIssue,
   loadProfileOrBase,
   type FhirClientLike,
 } from './profile-loader-utils';
@@ -81,9 +82,15 @@ export async function validateRecordsResource(
       )];
     }
 
-    const profileFallbackIssue: ValidationIssue | null = loadResult.usedBaseFallback
-      ? createProfileFallbackIssue(declaredProfileUrl, resource.resourceType)
-      : null;
+    const profileFallbackIssue: ValidationIssue | null = loadResult.incompatibleProfileType
+      ? createProfileResourceTypeMismatchIssue(
+        declaredProfileUrl,
+        resource.resourceType,
+        loadResult.incompatibleProfileType,
+      )
+      : loadResult.usedBaseFallback
+        ? createProfileFallbackIssue(declaredProfileUrl, resource.resourceType)
+        : null;
 
     const issues = await collectSingleResourceValidationIssues(
       {

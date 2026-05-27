@@ -5,7 +5,7 @@
  * Regression test for the bug where `validationStrictness='compatibility'`
  * was silently dropped in the records-validator multi-aspect batch path.
  *
- * The single-aspect `validation-engine-per-aspect.ts` correctly invoked
+ * The single-aspect `validation-engine-single-aspect.ts` correctly invoked
  * `applyStrictnessSeverity`. The multi-aspect `multi-aspect-validate-callback.ts`
  * did not, so the execution path used by `consolidated-validation-service`
  * (when `useRecordsMultiAspect === true`, which is the default) ignored
@@ -40,6 +40,7 @@ vi.mock('../profile-loader-utils', () => ({
     timestamp: new Date(),
     details: { profile: profileUrl },
   }),
+  createProfileResourceTypeMismatchIssue: vi.fn(),
 }));
 
 // Mock auxiliary validators — they run in addition to the executor issues,

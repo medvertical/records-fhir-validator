@@ -10,10 +10,16 @@ interface SubsumesCacheEntry {
     cachedAt: number;
 }
 
+interface CodeSystemValidateCodeCacheEntry {
+    result: unknown;
+    cachedAt: number;
+}
+
 const CACHE_TTL_MS = 15 * 60 * 1000;
 const MAX_CACHE_SIZE = 5000;
 const validateCodeCache = new Map<string, ValidateCodeCacheEntry>();
 const subsumesCache = new Map<string, SubsumesCacheEntry>();
+const codeSystemValidateCodeCache = new Map<string, CodeSystemValidateCodeCacheEntry>();
 
 export function makeValidateCodeCacheKey(
     serverUrl: string,
@@ -103,4 +109,37 @@ export function clearSubsumesCache(): void {
 
 export function getSubsumesCacheSize(): number {
     return subsumesCache.size;
+}
+
+export function makeCodeSystemValidateCodeCacheKey(
+    serverUrl: string,
+    system: string,
+    code: string,
+    display?: string,
+): string {
+    return `${serverUrl}|${system}|${code}|${display ?? ''}`;
+}
+
+export function getFromCodeSystemValidateCodeCache<T>(key: string): T | undefined {
+    const entry = codeSystemValidateCodeCache.get(key);
+    if (!entry) return undefined;
+    if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+        codeSystemValidateCodeCache.delete(key);
+        return undefined;
+    }
+    codeSystemValidateCodeCache.delete(key);
+    codeSystemValidateCodeCache.set(key, entry);
+    return entry.result as T;
+}
+
+export function storeInCodeSystemValidateCodeCache(key: string, result: unknown): void {
+    if (codeSystemValidateCodeCache.size >= MAX_CACHE_SIZE) {
+        const oldest = codeSystemValidateCodeCache.keys().next().value;
+        if (oldest) codeSystemValidateCodeCache.delete(oldest);
+    }
+    codeSystemValidateCodeCache.set(key, { result, cachedAt: Date.now() });
+}
+
+export function clearCodeSystemValidateCodeCache(): void {
+    codeSystemValidateCodeCache.clear();
 }
