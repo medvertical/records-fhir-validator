@@ -15,10 +15,10 @@ function isPreReleaseVersion(version: string | undefined): boolean {
 }
 
 function allowsUnversionedPreRelease(targetUrl: string): boolean {
-  // The EHDS EPS package currently publishes the agreed test IG as
-  // 1.0.0-xtehr. ART-DECOR resources declare unversioned canonicals, so
-  // rejecting that local package would silently fall back to base FHIR and
-  // skip the EPS slice rules we explicitly need to validate.
+  // EHDS EPS preview/reference packages use prerelease labels such as
+  // 1.0.0-alpha and 1.0.0-xtehr. ART-DECOR resources declare unversioned
+  // canonicals, so rejecting those local packages would silently fall back to
+  // base FHIR and skip the EPS slice rules we explicitly need to validate.
   return targetUrl.includes('hl7.eu/fhir/eps');
 }
 

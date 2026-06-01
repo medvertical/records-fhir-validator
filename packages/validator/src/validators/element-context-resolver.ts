@@ -14,6 +14,7 @@
  */
 
 import { logger as _logger } from '../logger';
+import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
 
 // ============================================================================
 // Types
@@ -90,17 +91,26 @@ export class ElementContextResolver {
             const baseName = segment.slice(0, -3);
             // Find matching property
             for (const key of Object.keys(current)) {
-                if (key.startsWith(baseName) && key !== baseName) {
+                if (key.startsWith(baseName) && key !== baseName && !key.startsWith('_')) {
                     actualSegment = key;
                     value = current[key];
                     break;
                 }
             }
             if (value === undefined) {
+                const sidecarKey = Object.keys(current).find(
+                    key => key.startsWith(`_${baseName}`) && key.length > baseName.length + 1
+                );
+                if (sidecarKey) {
+                    actualSegment = sidecarKey.slice(1);
+                    value = current[sidecarKey];
+                }
+            }
+            if (value === undefined) {
                 return; // Choice type not present
             }
         } else {
-            value = current[segment];
+            value = resolveFhirSegmentValue(current, segment);
             if (value === undefined) {
                 return; // Element not present
             }

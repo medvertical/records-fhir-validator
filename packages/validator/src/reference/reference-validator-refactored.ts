@@ -28,7 +28,7 @@
 import type { ValidationResult, ValidationSettings } from '@records-fhir/validation-types';
 import type { IReferenceValidator, ValidationContext, ValidationIssue } from '../types';
 import { addR6WarningIfNeeded } from '../utils/r6-support-warnings';
-import { ReferenceTypeExtractor } from './reference-type-extractor';
+import { parseReference, ReferenceTypeExtractor } from './reference-type-extractor';
 import { getReferenceTypeConstraintValidator } from './reference-type-constraint-validator';
 import { getContainedReferenceResolver } from './contained-reference-resolver';
 import { getBundleReferenceResolver } from './bundle-reference-resolver';
@@ -38,7 +38,6 @@ import { getVersionSpecificReferenceValidator } from './version-specific-referen
 import { getCanonicalReferenceValidator } from './canonical-reference-validator';
 import { getBatchedReferenceChecker } from './batched-reference-checker';
 import { extractReferences } from './reference-format-validator';
-import { parseReference } from './reference-type-extractor';
 import { validateContainedReferenceIssues } from './reference-contained-validation';
 import { validateExtractedReferences } from './reference-extracted-validation';
 import {

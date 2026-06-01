@@ -6,6 +6,7 @@
  */
 
 import type { ElementDefinition } from '../structure-definition-types';
+import { resolveFhirSegmentValue } from '../fhir-primitive-sidecar';
 
 // ============================================================================
 // Primitive Type Checking
@@ -47,13 +48,7 @@ export function getDirectValue(resource: any, path: string): any {
         if (current === undefined || current === null) {
             return undefined;
         }
-        let value = current[part];
-        // Handle FHIR choice types (e.g. value[x] → valueCoding, valueString)
-        if (value === undefined && part.endsWith('[x]') && typeof current === 'object') {
-            const prefix = part.slice(0, -3);
-            const actualKey = Object.keys(current).find(k => k.startsWith(prefix) && k !== prefix);
-            if (actualKey) value = current[actualKey];
-        }
+        const value = resolveFhirSegmentValue(current, part);
         current = value;
         if (current === undefined) {
             return undefined;
@@ -104,13 +99,7 @@ export function getNestedValue(obj: any, path: string): any {
             }
         } else {
             // Regular object property access
-            let value = current[part];
-            // Handle FHIR choice types (e.g. value[x] → valueCoding, valueString)
-            if (value === undefined && part.endsWith('[x]') && typeof current === 'object') {
-                const prefix = part.slice(0, -3);
-                const actualKey = Object.keys(current).find(k => k.startsWith(prefix) && k !== prefix);
-                if (actualKey) value = current[actualKey];
-            }
+            const value = resolveFhirSegmentValue(current, part);
             current = value;
         }
 

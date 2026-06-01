@@ -38,6 +38,8 @@ import { applyStrictnessSeverity, resolveStrictnessConfig } from '../strictness'
 import { applyAdvisorRules, type AdvisorRule } from '../advisor';
 import { createBundleReferenceResolver } from './multi-aspect-bundle-reference-resolver';
 import { appendBundleEntryValidationResults } from './multi-aspect-bundle-entry-validation';
+import { validateReferenceTargetProfileConformance } from './multi-aspect-target-profile-conformance';
+import { ReferenceTargetValidator } from '../validators/reference-target-validator';
 import type { AspectResult, MultiAspectValidateResult, ValidateOneFn } from './multi-aspect-types';
 
 interface MultiAspectDeps {
@@ -57,6 +59,9 @@ interface MultiAspectDeps {
 }
 
 const BUNDLE_ENTRY_MAX_DEPTH = 3;
+
+// Stateless enumerator for the opt-in target-profile-conformance pass.
+const targetProfileConformanceEnumerator = new ReferenceTargetValidator();
 
 /**
  * Builds the validateResource callback for multi-aspect batch validation.
@@ -85,6 +90,7 @@ export function buildMultiAspectValidateCallback(
     fhirVersion: 'R4' | 'R5' | 'R6',
     recursionDepth: number,
     enclosingBundle?: Record<string, unknown>,
+    skipTargetProfileConformance?: boolean,
   ) => {
     const res = resource as Record<string, unknown>;
     const collectedAspects: AspectResult[] = [];
@@ -254,13 +260,31 @@ export function buildMultiAspectValidateCallback(
     }
 
     if (aspects.includes('reference')) {
-      parallelAspects.push(runAspect('reference', () =>
-        deps.referenceExecutor.validate({
+      const wantsTargetProfileConformance =
+        !skipTargetProfileConformance &&
+        (typedSettings?.recursiveReferenceValidation as any)?.validateTargetProfiles === true &&
+        !!ctx.referenceResolver;
+
+      parallelAspects.push(runAspect('reference', async () => {
+        const referenceIssues = await deps.referenceExecutor.validate({
           resource: ctx.resource,
           fhirVersion: ctx.fhirVersion,
           settings: settings as ValidationSettings | undefined,
-        })
-      ));
+        });
+        if (!wantsTargetProfileConformance) return referenceIssues;
+
+        const conformanceIssues = await validateReferenceTargetProfileConformance({
+          resource: ctx.resource,
+          structureDef: ctx.structureDef,
+          referenceTargetValidator: targetProfileConformanceEnumerator,
+          resolveReference: ctx.referenceResolver ?? undefined,
+          validateProfile: async (target, profile) => {
+            const result = await validateOne(target, profile, ctx.fhirVersion, recursionDepth + 1, enclosingBundle, true);
+            return result.aspects.flatMap(aspect => aspect.issues);
+          },
+        });
+        return [...referenceIssues, ...conformanceIssues];
+      }));
     }
 
     if (aspects.includes('invariant')) {

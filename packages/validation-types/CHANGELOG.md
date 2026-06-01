@@ -11,6 +11,19 @@ captures changes that affect type-package consumers directly.
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-05-28
+
+Released alongside `@records-fhir/validator` 0.1.10.
+
+### Surface
+
+- Normalized profile source settings and defaults used by the validator runtime
+  and UI settings snapshots.
+- Kept the current EPS preview package visible in the default package source
+  set while preserving the canonical xTeHR reference.
+- Updated schema coverage so downstream consumers can validate the same
+  settings shape used by the restored HL7 and MII parity gates.
+
 ## [0.1.3] — 2026-05-26
 
 Released alongside `@records-fhir/validator` 0.1.9.

@@ -18,9 +18,8 @@
  * and will be deprecated in a future release.
  */
 
-import type { ValidationIssue } from '../types';
+import type { ValidationContext, ValidationIssue } from '../types';
 import type { ValidationResult } from '@records-fhir/validation-types';
-import type { ValidationContext } from '../types';
 /**
  * Structural shape of the host's HAPI validation coordinator. The
  * full implementation lives server-side and depends on the HAPI
@@ -382,4 +381,3 @@ export class MetadataValidator {
     return issues;
   }
 }
-

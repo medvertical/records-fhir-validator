@@ -36,7 +36,8 @@ describe('BestPracticeValidator Observation rules', () => {
 
     expect(issues).toContainEqual(expect.objectContaining({
       code: 'best-practice-missing-performer',
-      path: 'Observation',
+      message: 'All Observations should have a `performer`',
+      path: 'Observation.performer',
     }));
     expect(issues.find(issue => issue.code === 'best-practice-observation-method')).toBeUndefined();
     expect(issues.find(issue => issue.code === 'best-practice-observation-interpretation')).toBeUndefined();

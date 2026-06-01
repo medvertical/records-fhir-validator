@@ -78,7 +78,30 @@ export interface TerminologyResolutionConfig {
         mode: 'shadow' | 'enforce';
         logMismatches?: boolean;
     };
+    /**
+     * When true, a binding that cannot be verified locally and is not
+     * confirmed by a terminology server emits a `terminology-binding-unverified`
+     * informational issue instead of silently failing open. Default off —
+     * precision-neutral until explicitly enabled (gap P-3 step b).
+     */
+    reportUnverifiedBindings?: boolean;
+    /**
+     * Strict terminology policy (gap P-3 step c): when true, an unverifiable
+     * *required* binding is raised to `warning` severity instead of the default
+     * `information`. Implies `reportUnverifiedBindings`. Extensible/preferred
+     * bindings stay informational. Default off.
+     */
+    strictUnverifiedRequiredBindings?: boolean;
 }
+
+/**
+ * Tri-state outcome of a code-vs-binding check.
+ *
+ * `valid`/`invalid` are authoritative. `unverified` means the code is not
+ * known to be wrong but could not be confirmed (no local expansion, no
+ * terminology server). Callers fail open on `unverified` but may surface it.
+ */
+export type CodeBindingOutcome = 'valid' | 'invalid' | 'unverified';
 
 // ============================================================================
 // FHIR Resources

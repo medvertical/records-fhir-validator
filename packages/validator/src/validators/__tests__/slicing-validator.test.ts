@@ -4,10 +4,54 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { SlicingValidator } from '../slicing-validator';
+import { emitMatchedSliceChildIssues } from '../slicing-content-rules';
 import type { StructureDefinition } from '../../core/structure-definition-types';
 
 describe('SlicingValidator', () => {
   const validator = new SlicingValidator();
+
+  it('does not report a required primitive child missing when only its sidecar is present', () => {
+    const profile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/StructureDefinition/patient',
+      name: 'PatientProfile',
+      status: 'draft',
+      kind: 'resource',
+      abstract: false,
+      type: 'Patient',
+      snapshot: {
+        element: [
+          {
+            id: 'Patient.identifier:MaskierterVersichertenIdentifer',
+            path: 'Patient.identifier',
+            sliceName: 'MaskierterVersichertenIdentifer',
+          },
+          {
+            id: 'Patient.identifier:MaskierterVersichertenIdentifer.value',
+            path: 'Patient.identifier.value',
+            min: 1,
+          },
+        ],
+      },
+    } as any;
+
+    const issues = emitMatchedSliceChildIssues(
+      {
+        system: 'http://fhir.de/sid/gkv/kvid-10',
+        _value: {
+          extension: [{
+            url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+            valueCode: 'masked',
+          }],
+        },
+      },
+      { path: 'Patient.identifier', sliceName: 'MaskierterVersichertenIdentifer' } as any,
+      'Patient.identifier[0]',
+      profile,
+    );
+
+    expect(issues).toHaveLength(0);
+  });
 
   it('matches value $this slices that constrain the whole Coding with patternCoding', async () => {
     const bodyTemperatureProfile: StructureDefinition = {

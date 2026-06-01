@@ -20,4 +20,6 @@ export type ValidateOneFn = (
   fhirVersion: 'R4' | 'R5' | 'R6',
   recursionDepth: number,
   enclosingBundle?: Record<string, unknown>,
+  /** Suppress the reference target-profile-conformance pass to prevent cycles. */
+  skipTargetProfileConformance?: boolean,
 ) => Promise<MultiAspectValidateResult>;

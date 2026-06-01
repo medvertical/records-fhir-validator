@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dedupeIssues } from '../validation-utils';
+import { dedupeIssues, getValueAtPath } from '../validation-utils';
 import type { ValidationIssue } from '../../types';
 
 function issue(overrides: Partial<ValidationIssue>): ValidationIssue {
@@ -324,5 +324,48 @@ describe('dedupeIssues', () => {
 
     expect(deduped).toHaveLength(1);
     expect(deduped[0].code).toBe('profile-extension-min-cardinality');
+  });
+});
+
+describe('getValueAtPath', () => {
+  it('treats primitive sidecar extensions as present values', () => {
+    const patient = {
+      resourceType: 'Patient',
+      identifier: [{
+        system: 'http://fhir.de/sid/gkv/kvid-10',
+        _value: {
+          extension: [{
+            url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+            valueCode: 'masked',
+          }],
+        },
+      }],
+    };
+
+    expect(getValueAtPath(patient, 'Patient.identifier.value')).toEqual({
+      extension: [{
+        url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+        valueCode: 'masked',
+      }],
+    });
+  });
+
+  it('resolves primitive choice sidecars for value[x] paths', () => {
+    const observation = {
+      resourceType: 'Observation',
+      _valueString: {
+        extension: [{
+          url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+          valueCode: 'unknown',
+        }],
+      },
+    };
+
+    expect(getValueAtPath(observation, 'Observation.value[x]')).toEqual({
+      extension: [{
+        url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+        valueCode: 'unknown',
+      }],
+    });
   });
 });

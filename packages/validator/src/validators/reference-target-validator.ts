@@ -16,10 +16,17 @@
  *   - Absolute references (`https://fhir.example.com/Patient/123`) —
  *     extract type from the penultimate segment.
  *
- * Deferred to Phase B.2:
- *   - Contained references (`#id`) — require contained-resource
- *     lookup.
- *   - URN references (`urn:uuid:...`) — require Bundle.entry resolution.
+ * Phase B.2 (partial):
+ *   - Contained references (`#id`, `#`) — resolved against
+ *     `resource.contained` and checked with the same base-type logic.
+ *   - URN (`urn:uuid:`) / cross-bundle references — resolved via an
+ *     optional reference resolver (the enclosing Bundle's fullUrl/relative
+ *     index) so their target type can be checked too.
+ *
+ * Still deferred:
+ *   - Full targetProfile *profile* conformance — only the base resource
+ *     type is enforced, not that the target conforms to the named profile
+ *     (needs a recursive profile-validation pass).
  *   - Logical references (`identifier` only, no `reference`) — no
  *     target-type check is meaningful.
  */
@@ -81,6 +88,9 @@ const KNOWN_RESOURCE_TYPES = new Set([
 /** Callback to resolve a profile canonical URL to its base resource type from the SD cache */
 export type ProfileTypeResolver = (canonicalUrl: string) => string | null;
 
+/** Callback to resolve a reference string to its target resource (contained / bundle entry). */
+export type ReferenceResolver = (reference: string) => any;
+
 function extractResourceTypeFromCanonical(canonical: string, profileTypeResolver?: ProfileTypeResolver): string | null {
   // Canonical form: http://hl7.org/fhir/StructureDefinition/<ResourceType>
   // Profile canonicals may have a version suffix (|4.0.1).
@@ -105,6 +115,56 @@ function extractTargetTypeFromReference(reference: string): string | null {
   const abs = reference.match(RESOURCE_URL_RE);
   if (abs) return abs[1];
   return null; // contained / urn / logical — handled separately
+}
+
+/**
+ * A targetProfile is "profiled" (worth a conformance pass) when it does not
+ * name a bare core resource type — i.e. its last segment is not a known FHIR
+ * resource type (`.../StructureDefinition/us-core-patient`, not `.../Patient`).
+ */
+function isProfiledCanonical(canonical: string): boolean {
+  if (UNRESTRICTED_TARGET_CANONICALS.has(canonical)) return false;
+  const stripped = canonical.split('|')[0];
+  const last = stripped.match(/\/([A-Za-z][A-Za-z0-9-]*)$/)?.[1];
+  return last !== undefined && !KNOWN_RESOURCE_TYPES.has(last);
+}
+
+/** A reference hit together with the profiled targetProfiles its element declares. */
+export interface ProfiledTargetHit {
+  path: string;
+  reference: string;
+  profiles: string[];
+}
+
+/**
+ * Resolve a reference's target type via an injected resolver (bundle fullUrl /
+ * relative / contained index). Returns null when no resolver is supplied or the
+ * reference does not resolve — fail open.
+ */
+function resolveTargetTypeViaResolver(
+  reference: string,
+  resolveReference?: ReferenceResolver,
+): string | null {
+  if (!resolveReference) return null;
+  const target = resolveReference(reference);
+  return target && typeof target.resourceType === 'string' ? target.resourceType : null;
+}
+
+/**
+ * Resolve the resource type of a contained reference against the container's
+ * `contained` array. `#` (bare fragment) refers to the container resource
+ * itself. Returns null when the id cannot be resolved — fail open, never flag
+ * a reference we cannot positively type.
+ */
+function resolveContainedTargetType(reference: string, rootResource: any): string | null {
+  if (!reference.startsWith('#')) return null;
+  const id = reference.slice(1);
+  if (id === '') {
+    return typeof rootResource?.resourceType === 'string' ? rootResource.resourceType : null;
+  }
+  const contained = Array.isArray(rootResource?.contained) ? rootResource.contained : [];
+  const match = contained.find((c: any) => c && c.id === id);
+  return match && typeof match.resourceType === 'string' ? match.resourceType : null;
 }
 
 /**
@@ -167,7 +227,11 @@ export class ReferenceTargetValidator {
    * Validate that every Reference in `resource` points at a resource
    * type the StructureDefinition permits for that path.
    */
-  validate(resource: any, structureDef: StructureDefinition): ValidationIssue[] {
+  validate(
+    resource: any,
+    structureDef: StructureDefinition,
+    resolveReference?: ReferenceResolver,
+  ): ValidationIssue[] {
     const issues: ValidationIssue[] = [];
     if (!structureDef?.snapshot?.element) return issues;
 
@@ -190,9 +254,12 @@ export class ReferenceTargetValidator {
       // Walk the resource tree to find all reference(s) at that path.
       const hits = this.collectReferencesAtPath(resource, elementPath);
       for (const hit of hits) {
-        const targetType = extractTargetTypeFromReference(hit.reference);
+        const targetType =
+          extractTargetTypeFromReference(hit.reference) ??
+          resolveTargetTypeViaResolver(hit.reference, resolveReference) ??
+          resolveContainedTargetType(hit.reference, resource);
         if (!targetType) {
-          // Contained / URN / logical — Phase B.2.
+          // Logical / unresolvable reference — no meaningful type check.
           continue;
         }
         if (!allowed.has(targetType)) {
@@ -218,6 +285,33 @@ export class ReferenceTargetValidator {
     }
 
     return issues;
+  }
+
+  /**
+   * Enumerate reference hits whose element declares one or more *profiled*
+   * targetProfiles (e.g. `us-core-patient`, not bare `Patient`). Used by the
+   * opt-in target-profile-conformance pass — base-type-only references are
+   * already covered by {@link validate}.
+   */
+  collectProfiledTargetHits(resource: any, structureDef: StructureDefinition): ProfiledTargetHit[] {
+    const out: ProfiledTargetHit[] = [];
+    for (const el of structureDef.snapshot?.element ?? []) {
+      const referenceTypes = (el.type ?? []).filter(t => t.code === 'Reference');
+      if (referenceTypes.length === 0) continue;
+
+      const profiles = new Set<string>();
+      for (const t of referenceTypes) {
+        for (const canonical of ((t as any).targetProfile as string[] | undefined) ?? []) {
+          if (isProfiledCanonical(canonical)) profiles.add(canonical.split('|')[0]);
+        }
+      }
+      if (profiles.size === 0) continue;
+
+      for (const hit of this.collectReferencesAtPath(resource, el.path)) {
+        out.push({ path: hit.path, reference: hit.reference, profiles: [...profiles] });
+      }
+    }
+    return out;
   }
 
   /**

@@ -115,10 +115,10 @@ function validateUcumCoding(
     aspect: 'terminology',
     severity: 'error',
     code: 'terminology-code-invalid',
-    message: buildInvalidUcumMessage(coding.code, codingPath, result.message),
+    message: buildInvalidUcumMessage(coding.code, codingPath, result.message, result.suggestion),
     path: codingPath,
     timestamp: new Date(),
-    details: buildInvalidUcumIssueDetails(coding.code, codingPath, result.message),
+    details: buildInvalidUcumIssueDetails(coding.code, codingPath, result.message, result.suggestion),
   }];
 }
 

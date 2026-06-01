@@ -1,6 +1,7 @@
 import fhirpath from 'fhirpath';
 
 import { getFhirPathModel } from '../core/fhirpath-context';
+import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite';
 import { logger } from '../logger';
 
 class ExpressionCache {
@@ -21,7 +22,7 @@ class ExpressionCache {
 
         this.misses++;
         try {
-            const compiled = fhirpath.compile(expression, getFhirPathModel(fhirVersion));
+            const compiled = fhirpath.compile(rewriteCollectionTypeOperators(expression), getFhirPathModel(fhirVersion));
 
             if (this.cache.size >= this.maxSize) {
                 const oldestKey = this.cache.keys().next().value;

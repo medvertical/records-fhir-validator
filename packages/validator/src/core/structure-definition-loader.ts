@@ -12,6 +12,7 @@ import { PackageRegistryClient, packageRegistryClient } from '../package/package
 import { logger } from '../logger';
 import type { StructureDefinition } from './structure-definition-types';
 import type { ProfileSourcesConfig } from '../types';
+import { normalizeProfileSourcesConfig } from '@records-fhir/validation-types';
 import { loadFromLocalCache, isRelevantPackage as _isRelevantPackage } from './sd-loader-filesystem';
 import { parseAllowedPackages, isPackageAllowed as _isPackageAllowed } from './sd-loader-package-config';
 import { checkDatabaseCache } from './sd-loader-db-cache';
@@ -74,10 +75,7 @@ export class StructureDefinitionLoader {
     this.cachePath = cachePath;
     this.bundledPath = bundledPath ?? resolveDefaultBundledProfilesPath();
     this.autoDownload = options?.autoDownload ?? (process.env.FHIR_AUTO_DOWNLOAD_PACKAGES === 'true');
-    this.profileSourcesConfig = options?.profileSourcesConfig ?? {
-      simplifier: true,
-      packageRegistry: true
-    };
+    this.profileSourcesConfig = normalizeProfileSourcesConfig(options?.profileSourcesConfig);
     this.allowedPackages = options?.allowedPackages ?? parseAllowedPackages();
     this.packageVersionPins = { ...(options?.packageVersionPins ?? {}) };
     this.packageDownloader = options?.packageDownloader ?? packageDownloader;
@@ -402,10 +400,10 @@ export class StructureDefinitionLoader {
    * Update which remote sources are allowed for profile resolution.
    */
   setProfileSourcesConfig(config: ProfileSourcesConfig): void {
-    this.profileSourcesConfig = config;
+    this.profileSourcesConfig = normalizeProfileSourcesConfig(config);
     logger.info(
       `[SDLoader] Profile sources updated: ` +
-      `Simplifier=${config.simplifier}, Registry=${config.packageRegistry}`
+      `Simplifier=${this.profileSourcesConfig.simplifier}, Registry=${this.profileSourcesConfig.packageRegistry}`
     );
   }
 

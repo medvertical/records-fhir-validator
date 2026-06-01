@@ -5,6 +5,8 @@
  * These functions have zero state dependencies and can be tested in isolation.
  */
 
+import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
+
 export function getValueAtPath(obj: any, path: string): any {
   if (!path || path === '$this') return obj;
 
@@ -20,21 +22,13 @@ export function getValueAtPath(obj: any, path: string): any {
     if (Array.isArray(current)) {
       for (const item of current) {
         if (item == null) continue;
-        const v = item[part];
+        const v = resolveFhirSegmentValue(item, part);
         if (v !== undefined) return v;
       }
       return null;
     }
 
-    let value = current[part];
-
-    if (value === undefined && part.endsWith('[x]')) {
-      const prefix = part.slice(0, -3);
-      const actualKey = Object.keys(current).find(k => k.startsWith(prefix) && k !== part);
-      if (actualKey) value = current[actualKey];
-    }
-
-    current = value;
+    current = resolveFhirSegmentValue(current, part);
   }
 
   return current ?? null;

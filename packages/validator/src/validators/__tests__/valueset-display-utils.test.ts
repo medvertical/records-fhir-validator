@@ -34,4 +34,48 @@ describe('valueset display equivalence', () => {
       { system: 'http://snomed.info/sct' },
     )).toBe(false);
   });
+
+  it('allows HL7 v2 display comments to be omitted from Coding.display', () => {
+    expect(displaysEquivalentForCodeInfo(
+      'Routine appointment - default if not valued',
+      'Routine appointment',
+      { system: 'http://terminology.hl7.org/CodeSystem/v2-0276' },
+    )).toBe(true);
+  });
+
+  it('allows concise LOINC common display names', () => {
+    expect(displaysEquivalentForCodeInfo(
+      'Blood pressure systolic and diastolic',
+      'Blood Pressure',
+      { system: 'http://loinc.org', code: '55284-4' },
+    )).toBe(true);
+    expect(displaysEquivalentForCodeInfo(
+      'Cholesterol in HDL [Mass/volume] in Serum or Plasma',
+      'High Density Lipoprotein Cholesterol',
+      { system: 'http://loinc.org', code: '2085-9' },
+    )).toBe(true);
+    expect(displaysEquivalentForCodeInfo(
+      'Tobacco smoking status',
+      'Tobacco smoking status NHIS',
+      { system: 'http://loinc.org', code: '72166-2' },
+    )).toBe(true);
+    expect(displaysEquivalentForCodeInfo(
+      'Creatinine [Mass/volume] in Blood',
+      'Creatinine',
+      { system: 'http://loinc.org', code: '38483-4' },
+    )).toBe(true);
+    expect(displaysEquivalentForCodeInfo(
+      'Glomerular filtration rate [Volume Rate/Area] in Serum or Plasma by Creatinine-based formula (MDRD)/1.73 sq M',
+      'Estimated Glomerular Filtration Rate',
+      { system: 'http://loinc.org', code: '33914-3' },
+    )).toBe(true);
+  });
+
+  it('does not allow vague one-word LOINC labels for specific multi-token concepts', () => {
+    expect(displaysEquivalentForCodeInfo(
+      'Blood pressure systolic and diastolic',
+      'Blood',
+      { system: 'http://loinc.org', code: '55284-4' },
+    )).toBe(false);
+  });
 });

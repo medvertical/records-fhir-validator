@@ -6,6 +6,7 @@
  */
 
 import type { ValidationIssue } from '../types';
+import { resolveFhirSegmentValue } from './fhir-primitive-sidecar';
 
 /**
  * Helper: Get value at FHIRPath-like path
@@ -33,22 +34,13 @@ export function getValueAtPath(resource: any, path: string): any {
           if (item === undefined || item === null) {
             continue;
           }
-          const value = item[part];
+          const value = resolveFhirSegmentValue(item, part);
           if (value !== undefined) {
             nextValues.push(value);
           }
         }
       } else {
-        let value = current[part];
-
-        // Handle FHIR choice types (e.g. value[x] -> valueQuantity, valueString)
-        if (value === undefined && part.endsWith('[x]')) {
-          const prefix = part.slice(0, -3);
-          const actualKey = Object.keys(current).find(k => k.startsWith(prefix));
-          if (actualKey) {
-            value = current[actualKey];
-          }
-        }
+        const value = resolveFhirSegmentValue(current, part);
 
         if (value !== undefined) {
           nextValues.push(value);

@@ -5,9 +5,7 @@
  * Extracted from validator-engine.ts to comply with global.mdc guidelines.
  */
 
-import type { ValidationIssue } from '../types';
-import type { ValidationAspectType } from '../types';
-import type { ValidationSettings } from '../types';
+import type { ValidationAspectType, ValidationIssue, ValidationSettings } from '../types';
 import type { FhirClientLike } from './profile-loader-utils.js';
 import type { StructureDefinitionLoader } from './structure-definition-loader';
 import type { ProfileCache } from '../cache/profile-cache';

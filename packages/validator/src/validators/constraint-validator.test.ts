@@ -68,6 +68,33 @@ describe('ConstraintValidator', () => {
     expect(issues.find(issue => issue.ruleId === 'con-3')).toBeUndefined();
   });
 
+  it('skips unsupported htmlChecks constraints instead of surfacing engine diagnostics as issues', async () => {
+    const validator = new ConstraintValidator();
+
+    const issues = await validator.validate(
+      {
+        resourceType: 'Patient',
+        text: {
+          status: 'generated',
+          div: '<div xmlns="http://www.w3.org/1999/xhtml">ok</div>',
+        },
+      },
+      [{
+        path: 'Patient.text.div',
+        constraint: [{
+          key: 'txt-1',
+          severity: 'error' as const,
+          human: 'Narrative html checks',
+          expression: 'htmlChecks()',
+        }],
+      }] as any,
+      'http://hl7.org/fhir/StructureDefinition/Patient',
+    );
+
+    expect(issues.find(issue => issue.code === 'profile-constraint-evaluation-error')).toBeUndefined();
+    expect(issues.find(issue => issue.ruleId === 'txt-1')).toBeUndefined();
+  });
+
   it('treats simple ValueSet in-exists constraints as CodeableConcept membership checks', async () => {
     const validator = new ConstraintValidator();
     const valueSetUrl = 'http://hl7.org/fhir/us/core/ValueSet/us-core-condition-category';

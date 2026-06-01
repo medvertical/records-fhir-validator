@@ -83,6 +83,11 @@ export const TerminologyCodes = {
         severity: 'warning',
         description: 'Terminology server failed or timed out while validating the code',
     },
+    'terminology-binding-unverified': {
+        aspect: 'terminology',
+        severity: 'information',
+        description: 'Binding could not be verified — ValueSet not expandable locally and no terminology server confirmed the code',
+    },
 } as const satisfies Record<string, ValidationCodeMetadata>;
 
 export type TerminologyCode = keyof typeof TerminologyCodes;

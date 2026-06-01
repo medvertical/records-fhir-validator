@@ -137,6 +137,7 @@ export {
   createMii2026ValidationSettings,
   HL7_EU_EHDS_2026_PACKAGE_SET,
   HL7_EU_EHDS_2026_PACKAGE_VERSIONS,
+  HL7_EU_EPS_XTEHR_REFERENCE_PACKAGE,
   MII_2026_PACKAGE_SET,
   MII_2026_PACKAGE_VERSIONS,
   type FhirPackagePin,
@@ -152,6 +153,8 @@ export {
 } from './settings-validators';
 
 export {
+  DEFAULT_PROFILE_SOURCES_CONFIG,
+  normalizeProfileSourcesConfig,
   safeParseSettingsUpdate
 } from './settings-schema';
 

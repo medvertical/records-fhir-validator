@@ -85,10 +85,10 @@ export function validateUcumAtPath(
         aspect: 'terminology',
         severity: 'error',
         code: 'terminology-code-invalid',
-        message: buildInvalidUcumMessage(q.code, finalPath, result.message),
+        message: buildInvalidUcumMessage(q.code, finalPath, result.message, result.suggestion),
         path: finalPath,
         timestamp: new Date(),
-        details: buildInvalidUcumIssueDetails(q.code, finalPath, result.message),
+        details: buildInvalidUcumIssueDetails(q.code, finalPath, result.message, result.suggestion),
       });
     }
   }
@@ -124,16 +124,20 @@ const COMMON_UCUM_CORRECTIONS: Record<string, { code: string; display?: string }
 function getUcumSuggestion(
   code: string,
   message: string | undefined,
+  parserSuggestion?: { code: string; display?: string },
 ): { code: string; display?: string } | undefined {
-  return extractUcumSuggestion(message) ?? COMMON_UCUM_CORRECTIONS[code];
+  // Prefer ucum-lhc's own suggestion engine; the static table is a curated
+  // fallback for the handful of corrections it does not propose (gap P-5).
+  return parserSuggestion ?? extractUcumSuggestion(message) ?? COMMON_UCUM_CORRECTIONS[code];
 }
 
 export function buildInvalidUcumIssueDetails(
   code: string,
   fieldPath: string,
   message: string | undefined,
+  parserSuggestion?: { code: string; display?: string },
 ): Record<string, unknown> {
-  const suggestion = getUcumSuggestion(code, message);
+  const suggestion = getUcumSuggestion(code, message, parserSuggestion);
   return {
     system: UCUM_SYSTEM_URL,
     code,
@@ -150,8 +154,9 @@ export function buildInvalidUcumMessage(
   code: string,
   fieldPath: string,
   message: string | undefined,
+  parserSuggestion?: { code: string; display?: string },
 ): string {
-  const suggestion = getUcumSuggestion(code, message);
+  const suggestion = getUcumSuggestion(code, message, parserSuggestion);
   const base = `Invalid UCUM code '${code}' at ${fieldPath}`;
   if (suggestion) {
     const reason = message ? `: ${message}` : '.';

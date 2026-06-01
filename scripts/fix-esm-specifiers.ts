@@ -6,7 +6,6 @@ const TARGET_ROOTS = process.argv.slice(2).length > 0
   ? process.argv.slice(2).map((target) => path.resolve(target))
   : [
   path.resolve("dist/server"),
-  path.resolve("dist/electron"),
 ];
 
 const RELATIVE_IMPORT = /(\bfrom\s+['"])(\.{1,2}\/[^'"]+)(['"])/g;

@@ -116,6 +116,7 @@ export class StructuralExecutor {
           getValueAtPath,
           fhirVersion: fhirVersion || 'R4',
           deps: this.createSnapshotValidationDeps(),
+          resolveReference: ctx.referenceResolver ?? undefined,
         }));
       }
 

@@ -1,10 +1,11 @@
 import type { ValidationIssue } from '../types';
 import type { Binding } from '../core/structure-definition-types';
-import { createBindingViolation } from '../issues';
+import { createBindingViolation, createBindingUnverified } from '../issues';
 import { logger } from '../logger';
 
 import type {
-  TerminologyResolutionConfig
+  TerminologyResolutionConfig,
+  CodeBindingOutcome
 } from './valueset-types';
 import {
   DEFAULT_RESOLUTION_CONFIG,
@@ -311,10 +312,11 @@ export class ValueSetValidator {
     if (!valueSetUrl) return issues;
 
     const validCodeInfos: CodeInfo[] = [];
+    const unverifiedCodeInfos: CodeInfo[] = [];
     const firstCodeInfo = codeInfos[0];
 
     for (const codeInfo of codeInfos) {
-      const isCodeValid = await this.isCodeValidForBinding(
+      const outcome = await this.resolveCodeBindingForBinding(
         codeInfo.code,
         codeInfo.system,
         valueSetUrl,
@@ -322,8 +324,36 @@ export class ValueSetValidator {
         options?.fhirVersion,
       );
 
-      if (isCodeValid) {
+      if (outcome === 'valid') {
         validCodeInfos.push(codeInfo);
+      } else if (outcome === 'unverified') {
+        // Fail open (count as valid for the violation decision below) but
+        // keep a record so the skip can be surfaced as informational.
+        validCodeInfos.push(codeInfo);
+        unverifiedCodeInfos.push(codeInfo);
+      }
+    }
+
+    const strictRequired = this.resolutionConfig.strictUnverifiedRequiredBindings;
+    if (
+      (this.resolutionConfig.reportUnverifiedBindings || strictRequired)
+      && binding.strength !== 'example'
+    ) {
+      // Strict policy raises only unverifiable *required* bindings to warning;
+      // extensible/preferred stay informational (gap P-3 step c).
+      const severityOverride =
+        strictRequired && binding.strength === 'required' ? 'warning' as const : undefined;
+      for (const codeInfo of unverifiedCodeInfos) {
+        issues.push(createBindingUnverified({
+          strength: binding.strength as 'required' | 'extensible' | 'preferred',
+          code: codeInfo.code,
+          system: codeInfo.system,
+          valueSet: valueSetUrl,
+          path: elementPath,
+          resourceType: resourceTypeFromElementPath(elementPath),
+          profile: options?.profileUrl,
+          severityOverride,
+        }));
       }
     }
 
@@ -395,15 +425,30 @@ export class ValueSetValidator {
     bindingStrength: BindingStrength,
     fhirVersion?: FhirVersion,
   ): Promise<boolean> {
+    return (await this.resolveCodeBindingForBinding(code, system, valueSetUrl, bindingStrength, fhirVersion)) !== 'invalid';
+  }
+
+  /**
+   * Tri-state variant of {@link isCodeValidForBinding}. Distinguishes
+   * `unverified` (could not confirm) from `valid`, so callers can surface a
+   * visible informational issue instead of silently failing open (gap P-3).
+   */
+  async resolveCodeBindingForBinding(
+    code: string,
+    system: string | undefined,
+    valueSetUrl: string,
+    bindingStrength: BindingStrength,
+    fhirVersion?: FhirVersion,
+  ): Promise<CodeBindingOutcome> {
     try {
-      return await this.isCodeInValueSetStrict(code, system, valueSetUrl, bindingStrength, fhirVersion);
+      return await this.resolveCodeBinding(code, system, valueSetUrl, bindingStrength, fhirVersion);
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
       if (bindingStrength === 'required') {
         logger.warn(`[ValueSetValidator] Required binding validation failed, treating as invalid: ${err.message}`);
-        return false;
+        return 'invalid';
       }
-      return true;
+      return 'unverified';
     }
   }
 
@@ -426,7 +471,7 @@ export class ValueSetValidator {
     if (!display || !isDisplayMismatchResult(result)) {
       return this.validateInactiveCodeWithFallbackServers(code, system, result, override);
     }
-    if (this.isEquivalentDisplayMismatch(system, display, result)) {
+    if (this.isEquivalentDisplayMismatch(code, system, display, result)) {
       return { valid: true };
     }
 
@@ -435,6 +480,7 @@ export class ValueSetValidator {
   }
 
   private isEquivalentDisplayMismatch(
+    code: string,
     system: string,
     actualDisplay: string,
     result: CodeSystemValidationResult,
@@ -445,7 +491,7 @@ export class ValueSetValidator {
     ];
 
     return expectedDisplays.some(expected =>
-      displaysEquivalentForCodeInfo(expected, actualDisplay, { system }),
+      displaysEquivalentForCodeInfo(expected, actualDisplay, { code, system }),
     );
   }
 
@@ -644,21 +690,29 @@ export class ValueSetValidator {
   // Private Methods
   // -------------------------------------------------------------------------
 
-  private async isCodeInValueSetStrict(
+  /**
+   * Tri-state code-vs-binding check. `valid`/`invalid` are authoritative;
+   * `unverified` means the code is not known to be wrong but could not be
+   * confirmed (no local expansion, terminology-server-only filters, or empty
+   * expansion). Callers fail open on `unverified` but may surface it as an
+   * informational issue (gap P-3).
+   */
+  private async resolveCodeBinding(
     code: string,
     system: string | undefined,
     valueSetUrl: string,
     bindingStrength: BindingStrength,
     fhirVersion?: FhirVersion,
-  ): Promise<boolean> {
+  ): Promise<CodeBindingOutcome> {
     if (isLanguageBinding(valueSetUrl, system)) {
-      return validateBCP47(code);
+      return validateBCP47(code) ? 'valid' : 'invalid';
     }
 
     const twoPhaseLookup = await this.lookupTwoPhaseExpansion(code, system, valueSetUrl, fhirVersion);
     const enforcedTwoPhaseResult = this.getEnforcedTwoPhaseResult(twoPhaseLookup);
     if (enforcedTwoPhaseResult !== undefined) {
-      return this.finishTwoPhaseLookup(twoPhaseLookup, enforcedTwoPhaseResult, { code, system, valueSetUrl });
+      return this.finishTwoPhaseLookup(twoPhaseLookup, enforcedTwoPhaseResult, { code, system, valueSetUrl })
+        ? 'valid' : 'invalid';
     }
 
     const expandedCodes = await this.getExpandedValueSet(valueSetUrl, fhirVersion);
@@ -668,13 +722,13 @@ export class ValueSetValidator {
     // Strict matching for required bindings when system is provided
     if (bindingStrength === 'required' && system) {
       if (expandedCodes.has(fullCode)) {
-        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
+        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl }) ? 'valid' : 'invalid';
       }
       logger.debug(`[ValueSetValidator] Required binding: system|code '${fullCode}' not in expansion.`);
     } else {
       const isInExpansion = expandedCodes.has(fullCode) || expandedCodes.has(code);
       if (isInExpansion) {
-        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
+        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl }) ? 'valid' : 'invalid';
       }
     }
 
@@ -700,7 +754,7 @@ export class ValueSetValidator {
         fhirVersion,
       );
       if (isValidOnServer) {
-        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
+        return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl }) ? 'valid' : 'invalid';
       }
     }
 
@@ -717,7 +771,8 @@ export class ValueSetValidator {
         `[ValueSetValidator] Unsupported include filter in ${valueSetUrl} ` +
         `for '${system ? `${system}|` : ''}${code}' – skipping non-required binding check`,
       );
-      return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
+      this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
+      return 'unverified';
     }
     if (
       bindingStrength !== 'required'
@@ -727,7 +782,8 @@ export class ValueSetValidator {
         `[ValueSetValidator] SNOMED national-extension code '${code}' in filtered ` +
         `${valueSetUrl} cannot be subsumed by an International Edition terminology server – skipping non-required binding check`,
       );
-      return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
+      this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
+      return 'unverified';
     }
 
     // ValueSet could not be expanded (e.g., German content not available on public servers).
@@ -735,10 +791,22 @@ export class ValueSetValidator {
     // when terminology servers simply don't carry the relevant content.
     if (expandedCodes.size === 0) {
       logger.debug(`[ValueSetValidator] Empty expansion for ${valueSetUrl} – skipping binding check for '${code}'`);
-      return this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
+      this.finishTwoPhaseLookup(twoPhaseLookup, true, { code, system, valueSetUrl });
+      return 'unverified';
     }
 
-    return this.finishTwoPhaseLookup(twoPhaseLookup, false, { code, system, valueSetUrl });
+    return this.finishTwoPhaseLookup(twoPhaseLookup, false, { code, system, valueSetUrl }) ? 'valid' : 'invalid';
+  }
+
+  private async isCodeInValueSetStrict(
+    code: string,
+    system: string | undefined,
+    valueSetUrl: string,
+    bindingStrength: BindingStrength,
+    fhirVersion?: FhirVersion,
+  ): Promise<boolean> {
+    // Fail open on `unverified` to preserve the established precision contract.
+    return (await this.resolveCodeBinding(code, system, valueSetUrl, bindingStrength, fhirVersion)) !== 'invalid';
   }
 
   private async getExpandedValueSet(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<Set<string>> {

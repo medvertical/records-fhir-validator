@@ -31,6 +31,11 @@ export const UCUM_SYSTEM_URL = 'http://unitsofmeasure.org';
 interface UcumValidationResult {
   valid: boolean;
   message?: string;
+  /**
+   * Correction suggested by ucum-lhc's own engine for an invalid code
+   * (e.g. `mmHg` → `mm[Hg]`). Generalises beyond the curated static table.
+   */
+  suggestion?: { code: string; display?: string };
 }
 
 /**
@@ -90,14 +95,15 @@ export function validateUcumCode(code: string | undefined | null): UcumValidatio
 
   let result: UcumValidationResult;
   try {
-    const parsed = utils.validateUnitString(code, false);
+    // `suggest = true` makes ucum-lhc propose corrections for invalid codes.
+    const parsed = utils.validateUnitString(code, true);
     if (parsed && parsed.status === 'valid') {
       result = { valid: true };
     } else {
       const msg = Array.isArray(parsed?.msg) && parsed.msg.length > 0
         ? parsed.msg[0]
         : `'${code}' is not a valid UCUM expression`;
-      result = { valid: false, message: msg };
+      result = { valid: false, message: msg, suggestion: extractUcumLhcSuggestion(parsed) };
     }
   } catch (err) {
     // Library threw — fail open, log for diagnosis.
@@ -107,6 +113,19 @@ export function validateUcumCode(code: string | undefined | null): UcumValidatio
 
   codeCache.set(code, result);
   return result;
+}
+
+/**
+ * Pull the top correction out of ucum-lhc's `suggestions` payload. Shape:
+ * `[{ invalidUnit, units: [[code, display, ...], ...] }]`. Returns the first
+ * suggested unit, or undefined when the engine offers none.
+ */
+function extractUcumLhcSuggestion(parsed: any): { code: string; display?: string } | undefined {
+  const units = parsed?.suggestions?.[0]?.units;
+  if (!Array.isArray(units) || units.length === 0) return undefined;
+  const [code, display] = units[0];
+  if (typeof code !== 'string' || code.length === 0) return undefined;
+  return typeof display === 'string' && display.length > 0 ? { code, display } : { code };
 }
 
 export function ucumCodeHasAnnotation(code: string | undefined | null): boolean {

@@ -129,6 +129,27 @@ describe('Element Path Resolver', () => {
       expect(getValueAtPath(patient, 'Patient.link')).toBeUndefined();
       expect(getValueAtPath(patient, 'Patient.communication.preferred')).toBeUndefined();
     });
+
+    it('should resolve primitive sidecar-only values', () => {
+      const maskedPatient = {
+        resourceType: 'Patient',
+        identifier: [{
+          _value: {
+            extension: [{
+              url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+              valueCode: 'masked',
+            }],
+          },
+        }],
+      };
+
+      expect(getValueAtPath(maskedPatient, 'Patient.identifier.value')).toEqual({
+        extension: [{
+          url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+          valueCode: 'masked',
+        }],
+      });
+    });
   });
 
   describe('hasParentElement - Core Functionality', () => {
@@ -319,6 +340,17 @@ describe('Element Path Resolver', () => {
     });
 
     describe('getValidationTargets', () => {
+      it('should preserve root resource paths without trailing separators', () => {
+        const patient = { resourceType: 'Patient', id: 'p1' };
+
+        const targets = getValidationTargets(patient, 'Patient');
+
+        expect(targets).toHaveLength(1);
+        expect(targets[0].value).toBe(patient);
+        expect(targets[0].fullPath).toBe('Patient');
+        expect(targets[0].contextPath).toBe('Patient');
+      });
+
       it('should return single target for non-array path', () => {
         const patient = {
           resourceType: 'Patient',
@@ -448,6 +480,32 @@ describe('Element Path Resolver', () => {
         expect(targets[0].fullPath).toBe('Patient.contact[0].name.family');
         expect(targets[1].value).toBeUndefined();
         expect(targets[1].fullPath).toBe('Patient.contact[1].name.family');
+      });
+
+      it('should preserve primitive sidecar-only values as present targets', () => {
+        const patient = {
+          resourceType: 'Patient',
+          identifier: [{
+            _value: {
+              extension: [{
+                url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+                valueCode: 'masked',
+              }],
+            },
+          }],
+        };
+
+        const targets = getValidationTargets(patient, 'Patient.identifier.value');
+
+        expect(targets).toHaveLength(1);
+        expect(targets[0].fullPath).toBe('Patient.identifier[0].value');
+        expect(targets[0].contextPath).toBe('Patient.identifier[0]');
+        expect(targets[0].value).toEqual({
+          extension: [{
+            url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+            valueCode: 'masked',
+          }],
+        });
       });
     });
 

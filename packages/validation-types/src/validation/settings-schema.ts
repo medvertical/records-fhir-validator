@@ -60,6 +60,23 @@ export const ProfileSourcesConfigSchema = z.object({
     packageRegistry: z.boolean(),
 });
 
+export const DEFAULT_PROFILE_SOURCES_CONFIG = {
+    simplifier: true,
+    packageRegistry: true,
+} satisfies z.infer<typeof ProfileSourcesConfigSchema>;
+
+export function normalizeProfileSourcesConfig(value: unknown): z.infer<typeof ProfileSourcesConfigSchema> {
+    const source = typeof value === 'object' && value !== null ? value as Record<string, unknown> : {};
+    return {
+        simplifier: typeof source.simplifier === 'boolean'
+            ? source.simplifier
+            : DEFAULT_PROFILE_SOURCES_CONFIG.simplifier,
+        packageRegistry: typeof source.packageRegistry === 'boolean'
+            ? source.packageRegistry
+            : DEFAULT_PROFILE_SOURCES_CONFIG.packageRegistry,
+    };
+}
+
 export const TerminologyAuthConfigSchema = z.object({
     type: z.enum(['none', 'basic', 'bearer', 'oauth2', 'mtls']),
     username: z.string().optional(),
@@ -145,6 +162,18 @@ export const TerminologyResolutionSchema = z.object({
         logMismatches: z.boolean().optional(),
     }).optional(),
     unknownCodeBehavior: z.enum(['required-closed', 'all-open', 'all-closed']).optional(),
+    /**
+     * Surface bindings that cannot be verified (no local expansion, no
+     * terminology-server confirmation) as informational issues instead of
+     * silently failing open. Off by default — precision-neutral (gap P-3 step b).
+     */
+    reportUnverifiedBindings: z.boolean().optional(),
+    /**
+     * Strict terminology policy: raise unverifiable *required* bindings to
+     * warning severity (implies reportUnverifiedBindings). Off by default
+     * (gap P-3 step c).
+     */
+    strictUnverifiedRequiredBindings: z.boolean().optional(),
 });
 
 export const PackageDownloadConfigSchema = z.object({
@@ -164,6 +193,10 @@ export const RecursiveReferenceValidationSchema = z.object({
     excludeResourceTypes: z.array(z.string()).optional(),
     maxReferencesPerResource: z.number().optional(),
     timeoutMs: z.number().optional(),
+    // Opt-in (default off): validate that a resolvable reference target conforms
+    // to the profile named in the element's Reference(targetProfile), emitting a
+    // warning on non-conformance. Gap P-2 step "profile conformance".
+    validateTargetProfiles: z.boolean().optional(),
 });
 
 export const CacheConfigSchema = z.object({

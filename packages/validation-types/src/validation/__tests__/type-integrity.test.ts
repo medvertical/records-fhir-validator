@@ -19,7 +19,7 @@ import type {
   ValidationSettingsUpdate
 } from '../index';
 import { normalizeValidationAspect, normalizeValidationSettings } from '../index';
-import { safeParseSettingsUpdate } from '../settings-schema';
+import { normalizeProfileSourcesConfig, safeParseSettingsUpdate } from '../settings-schema';
 
 describe('Type Integrity - DTO Serialization', () => {
   describe('ValidationIssue', () => {
@@ -195,6 +195,20 @@ describe('Type Integrity - DTO Serialization', () => {
       expect(deserialized.resourceTypes.enabled).toBe(true);
       expect(deserialized.resourceTypes.includedTypes).toEqual(['Patient', 'Observation', 'Condition']);
       expect(deserialized.resourceTypes.excludedTypes).toEqual(['Binary']);
+    });
+
+    it('normalizes profile sources without preserving removed FHIR server source flags', () => {
+      const sources = normalizeProfileSourcesConfig({
+        simplifier: false,
+        packageRegistry: true,
+        fhirServer: true
+      });
+
+      expect(sources).toEqual({
+        simplifier: false,
+        packageRegistry: true
+      });
+      expect(sources).not.toHaveProperty('fhirServer');
     });
   });
 

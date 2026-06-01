@@ -547,6 +547,138 @@ describe('SD FHIRPath choice-type casts', () => {
     expect(issues.filter(issue => issue.code === 'constraint-violation-us-core-1')).toHaveLength(0);
   });
 
+  const effectiveCastProfile = (expression: string): StructureDefinition => ({
+    resourceType: 'StructureDefinition',
+    url: 'http://example.org/StructureDefinition/effective-cast',
+    name: 'EffectiveCast',
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type: 'Observation',
+    snapshot: {
+      element: [
+        { id: 'Observation', path: 'Observation' },
+        {
+          id: 'Observation.effective[x]',
+          path: 'Observation.effective[x]',
+          type: [{ code: 'dateTime' }, { code: 'Period' }, { code: 'string' }],
+          constraint: [
+            { key: 'eff-cast', severity: 'error', human: 'cast', expression },
+          ],
+        },
+      ],
+    },
+  });
+
+  it('skips a primitive-typed cast constraint when the instance is a different primitive', async () => {
+    // valueString-style: effectiveString present, constraint casts to dateTime.
+    // Structural inference is blind to primitives — path-based derivation is not.
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Observation',
+        id: 'string-effective',
+        effectiveString: 'roughly noon',
+      },
+      resourceType: 'Observation',
+      structureDef: effectiveCastProfile('($this as dateTime).toString().length() >= 8'),
+      fhirVersion: 'R4',
+    });
+
+    expect(issues.filter(issue => issue.code === 'constraint-violation-eff-cast')).toHaveLength(0);
+  });
+
+  it('skips an ofType() constraint when the instance type does not match', async () => {
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Observation',
+        id: 'period-effective-oftype',
+        effectivePeriod: { start: '2022-01-25', end: '2022-01-26' },
+      },
+      resourceType: 'Observation',
+      structureDef: effectiveCastProfile('effective.ofType(dateTime).toString().length() >= 8'),
+      fhirVersion: 'R4',
+    });
+
+    expect(issues.filter(issue => issue.code === 'constraint-violation-eff-cast')).toHaveLength(0);
+  });
+
+  it('still evaluates a cast constraint when the instance type matches', async () => {
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Observation',
+        id: 'short-datetime',
+        effectiveDateTime: '2022',
+      },
+      resourceType: 'Observation',
+      structureDef: effectiveCastProfile('($this as dateTime).toString().length() >= 8'),
+      fhirVersion: 'R4',
+    });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'constraint-violation-eff-cast',
+    }));
+  });
+
+  const typeNameProfile = (expression: string): StructureDefinition => ({
+    resourceType: 'StructureDefinition',
+    url: 'http://example.org/StructureDefinition/value-type-name',
+    name: 'ValueTypeName',
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type: 'Observation',
+    snapshot: {
+      element: [
+        { id: 'Observation', path: 'Observation' },
+        {
+          id: 'Observation.value[x]',
+          path: 'Observation.value[x]',
+          type: [{ code: 'Quantity' }, { code: 'string' }, { code: 'CodeableConcept' }],
+          constraint: [
+            { key: 'vtn-1', severity: 'error', human: 'type guard', expression },
+          ],
+        },
+      ],
+    },
+  });
+
+  // P-1 full type-annotation injection: for a polymorphic value[x] element the
+  // SD lists every choice type, so resolveElementType is null and fhirpath.js
+  // resolves `.type()` on the raw object to 'Object'. The concrete type derived
+  // from resourcePath (valueQuantity → Quantity) is injected into the
+  // preprocessor so `%context.type().name` resolves to the real type.
+  it('resolves %context.type().name against the concrete choice type (match → passes)', async () => {
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Observation',
+        id: 'qty-value',
+        valueQuantity: { value: 5, system: 'http://unitsofmeasure.org', code: 'mg' },
+      },
+      resourceType: 'Observation',
+      structureDef: typeNameProfile("%context.type().name = 'Quantity'"),
+      fhirVersion: 'R4',
+    });
+
+    expect(issues.filter(issue => issue.code === 'constraint-violation-vtn-1')).toHaveLength(0);
+  });
+
+  it('resolves %context.type().name against the concrete choice type (mismatch → violation)', async () => {
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Observation',
+        id: 'string-value',
+        valueString: 'free text',
+      },
+      resourceType: 'Observation',
+      structureDef: typeNameProfile("%context.type().name = 'Quantity'"),
+      fhirVersion: 'R4',
+    });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'constraint-violation-vtn-1',
+    }));
+  });
+
   it('evaluates simple memberOf exists constraints against cached ValueSets', async () => {
     const valueSetUrl = 'http://example.org/fhir/ValueSet/condition-category';
     valueSetCache.setValueSetFile(`${valueSetUrl}|R4`, {

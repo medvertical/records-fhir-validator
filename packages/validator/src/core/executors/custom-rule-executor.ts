@@ -8,6 +8,7 @@
 
 import fhirpath from 'fhirpath';
 import { getFhirPathModel } from '../../validators/fhirpath-model-resolver';
+import { rewriteCollectionTypeOperators } from '../../validators/fhirpath-as-operator-rewrite';
 import { checkFhirpathSandbox } from '../../validators/fhirpath-sandbox';
 import { getCustomRulesSource } from '../../persistence';
 import type { EngineCustomRule } from '../../persistence';
@@ -120,7 +121,7 @@ export class CustomRuleExecutor {
                     // Rule passes if result is true or non-empty
                     const result = fhirpath.evaluate(
                         resource,
-                        rule.expression,
+                        rewriteCollectionTypeOperators(rule.expression),
                         {
                             resource,
                             rootResource: resource,

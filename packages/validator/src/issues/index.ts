@@ -19,6 +19,7 @@ export {
     type CreateIssueParams,
     createValidationIssue,
     createBindingViolation,
+    createBindingUnverified,
     createRequiredElementMissing,
     createReferenceTypeMismatch,
     createConstraintViolation,

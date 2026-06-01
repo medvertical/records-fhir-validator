@@ -16,8 +16,12 @@
  *   3. CLI --advisor-rules flag
  */
 
-import type { ValidationIssue } from '@records-fhir/validation-types';
-import type { AdvisorRule, AdvisorRuleMatch, AdvisorRuleTransform } from '@records-fhir/validation-types';
+import type {
+  AdvisorRule,
+  AdvisorRuleMatch,
+  AdvisorRuleTransform,
+  ValidationIssue,
+} from '@records-fhir/validation-types';
 import { logger } from '../logger';
 
 // Re-export shared types so existing server imports continue to work

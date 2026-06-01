@@ -97,8 +97,8 @@ export class BestPracticeValidator {
                 // to pollute the fhir-test-cases OperationOutcome diff.
                 severity: 'information',
                 code: 'best-practice-missing-effective',
-                message: 'All Observations should have an effectiveDateTime or an effectivePeriod',
-                path: 'Observation',
+                message: 'All Observations should have an `effectiveDateTime` or an `effectivePeriod`',
+                path: 'Observation.effective[x]',
                 tags: ['best-practice'],
                 timestamp: new Date()
             });
@@ -119,8 +119,8 @@ export class BestPracticeValidator {
                 // to pollute the fhir-test-cases OperationOutcome diff.
                 severity: 'information',
                 code: 'best-practice-missing-performer',
-                message: 'All Observations should have a performer',
-                path: 'Observation',
+                message: 'All Observations should have a `performer`',
+                path: 'Observation.performer',
                 tags: ['best-practice'],
                 timestamp: new Date()
             });

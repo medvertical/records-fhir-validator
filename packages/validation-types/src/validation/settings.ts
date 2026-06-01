@@ -397,6 +397,20 @@ export interface ValidationSettings {
      * - 'all-closed': All unknown codes fail (strict)
      */
     unknownCodeBehavior?: 'required-closed' | 'all-open' | 'all-closed';
+
+    /**
+     * Surface bindings that cannot be verified (no local expansion, no
+     * terminology-server confirmation) as informational issues instead of
+     * silently failing open. Off by default — precision-neutral (gap P-3 step b).
+     */
+    reportUnverifiedBindings?: boolean;
+
+    /**
+     * Strict terminology policy: raise unverifiable *required* bindings to
+     * warning severity (implies reportUnverifiedBindings). Off by default
+     * (gap P-3 step c).
+     */
+    strictUnverifiedRequiredBindings?: boolean;
   };
 
   /** Circuit Breaker Configuration */
@@ -466,6 +480,12 @@ export interface ValidationSettings {
     excludeResourceTypes?: string[];
     maxReferencesPerResource?: number;
     timeoutMs?: number;
+    /**
+     * Opt-in (default off): validate a resolvable reference target against the
+     * profile named in the element's Reference(targetProfile); non-conformance
+     * is reported as a warning (gap P-2 profile conformance).
+     */
+    validateTargetProfiles?: boolean;
   };
 
   /** Task 7.12: Multi-Layer Cache Configuration */

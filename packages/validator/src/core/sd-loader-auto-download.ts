@@ -2,6 +2,7 @@ import type { StructureDefinition } from './structure-definition-types';
 import type { PackageDownloader } from '../package/package-downloader.js';
 import type { PackageRegistryClient } from '../package/package-registry-client.js';
 import type { ProfileSourcesConfig } from '../types';
+import { normalizeProfileSourcesConfig } from '@records-fhir/validation-types';
 import { logger } from '../logger';
 import { loadFromLocalCache } from './sd-loader-filesystem';
 import { isPackageAllowed } from './sd-loader-package-config';
@@ -19,12 +20,6 @@ export interface AutoDownloadContext {
   /** FHIR version for package filtering (defaults to R4) */
   fhirVersion?: 'R4' | 'R5' | 'R6';
 }
-
-/** Default remote profile sources. Local cache and bundled profiles are always enabled. */
-const DEFAULT_PROFILE_SOURCES: ProfileSourcesConfig = {
-  simplifier: true,
-  packageRegistry: true
-};
 
 function isCoreFhirStructureDefinition(url: string): boolean {
   return url.startsWith('http://hl7.org/fhir/StructureDefinition/') &&
@@ -148,7 +143,7 @@ async function executeAutoDownload(
     return null;
   }
 
-  const config = context.profileSourcesConfig || DEFAULT_PROFILE_SOURCES;
+  const config = normalizeProfileSourcesConfig(context.profileSourcesConfig);
   logger.info(`[SDLoader] Profile not found locally, trying remote sources for: ${url}`);
   logger.debug(`[SDLoader] Enabled sources: Simplifier=${config.simplifier}, Registry=${config.packageRegistry}`);
 

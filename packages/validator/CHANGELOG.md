@@ -10,6 +10,54 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.1.11] — 2026-06-01
+
+Patch release for the standalone OSS validator package after the latest Firely
+and public-server validation runs. Released with
+`@records-fhir/validation-types` 0.1.4.
+
+### Fixes
+
+- Closed the remaining HL7/HAPI validator-CLI capability gaps around profile
+  fallback, bundle-entry validation, and multi-aspect strictness handling.
+- Preserved code-aware display equivalence checks by passing the full code
+  context into display normalization.
+- Kept the EHDS EPS package selection stable while retaining the pinned
+  transitive reference closure.
+
+### Maintenance
+
+- Refreshed direct runtime dependencies: `axios`, `date-fns`, `fhirpath`, and
+  `tar`.
+- Verified the package boundary, TypeScript build, and OSS smoke checks before
+  publishing.
+
+## [0.1.10] — 2026-05-28
+
+Patch release after the HL7 JSON and MII 2026 parity gates were restored to
+100% on the current reference suites. Released with
+`@records-fhir/validation-types` 0.1.4.
+
+### Fixes
+
+- Normalized profile source settings so the package engine, server runtime,
+  Simplifier/registry loading, and bundled package fallback use the same source
+  policy.
+- Kept the current EPS preview package pinned while preserving the canonical
+  xTeHR reference source, avoiding accidental drift when upstream preview
+  packages move.
+- Tightened advisor, metadata, reference, strictness, and batch validation code
+  paths around the shared runtime settings model.
+
+### Quality
+
+- Restored full HL7 JSON conformance parity against the current
+  `fhir-test-cases` checkout: 496/496 run cases pass.
+- Restored MII 2026 reference parity against the current MII validator
+  container: 241/241 measured cases pass.
+- Added CI guardrails so missing bundled FHIR core profiles fail early instead
+  of surfacing as broad false parity regressions.
+
 ## [0.1.9] — 2026-05-26
 
 Patch release focused on reducing profile/slicing false positives found in

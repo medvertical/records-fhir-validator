@@ -12,7 +12,8 @@ import { ValueSetPackageLoader } from './valueset-package-loader';
 import { logger } from '../logger';
 import {
     prepareElementContext,
-    shouldSkipChoiceTypeCastConstraint,
+    resolveChoiceTypeCast,
+    deriveChoiceTypeFromConcretePath,
 } from './sd-fhirpath-choice-utils';
 import { sdFHIRPathExpressionCache } from './sd-fhirpath-expression-cache';
 import { constraintPassed } from './sd-fhirpath-result-utils';
@@ -149,21 +150,31 @@ export class SDFHIRPathExecutor {
         // Substitute `%context.type()` / `%resource.type()` literals against
         // the declared element type. fhirpath.js can't resolve `.type()` on
         // raw JS objects — this closes cont-1/2/3 on DomainResource.contained.
+        // For polymorphic `value[x]` elements `resolveElementType` is null (the
+        // SD lists every choice type), so fall back to the *concrete* type the
+        // element matcher already recorded on `resourcePath`
+        // (`Observation.valueQuantity` → `Quantity`) — the deterministic
+        // type-annotation that lets `%context.type().name = 'Quantity'` resolve.
+        const elementType =
+            resolveElementType(matched.element) ?? deriveChoiceTypeFromConcretePath(matched);
         const effectiveExpression = preprocessTypeLiterals(constraint.expression, {
-            elementType: resolveElementType(matched.element),
+            elementType,
             resourceType,
             rootResourceType: resourceType,
         });
 
+        const choiceCast = resolveChoiceTypeCast(effectiveExpression, matched);
+        if (choiceCast.skip) {
+            return issues;
+        }
+        const resolvedExpression = choiceCast.expression;
+
         try {
-            const evaluationContext = this.expressionStartsAtResourceRoot(effectiveExpression, resourceType)
+            const evaluationContext = this.expressionStartsAtResourceRoot(resolvedExpression, resourceType)
                 ? resource
                 : matched.data;
-            if (shouldSkipChoiceTypeCastConstraint(effectiveExpression, matched)) {
-                return issues;
-            }
             const memberOfPassed = await evaluateSimpleMemberOfExists(
-                effectiveExpression,
+                resolvedExpression,
                 resource,
                 resourceType,
                 this.memberOfValueSetLoader,
@@ -175,7 +186,7 @@ export class SDFHIRPathExecutor {
                 }
                 return issues;
             }
-            const result = this.evaluateExpression(effectiveExpression, evaluationContext, resource, userInvocationTable, fhirVersion);
+            const result = this.evaluateExpression(resolvedExpression, evaluationContext, resource, userInvocationTable, fhirVersion);
             if (!constraintPassed(result)) {
                 issues.push(this.createViolation(constraint, matched.resourcePath, resourceType, profileUrl));
             }
@@ -184,7 +195,11 @@ export class SDFHIRPathExecutor {
 
             // Silently skip constraints that use unsupported async FHIRPath functions
             // (memberOf, resolve, etc.) — these cannot be evaluated client-side.
-            if (message.includes('asynchronous function') || message.includes('is not allowed')) {
+            if (
+                message.includes('asynchronous function') ||
+                message.includes('is not allowed') ||
+                isUnsupportedEngineCapabilityError(message)
+            ) {
                 logger.debug(`[SDFHIRPathExecutor] Skipping ${constraint.key} (unsupported async function)`);
                 return issues;
             }
@@ -378,6 +393,10 @@ export class SDFHIRPathExecutor {
         );
     }
 
+}
+
+function isUnsupportedEngineCapabilityError(message: string): boolean {
+    return message.includes('Not implemented: htmlChecks');
 }
 
 // Singleton

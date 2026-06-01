@@ -1,4 +1,5 @@
 import type { ValidationSettings } from '../types';
+import { normalizeProfileSourcesConfig } from '@records-fhir/validation-types';
 import type { TerminologyResolutionConfig } from '../validators/valueset-validator';
 import type { StructureDefinitionLoader } from './structure-definition-loader';
 
@@ -22,7 +23,7 @@ export function applyProfileLoadingSettings(
   }
 
   if (settings.profileSources) {
-    sdLoader.setProfileSourcesConfig(settings.profileSources);
+    sdLoader.setProfileSourcesConfig(normalizeProfileSourcesConfig(settings.profileSources));
   }
 
   if (settings.packageDownload?.approvedPackages) {
@@ -57,5 +58,7 @@ export function buildTerminologyResolutionConfig(settings: ValidationSettings): 
     })),
     serverDelegation: settings.terminologyResolution?.serverDelegation,
     twoPhaseExpansion: settings.terminologyResolution?.twoPhaseExpansion,
+    reportUnverifiedBindings: settings.terminologyResolution?.reportUnverifiedBindings,
+    strictUnverifiedRequiredBindings: settings.terminologyResolution?.strictUnverifiedRequiredBindings,
   };
 }

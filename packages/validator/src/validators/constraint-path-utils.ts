@@ -1,4 +1,8 @@
+import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
+
 export function getEvaluationContext(resource: any, elementPath: string): any {
+  if (elementPath === resource?.resourceType) return resource;
+
   const segments = elementPath.split('.');
   if (segments.length > 1 && segments[0] === resource.resourceType) segments.shift();
   if (segments.length === 0) return resource;
@@ -14,20 +18,16 @@ export function getEvaluationContext(resource: any, elementPath: string): any {
       if (index >= current[fieldName].length) return resource;
       current = current[fieldName][index];
     } else {
-      let value = current[segment];
-      if (value === undefined && segment.endsWith('[x]')) {
-        const prefix = segment.slice(0, -3);
-        const actualKey = Object.keys(current).find(k => k.startsWith(prefix) && k !== prefix);
-        if (actualKey) value = current[actualKey];
-      }
-      current = value;
+      current = resolveFhirSegmentValue(current, segment);
     }
   }
-  return current || resource;
+  return current === undefined || current === null ? undefined : current;
 }
 
 export function elementExistsInResource(resource: any, elementPath: string): boolean {
   if (!resource || !elementPath) return false;
+  if (elementPath === resource.resourceType) return true;
+
   const segments = elementPath.split('.');
   const resourceType = resource.resourceType;
   if (segments.length > 1 && segments[0] === resourceType) segments.shift();
@@ -48,12 +48,7 @@ export function elementExistsInResource(resource: any, elementPath: string): boo
       }
       current = current[fieldName][index];
     } else {
-      let value = current[segment];
-      if ((value === undefined || value === null) && segment.endsWith('[x]')) {
-        const prefix = segment.slice(0, -3);
-        const actualKey = Object.keys(current).find(k => k.startsWith(prefix) && k !== prefix);
-        if (actualKey) value = current[actualKey];
-      }
+      const value = resolveFhirSegmentValue(current, segment);
       if (value === undefined || value === null) {
         return false;
       }

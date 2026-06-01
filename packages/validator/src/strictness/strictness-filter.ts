@@ -13,8 +13,12 @@
  * Additionally, per-aspect severity settings can cap the maximum severity for that aspect.
  */
 
-import type { ValidationIssue, ValidationSeverity } from '@records-fhir/validation-types';
-import type { ValidationSettings, ValidationAspectConfig } from '@records-fhir/validation-types';
+import type {
+  ValidationAspectConfig,
+  ValidationIssue,
+  ValidationSettings,
+  ValidationSeverity,
+} from '@records-fhir/validation-types';
 import { logger } from '../logger';
 
 export type ValidationStrictness = 'compatibility' | 'standard' | 'strict';

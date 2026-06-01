@@ -46,6 +46,8 @@ interface StructuralSnapshotParams {
   getValueAtPath: (resource: any, path: string) => any;
   fhirVersion: FhirVersion;
   deps: StructuralSnapshotDeps;
+  /** Resolves contained / bundle-entry references for reference-target typing. */
+  resolveReference?: (reference: string) => any;
 }
 
 interface SnapshotElementParams extends StructuralSnapshotParams {
@@ -53,7 +55,7 @@ interface SnapshotElementParams extends StructuralSnapshotParams {
 }
 
 export async function validateStructuralSnapshot(params: StructuralSnapshotParams): Promise<ValidationIssue[]> {
-  const { resource, structureDef, effectiveProfileUrl, getValueAtPath, fhirVersion, deps } = params;
+  const { resource, structureDef, effectiveProfileUrl, getValueAtPath, fhirVersion, deps, resolveReference } = params;
   const issues: ValidationIssue[] = [];
 
   for (const elementDef of structureDef.snapshot?.element ?? []) {
@@ -74,7 +76,7 @@ export async function validateStructuralSnapshot(params: StructuralSnapshotParam
   issues.push(...await validateMissedMustSupportElements(resource, structureDef, effectiveProfileUrl, getValueAtPath, deps, issues));
   issues.push(...await deps.detectUnknownElements(resource, structureDef, resource.resourceType, fhirVersion));
   issues.push(...deps.referenceFormatValidator.validateAllReferences(resource, resource.resourceType));
-  issues.push(...deps.referenceTargetValidator.validate(resource, structureDef));
+  issues.push(...deps.referenceTargetValidator.validate(resource, structureDef, resolveReference));
 
   if (resource.resourceType === 'Bundle') {
     issues.push(...await deps.bundleValidator.validateBundle(resource));

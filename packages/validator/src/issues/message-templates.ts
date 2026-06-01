@@ -41,6 +41,8 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
         "Required binding is missing a value at {path}",
     'terminology-valueset-error':
         "ValueSet validation failed: {error}",
+    'terminology-binding-unverified':
+        "Code '{code}' could not be verified against value set '{valueSet}' (binding strength: {strength}) — no local expansion and no terminology server confirmation available",
 
     // -------------------------------------------------------------------------
     // Metadata - Version ID

@@ -2,6 +2,8 @@
  * Array-aware validation target resolution for FHIR element paths.
  */
 
+import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
+
 /**
  * Validation target for a specific path in a resource.
  * Includes the value, full path with array indices, and context path for parent checking.
@@ -40,12 +42,7 @@ export function isArrayAtPath(resource: any, path: string): boolean {
       if (current == null) return false;
     }
 
-    let value = current[part];
-    if (value === undefined && part.endsWith('[x]') && typeof current === 'object') {
-      const prefix = part.slice(0, -3);
-      const actualKey = Object.keys(current).find(k => k.startsWith(prefix) && k !== prefix);
-      if (actualKey) value = current[actualKey];
-    }
+    const value = resolveFhirSegmentValue(current, part);
     current = value;
   }
 
@@ -129,17 +126,7 @@ function resolveNextSegmentTargets(
 }
 
 function resolveSegmentValue(currentValue: any, segment: string): any {
-  let nextValue = currentValue[segment];
-
-  if (nextValue === undefined && segment.endsWith('[x]')) {
-    const prefix = segment.slice(0, -3);
-    const actualKey = Object.keys(currentValue).find(k => k.startsWith(prefix));
-    if (actualKey) {
-      nextValue = currentValue[actualKey];
-    }
-  }
-
-  return nextValue;
+  return resolveFhirSegmentValue(currentValue, segment);
 }
 
 function convertToValidationTarget(target: {
@@ -147,13 +134,15 @@ function convertToValidationTarget(target: {
   pathSoFar: string[];
   resourceTypePart: string;
 }): ValidationTarget {
-  const fullPath = target.resourceTypePart
-    ? `${target.resourceTypePart}.${target.pathSoFar.join('.')}`
-    : target.pathSoFar.join('.');
+  const relativePath = target.pathSoFar.join('.');
+  const fullPath = target.resourceTypePart && relativePath
+    ? `${target.resourceTypePart}.${relativePath}`
+    : target.resourceTypePart || relativePath;
   const contextPathParts = target.pathSoFar.slice(0, -1);
-  const contextPath = target.resourceTypePart
-    ? `${target.resourceTypePart}.${contextPathParts.join('.')}`
-    : contextPathParts.join('.');
+  const contextRelativePath = contextPathParts.join('.');
+  const contextPath = target.resourceTypePart && contextRelativePath
+    ? `${target.resourceTypePart}.${contextRelativePath}`
+    : target.resourceTypePart || contextRelativePath;
 
   return {
     value: target.current,

@@ -385,6 +385,41 @@ export function createBindingViolation(params: {
 }
 
 /**
+ * Create a "binding could not be verified" informational issue.
+ *
+ * Emitted when a coded element's ValueSet cannot be expanded locally and no
+ * terminology server confirmed the code. Distinct from a binding violation:
+ * the code is not known to be wrong, only unverifiable. Severity is
+ * informational so it never gates, but the skip becomes visible instead of
+ * silent (gap P-3).
+ */
+export function createBindingUnverified(params: {
+    strength: 'required' | 'extensible' | 'preferred';
+    code: string;
+    system?: string;
+    valueSet: string;
+    path: string;
+    resourceType: string;
+    profile?: string;
+    /** Override the default `information` severity (e.g. `warning` under a strict policy). */
+    severityOverride?: ValidationSeverity;
+}): ValidationIssue {
+    return createValidationIssue({
+        code: 'terminology-binding-unverified',
+        path: params.path,
+        resourceType: params.resourceType,
+        profile: params.profile,
+        severityOverride: params.severityOverride,
+        messageParams: {
+            code: params.code,
+            system: params.system,
+            valueSet: params.valueSet,
+            strength: params.strength,
+        },
+    });
+}
+
+/**
  * Create a required element missing issue.
  */
 export function createRequiredElementMissing(params: {

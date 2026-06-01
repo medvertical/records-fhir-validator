@@ -249,7 +249,11 @@ export class ConstraintValidator {
 
       // Silently skip constraints that use unsupported FHIRPath functions (memberOf, resolve, etc.)
       // These can't be evaluated client-side and should not produce false-positive issues.
-      if (errorMsg.includes('asynchronous function') || errorMsg.includes('is not allowed')) {
+      if (
+        errorMsg.includes('asynchronous function') ||
+        errorMsg.includes('is not allowed') ||
+        isUnsupportedEngineCapabilityError(errorMsg)
+      ) {
         logger.debug(`[ConstraintValidator] Skipping constraint ${constraint.key} (unsupported FHIRPath function): ${errorMsg}`);
         return issues;
       }
@@ -450,6 +454,10 @@ export class ConstraintValidator {
   static clearCache(): void {
     clearConstraintExpressionCache();
   }
+}
+
+function isUnsupportedEngineCapabilityError(message: string): boolean {
+  return message.includes('Not implemented: htmlChecks');
 }
 
 export function getFHIRPathCacheStats() {
