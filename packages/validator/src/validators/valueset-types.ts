@@ -103,6 +103,27 @@ export interface TerminologyResolutionConfig {
  */
 export type CodeBindingOutcome = 'valid' | 'invalid' | 'unverified';
 
+export const TERMINOLOGY_UNVERIFIED_REASONS = [
+    'empty-expansion',
+    'unsupported-filter',
+    'unresolvable-snomed-extension-filter',
+    'validation-error',
+] as const;
+
+export type TerminologyUnverifiedReason = typeof TERMINOLOGY_UNVERIFIED_REASONS[number];
+
+export interface TerminologyReasonCounters {
+    total: number;
+    byReason: Record<TerminologyUnverifiedReason, number>;
+}
+
+export interface TerminologyDiagnostics {
+    /** Bindings that failed open because the validator could not prove validity locally or remotely. */
+    unverifiedBindings: TerminologyReasonCounters;
+    /** Direct ValueSet membership checks that failed open to avoid false negatives. */
+    failOpenMembershipChecks: TerminologyReasonCounters;
+}
+
 // ============================================================================
 // FHIR Resources
 // ============================================================================

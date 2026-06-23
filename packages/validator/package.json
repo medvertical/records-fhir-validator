@@ -1,6 +1,6 @@
 {
   "name": "@records-fhir/validator",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Pure-TypeScript FHIR R4/R4B/R5/R6 validation engine. Validates resources against StructureDefinitions, terminology, references, and custom rules with no database required.",
   "type": "module",
   "license": "Apache-2.0",

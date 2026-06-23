@@ -46,7 +46,7 @@ jobs:
 For production CI, pin an immutable patch tag:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.2.0
+- uses: medvertical/records-fhir-validator@v0.3.0
   with:
     paths: resources/**/*.json
     profile-url: http://hl7.org/fhir/StructureDefinition/Patient
@@ -59,7 +59,7 @@ Action pinning:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Latest stable in current major | `medvertical/records-fhir-validator@v0` | Floating tag, force-moved on stable releases only |
-| Exact released version | `medvertical/records-fhir-validator@v0.2.0` | Immutable consumer tag |
+| Exact released version | `medvertical/records-fhir-validator@v0.3.0` | Immutable consumer tag |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | Best for audit and forensics |
 
 The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
@@ -68,7 +68,7 @@ The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
 ### npm Package
 
 ```sh
-npm install @records-fhir/validator@0.2.0 @records-fhir/validation-types@0.1.5
+npm install @records-fhir/validator@0.3.0 @records-fhir/validation-types@0.1.5
 ```
 
 Run the CLI against one file or a folder:
@@ -138,7 +138,7 @@ includes `file`, `resourceType`, `profileUrl`, and `issues`. With
 
 ## What Is Included
 
-- `@records-fhir/validator` 0.2.0 - Apache-2.0 validation engine.
+- `@records-fhir/validator` 0.3.0 - Apache-2.0 validation engine.
 - `@records-fhir/validation-types` 0.1.5 - Apache-2.0 validation-domain types.
 - Composite GitHub Action at repository root.
 - Standalone examples under `packages/validator/examples/`.
@@ -185,17 +185,24 @@ validator mode.
 
 Current HL7 `FHIR/fhir-test-cases` JSON resource validation status:
 
-- Upstream manifest entries: 969.
+- Upstream manifest entries: 974 at pinned commit
+  `431b37cd06cac878bc23b4a8b457c2f2397fdcdc`.
 - Pre-filtered out before validation: 438.
-- Candidate JSON comparison set: 531.
-- Runtime skipped from the headline lane: 35.
+- Candidate JSON comparison set: 536.
+- Runtime skipped from the headline lane: 40.
 - Executed and compared against Java `OperationOutcome`: 496.
 - 496 passed.
 - Failed/errors: 0.
 - Headline JSON resource parity: 100.0%.
 - Launch-discovery lane: 547/547 comparisons passed, 0 skipped, 0 failed.
 
-Evidence artifacts:
+Reproduce the headline lane locally with:
+
+```sh
+npm run conformance -- --tx-server none --output-file conformance-results/report-local.json
+```
+
+Additional historical and scoped evidence artifacts:
 
 - [`conformance-results/hl7-validator-testkit-2026-05-20.json`](./conformance-results/hl7-validator-testkit-2026-05-20.json)
 - [`conformance-results/baseline-backlog-discovery-2026-05-03.json`](./conformance-results/baseline-backlog-discovery-2026-05-03.json)
@@ -208,7 +215,7 @@ versions, unsupported modules (SHC, CDA, CDS Hooks, JSON5, XVer, DSIG, HL7 v2),
 disabled upstream tests, logical models, or entries without a declared Java
 baseline.
 
-The 35 headline runtime skips are measured by the explicit
+The 40 headline runtime skips are measured by the explicit
 `--include-baseline-backlog` discovery lane. That lane now executes 547
 launch-discovery comparisons, including discovery-only FML/NDJSON, JSON5,
 DSIG JSON, and hidden-Java-outcome fixtures, with 0 skips.

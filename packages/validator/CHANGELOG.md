@@ -10,6 +10,50 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [0.3.0] — 2026-06-23
+
+Release-hardening update for the standalone validator and GitHub Action.
+Released with `@records-fhir/validation-types` 0.1.5.
+
+### Added
+
+- Added `recordsValidator.validateAll(...)`, an ordered public batch API that
+  returns `index`, `resourceType`, `id`, `isValid`, and `issues` for each input
+  while still using the optimized batch path for homogeneous profile/settings.
+- Added stable issue-contract helpers:
+  `issueFingerprint`, `summarizeIssueFingerprints`, `stableIssues`,
+  `issueMatchesAnchor`, and `issuePathMatchesPattern`.
+- Added structured terminology diagnostics in `ValueSetValidator.getCacheStats()`
+  for unverified bindings and fail-open membership checks.
+- Added cold-start, warmup, measured-wall-clock, heap, and peak-RSS fields to
+  the local validator performance baseline.
+- Added a pinned `FHIR/fhir-test-cases` runner default at
+  `431b37cd06cac878bc23b4a8b457c2f2397fdcdc` with an override flag/env var for
+  intentional upstream refreshes.
+
+### Changed
+
+- Negative-cache failed FHIRPath constraint-expression compiles so repeated
+  unsupported expressions do not pay repeated compile cost.
+- Silence HL7 conformance-runner engine logs by default while keeping a
+  `--verbose` escape hatch for investigation.
+- Refresh README/public-mirror conformance evidence around the pinned
+  2026-06-23 local run: 496/496 executable comparisons passed, 40 Java-baseline
+  output skips, and 100.0% headline JSON-resource parity.
+
+### Fixed
+
+- Exclude the selected `--output` report path from CLI validation inputs so a
+  later folder run does not validate its own previous report.
+
+### Verification
+
+- Verified locally with validator typecheck/build, targeted Vitest suites,
+  mirror-import guard, OSS package smoke test, local performance baseline, and
+  full pinned conformance against `FHIR/fhir-test-cases`.
+
 ## [0.2.0] — 2026-06-23
 
 Production-readiness release for the standalone npm CLI. Released with
@@ -24,12 +68,37 @@ Production-readiness release for the standalone npm CLI. Released with
   folder validation.
 - Documented stable CLI exit codes: `0` for pass, `1` for validation threshold
   failure, `2` for usage/input/output errors.
+- Added direct CLI behavior coverage for report output, summary-only mode,
+  include/exclude filters, help text, and usage/output error exit code `2`.
+- Added a deterministic golden quality-corpus matrix that validates
+  representative R4 defect fixtures against `.expected.json` issue anchors
+  without reading the developer's global FHIR package cache.
+- Added a local validator performance-baseline command with fixture limiting
+  and optional mean/p95/p99/worst timing budgets:
+  `npm run quality:validator-perf-baseline`.
 
 ### Verification
 
 - Extended the OSS package smoke test to install the packed npm package in a
   fresh project and execute the installed `records-fhir-validator` binary with
   output-file, summary-only, include, and exclude options.
+- Verified the local release loop with targeted Vitest suites, package
+  typecheck/build, mirror-import guard, OSS package smoke test, and the local
+  performance baseline.
+
+### Changed
+
+- Typed the public `recordsValidator` singleton facade so public API calls stay
+  aligned with the underlying `RecordsValidator` engine signatures.
+- Split the CLI implementation into argument parsing, file matching, validation
+  execution, shared result types, and output rendering.
+- Extracted reusable issue-contract anchors for stable golden-corpus
+  assertions.
+- Isolated the slicing ValueSet package loader so discriminator binding lookups
+  use a private terminology cache and preserve `FHIR_PACKAGE_CACHE_PATH` even
+  when dotenv leaves a literal `$HOME` placeholder.
+- Tightened CLI JSON-input and issue-rendering types from loose `any` handling
+  to guarded `unknown` boundaries.
 
 ## [0.1.14] — 2026-06-23
 
@@ -533,5 +602,7 @@ extracted from the Records DataOps Control Plane.
   are explicitly out of scope for this package and are not blended
   into the headline conformance score.
 
-[Unreleased]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.1.0...HEAD
+[Unreleased]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.3.0...HEAD
+[0.3.0]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.2.0...validator-v0.3.0
+[0.2.0]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.1.14...validator-v0.2.0
 [0.1.0]: https://github.com/medvertical/records-fhir-validator/releases/tag/validator-v0.1.0

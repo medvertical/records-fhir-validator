@@ -22,7 +22,6 @@ import { extractSlicingInfo as externalExtractSlicingInfo } from './slice-info-e
 import type { SliceDefinition } from './slice-types';
 import type { StructureDefinition, SlicingDefinition, SlicingDiscriminator } from '../core/structure-definition-types';
 import { ValueSetPackageLoader } from './valueset-package-loader';
-import { ValueSetCache } from './valueset-cache';
 import { logger } from '../logger';
 import {
   emitMatchedSliceChildIssues,
@@ -30,6 +29,7 @@ import {
   validateSliceContentConstraints,
 } from './slicing-content-rules';
 import { validateSliceOrdering } from './slicing-ordering';
+import { createIsolatedSlicingValueSetLoader } from './slicing-valueset-loader';
 import { urlMatchesRequestedFhirVersion, type FhirVersionFamily } from '../core/sd-loader-version-utils';
 
 // ============================================================================
@@ -89,20 +89,7 @@ export class SlicingValidator {
 
   private getValueSetLoader(): ValueSetPackageLoader {
     if (!this.valueSetLoader) {
-      // Use an isolated cache so binding lookups for discriminator matching
-      // don't pollute the shared terminology cache (which would cause
-      // false terminology-binding errors on unrelated codings).
-      const isolatedCache = new ValueSetCache();
-      // Ensure the loader can find packages even when dotenv loads $HOME
-      // literally. Override the env to force os.homedir() resolution.
-      const saved = process.env.FHIR_PACKAGE_CACHE_PATH;
-      if (saved?.includes('$HOME')) {
-        delete process.env.FHIR_PACKAGE_CACHE_PATH;
-      }
-      this.valueSetLoader = new ValueSetPackageLoader(isolatedCache);
-      if (saved !== undefined) {
-        process.env.FHIR_PACKAGE_CACHE_PATH = saved;
-      }
+      this.valueSetLoader = createIsolatedSlicingValueSetLoader();
     }
     return this.valueSetLoader;
   }

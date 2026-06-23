@@ -383,7 +383,7 @@ export class ConstraintValidator {
     this.timeout = timeout;
   }
 
-  static getCacheStats(): { hits: number; misses: number; hitRate: string; size: number } {
+  static getCacheStats(): { hits: number; misses: number; compileErrors: number; hitRate: string; size: number } {
     return getConstraintExpressionCacheStats();
   }
 
@@ -413,6 +413,7 @@ export function getCombinedFHIRPathCacheStats() {
   const sd = getSDFHIRPathCacheStats();
   const totalHits = constraint.hits + sd.hits;
   const totalMisses = constraint.misses + sd.misses;
+  const compileErrors = constraint.compileErrors + sd.compileErrors;
   const total = totalHits + totalMisses;
   return {
     constraint,
@@ -420,6 +421,7 @@ export function getCombinedFHIRPathCacheStats() {
     combined: {
       hits: totalHits,
       misses: totalMisses,
+      compileErrors,
       hitRate: total > 0 ? ((totalHits / total) * 100).toFixed(1) + '%' : '0%',
       size: constraint.size + sd.size,
     },

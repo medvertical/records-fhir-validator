@@ -89,7 +89,7 @@ depending on your trade-off between freshness and stability:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Always-latest within current major | `medvertical/records-fhir-validator@v0` | Force-moved on every stable release; never advances onto a prerelease |
-| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.2.0` | Immutable once published |
+| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.3.0` | Immutable once published |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | For audit / forensic builds |
 
 The `validator-v<semver>` tag you may see on the public repo's release
@@ -179,6 +179,42 @@ Exit codes are stable for CI:
 }
 ```
 
+## Local Quality Guarantees
+
+The 0.2.x release line is backed by local checks that do not require GitHub
+Actions:
+
+```sh
+npm run quality:validator-perf-baseline
+npx vitest run packages/validator/src/core/__tests__/golden-quality-corpus.test.ts
+npm run architecture:validator-mirror
+npm run oss:smoke-validator
+```
+
+What these checks cover:
+
+- CLI behavior: help text, report writing, summary-only mode, include/exclude
+  filters, output errors, and stable exit code `2` for usage/input failures.
+- Golden defect anchors: representative R4 fixtures are matched by severity,
+  issue-code family, path pattern, and stable issue fingerprints rather than
+  brittle message text.
+- Local performance baseline: 25 generated R4 fixtures, local-only terminology,
+  no HTTP terminology calls, separated cold-start/warmup/measured windows,
+  peak RSS tracking, and budget checks for mean/p95/worst timings.
+- Public package boundary: mirror imports and packed npm-package smoke tests.
+
+### Known Limits
+
+- The CLI validates JSON resources and folders of JSON resources. XML, Turtle,
+  CDA, HL7 v2, NDJSON, FML, CDS Hooks, SHC, and DSIG need dedicated loaders or
+  validators and are tracked outside the headline JSON-resource scope.
+- Local-only terminology avoids network calls. It can verify bundled/local
+  expansions, but server-only terminology semantics require explicit terminology
+  server configuration from embedder code.
+- Golden corpus assertions are contract anchors, not exact OperationOutcome
+  snapshots. This is intentional: message wording can improve without breaking
+  the defect-detection guarantee.
+
 ### Quick start (singleton)
 
 For most use cases, use the lazy singleton — no class instantiation,
@@ -203,6 +239,24 @@ const issues = await recordsValidator.validate(
   'http://hl7.org/fhir/StructureDefinition/Patient',
   'R4', // 'R4' | 'R4B' | 'R5' | 'R6'
 );
+```
+
+For ordered batch output, use `validateAll`. It preserves input order and wraps
+each resource with `isValid`, `index`, `resourceType`, `id`, and `issues` while
+using the optimized batch path when all inputs share profile/settings:
+
+```ts
+const results = await recordsValidator.validateAll([
+  { resource: { resourceType: 'Patient', id: 'p1' } },
+  {
+    resource: { resourceType: 'Observation', id: 'o1', status: 'final' },
+    profileUrl: 'http://hl7.org/fhir/StructureDefinition/Observation',
+  },
+], {
+  fhirVersion: 'R4',
+  maxConcurrency: 8,
+  continueOnError: true,
+});
 ```
 
 ### Class form (full control)
@@ -232,6 +286,19 @@ import { toInternalFhirVersion, type PublicFhirVersion } from '@records-fhir/val
 
 const v: PublicFhirVersion = 'R4B';
 toInternalFhirVersion(v); // → 'R4'
+```
+
+### Stable issue fingerprints
+
+Use `issueFingerprint` when storing regression snapshots or grouping validation
+findings across releases. It is stable across wording, `details`, timestamps,
+and generated issue IDs; it changes when the issue identity changes
+(`severity`, `code`, `path`, `resourceType`, `profile`, or `ruleId`).
+
+```ts
+import { issueFingerprint } from '@records-fhir/validator';
+
+const fingerprint = issueFingerprint(issues[0]);
 ```
 
 ### Apply a fix-suggestion patch
@@ -336,9 +403,10 @@ headline support scope unless called out by a dedicated conformance lane.
 ## Conformance
 
 Current HL7 `FHIR/fhir-test-cases` status: 100.0% of executable comparison
-tests passing. The latest report was generated on 2026-05-09 from upstream
-commit `e543043a076c493656fc8008df250659b15d02cb` and is stored in the source
-repository as `conformance-results/report-2026-05-09.json`.
+tests passing. The latest local report was generated on 2026-06-23 from pinned
+upstream commit `431b37cd06cac878bc23b4a8b457c2f2397fdcdc`. The local artifact
+used for this update was
+`conformance-results/report-local-review-2026-06-23.json`.
 
 The upstream manifest contains more than 900 entries. Records does not claim
 that all manifest entries are executable in the current TypeScript validator
@@ -347,31 +415,37 @@ can be compared against the Java validator's expected `OperationOutcome`.
 
 | Stage | Count | Meaning |
 |---|---:|---|
-| Upstream manifest entries | 969 | All entries in `FHIR/fhir-test-cases/validator/manifest.json` at commit `e543043a`. |
+| Upstream manifest entries | 974 | All entries in `FHIR/fhir-test-cases/validator/manifest.json` at commit `431b37c`. |
 | Pre-filtered out | 438 | Not executable by this harness: the current comparison runner measures JSON FHIR resource validation against Java `OperationOutcome` baselines, not XML, non-resource formats, disabled upstream cases, unsupported modules, logical models, or cases without a Java baseline. |
-| Candidate comparison set | 531 | R4/R5 or unversioned JSON-oriented entries with a declared Java baseline. |
-| Runtime skipped | 35 | Candidate entries kept outside the headline JSON score because their Java baseline output is not available locally. |
+| Candidate comparison set | 536 | R4/R5/R6 or unversioned JSON-oriented entries with a declared Java baseline. |
+| Runtime skipped | 40 | Candidate entries kept outside the headline JSON score because their Java baseline output is not available locally. |
 | Executed and compared | 496 | Records result was normalized to `OperationOutcome` and diffed against Java. |
 | Passed | 496 | All executable comparisons passed. |
+
+Reproduce the headline lane locally with:
+
+```sh
+npm run conformance -- --tx-server none --output-file conformance-results/report-local.json
+```
 
 Pre-filter exclusions:
 
 | Reason | Count |
 |---|---:|
 | XML resources (Records validator is JSON-only) | 296 |
-| Non-R4/R5 FHIR versions (`3.0`, `3.0.1`, `1.4`) | 47 |
+| Non-R4/R5/R6 FHIR versions (`3.0`, `3.0.1`, `1.4`) | 47 |
 | Unsupported modules: SHC, CDA, CDS Hooks, JSON5, XVer, DSIG, HL7 v2 | 74 |
 | Disabled by upstream manifest (`use-test: false`) | 17 |
 | No Java baseline declared in the manifest | 3 |
 | Logical model test | 1 |
 
-Runtime skips inside the 531 candidate set for the headline lane:
+Runtime skips inside the 536 candidate set for the headline lane:
 
 | Reason | Count |
 |---|---:|
-| Java baseline/parity backlog | 35 |
+| Java baseline output not found | 40 |
 
-The Java baseline/parity backlog is measured separately with the explicit
+The Java baseline backlog is measured separately with the explicit
 `--include-baseline-backlog` discovery flag. The 2026-05-03 discovery run
 resolves known upstream Java baseline path drift, includes explicit FML/NDJSON
 parser-baseline fixtures, synthesizes the missing empty Java outcome for

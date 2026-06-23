@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { toInternalFhirVersion, type PublicFhirVersion } from '../index';
+import {
+  recordsValidator,
+  toInternalFhirVersion,
+  type PublicFhirVersion,
+  type RecordsValidatorSingleton,
+} from '../index';
 
 describe('toInternalFhirVersion (K-2 phase 1)', () => {
   it('routes R4B through R4 — same StructureDefinitions and FHIRPath context', () => {
@@ -22,5 +27,15 @@ describe('toInternalFhirVersion (K-2 phase 1)', () => {
     // 'R4B' as a literal because PublicFhirVersion includes it.
     const v: PublicFhirVersion = 'R4B';
     expect(toInternalFhirVersion(v)).toBe('R4');
+  });
+
+  it('exports a typed singleton facade without eager initialization', () => {
+    const singleton: RecordsValidatorSingleton = recordsValidator;
+    const validate: RecordsValidatorSingleton['validate'] = singleton.validate.bind(singleton);
+    const validateAll: RecordsValidatorSingleton['validateAll'] = singleton.validateAll.bind(singleton);
+
+    expect(singleton.isCreated()).toBe(false);
+    expect(typeof validate).toBe('function');
+    expect(typeof validateAll).toBe('function');
   });
 });

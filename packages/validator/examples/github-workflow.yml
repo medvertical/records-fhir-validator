@@ -28,7 +28,7 @@ jobs:
           fhir-version: R4
           fail-on: error
           # Pin the validator version for reproducible CI:
-          # validator-version: '0.2.0'
+          # validator-version: '0.3.0'
           # Default `warn` keeps CI output focused on validation
           # annotations; raise to `info` or `debug` when troubleshooting:
           # log-level: warn

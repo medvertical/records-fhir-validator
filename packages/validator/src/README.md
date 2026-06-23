@@ -67,10 +67,11 @@ Stable subpaths are listed in `packages/validator/package.json` under
 
 Current HL7 `FHIR/fhir-test-cases` status:
 
-- Upstream manifest entries: 969.
+- Upstream manifest entries: 974 at pinned commit
+  `431b37cd06cac878bc23b4a8b457c2f2397fdcdc`.
 - Pre-filtered out before validation: 438 because this harness measures JSON FHIR resource validation against Java `OperationOutcome` baselines, not XML, non-resource formats, disabled upstream cases, unsupported modules, logical models, or cases without a Java baseline.
-- Candidate JSON comparison set: 531.
-- Runtime skipped: 35.
+- Candidate JSON comparison set: 536.
+- Runtime skipped: 40 because the Java baseline output is not available locally.
 - Executed and compared against Java `OperationOutcome`: 496.
 - Passed: 496.
 - Failed/errors: 0.
@@ -85,7 +86,7 @@ versions, unsupported modules (SHC, CDA, CDS Hooks, JSON5, XVer, DSIG, HL7 v2),
 disabled upstream tests, logical models, or entries without a declared Java
 baseline.
 
-The 35 headline runtime skips are measured by the explicit
+The 40 headline runtime skips are measured by the explicit
 `--include-baseline-backlog` discovery lane. That lane now executes 547
 launch-discovery comparisons, including discovery-only FML/NDJSON,
 JSON5, DSIG JSON, and hidden-Java-outcome fixtures, with 0 skips.

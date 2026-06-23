@@ -8,9 +8,25 @@
  *   const issues = await recordsValidator.validate(resource, profileUrl);
  */
 
+import type { RecordsValidator } from './core/validator-engine';
+import type { FhirClientLike } from './core/profile-loader-utils';
+import type { ValidationIssue, ValidationSettings } from './types';
+import type { TerminologyResolutionConfig } from './validators/valueset-validator';
+import type { AnomalyDetectorConfig, AnomalyFinding } from './validators/anomaly-detector';
+import {
+  toInternalFhirVersion,
+  validateAllResources,
+} from './public-validation-api';
+import type {
+  PublicBatchValidationOptions,
+  PublicFhirVersion,
+  PublicValidationInput,
+  PublicValidationResult,
+} from './public-validation-api';
+
 // Lazy import to avoid circular dependencies
 // Import RecordsValidator class only when needed
-let _recordsValidatorInstance: any = null;
+let _recordsValidatorInstance: RecordsValidator | null = null;
 
 // Export validator classes for testing and advanced usage
 export { ExtensionValidator } from './validators/extension-validator';
@@ -22,7 +38,7 @@ export { SnapshotGenerator } from './core/snapshot-generator';
  * Get singleton instance of RecordsValidator
  * Lazy initialization to avoid circular dependencies
  */
-async function getRecordsValidator() {
+async function getRecordsValidator(): Promise<RecordsValidator> {
   if (!_recordsValidatorInstance) {
     const { RecordsValidator } = await import('./core/validator-engine');
     const { logger } = await import('./logger');
@@ -78,15 +94,25 @@ async function getRecordsValidator() {
  * check has CodeSystems available without performing disk I/O at
  * validation time.
  */
-async function prewarmAnswerValueSets(questionnaire: any): Promise<void> {
+interface QuestionnaireItemLike {
+  answerValueSet?: unknown;
+  item?: unknown;
+}
+
+interface QuestionnaireLike {
+  item?: unknown;
+}
+
+async function prewarmAnswerValueSets(questionnaire: QuestionnaireLike): Promise<void> {
   const urls = new Set<string>();
-  const walk = (items: any[] | undefined): void => {
+  const walk = (items: unknown): void => {
     if (!Array.isArray(items)) return;
     for (const item of items) {
-      if (item?.answerValueSet && typeof item.answerValueSet === 'string') {
-        urls.add(item.answerValueSet);
+      const candidate = item as QuestionnaireItemLike;
+      if (typeof candidate.answerValueSet === 'string') {
+        urls.add(candidate.answerValueSet);
       }
-      if (item?.item) walk(item.item);
+      walk(candidate.item);
     }
   };
   walk(questionnaire?.item);
@@ -107,47 +133,81 @@ async function prewarmAnswerValueSets(questionnaire: any): Promise<void> {
   }
 }
 
-/**
- * Public-API FHIR version literal. R4B is accepted on every entry
- * point and routed internally as R4: the records engine validates R4B
- * resources against the same StructureDefinitions and FHIRPath context
- * that R4 uses, which matches the R4B maintenance-release semantics.
- * R4B-specific package bundling (`hl7.fhir.r4b.core`) and a separate
- * R4B FHIRPath context are tracked under K-2 in the strategic roadmap.
- */
-export type PublicFhirVersion = 'R4' | 'R4B' | 'R5' | 'R6';
+export { toInternalFhirVersion } from './public-validation-api';
+export type {
+  PublicBatchValidationOptions,
+  PublicFhirVersion,
+  PublicValidationInput,
+  PublicValidationRequest,
+  PublicValidationResult,
+} from './public-validation-api';
 
-/** Map a public-API FHIR version to the internal validator's accepted version. */
-export function toInternalFhirVersion(v: PublicFhirVersion): 'R4' | 'R5' | 'R6' {
-  return v === 'R4B' ? 'R4' : v;
+export interface RecordsValidatorSingleton {
+  validate(
+    resource: unknown,
+    profileUrl?: string,
+    fhirVersion?: PublicFhirVersion,
+    settings?: ValidationSettings,
+    fhirClient?: FhirClientLike,
+  ): Promise<ValidationIssue[]>;
+  validateMetadata(...args: Parameters<RecordsValidator['validateMetadata']>): ReturnType<RecordsValidator['validateMetadata']>;
+  validateStructure(...args: Parameters<RecordsValidator['validateStructure']>): ReturnType<RecordsValidator['validateStructure']>;
+  validateBatch(...args: Parameters<RecordsValidator['validateBatch']>): ReturnType<RecordsValidator['validateBatch']>;
+  validateAll(inputs: PublicValidationInput[], options?: PublicBatchValidationOptions): Promise<PublicValidationResult[]>;
+  isCreated(): boolean;
+  isInitialized(): Promise<boolean>;
+  isAvailable(): boolean;
+  isProfileSupported(...args: Parameters<RecordsValidator['isProfileSupported']>): ReturnType<RecordsValidator['isProfileSupported']>;
+  waitForInitialization(): ReturnType<RecordsValidator['waitForInitialization']>;
+  getSdLoader(): Promise<ReturnType<RecordsValidator['getSdLoader']>>;
+  loadProfileWithSnapshot(...args: Parameters<RecordsValidator['loadProfileWithSnapshot']>): ReturnType<RecordsValidator['loadProfileWithSnapshot']>;
+  registerQuestionnaire(questionnaire: QuestionnaireLike): Promise<boolean>;
+  getQuestionnaire(...args: Parameters<RecordsValidator['getQuestionnaire']>): ReturnType<RecordsValidator['getQuestionnaire']>;
+  configureTerminologyResolution(config: TerminologyResolutionConfig): Promise<ReturnType<RecordsValidator['configureTerminologyResolution']>>;
+  clearTerminologyCache(): Promise<ReturnType<RecordsValidator['clearTerminologyCache']>>;
+  clearProfileCache(): Promise<ReturnType<RecordsValidator['clearProfileCache']> | undefined>;
+  evictProfile(...args: Parameters<RecordsValidator['evictProfile']>): ReturnType<RecordsValidator['evictProfile']> | undefined;
+  setPinnedCanonicals(...args: Parameters<RecordsValidator['setPinnedCanonicals']>): Promise<ReturnType<RecordsValidator['setPinnedCanonicals']>>;
+  getPinnedCanonicalCount(): ReturnType<RecordsValidator['getPinnedCanonicalCount']>;
+  detectAnomalies(resources: unknown[], config?: Partial<AnomalyDetectorConfig>): Promise<AnomalyFinding[]>;
 }
 
 /**
  * RecordsValidator singleton with lazy initialization
  * Methods are proxied to avoid breaking existing code
  */
-export const recordsValidator = {
+export const recordsValidator: RecordsValidatorSingleton = {
   async validate(
     resource: unknown,
     profileUrl?: string,
     fhirVersion?: PublicFhirVersion,
-    ...rest: unknown[]
+    settings?: ValidationSettings,
+    fhirClient?: FhirClientLike,
   ) {
     const instance = await getRecordsValidator();
     const mapped = fhirVersion ? toInternalFhirVersion(fhirVersion) : undefined;
-    return instance.validate(resource, profileUrl, mapped, ...rest);
+    return instance.validate(resource, profileUrl, mapped, settings, fhirClient);
   },
-  async validateMetadata(...args: any[]) {
+  async validateMetadata(...args) {
     const instance = await getRecordsValidator();
     return instance.validateMetadata(...args);
   },
-  async validateStructure(...args: any[]) {
+  async validateStructure(...args) {
     const instance = await getRecordsValidator();
     return instance.validateStructure(...args);
   },
-  async validateBatch(...args: any[]) {
+  async validateBatch(...args) {
     const instance = await getRecordsValidator();
     return instance.validateBatch(...args);
+  },
+  async validateAll(inputs, options) {
+    const instance = await getRecordsValidator();
+    return validateAllResources({
+      validate: (resource, profileUrl, fhirVersion, settings, fhirClient) =>
+        instance.validate(resource, profileUrl, fhirVersion, settings, fhirClient),
+      validateBatch: (resources, batchOptions) =>
+        instance.validateBatch(resources as any[], batchOptions),
+    }, inputs, options);
   },
   /**
    * Check if validator singleton has been created
@@ -170,7 +230,7 @@ export const recordsValidator = {
   isAvailable() {
     return _recordsValidatorInstance !== null; // Only true if singleton exists
   },
-  isProfileSupported(...args: any[]) {
+  isProfileSupported(...args) {
     if (!_recordsValidatorInstance) {
       return false; // Not initialized yet
     }
@@ -199,7 +259,7 @@ export const recordsValidator = {
    * the questionnaire references so the synchronous Coding display-match
    * check in QR validation can consult the local CodeSystem.
    */
-  async registerQuestionnaire(questionnaire: any) {
+  async registerQuestionnaire(questionnaire) {
     const instance = await getRecordsValidator();
     await instance.waitForInitialization();
     const ok = instance.registerQuestionnaire(questionnaire);
@@ -218,60 +278,7 @@ export const recordsValidator = {
    * Configure terminology resolution strategy
    * Call when settings change to update how terminology validation resolves codes
    */
-  async configureTerminologyResolution(config: {
-    strategy: 'local-first' | 'server-first' | 'local-only';
-    serverUrl?: string;
-    auth?: {
-      type: 'none' | 'basic' | 'bearer' | 'oauth2' | 'mtls';
-      username?: string;
-      password?: string;
-      token?: string;
-      clientId?: string;
-      clientSecret?: string;
-      scope?: string;
-      tokenUrl?: string;
-      clientCert?: string;
-      clientCertPath?: string;
-      clientKey?: string;
-      clientKeyPath?: string;
-      caCert?: string;
-      caCertPath?: string;
-      passphrase?: string;
-      rejectUnauthorized?: boolean;
-    };
-    servers?: Array<{
-      id: string;
-      url: string;
-      enabled: boolean;
-      fhirVersions: ('R4' | 'R5' | 'R6')[];
-      preferredSystems?: string[];
-      circuitOpen?: boolean;
-      authConfig?: {
-        type: 'none' | 'basic' | 'bearer' | 'oauth2' | 'mtls';
-        username?: string;
-        password?: string;
-        token?: string;
-        clientId?: string;
-        clientSecret?: string;
-        scope?: string;
-        tokenUrl?: string;
-        clientCert?: string;
-        clientCertPath?: string;
-        clientKey?: string;
-        clientKeyPath?: string;
-        caCert?: string;
-        caCertPath?: string;
-        passphrase?: string;
-        rejectUnauthorized?: boolean;
-      };
-    }>;
-    serverDelegation?: {
-      expandValueSets: boolean;
-      validateCodes: boolean;
-      cacheResults: boolean;
-      cacheTTLSeconds: number;
-    };
-  }) {
+  async configureTerminologyResolution(config) {
     const instance = await getRecordsValidator();
     return instance.configureTerminologyResolution(config);
   },
@@ -306,9 +313,9 @@ export const recordsValidator = {
     return _recordsValidatorInstance.evictProfile(profileUrl, fhirVersion);
   },
 
-  async setPinnedCanonicals(pinned: Map<string, string>) {
+  async setPinnedCanonicals(...args) {
     const instance = await getRecordsValidator();
-    return instance.setPinnedCanonicals(pinned);
+    return instance.setPinnedCanonicals(...args);
   },
 
   getPinnedCanonicalCount(): number {
@@ -327,7 +334,7 @@ export const recordsValidator = {
    * @param resources — array of FHIR resources to analyse
    * @param config — optional detection threshold overrides
    */
-  async detectAnomalies(resources: any[], config?: any) {
+  async detectAnomalies(resources, config) {
     const instance = await getRecordsValidator();
     return instance.detectAnomalies(resources, config);
   }
@@ -409,6 +416,14 @@ export {
     createValidationIssue,
     applyFixPatch,
     type FixApplyResult,
+    issueFingerprint,
+    issueMatchesAnchor,
+    issuePathMatchesPattern,
+    stableIssues,
+    summarizeIssueAnchors,
+    summarizeIssueFingerprints,
+    type ExpectedIssueAnchor,
+    type StableIssueSummaryOptions,
 } from './issues';
 
 // FHIRPath sandbox — static safety pre-flight for Custom Rules (P-3)

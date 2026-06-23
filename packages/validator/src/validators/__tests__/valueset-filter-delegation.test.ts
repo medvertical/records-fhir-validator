@@ -299,6 +299,7 @@ describe('ValueSet filtered include server delegation', () => {
     await expect(
       validator.isCodeValidForBinding('58410-2', LOINC, UNSUPPORTED_FILTER_VALUE_SET_URL, 'extensible')
     ).resolves.toBe(true);
+    expect(validator.getCacheStats().terminologyDiagnostics.unverifiedBindings.byReason['unsupported-filter']).toBe(1);
   });
 
   it('fails open for direct membership checks against unsupported terminology filters', async () => {
@@ -334,6 +335,7 @@ describe('ValueSet filtered include server delegation', () => {
     await expect(
       validator.isCodeInValueSet('58410-2', LOINC, UNSUPPORTED_FILTER_VALUE_SET_URL)
     ).resolves.toBe(true);
+    expect(validator.getCacheStats().terminologyDiagnostics.failOpenMembershipChecks.byReason['unsupported-filter']).toBe(1);
   });
 
   it('keeps required bindings strict when unsupported terminology filters are only partially expanded', async () => {

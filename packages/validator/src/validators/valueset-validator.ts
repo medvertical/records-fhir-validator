@@ -4,7 +4,8 @@ import { logger } from '../logger';
 
 import type {
   TerminologyResolutionConfig,
-  CodeBindingOutcome
+  CodeBindingOutcome,
+  TerminologyDiagnostics,
 } from './valueset-types';
 import {
   DEFAULT_RESOLUTION_CONFIG,
@@ -44,6 +45,12 @@ import {
   type BindingValidationDeps,
   type ValidateBindingOptions,
 } from './valueset-binding-validator';
+import {
+  cloneTerminologyDiagnostics,
+  createEmptyTerminologyDiagnostics,
+  recordTerminologyReason,
+} from './valueset-diagnostics';
+import { validateCodeViaTerminologyServerWithFilters } from './valueset-terminology-server-validation';
 
 export type { TerminologyResolutionStrategy, TerminologyResolutionConfig, ValueSet, CodeSystem } from './valueset-types';
 
@@ -53,6 +60,7 @@ export class ValueSetValidator {
   private apiClient: TerminologyApiClient;
   private packageLoader: ValueSetPackageLoader;
   private twoPhaseShadow: TwoPhaseShadowEvaluator;
+  private terminologyDiagnostics: TerminologyDiagnostics = createEmptyTerminologyDiagnostics();
 
   static readonly EXTERNAL_CODE_SYSTEMS = EXTERNAL_CODE_SYSTEMS;
 
@@ -110,43 +118,17 @@ export class ValueSetValidator {
     override: { url: string; auth?: any } | undefined,
     fhirVersion?: FhirVersion,
   ): Promise<boolean> {
-    const isValidOnServer = await this.apiClient.validateCode(code, system, valueSetUrl, bindingStrength, override);
-    if (isValidOnServer) {
-      return true;
-    }
-
-    return this.validateCodeAgainstConceptFilters(code, system, valueSetUrl, override, fhirVersion);
-  }
-
-  private async validateCodeAgainstConceptFilters(
-    code: string,
-    system: string | undefined,
-    valueSetUrl: string,
-    override: { url: string; auth?: any } | undefined,
-    fhirVersion?: FhirVersion,
-  ): Promise<boolean> {
-    if (!system || !this.hasTerminologyServer(override)) return false;
-
-    const filters = await this.packageLoader.getIncludeConceptFilters(valueSetUrl, fhirVersion);
-    for (const filter of filters) {
-      if (filter.system !== system || filter.property !== 'concept') continue;
-
-      if (filter.op === '=' && filter.value === code) {
-        return true;
-      }
-
-      if (filter.op === 'is-a' || filter.op === 'descendent-of') {
-        const outcome = await this.apiClient.subsumes(system, filter.value, code, override);
-        if (outcome === 'subsumes') {
-          return true;
-        }
-        if (filter.op === 'is-a' && outcome === 'equivalent') {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    return validateCodeViaTerminologyServerWithFilters({
+      apiClient: this.apiClient,
+      packageLoader: this.packageLoader,
+      hasTerminologyServer: this.hasTerminologyServer.bind(this),
+      code,
+      system,
+      valueSetUrl,
+      bindingStrength,
+      override,
+      fhirVersion,
+    });
   }
 
   /**
@@ -203,6 +185,7 @@ export class ValueSetValidator {
         logger.warn(`[ValueSetValidator] Required binding validation failed, treating as invalid: ${err.message}`);
         return 'invalid';
       }
+      recordTerminologyReason(this.terminologyDiagnostics.unverifiedBindings, 'validation-error');
       return 'unverified';
     }
   }
@@ -284,6 +267,7 @@ export class ValueSetValidator {
           `[ValueSetValidator] Unsupported include filter in ${valueSetUrl} ` +
           `for '${system ? `${system}|` : ''}${code}' – direct ValueSet membership cannot be verified locally`,
         );
+        recordTerminologyReason(this.terminologyDiagnostics.failOpenMembershipChecks, 'unsupported-filter');
         return this.twoPhaseShadow.finish(twoPhaseLookup, true, { code, system, valueSetUrl });
       }
       if (isUnresolvableSnomedExtensionFilterCode(system, code, filteredIncludes)) {
@@ -291,6 +275,7 @@ export class ValueSetValidator {
           `[ValueSetValidator] SNOMED national-extension code '${code}' in filtered ` +
           `${valueSetUrl} cannot be subsumed by an International Edition terminology server – failing open`,
         );
+        recordTerminologyReason(this.terminologyDiagnostics.failOpenMembershipChecks, 'unresolvable-snomed-extension-filter');
         return this.twoPhaseShadow.finish(twoPhaseLookup, true, { code, system, valueSetUrl });
       }
 
@@ -299,6 +284,7 @@ export class ValueSetValidator {
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.warn(`[ValueSetValidator] Could not validate code against ${valueSetUrl}:`, err.message);
+      recordTerminologyReason(this.terminologyDiagnostics.failOpenMembershipChecks, 'validation-error');
       return true; // Fail open
     }
   }
@@ -312,6 +298,7 @@ export class ValueSetValidator {
     clearCodeSystemValidateCodeCache();
     clearSubsumesCache();
     this.twoPhaseShadow.clearExpansion();
+    this.terminologyDiagnostics = createEmptyTerminologyDiagnostics();
     logger.debug('[ValueSetValidator] Cache cleared');
   }
 
@@ -323,6 +310,7 @@ export class ValueSetValidator {
     codeSystemCount: number;
     validateCodeResultCount: number;
     subsumesResultCount: number;
+    terminologyDiagnostics: TerminologyDiagnostics;
     twoPhaseExpansion?: {
       lookups: number;
       hits: number;
@@ -338,6 +326,7 @@ export class ValueSetValidator {
       codeSystemCount: stats.codeSystemCount,
       validateCodeResultCount: getValidateCodeCacheSize(),
       subsumesResultCount: getSubsumesCacheSize(),
+      terminologyDiagnostics: cloneTerminologyDiagnostics(this.terminologyDiagnostics),
       twoPhaseExpansion: this.twoPhaseShadow.getStats(),
     };
   }
@@ -443,6 +432,7 @@ export class ValueSetValidator {
         `for '${system ? `${system}|` : ''}${code}' – skipping non-required binding check`,
       );
       this.twoPhaseShadow.finish(twoPhaseLookup, true, { code, system, valueSetUrl });
+      recordTerminologyReason(this.terminologyDiagnostics.unverifiedBindings, 'unsupported-filter');
       return 'unverified';
     }
     if (
@@ -454,6 +444,7 @@ export class ValueSetValidator {
         `${valueSetUrl} cannot be subsumed by an International Edition terminology server – skipping non-required binding check`,
       );
       this.twoPhaseShadow.finish(twoPhaseLookup, true, { code, system, valueSetUrl });
+      recordTerminologyReason(this.terminologyDiagnostics.unverifiedBindings, 'unresolvable-snomed-extension-filter');
       return 'unverified';
     }
 
@@ -463,6 +454,7 @@ export class ValueSetValidator {
     if (expandedCodes.size === 0) {
       logger.debug(`[ValueSetValidator] Empty expansion for ${valueSetUrl} – skipping binding check for '${code}'`);
       this.twoPhaseShadow.finish(twoPhaseLookup, true, { code, system, valueSetUrl });
+      recordTerminologyReason(this.terminologyDiagnostics.unverifiedBindings, 'empty-expansion');
       return 'unverified';
     }
 

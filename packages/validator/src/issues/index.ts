@@ -38,3 +38,14 @@ export {
     applyFixPatch,
     type FixApplyResult,
 } from './fix-applier';
+
+export {
+    issueFingerprint,
+    issueMatchesAnchor,
+    issuePathMatchesPattern,
+    stableIssues,
+    summarizeIssueAnchors,
+    summarizeIssueFingerprints,
+    type ExpectedIssueAnchor,
+    type StableIssueSummaryOptions,
+} from './issue-contract';

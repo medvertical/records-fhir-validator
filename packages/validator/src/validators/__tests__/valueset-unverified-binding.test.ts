@@ -38,6 +38,15 @@ describe('ValueSetValidator unverified bindings (P-3)', () => {
     );
 
     expect(issues).toHaveLength(0);
+    expect(validator.getCacheStats().terminologyDiagnostics.unverifiedBindings).toEqual({
+      total: 1,
+      byReason: {
+        'empty-expansion': 1,
+        'unsupported-filter': 0,
+        'unresolvable-snomed-extension-filter': 0,
+        'validation-error': 0,
+      },
+    });
   });
 
   it('emits an informational issue when reportUnverifiedBindings is enabled', async () => {
