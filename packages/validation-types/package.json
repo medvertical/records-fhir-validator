@@ -1,6 +1,6 @@
 {
   "name": "@records-fhir/validation-types",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Validation-domain TypeScript types for the Records FHIR validator: ValidationIssue, ValidationSettings, ValidationResult, advisor rules, fix suggestions. No runtime code, no DB coupling.",
   "type": "module",
   "license": "Apache-2.0",

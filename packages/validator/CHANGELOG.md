@@ -10,6 +10,17 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.1.14] — 2026-06-23
+
+Runtime patch release for the standalone CLI package. Released with
+`@records-fhir/validation-types` 0.1.5.
+
+### Fixes
+
+- Pinned the validator runtime dependency to `@records-fhir/validation-types`
+  0.1.5 so npm installs include the issue-identity helper exports required by
+  the CLI and validation engine.
+
 ## [0.1.13] — 2026-06-23
 
 Public usability polish for the standalone validator package and public mirror.

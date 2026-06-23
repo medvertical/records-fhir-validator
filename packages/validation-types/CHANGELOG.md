@@ -11,6 +11,15 @@ captures changes that affect type-package consumers directly.
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-06-23
+
+Released alongside `@records-fhir/validator` 0.1.14.
+
+### Surface
+
+- Published the issue-identity helper exports, including
+  `computeValidationIssueId`, required by the validator runtime and CLI.
+
 ## [0.1.4] — 2026-05-28
 
 Released alongside `@records-fhir/validator` 0.1.10.
