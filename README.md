@@ -46,7 +46,7 @@ jobs:
 For production CI, pin an immutable patch tag:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.1.14
+- uses: medvertical/records-fhir-validator@v0.2.0
   with:
     paths: resources/**/*.json
     profile-url: http://hl7.org/fhir/StructureDefinition/Patient
@@ -59,7 +59,7 @@ Action pinning:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Latest stable in current major | `medvertical/records-fhir-validator@v0` | Floating tag, force-moved on stable releases only |
-| Exact released version | `medvertical/records-fhir-validator@v0.1.14` | Immutable consumer tag |
+| Exact released version | `medvertical/records-fhir-validator@v0.2.0` | Immutable consumer tag |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | Best for audit and forensics |
 
 The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
@@ -68,7 +68,7 @@ The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
 ### npm Package
 
 ```sh
-npm install @records-fhir/validator@0.1.14 @records-fhir/validation-types@0.1.5
+npm install @records-fhir/validator@0.2.0 @records-fhir/validation-types@0.1.5
 ```
 
 Run the CLI against one file or a folder:
@@ -77,7 +77,29 @@ Run the CLI against one file or a folder:
 npx -p @records-fhir/validator records-fhir-validator ./patient.json
 npx -p @records-fhir/validator records-fhir-validator ./fixtures --fail-on=warning
 npx -p @records-fhir/validator records-fhir-validator ./patient.json --format=json
+npx -p @records-fhir/validator records-fhir-validator ./fixtures --summary-only --output validation-report.json
 ```
+
+Useful CLI options:
+
+| Option | Default | Purpose |
+|---|---|---|
+| `--profile-url <url>` | base profile for each `resourceType` | Validate every resource against one canonical profile. |
+| `--fhir-version R4\|R4B\|R5\|R6` | `R4` | Select the public FHIR version. |
+| `--fail-on error\|warning\|none` | `error` | Control the process exit threshold. |
+| `--format text\|json` | `text` | Print human-readable lines or structured JSON. |
+| `--output <file>` | stdout | Write validation output to a file. Parent directories are created. |
+| `--summary-only` | off | Omit per-issue output and print only aggregate counts. |
+| `--include <glob>` | `**/*.json` | Include matching JSON files when walking folders. Repeatable or comma-separated. |
+| `--exclude <glob>` | none | Exclude matching JSON files when walking folders. Repeatable or comma-separated. |
+
+CLI exit codes:
+
+| Code | Meaning |
+|---:|---|
+| `0` | Validation completed and did not meet the `--fail-on` threshold. |
+| `1` | Validation completed and met the `--fail-on` threshold. |
+| `2` | Invalid CLI input, unreadable paths, no matched JSON files, or output write failure. |
 
 Validate a resource from Node.js:
 
@@ -111,11 +133,12 @@ database storage, and UI display:
 
 The CLI text mode prints one issue per line and exits according to
 `--fail-on`. JSON mode returns `{ summary, results }`, where each result
-includes `file`, `resourceType`, `profileUrl`, and `issues`.
+includes `file`, `resourceType`, `profileUrl`, and `issues`. With
+`--summary-only`, JSON mode returns only `{ summary }`.
 
 ## What Is Included
 
-- `@records-fhir/validator` 0.1.14 - Apache-2.0 validation engine.
+- `@records-fhir/validator` 0.2.0 - Apache-2.0 validation engine.
 - `@records-fhir/validation-types` 0.1.5 - Apache-2.0 validation-domain types.
 - Composite GitHub Action at repository root.
 - Standalone examples under `packages/validator/examples/`.

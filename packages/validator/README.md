@@ -1,6 +1,6 @@
 # @records-fhir/validator
 
-Pure TypeScript FHIR validation engine for R4, R5, and R6 resources.
+Pure TypeScript FHIR validation engine for R4, R4B, R5, and R6 resources.
 
 The package validates FHIR resources against StructureDefinitions, FHIRPath constraints, terminology bindings, references, and optional custom rules without requiring a database or JVM. Records can wire database-backed profile and rule sources through dependency injection, while standalone consumers can run from local FHIR packages or optional bundled profiles.
 
@@ -89,7 +89,7 @@ depending on your trade-off between freshness and stability:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Always-latest within current major | `medvertical/records-fhir-validator@v0` | Force-moved on every stable release; never advances onto a prerelease |
-| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.1.14` | Immutable once published |
+| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.2.0` | Immutable once published |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | For audit / forensic builds |
 
 The `validator-v<semver>` tag you may see on the public repo's release
@@ -128,12 +128,35 @@ Common options:
 | `--fhir-version R4\|R4B\|R5\|R6` | `R4` | Select the public FHIR version. |
 | `--fail-on error\|warning\|none` | `error` | Control the process exit threshold. |
 | `--format text\|json` | `text` | Print human-readable lines or structured JSON. |
+| `--output <file>` | stdout | Write validation output to a file. Parent directories are created. |
+| `--summary-only` | off | Omit per-issue output and print only aggregate counts. |
+| `--include <glob>` | `**/*.json` | Include matching JSON files when walking folders. Repeatable or comma-separated. |
+| `--exclude <glob>` | none | Exclude matching JSON files when walking folders. Repeatable or comma-separated. |
 
 Example JSON output:
 
 ```sh
 npx -p @records-fhir/validator records-fhir-validator ./patient.json --format=json
 ```
+
+Write a CI report while validating only selected files:
+
+```sh
+npx -p @records-fhir/validator records-fhir-validator ./fixtures \
+  --include 'fixtures/**/*.json' \
+  --exclude 'fixtures/drafts/**' \
+  --format=json \
+  --summary-only \
+  --output validation-report.json
+```
+
+Exit codes are stable for CI:
+
+| Code | Meaning |
+|---:|---|
+| `0` | Validation completed and did not meet the `--fail-on` threshold. |
+| `1` | Validation completed and met the `--fail-on` threshold. |
+| `2` | Invalid CLI input, unreadable paths, no matched JSON files, or output write failure. |
 
 ```json
 {

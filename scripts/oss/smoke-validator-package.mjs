@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -143,6 +143,43 @@ if (outcome.resourceType !== 'OperationOutcome' || outcome.issue.length === 0) {
   );
 
   await run('node', ['smoke.mjs'], { cwd: packageDir });
+
+  await mkdir(join(packageDir, 'fixtures'), { recursive: true });
+  await writeFile(
+    join(packageDir, 'fixtures', 'patient.json'),
+    JSON.stringify({ resourceType: 'Patient', id: 'cli-smoke' }, null, 2),
+  );
+  await writeFile(
+    join(packageDir, 'fixtures', 'skip-me.json'),
+    JSON.stringify({ resourceType: 'Observation', id: 'skip-me' }, null, 2),
+  );
+  await writeFile(join(packageDir, 'fixtures', 'notes.txt'), 'not fhir json\n');
+
+  await run(
+    './node_modules/.bin/records-fhir-validator',
+    [
+      'fixtures',
+      '--include',
+      'fixtures/**/*.json',
+      '--exclude',
+      'fixtures/skip-*.json',
+      '--format=json',
+      '--summary-only',
+      '--output',
+      'validation-report.json',
+      '--fail-on=none',
+    ],
+    { cwd: packageDir },
+  );
+
+  const report = JSON.parse(await readFile(join(packageDir, 'validation-report.json'), 'utf8'));
+  if (report.summary?.files !== 1 || report.summary?.errors !== 0) {
+    throw new Error(`Unexpected CLI smoke summary: ${JSON.stringify(report.summary)}`);
+  }
+  if ('results' in report) {
+    throw new Error('Expected --summary-only JSON output to omit results');
+  }
+
   console.log('OSS validator package smoke test passed');
 } finally {
   if (process.env.KEEP_SMOKE_TMP !== '1') {

@@ -10,6 +10,27 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-06-23
+
+Production-readiness release for the standalone npm CLI. Released with
+`@records-fhir/validation-types` 0.1.5.
+
+### Added
+
+- Added `--output <file>` so CLI runs can write JSON or text reports without
+  shell redirection.
+- Added `--summary-only` for quiet CI jobs that only need aggregate counts.
+- Added repeatable `--include <glob>` and `--exclude <glob>` filters for
+  folder validation.
+- Documented stable CLI exit codes: `0` for pass, `1` for validation threshold
+  failure, `2` for usage/input/output errors.
+
+### Verification
+
+- Extended the OSS package smoke test to install the packed npm package in a
+  fresh project and execute the installed `records-fhir-validator` binary with
+  output-file, summary-only, include, and exclude options.
+
 ## [0.1.14] — 2026-06-23
 
 Runtime patch release for the standalone CLI package. Released with

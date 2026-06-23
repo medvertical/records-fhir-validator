@@ -23,6 +23,7 @@ After installing the npm package, the same check is available through the CLI:
 ```sh
 npx -p @records-fhir/validator records-fhir-validator path/to/patient.json
 npx -p @records-fhir/validator records-fhir-validator ./fixtures --fail-on=warning --format=json
+npx -p @records-fhir/validator records-fhir-validator ./fixtures --summary-only --output validation-report.json
 ```
 
 The GitHub workflow uses the composite Action and needs no extra setup:

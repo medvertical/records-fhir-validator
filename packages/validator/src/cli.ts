@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { recordsValidator, setEngineLogger, type PublicFhirVersion } from './index';
 
 type FailOn = 'error' | 'warning' | 'none';
@@ -12,6 +12,10 @@ interface CliOptions {
   fhirVersion: PublicFhirVersion;
   failOn: FailOn;
   format: OutputFormat;
+  output?: string;
+  summaryOnly: boolean;
+  include: string[];
+  exclude: string[];
 }
 
 interface FileResult {
@@ -31,12 +35,21 @@ Options:
   --fhir-version <version>  R4, R4B, R5, or R6. Default: R4.
   --fail-on <level>         error, warning, or none. Default: error.
   --format <format>         text or json. Default: text.
+  --output <file>           Write validation output to a file instead of stdout.
+  --summary-only            Print only aggregate counts; omit per-issue output.
+  --include <glob>          Include matching JSON files. Repeatable. Default: **/*.json.
+  --exclude <glob>          Exclude matching JSON files. Repeatable.
   -h, --help                Show this help.
+
+Exit codes:
+  0  Validation completed and did not meet the fail threshold.
+  1  Validation completed and met --fail-on threshold.
+  2  Invalid CLI input, unreadable paths, no matched JSON files, or output write failure.
 
 Examples:
   npx -p @records-fhir/validator records-fhir-validator ./patient.json
   npx -p @records-fhir/validator records-fhir-validator ./fixtures --fail-on=warning
-  npx -p @records-fhir/validator records-fhir-validator ./patient.json --profile-url http://hl7.org/fhir/StructureDefinition/Patient --format=json`;
+  npx -p @records-fhir/validator records-fhir-validator ./fixtures --format=json --output validation-report.json`;
 }
 
 function readOption(args: string[], index: number): [string | undefined, number] {
@@ -52,6 +65,9 @@ function parseArgs(args: string[]): CliOptions {
     fhirVersion: 'R4',
     failOn: 'error',
     format: 'text',
+    summaryOnly: false,
+    include: [],
+    exclude: [],
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -94,12 +110,44 @@ function parseArgs(args: string[]): CliOptions {
       i = nextIndex;
       continue;
     }
+    if (arg.startsWith('--output')) {
+      const [value, nextIndex] = readOption(args, i);
+      if (!value) throw new Error('--output requires a value');
+      options.output = value;
+      i = nextIndex;
+      continue;
+    }
+    if (arg === '--summary-only') {
+      options.summaryOnly = true;
+      continue;
+    }
+    if (arg.startsWith('--include')) {
+      const [value, nextIndex] = readOption(args, i);
+      if (!value) throw new Error('--include requires a value');
+      options.include.push(...splitPatterns(value));
+      i = nextIndex;
+      continue;
+    }
+    if (arg.startsWith('--exclude')) {
+      const [value, nextIndex] = readOption(args, i);
+      if (!value) throw new Error('--exclude requires a value');
+      options.exclude.push(...splitPatterns(value));
+      i = nextIndex;
+      continue;
+    }
     if (arg.startsWith('-')) throw new Error(`Unknown option: ${arg}`);
     options.paths.push(arg);
   }
 
   if (options.paths.length === 0) throw new Error('At least one file or folder path is required');
   return options;
+}
+
+function splitPatterns(value: string): string[] {
+  return value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function* walkJson(path: string): Generator<string> {
@@ -113,6 +161,58 @@ function* walkJson(path: string): Generator<string> {
   for (const entry of readdirSync(resolved)) {
     yield* walkJson(join(resolved, entry));
   }
+}
+
+function normalizePathForGlob(path: string): string {
+  const normalized = path.split(sep).join('/');
+  return normalized.startsWith('./') ? normalized.slice(2) : normalized;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[|\\{}()[\]^$+?.]/g, '\\$&');
+}
+
+function globToRegExp(glob: string): RegExp {
+  const normalized = normalizePathForGlob(glob);
+  let source = '';
+  for (let i = 0; i < normalized.length; i++) {
+    const char = normalized[i];
+    const next = normalized[i + 1];
+    if (char === '*' && next === '*') {
+      i++;
+      if (normalized[i + 1] === '/') {
+        source += '(?:.*/)?';
+        i++;
+      } else {
+        source += '.*';
+      }
+      continue;
+    }
+    if (char === '*') {
+      source += '[^/]*';
+      continue;
+    }
+    if (char === '?') {
+      source += '[^/]';
+      continue;
+    }
+    source += escapeRegExp(char);
+  }
+  return new RegExp(`^${source}$`);
+}
+
+function matchesAny(path: string, patterns: string[]): boolean {
+  const normalized = normalizePathForGlob(path);
+  return patterns.some((pattern) => globToRegExp(pattern).test(normalized));
+}
+
+function shouldIncludeFile(file: string, options: CliOptions): boolean {
+  const relativePath = normalizePathForGlob(relative(process.cwd(), file));
+  const absolutePath = normalizePathForGlob(file);
+  const includePatterns = options.include.length > 0 ? options.include : ['**/*.json'];
+  const include = matchesAny(relativePath, includePatterns) || matchesAny(absolutePath, includePatterns);
+  if (!include) return false;
+  return !(matchesAny(relativePath, options.exclude) || matchesAny(absolutePath, options.exclude));
 }
 
 function severityOf(issue: any): string {
@@ -158,6 +258,12 @@ try {
 }
 if (files.length === 0) {
   console.error('No JSON files found.');
+  process.exit(2);
+}
+
+files = files.filter((file) => shouldIncludeFile(file, options));
+if (files.length === 0) {
+  console.error('No JSON files matched the include/exclude filters.');
   process.exit(2);
 }
 
@@ -214,29 +320,49 @@ for (const file of files) {
   }
 }
 
+const summary = {
+  files: results.length,
+  errors: totalErrors,
+  warnings: totalWarnings,
+  issues: totalIssues,
+};
+
+let rendered = '';
 if (options.format === 'json') {
-  console.log(JSON.stringify({
-    summary: {
-      files: results.length,
-      errors: totalErrors,
-      warnings: totalWarnings,
-      issues: totalIssues,
-    },
-    results,
-  }, null, 2));
+  rendered = JSON.stringify({
+    summary,
+    ...(options.summaryOnly ? {} : { results }),
+  }, null, 2);
 } else {
-  for (const result of results) {
-    if (result.error) {
-      console.error(`ERROR ${result.file}: ${result.error}`);
-      continue;
-    }
-    for (const issue of result.issues as any[]) {
-      console.log(
-        `${severityOf(issue).toUpperCase()} ${result.file} ${issuePath(issue)} ${issue?.code || 'issue'}: ${issueMessage(issue)}`,
-      );
+  const lines: string[] = [];
+  if (!options.summaryOnly) {
+    for (const result of results) {
+      if (result.error) {
+        lines.push(`ERROR ${result.file}: ${result.error}`);
+        continue;
+      }
+      for (const issue of result.issues as any[]) {
+        lines.push(
+          `${severityOf(issue).toUpperCase()} ${result.file} ${issuePath(issue)} ${issue?.code || 'issue'}: ${issueMessage(issue)}`,
+        );
+      }
     }
   }
-  console.log(`Validated ${results.length} file(s): ${totalErrors} error(s), ${totalWarnings} warning(s), ${totalIssues} issue(s).`);
+  lines.push(`Validated ${summary.files} file(s): ${summary.errors} error(s), ${summary.warnings} warning(s), ${summary.issues} issue(s).`);
+  rendered = lines.join('\n');
+}
+
+if (options.output) {
+  try {
+    const outputPath = resolve(options.output);
+    mkdirSync(dirname(outputPath), { recursive: true });
+    writeFileSync(outputPath, `${rendered}\n`, 'utf8');
+  } catch (err) {
+    console.error(`Could not write output file: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(2);
+  }
+} else {
+  console.log(rendered);
 }
 
 if (options.failOn === 'error' && totalErrors > 0) process.exit(1);
