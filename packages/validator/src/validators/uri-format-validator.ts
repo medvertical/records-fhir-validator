@@ -7,6 +7,7 @@ import { createValidationIssue } from '../issues';
  * These use `uri` type in the SD but are not required to be absolute.
  */
 const RELATIVE_URI_PATHS = new Set([
+    'meta.source', // Meta.source is a uri and may be a relative source reference
     'request.url',   // Bundle.entry.request.url — relative request target
     'response.location', // Bundle.entry.response.location
 ]);
@@ -24,6 +25,32 @@ function allowsRelativeUri(path: string): boolean {
         if (RELATIVE_URI_PATHS.has(tail)) return true;
     }
     return false;
+}
+
+function buildInvalidUriDetails(value: string): Record<string, unknown> {
+    const oidPattern = /^\d+(?:\.\d+)+$/;
+    if (oidPattern.test(value)) {
+        const suggestedUri = `urn:oid:${value}`;
+        return {
+            value,
+            suggestedUri,
+            fixHint: `Use '${suggestedUri}' for bare OID identifiers in FHIR URI fields.`,
+        };
+    }
+
+    if (/^www\.[^\s]+$/.test(value)) {
+        const suggestedUri = `https://${value}`;
+        return {
+            value,
+            suggestedUri,
+            fixHint: `Use an absolute URI with a scheme, for example '${suggestedUri}'.`,
+        };
+    }
+
+    return {
+        value,
+        fixHint: `Use an absolute URI with a scheme such as 'https:', 'urn:', or 'urn:oid:'.`,
+    };
 }
 
 /**
@@ -75,9 +102,7 @@ export function validateUriFormat(value: string, path: string, resourceType: str
             profile: profileUrl,
             severityOverride: 'error',
             customMessage: `URI '${value}' is not a valid absolute URI`,
-            details: {
-                value
-            }
+            details: buildInvalidUriDetails(value)
         });
     }
 

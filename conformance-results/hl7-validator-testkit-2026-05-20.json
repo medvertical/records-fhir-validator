@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-05-20T05:11:06.211Z",
+  "lane": "hl7-fhir-validator-testkit",
+  "repoUrl": "https://github.com/nicola-coventry/fhir-validator-testkit.git",
+  "checkout": "HEAD",
+  "workDir": ".external/hl7-validator-testkit",
+  "status": "unavailable",
+  "error": "Command failed: git ls-remote https://github.com/nicola-coventry/fhir-validator-testkit.git HEAD\nremote: Repository not found.\nfatal: repository 'https://github.com/nicola-coventry/fhir-validator-testkit.git/' not found\n",
+  "nextAction": "Confirm the authoritative HL7 validator test-kit repository URL or replace --repo-url with a reachable source."
+}

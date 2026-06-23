@@ -74,6 +74,21 @@ function shouldSkipObservationAlternativeMustSupport(resource: any, path: string
 function shouldSkipContextualMustSupport(resource: any, path: string): boolean {
   if (!resource) return false;
 
+  if (
+    resource.resourceType === 'Observation' &&
+    /^Observation\.(performer|specimen|interpretation|referenceRange)$/i.test(path)
+  ) {
+    return true;
+  }
+
+  if (resource.resourceType === 'DiagnosticReport' && /^DiagnosticReport\.resultsInterpreter$/i.test(path)) {
+    return true;
+  }
+
+  if (resource.resourceType === 'Patient' && /^Patient\.address\.postalCode$/i.test(path)) {
+    return true;
+  }
+
   if (resource.resourceType === 'Encounter' && /^Encounter\.hospitalization$/i.test(path)) {
     const classCode = resource.class?.code;
     return typeof classCode === 'string' && classCode !== 'IMP';
@@ -163,6 +178,9 @@ export class CardinalityValidator {
           resourceType: resource?.resourceType || resourceTypeFromPath(path),
           profile: profileUrl,
           messageParams: { element: path, actual: count, min },
+          details: {
+            fixHint: `Add '${path}' with at least ${min} value${min === 1 ? '' : 's'}.`,
+          },
         }));
       } else {
         // Parent doesn't exist - child element is not required

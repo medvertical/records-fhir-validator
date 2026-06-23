@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PackageRegistryClient } from './package-registry-client';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('PackageRegistryClient package detection', () => {
   it('maps Da Vinci PDEX Plan-Net canonicals to the Plan-Net package id', async () => {
@@ -48,5 +52,48 @@ describe('PackageRegistryClient package detection', () => {
     await expect(
       client.detectPackageForProfile('http://hl7.eu/fhir/base/StructureDefinition/flag-patient-eu-core'),
     ).resolves.toBe('hl7.fhir.eu.base');
+  });
+});
+
+describe('PackageRegistryClient manifest cache', () => {
+  it('bounds manifest cache size and refreshes recently used entries', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const packageId = url.split('/').pop() || 'unknown';
+      return new Response(JSON.stringify({
+        name: packageId,
+        'dist-tags': { latest: '1.0.0' },
+        versions: {
+          '1.0.0': {
+            name: packageId,
+            version: '1.0.0',
+            dist: { tarball: `https://example.test/${packageId}.tgz` },
+          },
+        },
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new PackageRegistryClient(1000, 2);
+
+    await client.fetchPackageManifest('package-a');
+    await client.fetchPackageManifest('package-b');
+    await client.fetchPackageManifest('package-a');
+    await client.fetchPackageManifest('package-c');
+
+    expect(client.getCacheStats()).toEqual(expect.objectContaining({
+      size: 2,
+      maxSize: 2,
+      packageIds: ['package-a', 'package-c'],
+      hits: 1,
+      misses: 3,
+      evictions: 1,
+      staleEvictions: 0,
+    }));
+
+    await client.fetchPackageManifest('package-b');
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });

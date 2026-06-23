@@ -68,6 +68,9 @@ export type {
   ValidationProgress,
   ValidationRunSummary,
   ValidationMetrics,
+} from './results';
+
+export type {
   ValidationQualityMetrics,
   ValidationAccuracyMetrics,
   ValidationConsistencyMetrics,
@@ -90,8 +93,8 @@ export type {
   ValidationGap,
   ValidationCompletenessMetrics,
   ValidationResultWithCompleteness,
-  ValidationCompletenessAction
-} from './results';
+  ValidationCompletenessAction,
+} from './validation-advanced-metrics';
 
 // ============================================================================
 // Settings and Configuration
@@ -205,3 +208,25 @@ export {
   normalizeCanonicalPath,
   normalizeMessageText
 } from './dtos';
+
+export type {
+  ValidationIssueIdentityInput
+} from './issue-identity';
+
+export {
+  computeValidationIssueId,
+  stableStringify
+} from './issue-identity';
+
+export type {
+  ValidationIssueConfidence,
+  ValidationIssueProvenance,
+  ValidationIssueProvenanceInput,
+  ValidationIssueSourceExecutor,
+  ValidationIssueVerificationState,
+} from './issue-provenance';
+
+export {
+  buildValidationIssueProvenance,
+  inferValidationIssueSourceExecutor,
+} from './issue-provenance';

@@ -10,6 +10,36 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.1.12] — 2026-06-23
+
+Feature release adding FHIR R6 validation. Released with
+`@records-fhir/validation-types` 0.1.4. Re-verified green against the HL7
+`fhir-test-cases` JSON-resource parity gate.
+
+### Features
+
+- **FHIR R6 validation support** — resources can now be validated against R6
+  alongside R4, R4B, and R5.
+- **Publication-status escalation** in the strictness layer: issue severity now
+  accounts for the publication status of the governing artifact.
+
+### Fixes
+
+- `memberOf()` boolean constraints: added a synchronous fallback so terminology
+  `memberOf` checks resolve correctly when async ValueSet expansion is
+  unavailable.
+- Reduced validation false positives and corrected gate-status reporting.
+- Hardened engine contracts and expanded golden-regression coverage.
+
+### Maintenance
+
+- Split `valueset-validator` into cohesive modules (binding, code-system,
+  expansion-loader, filter-checks, two-phase-shadow).
+- Deduped advisor rules into the validator package; split out the terminology
+  server manager.
+- Extracted the SD-loader profile-load pipeline, extension FHIR-version filter,
+  circular-reference graph builder, and profile→package detection.
+
 ## [0.1.11] — 2026-06-01
 
 Patch release for the standalone OSS validator package after the latest Firely

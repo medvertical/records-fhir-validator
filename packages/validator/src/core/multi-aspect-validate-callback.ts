@@ -34,7 +34,7 @@ import { sdFHIRPathExecutor } from '../validators/sd-fhirpath-executor';
 import { containedResourceValidator } from '../validators/contained-resource-validator';
 import { universalConstraintsValidator } from '../validators/universal-constraints-validator';
 import { terminologyResourceValidator } from '../validators/terminology-resource-validator';
-import { applyStrictnessSeverity, resolveStrictnessConfig } from '../strictness';
+import { applyStrictnessSeverity, applyPublicationEscalation, isForPublication, resolveStrictnessConfig } from '../strictness';
 import { applyAdvisorRules, type AdvisorRule } from '../advisor';
 import { createBundleReferenceResolver } from './multi-aspect-bundle-reference-resolver';
 import { appendBundleEntryValidationResults } from './multi-aspect-bundle-entry-validation';
@@ -82,6 +82,7 @@ export function buildMultiAspectValidateCallback(
   );
   const advisorRules: AdvisorRule[] =
     typedSettings?.advisorRules ?? [];
+  const forPublication = isForPublication(typedSettings);
   const profileLoadCache = new Map<string, Promise<ProfileLoadResult>>();
 
   const validateOne: ValidateOneFn = async (
@@ -100,7 +101,8 @@ export function buildMultiAspectValidateCallback(
       try {
         const rawIssues = await fn();
         const afterStrictness = applyStrictnessSeverity(rawIssues, strictness, aspectSeverityFor(name));
-        const { resultIssues: issues } = applyAdvisorRules(afterStrictness, advisorRules);
+        const { resultIssues: afterAdvisor } = applyAdvisorRules(afterStrictness, advisorRules);
+        const issues = applyPublicationEscalation(afterAdvisor, forPublication);
         const time = Date.now() - aspectStart;
         collectedAspects.push({
           aspect: name,
@@ -333,10 +335,13 @@ export function buildMultiAspectValidateCallback(
         validateOne,
         collectedAspects,
         structureDef,
-        issues => applyAdvisorRules(
-          applyStrictnessSeverity(issues, strictness, aspectSeverityFor('profile')),
-          advisorRules,
-        ).resultIssues,
+        issues => applyPublicationEscalation(
+          applyAdvisorRules(
+            applyStrictnessSeverity(issues, strictness, aspectSeverityFor('profile')),
+            advisorRules,
+          ).resultIssues,
+          forPublication,
+        ),
       );
     }
 

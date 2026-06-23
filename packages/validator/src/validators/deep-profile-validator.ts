@@ -122,6 +122,7 @@ export class DeepProfileValidator {
                     resourceType,
                     customMessage: `Value does not satisfy required binding to ${elementDef.binding.valueSet}`,
                     severityOverride: 'error',
+                    details: this.buildRequiredBindingDetails(value, elementDef.binding),
                 }));
             }
         }
@@ -285,6 +286,39 @@ export class DeepProfileValidator {
             return true;
         }
         return false;
+    }
+
+    private buildRequiredBindingDetails(value: any, binding: any): Record<string, unknown> {
+        const valueSet = binding?.valueSet;
+        const details: Record<string, unknown> = {
+            ...(valueSet ? { valueSet } : {}),
+        };
+
+        if (value && typeof value === 'object') {
+            if (typeof value.text === 'string' && value.text.trim().length > 0) {
+                details.textValue = value.text;
+                details.fixHint = valueSet
+                    ? `Replace text-only CodeableConcept '${value.text}' with a Coding from required ValueSet '${valueSet}'.`
+                    : `Replace text-only CodeableConcept '${value.text}' with a coded value from the required binding.`;
+            } else {
+                details.fixHint = valueSet
+                    ? `Add a Coding from required ValueSet '${valueSet}'.`
+                    : `Add a Coding from the required binding.`;
+            }
+
+            if (Array.isArray(value.coding)) {
+                details.codingCount = value.coding.length;
+            }
+            return details;
+        }
+
+        if (typeof value === 'string') {
+            details.value = value;
+        }
+        details.fixHint = valueSet
+            ? `Use a code from required ValueSet '${valueSet}'.`
+            : `Use a code from the required binding.`;
+        return details;
     }
 }
 

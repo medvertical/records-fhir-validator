@@ -20,4 +20,9 @@ export {
     getStrictnessDescription,
 } from './strictness-filter';
 
+export {
+    applyPublicationEscalation,
+    isForPublication,
+} from './publication-escalation';
+
 export type { ValidationStrictness } from './strictness-filter';

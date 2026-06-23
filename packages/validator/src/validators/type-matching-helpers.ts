@@ -6,7 +6,13 @@ export const PRIMITIVE_TYPE_CODES = new Set<string>([
   'base64Binary',
 ]);
 
-export function matchesPrimitiveType(value: any, effectiveType: string): boolean | null {
+type FhirObject = Record<string, unknown>;
+
+function isFhirObject(value: unknown): value is FhirObject {
+  return typeof value === 'object' && value !== null;
+}
+
+export function matchesPrimitiveType(value: unknown, effectiveType: string): boolean | null {
   switch (effectiveType) {
     case 'string':
     case 'code':
@@ -38,27 +44,24 @@ export function matchesPrimitiveType(value: any, effectiveType: string): boolean
       return typeof value === 'boolean';
 
     case 'date':
-      return typeof value === 'string' && /^\d{4}(-\d{2}(-\d{2})?)?$/.test(value);
+      return typeof value === 'string';
 
     case 'dateTime':
     case 'instant':
-      if (typeof value === 'string' && value.includes('T') && !/[Z+-]/.test(value.split('T')[1] || '')) {
-        return false;
-      }
-      return typeof value === 'string' && isValidDateTime(value);
+      return typeof value === 'string';
 
     case 'time':
-      return typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d+)?$/.test(value);
+      return typeof value === 'string';
 
     case 'base64Binary':
-      return typeof value === 'string' && /^[A-Za-z0-9+/]*={0,2}$/.test(value);
+      return typeof value === 'string';
 
     default:
       return null;
   }
 }
 
-export function matchesComplexType(value: any, effectiveType: string): boolean {
+export function matchesComplexType(value: unknown, effectiveType: string): boolean {
   switch (effectiveType) {
     case 'CodeableConcept':
       return isCodeableConcept(value);
@@ -91,21 +94,21 @@ export function matchesComplexType(value: any, effectiveType: string): boolean {
       return isCodeableReference(value);
     case 'BackboneElement':
     case 'Element':
-      return typeof value === 'object' && value !== null;
+      return isFhirObject(value);
     case 'Resource':
-      return typeof value === 'object' && value !== null && typeof value.resourceType === 'string';
+      return isFhirObject(value) && typeof value.resourceType === 'string';
     default:
-      return typeof value === 'object' && value !== null;
+      return isFhirObject(value);
   }
 }
 
-export function getActualFhirType(value: any): string {
+export function getActualFhirType(value: unknown): string {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
   if (Array.isArray(value)) return 'array';
 
   const jsType = typeof value;
-  if (jsType === 'object' && value.resourceType) {
+  if (isFhirObject(value) && typeof value.resourceType === 'string') {
     return value.resourceType;
   }
 
@@ -127,57 +130,36 @@ export function getActualFhirType(value: any): string {
   return jsType;
 }
 
-export function isExtensionOnly(value: any): boolean {
-  if (typeof value !== 'object' || value === null) return false;
+export function isExtensionOnly(value: unknown): boolean {
+  if (!isFhirObject(value)) return false;
   const keys = Object.keys(value);
   return keys.length > 0 && keys.every(k => k === 'extension' || k === 'id');
 }
 
-function isValidDateTime(value: string): boolean {
-  const fhirDateTimeRe = /^[0-9]{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|[+-]((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$/;
-  if (!fhirDateTimeRe.test(value)) return false;
-
-  const dayMatch = value.match(/^([0-9]{4})-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])/);
-  if (dayMatch) {
-    const [, y, m, d] = dayMatch;
-    const dt = new Date(`${y}-${m}-${d}T00:00:00Z`);
-    if (dt.getUTCFullYear() !== Number(y)
-      || (dt.getUTCMonth() + 1) !== Number(m)
-      || dt.getUTCDate() !== Number(d)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function isCodeableConcept(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isCodeableConcept(value: unknown): boolean {
+  return isFhirObject(value) &&
     (value.coding !== undefined || value.text !== undefined);
 }
 
-function isCoding(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isCoding(value: unknown): boolean {
+  return isFhirObject(value) &&
     value.code !== undefined &&
     value.rank === undefined &&
     !Array.isArray(value.coding);
 }
 
-function isReference(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isReference(value: unknown): boolean {
+  return isFhirObject(value) &&
     (value.reference !== undefined || value.identifier !== undefined || value.display !== undefined);
 }
 
-function isIdentifier(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isIdentifier(value: unknown): boolean {
+  return isFhirObject(value) &&
     (value.system !== undefined || value.value !== undefined);
 }
 
-function isHumanName(value: any): boolean {
-  if (typeof value !== 'object' || value === null) return false;
+function isHumanName(value: unknown): boolean {
+  if (!isFhirObject(value)) return false;
   if (value.family !== undefined || value.given !== undefined ||
       value.prefix !== undefined || value.suffix !== undefined) {
     return true;
@@ -192,65 +174,56 @@ function isHumanName(value: any): boolean {
   return value.text !== undefined || value.use !== undefined || value.period !== undefined;
 }
 
-function isAddress(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isAddress(value: unknown): boolean {
+  return isFhirObject(value) &&
     (value.use !== undefined || value.type !== undefined || value.text !== undefined ||
       value.line !== undefined || value.city !== undefined || value.district !== undefined ||
       value.state !== undefined || value.postalCode !== undefined || value.country !== undefined ||
       value.period !== undefined);
 }
 
-function isContactPoint(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isContactPoint(value: unknown): boolean {
+  return isFhirObject(value) &&
     value.code === undefined &&
     (value.rank !== undefined ||
       (value.system !== undefined && value.value !== undefined) ||
       (value.value !== undefined && (value.use !== undefined || value.period !== undefined)));
 }
 
-function isPeriod(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isPeriod(value: unknown): boolean {
+  return isFhirObject(value) &&
     (value.start !== undefined || value.end !== undefined);
 }
 
-function isQuantity(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isQuantity(value: unknown): boolean {
+  return isFhirObject(value) &&
     (typeof value.value === 'number' || value.unit !== undefined ||
       value.system !== undefined || value.code !== undefined);
 }
 
-function isRange(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isRange(value: unknown): boolean {
+  return isFhirObject(value) &&
     (value.low !== undefined || value.high !== undefined);
 }
 
-function isRatio(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isRatio(value: unknown): boolean {
+  return isFhirObject(value) &&
     (value.numerator !== undefined || value.denominator !== undefined);
 }
 
-function isAttachment(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isAttachment(value: unknown): boolean {
+  return isFhirObject(value) &&
     (value.contentType !== undefined || value.language !== undefined || value.data !== undefined ||
       value.url !== undefined || value.size !== undefined || value.hash !== undefined ||
       value.title !== undefined || value.creation !== undefined);
 }
 
-function isAnnotation(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
+function isAnnotation(value: unknown): boolean {
+  return isFhirObject(value) &&
     (value.text !== undefined || value.authorReference !== undefined || value.authorString !== undefined || value.time !== undefined);
 }
 
-function isCodeableReference(value: any): boolean {
-  return typeof value === 'object' &&
-    value !== null &&
-    (value.concept !== undefined || (value.reference !== undefined && typeof value.reference === 'object'));
+function isCodeableReference(value: unknown): boolean {
+  return isFhirObject(value) &&
+    (value.concept !== undefined || isFhirObject(value.reference));
 }

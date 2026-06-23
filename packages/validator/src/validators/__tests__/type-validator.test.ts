@@ -39,6 +39,49 @@ describe('TypeValidator', () => {
       expect(issues).toHaveLength(1);
       expect(issues[0].code).toBe('structural-type-mismatch');
     });
+
+    it('reports malformed instant strings as format errors, not type mismatches', async () => {
+      const types: ElementType[] = [{ code: 'instant' }];
+      const issues = await validator.validate('2026-06-05T09:00:00', types, 'Appointment.start');
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0].code).toBe('invalid');
+      expect(issues[0].message).toContain('timezone');
+      expect(issues[0].details).toEqual(expect.objectContaining({
+        value: '2026-06-05T09:00:00',
+        expectedType: 'instant',
+        suggestedValue: '2026-06-05T09:00:00Z',
+        fixHint: expect.stringContaining('2026-06-05T09:00:00Z'),
+      }));
+      expect(issues.some(issue => issue.code === 'structural-type-mismatch')).toBe(false);
+    });
+
+    it('reports malformed date strings as format errors, not type mismatches', async () => {
+      const types: ElementType[] = [{ code: 'date' }];
+      const issues = await validator.validate('2026-02-31', types, 'Patient.birthDate');
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0].code).toBe('invalid');
+      expect(issues.some(issue => issue.code === 'structural-type-mismatch')).toBe(false);
+    });
+
+    it('reports malformed time strings as format errors, not type mismatches', async () => {
+      const types: ElementType[] = [{ code: 'time' }];
+      const issues = await validator.validate('25:61:00', types, 'Observation.effectiveTime');
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0].code).toBe('invalid');
+      expect(issues.some(issue => issue.code === 'structural-type-mismatch')).toBe(false);
+    });
+
+    it('reports malformed base64 strings as format errors, not type mismatches', async () => {
+      const types: ElementType[] = [{ code: 'base64Binary' }];
+      const issues = await validator.validate('not base64!', types, 'Binary.data');
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0].code).toBe('invalid');
+      expect(issues.some(issue => issue.code === 'structural-type-mismatch')).toBe(false);
+    });
   });
 
   describe('FHIRPath Type System Support', () => {
@@ -184,6 +227,45 @@ describe('TypeValidator', () => {
       
       const booleanIssues = await validator.validate(true, types, 'Element.value');
       expect(booleanIssues).toHaveLength(0);
+    });
+
+    it('accepts dateTime strings in choice slots and reports format separately', async () => {
+      const types: ElementType[] = [
+        { code: 'dateTime' },
+        { code: 'Period' },
+        { code: 'Timing' },
+        { code: 'instant' },
+      ];
+
+      const issues = await validator.validate(
+        '2024-01-01T12:00:00',
+        types,
+        'Observation.effective[x]'
+      );
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0].code).toBe('invalid');
+      expect(issues[0].message).toBe('If a date has a time, it must have a timezone');
+      expect(issues[0].details).toEqual(expect.objectContaining({
+        value: '2024-01-01T12:00:00',
+        suggestedValue: '2024-01-01T12:00:00Z',
+        fixHint: expect.stringContaining('timezone'),
+      }));
+    });
+
+    it('suggests adding seconds for dateTime values with hour and minute precision plus timezone', async () => {
+      const types: ElementType[] = [{ code: 'dateTime' }];
+      const issues = await validator.validate('2021-01-01T09:41Z', types, 'Observation.effective[x]');
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]).toEqual(expect.objectContaining({
+        code: 'invalid',
+        details: expect.objectContaining({
+          value: '2021-01-01T09:41Z',
+          suggestedValue: '2021-01-01T09:41:00Z',
+          fixHint: expect.stringContaining('2021-01-01T09:41:00Z'),
+        }),
+      }));
     });
 
     it('should reject if none of the types match', async () => {

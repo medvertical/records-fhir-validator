@@ -45,6 +45,18 @@ function hasEncounterReasonContext(resource: any): boolean {
         hasArrayContent(resource.diagnosis);
 }
 
+function isOptionalPerInstanceObservationSupport(path: string): boolean {
+    return /^Observation\.(performer|specimen|interpretation|referenceRange)$/i.test(path);
+}
+
+function isOptionalPerInstanceDiagnosticReportSupport(path: string): boolean {
+    return /^DiagnosticReport\.resultsInterpreter$/i.test(path);
+}
+
+function isOptionalPerInstancePatientAddressSupport(path: string): boolean {
+    return /^Patient\.address\.postalCode$/i.test(path);
+}
+
 /**
  * Validator for MustSupport elements
  * Handles validation of elements marked with mustSupport=true
@@ -98,6 +110,20 @@ export class MustSupportValidator {
         const lastPart = pathParts[pathParts.length - 1];
         const secondToLast = pathParts[pathParts.length - 2];
         if (lastPart === 'extension' && secondToLast?.startsWith('_')) return true;
+
+        // MustSupport is a system support obligation, not a blanket
+        // per-instance cardinality rule. These optional elements created
+        // high-volume false positives in public-server runs when absent from
+        // otherwise valid resources.
+        if (resource.resourceType === 'Observation' && isOptionalPerInstanceObservationSupport(path)) {
+            return true;
+        }
+        if (resource.resourceType === 'DiagnosticReport' && isOptionalPerInstanceDiagnosticReportSupport(path)) {
+            return true;
+        }
+        if (resource.resourceType === 'Patient' && isOptionalPerInstancePatientAddressSupport(path)) {
+            return true;
+        }
 
         // For Observation.value[x], dataAbsentReason satisfies the requirement
         if (path === 'Observation.value[x]' || path.match(/^Observation\.value\[x\]$/i)) {

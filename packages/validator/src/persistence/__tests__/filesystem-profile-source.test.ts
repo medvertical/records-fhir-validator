@@ -4,7 +4,7 @@ import * as path from 'path';
 
 const BUNDLED_DIR = path.resolve(
     __dirname,
-    '../../../../../../../server/storage/profiles/bundled',
+    '../../../../../server/storage/profiles/bundled',
 );
 
 describe('createFilesystemProfileSource', () => {

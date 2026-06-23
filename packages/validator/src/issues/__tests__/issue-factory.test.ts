@@ -107,7 +107,7 @@ describe('validation-issue-factory', () => {
             expect(issue.details?.system).toBe('http://example.org');
         });
 
-        it('generates unique IDs', () => {
+        it('generates deterministic IDs for the same issue identity', () => {
             const issue1 = createValidationIssue({
                 code: 'validation-error',
                 path: 'Patient.name',
@@ -117,6 +117,22 @@ describe('validation-issue-factory', () => {
             const issue2 = createValidationIssue({
                 code: 'validation-error',
                 path: 'Patient.name',
+                resourceType: 'Patient',
+            });
+
+            expect(issue1.id).toBe(issue2.id);
+        });
+
+        it('generates different IDs for different issue identities', () => {
+            const issue1 = createValidationIssue({
+                code: 'validation-error',
+                path: 'Patient.name',
+                resourceType: 'Patient',
+            });
+
+            const issue2 = createValidationIssue({
+                code: 'validation-error',
+                path: 'Patient.birthDate',
                 resourceType: 'Patient',
             });
 

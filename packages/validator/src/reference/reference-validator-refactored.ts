@@ -204,7 +204,10 @@ export class ReferenceValidator implements IReferenceValidator {
     logger.debug(`[ReferenceValidator] Recursive validation enabled (maxDepth: ${recursiveConfig.maxDepth})`);
     try {
       const recursiveResult = await this.recursiveValidator.validateRecursively(resource, recursiveConfig, resourceFetcher);
-      const issues = buildRecursiveReferenceIssues(recursiveResult, recursiveConfig.timeoutMs, resourceType, referencePathsByValue);
+      const issueResult = recursiveConfig.validateExternal
+        ? recursiveResult
+        : { ...recursiveResult, unresolvedReferences: [] };
+      const issues = buildRecursiveReferenceIssues(issueResult, recursiveConfig.timeoutMs, resourceType, referencePathsByValue);
 
       logger.debug(
         `[ReferenceValidator] Recursive validation: ${recursiveResult.totalResourcesValidated} resources, ` +

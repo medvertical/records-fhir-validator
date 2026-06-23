@@ -289,9 +289,6 @@ export class RecursiveReferenceValidator {
     resourceFetcher?: (reference: string) => Promise<any>,
   ): Promise<void> {
     if (!resourceFetcher) {
-      if (!context.config.validateExternal) {
-        return;
-      }
       result.unresolvedReferences.push(ref.reference);
       return;
     }

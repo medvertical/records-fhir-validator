@@ -348,7 +348,10 @@ describe('CardinalityValidator', () => {
 
     expect(issues).toContainEqual(expect.objectContaining({
       code: 'structural-cardinality-min',
-      details: expect.objectContaining({ resourceType: 'Observation' }),
+      details: expect.objectContaining({
+        resourceType: 'Observation',
+        fixHint: expect.stringContaining("Observation.value[x]"),
+      }),
     }));
   });
 });

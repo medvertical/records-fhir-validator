@@ -12,11 +12,8 @@ import type { ValidationIssue } from '../../types';
 import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
 import { ValueSetValidator, type TerminologyResolutionConfig } from '../../validators/valueset-validator';
 import { shouldValidateRequired } from '../../business-rules';
-import { ucumCodeHasAnnotation, validateUcumCode } from '../../validators/ucum-validator';
 import { logger } from '../../logger';
 import {
-  buildInvalidUcumIssueDetails,
-  buildInvalidUcumMessage,
   UCUM_BEARING_TYPES,
   validateUcumAtPath,
 } from './terminology-ucum-rules';
@@ -32,6 +29,9 @@ import {
   shouldSuppressValueSetSliceMembershipIssue,
   shouldValidateBindingForValue,
 } from './terminology-binding-selection';
+import { validateCodingHygiene } from './terminology-coding-hygiene-rules';
+import { createValidationIssue } from '../../issues';
+import { computeValidationIssueId } from '@records-fhir/validation-types';
 
 // ============================================================================
 // Types
@@ -42,13 +42,6 @@ export interface TerminologyValidationContext {
   structureDef: StructureDefinition;
   getValueAtPath: (resource: any, path: string) => any;
   fhirVersion?: 'R4' | 'R5' | 'R6';
-}
-
-function isCodingHygienePath(path: string): boolean {
-  return (
-    /\.coding\[\d+\]$/.test(path) ||
-    /\.(?:value|answer|pattern|fixed)Coding$/.test(path)
-  );
 }
 
 // ============================================================================
@@ -113,21 +106,20 @@ export class TerminologyExecutor {
       }
 
       issues.push(...validateKnownLoincDisplays(resource));
-      issues.push(...this.validateCodingHygiene(resource, issues));
+      issues.push(...validateCodingHygiene(resource, issues));
 
       return issues;
 
     } catch (error) {
       logger.error('[TerminologyExecutor] Validation error:', error);
-      return [{
-        id: `terminology-executor-error-${Date.now()}`,
-        aspect: 'terminology',
-        severity: 'error',
+      return [createValidationIssue({
         code: 'validation-error',
-        message: `Terminology validation failed: ${error instanceof Error ? error.message : String(error)}`,
         path: '',
-        timestamp: new Date()
-      }];
+        resourceType: context.resource?.resourceType || context.structureDef?.type || 'Resource',
+        aspectOverride: 'terminology',
+        severityOverride: 'error',
+        customMessage: `Terminology validation failed: ${error instanceof Error ? error.message : String(error)}`,
+      })];
     }
   }
 
@@ -206,16 +198,36 @@ export class TerminologyExecutor {
       : getValueAtPath(resource, path);
 
     if (elementDef.binding?.strength === 'required' && (elementDef.min ?? 0) > 0) {
-      if (sliceSelection && (value === null || value === undefined) && shouldValidateRequired(resource, path)) {
+      const shouldReportMissingRequiredBinding = (value === null || value === undefined) &&
+        shouldValidateRequired(resource, path) &&
+        (Boolean(sliceSelection) || isDirectResourceElementPath(path, resource?.resourceType || structureDef.type));
+
+      if (shouldReportMissingRequiredBinding) {
+        const resourceType = resource?.resourceType || structureDef.type || 'Resource';
+        const message = `Required binding for '${path}' is missing (binding strength: required)`;
+        const details = {
+          bindingStrength: 'required',
+          fieldPath: path,
+        };
         return [{
-          id: `terminology-required-binding-missing-${Date.now()}`,
+          id: computeValidationIssueId({
+            aspect: 'terminology',
+            severity: 'error',
+            code: 'binding-required-missing',
+            path,
+            resourceType,
+            message,
+            profile: profileUrl,
+            details,
+          }),
           aspect: 'terminology',
           severity: 'error',
           code: 'binding-required-missing',
-          message: `Required binding for '${path}' is missing (binding strength: required)`,
+          message,
           path,
           timestamp: new Date(),
           profile: profileUrl,
+          details,
         }];
       }
     }
@@ -243,70 +255,11 @@ export class TerminologyExecutor {
     return issues;
   }
 
-  private validateCodingHygiene(resource: any, existingIssues: ValidationIssue[]): ValidationIssue[] {
-    const issues: ValidationIssue[] = [];
-    const seen = new Set(existingIssues.map(issue => `${issue.code}|${issue.path}`));
-    const root = resource?.resourceType || 'Resource';
+}
 
-    const pushOnce = (issue: Omit<ValidationIssue, 'id' | 'aspect' | 'timestamp'>): void => {
-      const key = `${issue.code}|${issue.path}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-      issues.push({
-        id: `terminology-coding-hygiene-${Date.now()}-${issues.length}`,
-        aspect: 'terminology',
-        timestamp: new Date(),
-        ...issue,
-      } as ValidationIssue);
-    };
-
-    const visit = (value: any, path: string): void => {
-      if (Array.isArray(value)) {
-        value.forEach((item, index) => visit(item, `${path}[${index}]`));
-        return;
-      }
-
-      if (!value || typeof value !== 'object') return;
-
-      if (typeof value.code === 'string' && !value.system && isCodingHygienePath(path)) {
-        pushOnce({
-          severity: 'warning',
-          code: 'terminology-coding-missing-system',
-          message: 'Coding has no system. A code with no system has no defined meaning, and it cannot be validated. A system should be provided',
-          path,
-        });
-      }
-
-      if (value.system === 'http://unitsofmeasure.org' && typeof value.code === 'string') {
-        const result = validateUcumCode(value.code);
-        if (result.valid && ucumCodeHasAnnotation(value.code)) {
-          pushOnce({
-            severity: 'information',
-            code: 'terminology-ucum-annotation',
-            message: `UCUM code '${value.code}' at ${path}.code contains a human-readable annotation. UCUM annotations are ignored semantically, so validation should not depend on them`,
-            path: `${path}.code`,
-          });
-        } else if (!result.valid) {
-          pushOnce({
-            severity: 'error',
-            code: 'terminology-code-invalid',
-            message: buildInvalidUcumMessage(value.code, `${path}.code`, result.message),
-            path: `${path}.code`,
-            details: buildInvalidUcumIssueDetails(value.code, `${path}.code`, result.message),
-          });
-        }
-      }
-
-      for (const [key, child] of Object.entries(value)) {
-        if (root === 'Bundle' && key === 'resource' && /^Bundle\.entry\[\d+\]$/.test(path)) {
-          continue;
-        }
-        visit(child, `${path}.${key}`);
-      }
-    };
-
-    visit(resource, root);
-    return issues;
-  }
-
+function isDirectResourceElementPath(path: string, resourceType?: string): boolean {
+  if (!resourceType) return false;
+  const normalizedPath = path.replace(/\[[^\]]+\]/g, '');
+  const segments = normalizedPath.split('.').filter(Boolean);
+  return segments.length === 2 && segments[0] === resourceType;
 }

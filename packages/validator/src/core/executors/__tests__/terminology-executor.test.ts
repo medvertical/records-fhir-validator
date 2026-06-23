@@ -453,6 +453,59 @@ describe('TerminologyExecutor', () => {
       validatorInstance.validateBinding = originalMethod;
     });
 
+    it('reports a missing required binding for a direct required coded resource element', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          path: 'Observation.status',
+          min: 1,
+          max: '1',
+          type: [{ code: 'code' }],
+          binding: {
+            strength: 'required',
+            valueSet: 'http://hl7.org/fhir/ValueSet/observation-status',
+          },
+        } as ElementDefinition,
+      ];
+      mockContext.resource = {
+        resourceType: 'Observation',
+        id: 'obs-missing-status',
+      };
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        aspect: 'terminology',
+        severity: 'error',
+        code: 'binding-required-missing',
+        path: 'Observation.status',
+        profile: mockStructureDef.url,
+      }));
+    });
+
+    it('does not synthesize missing required binding errors for absent nested backbone elements', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          path: 'Observation.component.code',
+          min: 1,
+          max: '1',
+          type: [{ code: 'CodeableConcept' }],
+          binding: {
+            strength: 'required',
+            valueSet: 'http://loinc.org',
+          },
+        } as ElementDefinition,
+      ];
+      mockContext.resource = {
+        resourceType: 'Observation',
+        id: 'obs-no-components',
+      };
+      mockContext.getValueAtPath = () => undefined;
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues.some(issue => issue.code === 'binding-required-missing')).toBe(false);
+    });
+
     it('should handle missing snapshot elements', async () => {
       mockContext.structureDef.snapshot = undefined;
       const issues = await executor.validate(mockContext);
@@ -554,6 +607,55 @@ describe('TerminologyExecutor', () => {
         severity: 'warning',
         code: 'terminology-display-mismatch',
         path: 'Observation.code.coding[0].display',
+      }));
+    });
+
+    it('adds LOINC check digit diagnostics to invalid code issues', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          path: 'Observation.code',
+          min: 1,
+          max: '1',
+          type: [{ code: 'CodeableConcept' }],
+        } as ElementDefinition,
+      ];
+      mockContext.resource = {
+        resourceType: 'Observation',
+        code: {
+          coding: [{
+            system: 'http://loinc.org',
+            code: '55228-7',
+            display: 'Example lab code',
+          }],
+        },
+      };
+      mockContext.getValueAtPath = (resource: any, path: string) => {
+        if (path === 'Observation.code') return resource.code;
+        return undefined;
+      };
+
+      const validatorInstance = (executor as any).valuesetValidator;
+      validatorInstance.isExternalCodeSystem.mockReturnValue(true);
+      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
+        valid: false,
+        reason: 'not-found',
+        message: "Unknown code '55228-7' in CodeSystem 'http://loinc.org'",
+      });
+
+      const issues = await executor.validate(mockContext);
+
+      expect(issues).toContainEqual(expect.objectContaining({
+        severity: 'error',
+        code: 'terminology-code-invalid',
+        path: 'Observation.code.coding[0].code',
+        message: expect.stringContaining("expected '1'"),
+        details: expect.objectContaining({
+          loincCheckDigitStatus: 'invalid',
+          expectedCheckDigit: '1',
+          actualCheckDigit: '7',
+          suggestedCode: '55228-1',
+          fixHint: expect.stringContaining("55228-1"),
+        }),
       }));
     });
 
@@ -1453,7 +1555,7 @@ describe('TerminologyExecutor', () => {
       expect(issues.some(issue => issue.code === 'binding-required-missing')).toBe(false);
     });
 
-    it('does not report a terminology error when a non-sliced required element is absent', async () => {
+    it('reports a missing required binding when a direct required coded element is absent', async () => {
       mockStructureDef.snapshot!.element = [
         {
           id: 'Patient.gender',
@@ -1478,7 +1580,11 @@ describe('TerminologyExecutor', () => {
 
       const issues = await executor.validate(mockContext);
 
-      expect(issues.some(issue => issue.code === 'binding-required-missing')).toBe(false);
+      expect(issues).toContainEqual(expect.objectContaining({
+        code: 'binding-required-missing',
+        severity: 'error',
+        path: 'Patient.gender',
+      }));
     });
 
     it('reports missing required bindings for matching slice descendants', async () => {

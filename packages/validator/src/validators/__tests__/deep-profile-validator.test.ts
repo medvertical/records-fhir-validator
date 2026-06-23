@@ -46,4 +46,48 @@ describe('DeepProfileValidator', () => {
 
     expect(issues.filter(issue => issue.code === 'profile-pattern-mismatch')).toHaveLength(0);
   });
+
+  it('adds remediation details for text-only CodeableConcept required binding violations', () => {
+    const profile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/StructureDefinition/condition-status',
+      name: 'ConditionStatus',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Condition',
+      snapshot: {
+        element: [
+          { id: 'Condition', path: 'Condition' },
+          {
+            id: 'Condition.clinicalStatus',
+            path: 'Condition.clinicalStatus',
+            binding: {
+              strength: 'required',
+              valueSet: 'http://hl7.org/fhir/ValueSet/condition-clinical',
+            },
+          },
+        ],
+      },
+    };
+
+    const issues = deepProfileValidator.validate({
+      resource: {
+        resourceType: 'Condition',
+        clinicalStatus: { text: 'active' },
+      },
+      resourceType: 'Condition',
+      structureDef: profile,
+    });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-required-binding-violation',
+      path: 'Condition.clinicalStatus',
+      details: expect.objectContaining({
+        valueSet: 'http://hl7.org/fhir/ValueSet/condition-clinical',
+        textValue: 'active',
+        fixHint: expect.stringContaining('text-only CodeableConcept'),
+      }),
+    }));
+  });
 });

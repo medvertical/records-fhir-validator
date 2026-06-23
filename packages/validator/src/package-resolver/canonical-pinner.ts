@@ -75,7 +75,13 @@ function selectCandidate(
 
   // Stage 4: Highest version
   const algo = detectVersionAlgorithm(pool3[0].version);
-  const sorted = [...pool3].sort((a, b) => compareVersions(b.version, a.version, algo));
+  const sorted = [...pool3].sort((a, b) => {
+    const byVersion = compareVersions(b.version, a.version, algo);
+    if (byVersion !== 0) return byVersion;
+    const byPackage = a.sourcePackage.localeCompare(b.sourcePackage);
+    if (byPackage !== 0) return byPackage;
+    return a.url.localeCompare(b.url);
+  });
   return { selected: sorted[0], resolvedBy: 'version-highest' };
 }
 

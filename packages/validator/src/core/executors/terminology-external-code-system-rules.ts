@@ -18,6 +18,15 @@ interface TerminologyServerIssue {
   message?: string;
 }
 
+interface LoincCheckDigitDiagnostic {
+  actualCheckDigit: string;
+  expectedCheckDigit: string;
+  suggestedCode: string;
+  fixHint: string;
+}
+
+const LOINC_SYSTEM_URL = 'http://loinc.org';
+
 export async function validateExternalCodeSystems(
   value: any,
   path: string,
@@ -231,12 +240,13 @@ function buildInvalidCodeIssues(
 
   const codingPath = isArrayInput ? `${path}[${index}].code` : `${path}.code`;
   const isSystemUnresolvable = result.reason === 'system-unresolvable';
+  const loincCheckDigit = getLoincCheckDigitDiagnostic(coding.system, coding.code);
   return [{
     id: `terminology-codesystem-${isSystemUnresolvable ? 'unresolvable' : 'invalid'}-${Date.now()}-${index}`,
     aspect: 'terminology',
     severity: isSystemUnresolvable ? 'warning' : 'error',
     code: isSystemUnresolvable ? 'terminology-codesystem-unresolvable' : 'terminology-code-invalid',
-    message: result.message || `Unknown code '${coding.code}' in CodeSystem '${coding.system}'`,
+    message: buildInvalidCodeMessage(coding, result, loincCheckDigit),
     path: codingPath,
     timestamp: new Date(),
     details: {
@@ -244,8 +254,58 @@ function buildInvalidCodeIssues(
       system: coding.system,
       ...(coding.display ? { display: coding.display } : {}),
       ...(result.reason ? { reason: result.reason } : {}),
+      ...(loincCheckDigit ? {
+        loincCheckDigitStatus: 'invalid',
+        expectedCheckDigit: loincCheckDigit.expectedCheckDigit,
+        actualCheckDigit: loincCheckDigit.actualCheckDigit,
+        suggestedCode: loincCheckDigit.suggestedCode,
+        fixHint: loincCheckDigit.fixHint,
+      } : {}),
     },
   }];
+}
+
+function buildInvalidCodeMessage(
+  coding: any,
+  result: any,
+  loincCheckDigit?: LoincCheckDigitDiagnostic,
+): string {
+  const base = result.message || `Unknown code '${coding.code}' in CodeSystem '${coding.system}'`;
+  if (!loincCheckDigit) return base;
+  return `${base}. LOINC check digit '${loincCheckDigit.actualCheckDigit}' is invalid; expected '${loincCheckDigit.expectedCheckDigit}' for '${loincCheckDigit.suggestedCode}'`;
+}
+
+function getLoincCheckDigitDiagnostic(system: unknown, code: unknown): LoincCheckDigitDiagnostic | undefined {
+  if (system !== LOINC_SYSTEM_URL || typeof code !== 'string') return undefined;
+
+  const match = code.match(/^(\d+)-(\d)$/);
+  if (!match) return undefined;
+
+  const [, stem, actualCheckDigit] = match;
+  const expectedCheckDigit = calculateLoincCheckDigit(stem);
+  if (actualCheckDigit === expectedCheckDigit) return undefined;
+
+  const suggestedCode = `${stem}-${expectedCheckDigit}`;
+  return {
+    actualCheckDigit,
+    expectedCheckDigit,
+    suggestedCode,
+    fixHint: `LOINC code '${code}' has an invalid check digit. If the numeric stem '${stem}' is intended, replace it with '${suggestedCode}'.`,
+  };
+}
+
+function calculateLoincCheckDigit(stem: string): string {
+  let sum = 0;
+  let doubleDigit = true;
+
+  for (let index = stem.length - 1; index >= 0; index--) {
+    const digit = Number(stem[index]);
+    const product = doubleDigit ? digit * 2 : digit;
+    sum += Math.floor(product / 10) + (product % 10);
+    doubleDigit = !doubleDigit;
+  }
+
+  return String((10 - (sum % 10)) % 10);
 }
 
 function validateCodeSystemUrl(systemUrl: string): { valid: boolean; message?: string } {

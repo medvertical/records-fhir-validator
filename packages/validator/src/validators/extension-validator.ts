@@ -15,7 +15,6 @@ import type { ValidationIssue } from '../types';
 import { createValidationIssue } from '../issues';
 import type { StructureDefinition } from '../core/structure-definition-types';
 import { StructureDefinitionLoader } from '../core/structure-definition-loader';
-import { urlMatchesRequestedFhirVersion, type FhirVersionFamily } from '../core/sd-loader-version-utils';
 import { logger } from '../logger';
 import { TypeValidator } from './type-validator';
 import { ValueSetValidator } from './valueset-validator';
@@ -36,6 +35,10 @@ import {
 } from './extension-structure-rules';
 import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types';
 import { validateUniversalExtensionRules } from './extension-universal-rules';
+import {
+  filterDefinitionContextForFhirVersion,
+  filterDefinitionsForFhirVersion,
+} from './extension-version-filter';
 
 export type { ExtensionDefinition, ExtensionValidationContext } from './extension-types';
 
@@ -101,7 +104,7 @@ export class ExtensionValidator {
     const issues: ValidationIssue[] = [];
 
     try {
-      const definitionContext = this.filterDefinitionContextForFhirVersion(
+      const definitionContext = filterDefinitionContextForFhirVersion(
         extractExtensionDefinitions(profileSD),
         context.fhirVersion,
       );
@@ -421,7 +424,7 @@ export class ExtensionValidator {
           this.subExtensionDefinitionsCache,
         )
         : new Map<string, ExtensionDefinition>();
-      const compatibleSubDefinitions = this.filterDefinitionsForFhirVersion(
+      const compatibleSubDefinitions = filterDefinitionsForFhirVersion(
         subDefinitions,
         context.fhirVersion,
       );
@@ -467,49 +470,6 @@ export class ExtensionValidator {
     }
 
     return issues;
-  }
-
-  private filterDefinitionContextForFhirVersion(
-    definitionContext: ReturnType<typeof extractExtensionDefinitions>,
-    fhirVersion: FhirVersionFamily,
-  ): ReturnType<typeof extractExtensionDefinitions> {
-    const byUrl = this.filterDefinitionsForFhirVersion(definitionContext.byUrl, fhirVersion);
-    const byPath = new Map<string, Map<string, ExtensionDefinition>>();
-
-    for (const [path, definitions] of definitionContext.byPath.entries()) {
-      const filtered = this.filterDefinitionsForFhirVersion(definitions, fhirVersion);
-      if (filtered.size > 0) {
-        byPath.set(path, filtered);
-      }
-    }
-
-    return { byUrl, byPath };
-  }
-
-  private filterDefinitionsForFhirVersion(
-    definitions: Map<string, ExtensionDefinition>,
-    fhirVersion: FhirVersionFamily,
-  ): Map<string, ExtensionDefinition> {
-    const filtered = new Map<string, ExtensionDefinition>();
-
-    for (const [url, definition] of definitions.entries()) {
-      if (!this.isExtensionDefinitionCompatible(definition, fhirVersion)) {
-        logger.debug(`[ExtensionValidator] Skipping FHIR-version-incompatible extension definition: ${definition.profileUrl ?? definition.url} (${fhirVersion})`);
-        continue;
-      }
-      filtered.set(url, definition);
-    }
-
-    return filtered;
-  }
-
-  private isExtensionDefinitionCompatible(
-    definition: ExtensionDefinition,
-    fhirVersion: FhirVersionFamily,
-  ): boolean {
-    return [definition.url, definition.profileUrl]
-      .filter((url): url is string => typeof url === 'string' && url.length > 0)
-      .every(url => urlMatchesRequestedFhirVersion(url, fhirVersion));
   }
 
 }

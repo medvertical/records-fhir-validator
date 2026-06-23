@@ -73,6 +73,16 @@ describe('pinCanonicals', () => {
     expect([...pinned.values()][0].resolvedBy).toBe('version-highest');
   });
 
+  it('stage 4: uses package name as deterministic tie-breaker for equal versions', () => {
+    const map = buildMap([
+      candidate({ version: '1.0.0', sourcePackage: 'z.pkg@1.0.0', status: 'active' }),
+      candidate({ version: '1.0.0', sourcePackage: 'a.pkg@1.0.0', status: 'active' }),
+    ]);
+    const pinned = pinCanonicals(map);
+    expect([...pinned.values()][0].sourcePackage).toBe('a.pkg@1.0.0');
+    expect([...pinned.values()][0].resolvedBy).toBe('version-highest');
+  });
+
   it('excludes pre-expanded ValueSets', () => {
     const map = buildMap([
       candidate({ version: '1.0.0', hasExpansion: true }),

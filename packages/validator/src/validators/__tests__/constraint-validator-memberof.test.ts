@@ -2,12 +2,14 @@
 import { describe, it, expect } from 'vitest';
 import { ConstraintValidator } from '../constraint-validator';
 
-// fhirpath.js built-in memberOf is async-only and takes precedence over our
-// custom sync implementation in the user invocation table. These tests need
-// async fhirpath evaluation mode to work correctly.
+// fhirpath.js only exposes memberOf as an async function, which our synchronous
+// compiled-expression path rejects. ConstraintValidator handles boolean
+// `<prefix>.memberOf('<ValueSet>')` constraints via evaluateTrailingMemberOf:
+// it evaluates the prefix synchronously and applies the shared sync memberOf
+// logic (ISO-3166 hardcoded sets + expanded-ValueSet cache).
 describe('ConstraintValidator - memberOf (ISO specific)', () => {
 
-    it.skip('should validate ISO-3166-1-2 country codes correctly', async () => {
+    it('should validate ISO-3166-1-2 country codes correctly', async () => {
         const validator = new ConstraintValidator();
         const resource = {
             resourceType: 'Patient',
@@ -66,7 +68,7 @@ describe('ConstraintValidator - memberOf (ISO specific)', () => {
         expect(issuesXX[0].code).toBe('profile-constraint-warning');
     });
 
-    it.skip('should validate ISO-3166-1-3 country codes correctly', async () => {
+    it('should validate ISO-3166-1-3 country codes correctly', async () => {
         const validator = new ConstraintValidator();
         const resource = {
             resourceType: 'Patient',

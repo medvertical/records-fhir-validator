@@ -273,13 +273,29 @@ export function aggregateAspectScores(
 // ============================================================================
 
 /**
- * Normalize FHIR path for signature computation
- * Removes array indices: entry[3].item[0].code -> entry.item.code
+ * Normalize FHIR path for signature computation.
+ *
+ * This is intentionally stricter than display-path cleanup:
+ * - removes concrete array indexes so the same rule on `name[0]` and `name[4]`
+ *   remains one issue type;
+ * - removes Records embedded-resource markers used in Bundle child paths so
+ *   issue signatures do not fragment by embedded resource id;
+ * - removes whitespace/control characters and lowercases for stable grouping.
  */
 export function normalizeCanonicalPath(path: string, maxLength: number = 256): { normalized: string; truncated: boolean } {
     let normalized = path
+        .trim()
+        // Remove Records embedded resource markers from Bundle paths.
+        .replace(/\/\*[^*]*\*\//g, '')
         // Remove array indices
         .replace(/\[\d+\]/g, '')
+        // Treat FHIR choice placeholders as the base element for grouping.
+        .replace(/\[x\]/gi, '')
+        // Remove quoted slice/type annotations that sometimes appear in diagnostics.
+        .replace(/\x60([^\x60]+)\x60/g, '$1')
+        // Remove control characters
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\u0000-\u001F\u007F]/g, '')
         // Remove multiple dots
         .replace(/\.{2,}/g, '.')
         // Remove leading/trailing dots

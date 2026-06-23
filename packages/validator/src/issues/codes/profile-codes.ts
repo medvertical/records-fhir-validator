@@ -115,7 +115,7 @@ export const ProfileCodes = {
     'profile-mustsupport-missing': {
         aspect: 'profile',
         severity: 'warning',
-        description: 'MustSupport element is missing data',
+        description: 'MustSupport element is not populated',
     },
     'profile-validation-error': {
         aspect: 'profile',

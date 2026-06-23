@@ -73,6 +73,39 @@ describe('validateReferenceTargetProfileConformance (gap P-2)', () => {
     expect(issues).toHaveLength(0);
   });
 
+  it('treats multiple targetProfiles as alternatives, not cumulative requirements', async () => {
+    const multiProfile: StructureDefinition = {
+      ...profile,
+      snapshot: {
+        element: [
+          { id: 'Observation', path: 'Observation' },
+          {
+            id: 'Observation.subject',
+            path: 'Observation.subject',
+            type: [{
+              code: 'Reference',
+              targetProfile: [
+                'http://example.org/StructureDefinition/not-this-patient',
+                SPECIAL_PATIENT,
+              ],
+            }],
+          } as any,
+        ],
+      },
+    };
+
+    const issues = await validateReferenceTargetProfileConformance({
+      resource: baseResource('urn:uuid:p1'),
+      structureDef: multiProfile,
+      referenceTargetValidator: validator,
+      resolveReference: () => ({ resourceType: 'Patient', id: 'p1' }),
+      validateProfile: async (_target, profileUrl) =>
+        profileUrl === SPECIAL_PATIENT ? [] : err(),
+    });
+
+    expect(issues).toHaveLength(0);
+  });
+
   it('fails open when the required profile cannot be loaded', async () => {
     const issues = await run({
       resolve: () => ({ resourceType: 'Patient', id: 'p1' }),

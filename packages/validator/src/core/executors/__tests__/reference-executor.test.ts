@@ -16,9 +16,12 @@ import type { ValidationIssue } from '../../../types';
 
 // Mock dependencies
 vi.mock('../../../reference/reference-validator-refactored', () => ({
-  ReferenceValidator: vi.fn().mockImplementation(() => ({
-    validateInternal: vi.fn().mockResolvedValue([])
-  }))
+  ReferenceValidator: vi.fn().mockImplementation(function () {
+    return {
+      validateInternal: vi.fn().mockResolvedValue([]),
+      validateContainedReferencesSync: vi.fn().mockReturnValue([]),
+    };
+  })
 }));
 
 vi.mock('../../../logger', () => ({
@@ -249,4 +252,3 @@ describe('ReferenceExecutor', () => {
     });
   });
 });
-

@@ -210,9 +210,6 @@ export class ProfileValidator {
           }
         }
 
-        if (/^[A-Z][a-z]+$/.test(profileName)) {
-          return profileName;
-        }
       }
 
       return null;

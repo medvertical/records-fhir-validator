@@ -355,6 +355,41 @@ describe('MustSupport contextual applicability', () => {
     },
   } satisfies StructureDefinition;
 
+  const observationPublicRunProfile = {
+    resourceType: 'StructureDefinition',
+    url: 'http://example.org/StructureDefinition/observation-public-run-ms',
+    name: 'ObservationPublicRunMustSupport',
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type: 'Observation',
+    snapshot: {
+      element: [
+        { id: 'Observation', path: 'Observation' },
+        { id: 'Observation.performer', path: 'Observation.performer', mustSupport: true },
+        { id: 'Observation.specimen', path: 'Observation.specimen', mustSupport: true },
+        { id: 'Observation.interpretation', path: 'Observation.interpretation', mustSupport: true },
+        { id: 'Observation.referenceRange', path: 'Observation.referenceRange', mustSupport: true },
+      ],
+    },
+  } satisfies StructureDefinition;
+
+  const diagnosticReportPublicRunProfile = {
+    resourceType: 'StructureDefinition',
+    url: 'http://example.org/StructureDefinition/diagnostic-report-public-run-ms',
+    name: 'DiagnosticReportPublicRunMustSupport',
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type: 'DiagnosticReport',
+    snapshot: {
+      element: [
+        { id: 'DiagnosticReport', path: 'DiagnosticReport' },
+        { id: 'DiagnosticReport.resultsInterpreter', path: 'DiagnosticReport.resultsInterpreter', mustSupport: true },
+      ],
+    },
+  } satisfies StructureDefinition;
+
   const getValueAtPath = (resource: any, path: string) => {
     if (path === 'Encounter.hospitalization') return resource.hospitalization;
     if (path === 'Encounter.reasonCode') return resource.reasonCode;
@@ -362,6 +397,9 @@ describe('MustSupport contextual applicability', () => {
     if (path === 'Patient.address') return resource.address;
     if (path === 'Patient.address.period') {
       return resource.address?.flatMap((address: any) => address.period ?? []);
+    }
+    if (path === 'Patient.address.postalCode') {
+      return resource.address?.flatMap((address: any) => address.postalCode ?? []);
     }
     return undefined;
   };
@@ -471,6 +509,84 @@ describe('MustSupport contextual applicability', () => {
     );
 
     expect(issues.filter(issue => issue.path === 'Patient.address.period')).toHaveLength(0);
+  });
+
+  it('does not report public-run optional Observation MustSupport elements as missing', async () => {
+    const validator = new MustSupportValidator();
+
+    const issues = await validator.validateAllMustSupportElements(
+      {
+        resourceType: 'Observation',
+        status: 'final',
+        code: {
+          coding: [{ system: 'http://loinc.org', code: '8302-2' }],
+        },
+        valueQuantity: {
+          value: 170,
+          unit: 'cm',
+          system: 'http://unitsofmeasure.org',
+          code: 'cm',
+        },
+      },
+      observationPublicRunProfile,
+      observationPublicRunProfile.url,
+      getValueAtPath,
+    );
+
+    expect(issues.filter(issue =>
+      [
+        'Observation.performer',
+        'Observation.specimen',
+        'Observation.interpretation',
+        'Observation.referenceRange',
+      ].includes(issue.path ?? '')
+    )).toHaveLength(0);
+  });
+
+  it('does not report resultsInterpreter MustSupport missing for DiagnosticReport instances', async () => {
+    const validator = new MustSupportValidator();
+
+    const issues = await validator.validateAllMustSupportElements(
+      {
+        resourceType: 'DiagnosticReport',
+        status: 'final',
+        code: {
+          coding: [{ system: 'http://loinc.org', code: '11502-2' }],
+        },
+      },
+      diagnosticReportPublicRunProfile,
+      diagnosticReportPublicRunProfile.url,
+      getValueAtPath,
+    );
+
+    expect(issues.filter(issue => issue.path === 'DiagnosticReport.resultsInterpreter')).toHaveLength(0);
+  });
+
+  it('does not report postalCode MustSupport missing for Patient address instances', async () => {
+    const validator = new MustSupportValidator();
+
+    const issues = await validator.validateAllMustSupportElements(
+      {
+        resourceType: 'Patient',
+        address: [{
+          city: 'Berlin',
+          country: 'DE',
+        }],
+      },
+      {
+        ...patientAddressProfile,
+        snapshot: {
+          element: [
+            ...patientAddressProfile.snapshot.element,
+            { id: 'Patient.address.postalCode', path: 'Patient.address.postalCode', mustSupport: true },
+          ],
+        },
+      },
+      patientAddressProfile.url,
+      getValueAtPath,
+    );
+
+    expect(issues.filter(issue => issue.path === 'Patient.address.postalCode')).toHaveLength(0);
   });
 
   it('still reports address.period MustSupport missing for old Patient addresses', async () => {

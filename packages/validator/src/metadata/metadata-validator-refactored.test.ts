@@ -103,6 +103,34 @@ describe('MetadataValidator', () => {
       expect(profileIssues.length).toBeGreaterThan(0);
     });
 
+    it('should not infer resource type from IG-specific profile names', async () => {
+      const resource = {
+        resourceType: 'Condition',
+        id: 'diagnosis-1',
+        meta: {
+          profile: ['https://www.medizininformatik-initiative.de/fhir/core/modul-diagnose/StructureDefinition/Diagnose']
+        }
+      };
+
+      const issues = await validator.validate(resource, 'Condition', 'R4');
+
+      expect(issues.some(i => i.code === 'metadata-profile-resource-type-mismatch')).toBe(false);
+    });
+
+    it('should still detect profile URLs that explicitly name a different resource type', async () => {
+      const resource = {
+        resourceType: 'Condition',
+        id: 'condition-1',
+        meta: {
+          profile: ['http://hl7.org/fhir/StructureDefinition/Patient']
+        }
+      };
+
+      const issues = await validator.validate(resource, 'Condition', 'R4');
+
+      expect(issues.some(i => i.code === 'metadata-profile-resource-type-mismatch')).toBe(true);
+    });
+
     it('should validate security labels', async () => {
       const resource = {
         resourceType: 'Patient',
@@ -219,4 +247,3 @@ describe('MetadataValidator', () => {
     });
   });
 });
-

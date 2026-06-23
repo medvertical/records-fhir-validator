@@ -316,7 +316,7 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
     'profile-slicing-violation':
         "Slicing constraint violated at {path}",
     'profile-mustsupport-missing':
-        "MustSupport element is missing data: {element}",
+        "MustSupport element is not populated; verify support or availability when applicable: {element}",
     'profile-validation-error':
         "Profile validation failed: {error}",
     'profile-not-found':

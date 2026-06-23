@@ -1,4 +1,6 @@
 import { ValueSetPackageLoader } from './valueset-package-loader';
+import { getOrCompileFHIRPathExpression } from './constraint-expression-cache';
+import { memberOfFunction } from './fhirpath-custom-functions';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 
@@ -8,6 +10,12 @@ const MEMBER_OF_EXISTS_PATTERN =
   /^\s*where\s*\(\s*([A-Za-z][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])?(?:\.[A-Za-z][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])?)*)\.memberOf\(\s*'([^']+)'\s*\)\s*\)\.exists\(\)\s*$/;
 const VALUE_SET_IN_EXISTS_PATTERN =
   /^\s*where\s*\(\s*([A-Za-z][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])?(?:\.[A-Za-z][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])?)*)\s+in\s+'([^']*\/ValueSet\/[^']+)'\s*\)\.exists\(\)\s*$/;
+
+// Matches an expression ending in `<prefix>.memberOf('<url>')` (not wrapped in
+// `.exists()`), capturing the prefix and the ValueSet URL. The prefix may
+// itself contain `.where(...)`, `.first()`, etc. — anything fhirpath.js can
+// evaluate synchronously.
+const TRAILING_MEMBER_OF_PATTERN = /^(.*)\.memberOf\(\s*'([^']+)'\s*\)\s*$/s;
 
 /**
  * Evaluates the common invariant shape:
@@ -38,6 +46,64 @@ export async function evaluateSimpleMemberOfExists(
   if (values.length === 0) return false;
 
   return values.some(value => valueMatchesAcceptedCode(value, acceptedCodes));
+}
+
+/**
+ * Evaluates a boolean constraint ending in `<prefix>.memberOf('<ValueSet>')`,
+ * e.g. `address.where(country = 'XX').country.memberOf('.../iso3166-1-2')`.
+ *
+ * fhirpath.js only exposes `memberOf` as an async function, which our
+ * synchronous compiled-expression path rejects ("asynchronous function is not
+ * allowed"). So we split off the trailing `.memberOf(url)`, evaluate the prefix
+ * synchronously via fhirpath.js (everything before `.memberOf` is ordinary
+ * FHIRPath), and apply the shared synchronous `memberOfFunction` (ISO-3166
+ * hardcoded sets + expanded-ValueSet cache) to each resulting value.
+ *
+ * Returns:
+ *   - `true`  — every selected value is a member (or no values were selected,
+ *               which FHIRPath treats as vacuously satisfied)
+ *   - `false` — at least one selected value is a determinate non-member
+ *   - `null`  — not a trailing-memberOf expression, or membership is
+ *               undeterminable (no ISO match, no cached expansion) — caller
+ *               falls back to its normal evaluation/skip path
+ */
+export function evaluateTrailingMemberOf(
+  expression: string,
+  resource: any,
+  fhirVersion: FhirVersion = 'R4',
+): MemberOfPrecheckResult {
+  const match = expression.match(TRAILING_MEMBER_OF_PATTERN);
+  if (!match) return null;
+
+  const prefixExpression = match[1].trim();
+  const valueSetUrl = match[2];
+  if (!prefixExpression) return null;
+
+  let selectedValues: any[];
+  try {
+    const compiled = getOrCompileFHIRPathExpression(prefixExpression, fhirVersion);
+    const result = compiled(resource, { resource, rootResource: resource }, { traceFn: () => {} });
+    selectedValues = Array.isArray(result) ? result : result == null ? [] : [result];
+  } catch {
+    // Prefix itself uses something we can't evaluate synchronously — let the
+    // caller handle the full expression (and its eventual skip).
+    return null;
+  }
+
+  // No values selected → FHIRPath constraints are vacuously satisfied.
+  if (selectedValues.length === 0) return true;
+
+  let sawDeterminate = false;
+  for (const value of selectedValues) {
+    const outcome = memberOfFunction.fn([value], [valueSetUrl]);
+    // memberOfFunction returns [] when membership is undeterminable.
+    if (!Array.isArray(outcome) || outcome.length === 0) continue;
+    sawDeterminate = true;
+    if (outcome[0] === false) return false;
+  }
+
+  // If nothing was determinable, defer to the caller rather than asserting pass.
+  return sawDeterminate ? true : null;
 }
 
 function stripResourcePrefix(path: string, resourceType: string): string {

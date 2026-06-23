@@ -35,6 +35,8 @@ export async function validateReferenceTargetProfileConformance(params: {
     const target = resolveReference(hit.reference);
     if (!target || typeof target.resourceType !== 'string') continue; // unresolvable — fail open
 
+    const failures: Array<{ profile: string; errorCount: number }> = [];
+
     for (const profile of hit.profiles) {
       let targetIssues: ValidationIssue[];
       try {
@@ -47,7 +49,16 @@ export async function validateReferenceTargetProfileConformance(params: {
       if (targetIssues.some(isProfileUnavailable)) continue;
 
       const errors = targetIssues.filter(i => i.severity === 'error' || i.severity === 'fatal');
-      if (errors.length === 0) continue;
+      if (errors.length === 0) {
+        failures.length = 0;
+        break;
+      }
+
+      failures.push({ profile, errorCount: errors.length });
+    }
+
+    for (const failure of failures) {
+      const { profile, errorCount } = failure;
 
       const targetLabel = target.id ? `${target.resourceType}/${target.id}` : target.resourceType;
       issues.push(createValidationIssue({
@@ -57,12 +68,12 @@ export async function validateReferenceTargetProfileConformance(params: {
         severityOverride: 'warning',
         customMessage:
           `Reference target ${targetLabel} at ${hit.path} does not conform to the ` +
-          `required profile ${profile} (${errors.length} error${errors.length === 1 ? '' : 's'}).`,
+          `required profile ${profile} (${errorCount} error${errorCount === 1 ? '' : 's'}).`,
         details: {
           reference: hit.reference,
           requiredProfile: profile,
           targetResourceType: target.resourceType,
-          errorCount: errors.length,
+          errorCount,
         },
       }));
     }

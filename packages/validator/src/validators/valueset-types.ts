@@ -201,17 +201,16 @@ export const DEFAULT_RESOLUTION_CONFIG: TerminologyResolutionConfig = {
  * External CodeSystems that should be validated via tx.fhir.org
  * These systems are too large to bundle locally and require server validation
  *
- * ICD systems are intentionally not listed here. Public terminology servers
- * often expose incomplete/licensed ICD content and can report common valid
- * ICD-10-CM codes as unknown. Treat ICD system URLs as known, but only assert
- * code membership when an authoritative ValueSet/CodeSystem is loaded or a
- * scoped terminology server is configured for a binding.
+ * ICD and CPT systems are intentionally not listed here. Public terminology
+ * servers often expose incomplete/licensed content and can report common valid
+ * codes as unknown. Treat those system URLs as known, but only assert code
+ * membership when an authoritative ValueSet/CodeSystem is loaded or a scoped
+ * terminology server is configured for a binding.
  */
 export const EXTERNAL_CODE_SYSTEMS = new Set([
     'http://loinc.org',
     'http://snomed.info/sct',
     'http://www.nlm.nih.gov/research/umls/rxnorm',
-    'http://www.ama-assn.org/go/cpt',
 ]);
 
 /**

@@ -12,9 +12,15 @@
  * - Type safety for code values
  */
 
-import type { ValidationIssue, ValidationAspect, ValidationSeverity } from '@records-fhir/validation-types';
+import {
+    computeValidationIssueId,
+    type ValidationIssue,
+    type ValidationAspect,
+    type ValidationSeverity,
+} from '@records-fhir/validation-types';
 import { ValidationCodes as _ValidationCodes, getCodeMetadata, resolveCode, type ValidationCode } from './message-catalog';
 import { formatMessage, getHumanReadableMessage } from './message-templates';
+import { normalizeResourceType } from './resource-type-normalizer';
 
 // ============================================================================
 // Factory Parameters
@@ -78,180 +84,28 @@ export interface CreateIssueParams {
 // ID Generation
 // ============================================================================
 
-let issueCounter = 0;
-
 /**
- * Generate a unique issue ID.
- * Format: {aspect}-{code}-{timestamp}-{counter}
+ * Generate a deterministic issue ID from the issue identity fields.
  */
-function generateIssueId(aspect: string, code: string): string {
-    issueCounter++;
-    return `${aspect}-${code}-${Date.now()}-${issueCounter}`;
-}
-
-const KNOWN_RESOURCE_TYPE_BY_LOWERCASE: Record<string, string> = {
-    account: 'Account',
-    activitydefinition: 'ActivityDefinition',
-    adverseevent: 'AdverseEvent',
-    allergyintolerance: 'AllergyIntolerance',
-    appointment: 'Appointment',
-    appointmentresponse: 'AppointmentResponse',
-    auditevent: 'AuditEvent',
-    basic: 'Basic',
-    binary: 'Binary',
-    biologicallyderivedproduct: 'BiologicallyDerivedProduct',
-    bodystructure: 'BodyStructure',
-    bundle: 'Bundle',
-    capabilitystatement: 'CapabilityStatement',
-    careplan: 'CarePlan',
-    careteam: 'CareTeam',
-    catalogentry: 'CatalogEntry',
-    chargeitem: 'ChargeItem',
-    chargeitemdefinition: 'ChargeItemDefinition',
-    claim: 'Claim',
-    claimresponse: 'ClaimResponse',
-    clinicalimpression: 'ClinicalImpression',
-    codesystem: 'CodeSystem',
-    communication: 'Communication',
-    communicationrequest: 'CommunicationRequest',
-    compartmentdefinition: 'CompartmentDefinition',
-    composition: 'Composition',
-    conceptmap: 'ConceptMap',
-    condition: 'Condition',
-    consent: 'Consent',
-    contract: 'Contract',
-    coverage: 'Coverage',
-    coverageeligibilityrequest: 'CoverageEligibilityRequest',
-    coverageeligibilityresponse: 'CoverageEligibilityResponse',
-    detectedissue: 'DetectedIssue',
-    device: 'Device',
-    devicedefinition: 'DeviceDefinition',
-    devicemetric: 'DeviceMetric',
-    devicerequest: 'DeviceRequest',
-    deviceusestatement: 'DeviceUseStatement',
-    diagnosticreport: 'DiagnosticReport',
-    documentmanifest: 'DocumentManifest',
-    documentreference: 'DocumentReference',
-    effectevidencesynthesis: 'EffectEvidenceSynthesis',
-    encounter: 'Encounter',
-    endpoint: 'Endpoint',
-    enrollmentrequest: 'EnrollmentRequest',
-    enrollmentresponse: 'EnrollmentResponse',
-    episodeofcare: 'EpisodeOfCare',
-    eventdefinition: 'EventDefinition',
-    evidence: 'Evidence',
-    evidencevariable: 'EvidenceVariable',
-    examplescenario: 'ExampleScenario',
-    explanationofbenefit: 'ExplanationOfBenefit',
-    familymemberhistory: 'FamilyMemberHistory',
-    flag: 'Flag',
-    goal: 'Goal',
-    graphdefinition: 'GraphDefinition',
-    group: 'Group',
-    guidanceresponse: 'GuidanceResponse',
-    healthcareservice: 'HealthcareService',
-    imagingstudy: 'ImagingStudy',
-    immunization: 'Immunization',
-    immunizationevaluation: 'ImmunizationEvaluation',
-    immunizationrecommendation: 'ImmunizationRecommendation',
-    implementationguide: 'ImplementationGuide',
-    insuranceplan: 'InsurancePlan',
-    invoice: 'Invoice',
-    library: 'Library',
-    linkage: 'Linkage',
-    list: 'List',
-    location: 'Location',
-    measure: 'Measure',
-    measurereport: 'MeasureReport',
-    media: 'Media',
-    medication: 'Medication',
-    medicationadministration: 'MedicationAdministration',
-    medicationdispense: 'MedicationDispense',
-    medicationknowledge: 'MedicationKnowledge',
-    medicationrequest: 'MedicationRequest',
-    medicationstatement: 'MedicationStatement',
-    medicinalproduct: 'MedicinalProduct',
-    medicinalproductauthorization: 'MedicinalProductAuthorization',
-    medicinalproductcontraindication: 'MedicinalProductContraindication',
-    medicinalproductindication: 'MedicinalProductIndication',
-    medicinalproductingredient: 'MedicinalProductIngredient',
-    medicinalproductinteraction: 'MedicinalProductInteraction',
-    medicinalproductmanufactured: 'MedicinalProductManufactured',
-    medicinalproductpackaged: 'MedicinalProductPackaged',
-    medicinalproductpharmaceutical: 'MedicinalProductPharmaceutical',
-    medicinalproductundesirableeffect: 'MedicinalProductUndesirableEffect',
-    messageheader: 'MessageHeader',
-    namingsystem: 'NamingSystem',
-    nutritionorder: 'NutritionOrder',
-    observation: 'Observation',
-    observationdefinition: 'ObservationDefinition',
-    operationdefinition: 'OperationDefinition',
-    operationoutcome: 'OperationOutcome',
-    organization: 'Organization',
-    organizationaffiliation: 'OrganizationAffiliation',
-    parameters: 'Parameters',
-    patient: 'Patient',
-    paymentnotice: 'PaymentNotice',
-    paymentreconciliation: 'PaymentReconciliation',
-    person: 'Person',
-    plandefinition: 'PlanDefinition',
-    practitioner: 'Practitioner',
-    practitionerrole: 'PractitionerRole',
-    procedure: 'Procedure',
-    provenance: 'Provenance',
-    questionnaire: 'Questionnaire',
-    questionnaireresponse: 'QuestionnaireResponse',
-    relatedperson: 'RelatedPerson',
-    requestgroup: 'RequestGroup',
-    researchdefinition: 'ResearchDefinition',
-    researchelementdefinition: 'ResearchElementDefinition',
-    researchstudy: 'ResearchStudy',
-    researchsubject: 'ResearchSubject',
-    riskassessment: 'RiskAssessment',
-    riskevidencesynthesis: 'RiskEvidenceSynthesis',
-    schedule: 'Schedule',
-    searchparameter: 'SearchParameter',
-    servicerequest: 'ServiceRequest',
-    slot: 'Slot',
-    specimen: 'Specimen',
-    specimendefinition: 'SpecimenDefinition',
-    structuredefinition: 'StructureDefinition',
-    structuremap: 'StructureMap',
-    subscription: 'Subscription',
-    substance: 'Substance',
-    substancenucleicacid: 'SubstanceNucleicAcid',
-    substancepolymer: 'SubstancePolymer',
-    substanceprotein: 'SubstanceProtein',
-    substancereferenceinformation: 'SubstanceReferenceInformation',
-    substancesourcematerial: 'SubstanceSourceMaterial',
-    substancespecification: 'SubstanceSpecification',
-    supplydelivery: 'SupplyDelivery',
-    supplyrequest: 'SupplyRequest',
-    task: 'Task',
-    terminologycapabilities: 'TerminologyCapabilities',
-    testreport: 'TestReport',
-    testscript: 'TestScript',
-    valueset: 'ValueSet',
-    verificationresult: 'VerificationResult',
-    visionprescription: 'VisionPrescription',
-};
-
-function inferResourceTypeFromPath(path: string): string | undefined {
-    const firstPathSegment = path.split(/[.[/:]/)[0]?.toLowerCase();
-    if (!firstPathSegment) return undefined;
-    return KNOWN_RESOURCE_TYPE_BY_LOWERCASE[firstPathSegment];
-}
-
-function normalizeResourceType(resourceType: string, path: string): string {
-    if (resourceType && resourceType !== 'Unknown') return resourceType;
-    return inferResourceTypeFromPath(path) ?? resourceType;
+function generateIssueId(params: {
+    aspect: string;
+    severity: ValidationSeverity;
+    code: string;
+    path: string;
+    resourceType: string;
+    message: string;
+    profile?: string;
+    ruleId?: string;
+    details: Record<string, unknown>;
+}): string {
+    return computeValidationIssueId(params);
 }
 
 /**
- * Reset the issue counter (useful for testing).
+ * Kept for backward-compatible tests/callers. Issue IDs are now deterministic
+ * and no longer rely on mutable counters.
  */
 export function resetIssueCounter(): void {
-    issueCounter = 0;
 }
 
 // ============================================================================
@@ -318,7 +172,17 @@ export function createValidationIssue(params: CreateIssueParams): ValidationIssu
     }
 
     return {
-        id: generateIssueId(aspect, resolvedCode),
+        id: generateIssueId({
+            aspect,
+            severity,
+            code: resolvedCode,
+            path,
+            resourceType,
+            message,
+            profile,
+            ruleId,
+            details: issueDetails,
+        }),
         aspect,
         severity,
         code: resolvedCode,

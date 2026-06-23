@@ -69,7 +69,7 @@ export class SourceValidator {
 
       // Validate URI format
       const uriValidation = validateUriFormat(source);
-      if (!uriValidation.isValid) {
+      if (!uriValidation.isValid && uriValidation.reason !== 'Invalid URI format: missing scheme') {
         issues.push(createValidationIssue({
           code: 'metadata-source-invalid-format',
           path: PATH,
@@ -110,17 +110,6 @@ export class SourceValidator {
           path: PATH,
           resourceType,
           messageParams: { value: source },
-        }));
-      }
-
-      // Recommend absolute URIs
-      if (uriValidation.type === 'relative' || uriValidation.type === 'unknown') {
-        issues.push(createValidationIssue({
-          code: 'metadata-source-relative-uri',
-          path: PATH,
-          resourceType,
-          messageParams: { value: source },
-          details: { uriType: uriValidation.type },
         }));
       }
 
