@@ -29,7 +29,7 @@ In scope:
 
 - The validator engine in `@records-fhir/validator` and the type
   package `@records-fhir/validation-types`.
-- The composite GitHub Action `medvertical/records-fhir-validator@v1`.
+- The composite GitHub Action `medvertical/records-fhir-validator@v0`.
 - The optional bundled-profiles package.
 
 Out of scope (file at the relevant project instead):

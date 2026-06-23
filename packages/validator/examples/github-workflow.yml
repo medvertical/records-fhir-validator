@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Validate against base StructureDefinitions
-        uses: medvertical/records-fhir-validator@v1
+        uses: medvertical/records-fhir-validator@v0
         with:
           paths: |
             fhir/**/*.json
@@ -28,14 +28,14 @@ jobs:
           fhir-version: R4
           fail-on: error
           # Pin the validator version for reproducible CI:
-          # validator-version: '0.1.0'
+          # validator-version: '0.1.13'
           # Default `warn` keeps CI output focused on validation
           # annotations; raise to `info` or `debug` when troubleshooting:
           # log-level: warn
 
       # --- Optional: validate against a specific profile -------------------
       # - name: Validate against MII KDS Person profile
-      #   uses: medvertical/records-fhir-validator@v1
+      #   uses: medvertical/records-fhir-validator@v0
       #   with:
       #     paths: 'fhir/patients/*.json'
       #     profile-url: 'https://www.medizininformatik-initiative.de/fhir/core/modul-person/StructureDefinition/PatientIn'

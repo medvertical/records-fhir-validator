@@ -18,10 +18,17 @@ npm install @records-fhir/validator @records-fhir/validation-types
 node standalone-validate.mjs path/to/patient.json
 ```
 
+After installing the npm package, the same check is available through the CLI:
+
+```sh
+npx -p @records-fhir/validator records-fhir-validator path/to/patient.json
+npx -p @records-fhir/validator records-fhir-validator ./fixtures --fail-on=warning --format=json
+```
+
 The GitHub workflow uses the composite Action and needs no extra setup:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v1
+- uses: medvertical/records-fhir-validator@v0
   with:
     paths: 'examples/**/*.json'
 ```

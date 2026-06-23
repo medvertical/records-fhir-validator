@@ -10,6 +10,26 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.1.13] — 2026-06-23
+
+Public usability polish for the standalone validator package and public mirror.
+Released with `@records-fhir/validation-types` 0.1.4.
+
+### Added
+
+- Added the `records-fhir-validator` npm binary for local file/folder
+  validation, JSON output, FHIR version selection, profile-url selection, and
+  configurable CI failure thresholds.
+
+### Documentation
+
+- Reworked the package README and public mirror README around copy-pasteable
+  CLI, TypeScript API, and GitHub Action quickstarts.
+- Documented structured issue output and clarified the current practical scope
+  of the TypeScript validator before broader conformance evidence.
+- Updated examples and security docs from the old `@v1` action reference to
+  the current `@v0` / `@v0.1.13` release line.
+
 ## [0.1.12] — 2026-06-23
 
 Feature release adding FHIR R6 validation. Released with

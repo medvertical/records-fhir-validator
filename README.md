@@ -8,6 +8,7 @@ slicing, extensions, Bundle rules, metadata, and optional custom rules without
 requiring a JVM, database, or Records server.
 
 [![npm](https://img.shields.io/npm/v/@records-fhir/validator)](https://www.npmjs.com/package/@records-fhir/validator)
+[![CI](https://github.com/medvertical/records-fhir-validator/actions/workflows/ci.yml/badge.svg)](https://github.com/medvertical/records-fhir-validator/actions/workflows/ci.yml)
 [![FHIR](https://img.shields.io/badge/FHIR-R4%20%7C%20R4B%20%7C%20R5%20%7C%20R6-blue)](#fhir-version-support)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 [![HL7 parity](https://img.shields.io/badge/HL7%20JSON%20parity-496%2F496-brightgreen)](#validation-evidence)
@@ -45,7 +46,7 @@ jobs:
 For production CI, pin an immutable patch tag:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.1.12
+- uses: medvertical/records-fhir-validator@v0.1.13
   with:
     paths: resources/**/*.json
     profile-url: http://hl7.org/fhir/StructureDefinition/Patient
@@ -58,7 +59,7 @@ Action pinning:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Latest stable in current major | `medvertical/records-fhir-validator@v0` | Floating tag, force-moved on stable releases only |
-| Exact released version | `medvertical/records-fhir-validator@v0.1.12` | Immutable consumer tag |
+| Exact released version | `medvertical/records-fhir-validator@v0.1.13` | Immutable consumer tag |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | Best for audit and forensics |
 
 The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
@@ -67,7 +68,15 @@ The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
 ### npm Package
 
 ```sh
-npm install @records-fhir/validator@0.1.12 @records-fhir/validation-types@0.1.4
+npm install @records-fhir/validator@0.1.13 @records-fhir/validation-types@0.1.4
+```
+
+Run the CLI against one file or a folder:
+
+```sh
+npx -p @records-fhir/validator records-fhir-validator ./patient.json
+npx -p @records-fhir/validator records-fhir-validator ./fixtures --fail-on=warning
+npx -p @records-fhir/validator records-fhir-validator ./patient.json --format=json
 ```
 
 Validate a resource from Node.js:
@@ -86,9 +95,27 @@ Optional offline profile packages can be loaded through the package APIs. The
 default public repository export intentionally excludes bundled third-party IG
 artifacts until their upstream licenses and notices have been reviewed.
 
+## Output Shape
+
+The validator emits structured issues that are intended for CI annotations,
+database storage, and UI display:
+
+```json
+{
+  "severity": "warning",
+  "code": "terminology-binding-preferred",
+  "path": "Patient.gender",
+  "message": "Code is outside the preferred value set."
+}
+```
+
+The CLI text mode prints one issue per line and exits according to
+`--fail-on`. JSON mode returns `{ summary, results }`, where each result
+includes `file`, `resourceType`, `profileUrl`, and `issues`.
+
 ## What Is Included
 
-- `@records-fhir/validator` 0.1.12 - Apache-2.0 validation engine.
+- `@records-fhir/validator` 0.1.13 - Apache-2.0 validation engine.
 - `@records-fhir/validation-types` 0.1.4 - Apache-2.0 validation-domain types.
 - Composite GitHub Action at repository root.
 - Standalone examples under `packages/validator/examples/`.
@@ -110,6 +137,19 @@ configuration.
 The validator packages are designed for standalone embedding. Host applications
 can provide optional profile, rule, persistence, and logging integrations
 through explicit package APIs.
+
+## Practical Scope
+
+Use this project when you need a TypeScript-native validator that runs in Node,
+CI, GitHub Actions, or product backends without starting the Java validator.
+It is strongest for FHIR JSON resource validation, StructureDefinition
+constraints, slicing, references, terminology checks, and structured issue
+metadata that downstream applications can store or display.
+
+It is not a universal FHIR ecosystem implementation. XML resources, CDA, HL7
+v2, CDS Hooks, SHC, DSIG, JSON5 harnesses, legacy STU3/DSTU versions, logical
+models, and site-level MII certification are outside the current headline
+support scope unless called out by a dedicated conformance lane.
 
 ## FHIR Version Support
 

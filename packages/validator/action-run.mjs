@@ -1,5 +1,5 @@
 /**
- * Composite-action runner for `medvertical/records-fhir-validator@v1`.
+ * Composite-action runner for `medvertical/records-fhir-validator@v0`.
  *
  * Reads inputs from `INPUT_*` env vars (set by action.yml), expands the
  * `paths` glob, validates each JSON file via `@records-fhir/validator`,

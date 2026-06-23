@@ -1,9 +1,12 @@
 {
   "name": "@records-fhir/validator",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Pure-TypeScript FHIR R4/R5/R6 validation engine. Validates resources against StructureDefinitions, terminology, references, and custom rules with no database required.",
   "type": "module",
   "license": "Apache-2.0",
+  "bin": {
+    "records-fhir-validator": "./dist/cli.js"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"
@@ -18,10 +21,14 @@
     "fhir",
     "validation",
     "fhirpath",
+    "fhir-validator",
+    "github-actions",
     "structuredefinition",
     "healthcare",
     "interoperability",
-    "hl7"
+    "hl7",
+    "mii",
+    "ehds"
   ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

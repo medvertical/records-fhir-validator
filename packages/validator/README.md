@@ -6,6 +6,46 @@ The package validates FHIR resources against StructureDefinitions, FHIRPath cons
 
 This package is the open-source validator surface for `medvertical/records-fhir-validator`. The Records product itself is commercial closed source; it is not part of this package.
 
+[![npm](https://img.shields.io/npm/v/@records-fhir/validator)](https://www.npmjs.com/package/@records-fhir/validator)
+[![FHIR](https://img.shields.io/badge/FHIR-R4%20%7C%20R4B%20%7C%20R5%20%7C%20R6-blue)](#fhir-version-routing-r4b)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
+
+## Two-Minute Quickstart
+
+Run the CLI against one resource:
+
+```sh
+npx -p @records-fhir/validator records-fhir-validator ./patient.json
+```
+
+Validate a folder and fail CI on warnings:
+
+```sh
+npx -p @records-fhir/validator records-fhir-validator ./fixtures --fail-on=warning
+```
+
+Embed the TypeScript API:
+
+```ts
+import { recordsValidator } from '@records-fhir/validator';
+
+const issues = await recordsValidator.validate(
+  { resourceType: 'Patient', id: 'example' },
+  'http://hl7.org/fhir/StructureDefinition/Patient',
+  'R4',
+);
+```
+
+Gate pull requests with the GitHub Action:
+
+```yaml
+- uses: medvertical/records-fhir-validator@v0
+  with:
+    paths: resources/**/*.json
+    fhir-version: R4
+    fail-on: error
+```
+
 ## Repository Boundary
 
 This package is designed to be published from the separate public repository
@@ -49,7 +89,7 @@ depending on your trade-off between freshness and stability:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Always-latest within current major | `medvertical/records-fhir-validator@v0` | Force-moved on every stable release; never advances onto a prerelease |
-| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.1.7` | Immutable once published |
+| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.1.13` | Immutable once published |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | For audit / forensic builds |
 
 The `validator-v<semver>` tag you may see on the public repo's release
@@ -71,6 +111,50 @@ Three copy-pasteable starting points ship in
   with the composite Action.
 
 ## Usage
+
+### CLI
+
+The npm package installs a small CLI for local checks and CI scripts:
+
+```sh
+records-fhir-validator <file-or-folder...> [options]
+```
+
+Common options:
+
+| Option | Default | Purpose |
+|---|---|---|
+| `--profile-url <url>` | base profile for each `resourceType` | Validate every resource against one canonical profile. |
+| `--fhir-version R4\|R4B\|R5\|R6` | `R4` | Select the public FHIR version. |
+| `--fail-on error\|warning\|none` | `error` | Control the process exit threshold. |
+| `--format text\|json` | `text` | Print human-readable lines or structured JSON. |
+
+Example JSON output:
+
+```sh
+npx -p @records-fhir/validator records-fhir-validator ./patient.json --format=json
+```
+
+```json
+{
+  "summary": { "files": 1, "errors": 0, "warnings": 1, "issues": 1 },
+  "results": [
+    {
+      "file": "/workspace/patient.json",
+      "resourceType": "Patient",
+      "profileUrl": "http://hl7.org/fhir/StructureDefinition/Patient",
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "terminology-binding-preferred",
+          "path": "Patient.gender",
+          "message": "Code is outside the preferred value set."
+        }
+      ]
+    }
+  ]
+}
+```
 
 ### Quick start (singleton)
 
@@ -212,6 +296,19 @@ The package does not import Records server modules, database code, Express handl
 - `setEngineLogger()` for host logging.
 
 Without these integrations, the validator uses no-op defaults and runs as a standalone offline validator.
+
+## Practical Scope
+
+Use this package when you need a TypeScript-native validator that runs in Node,
+CI, GitHub Actions, or product backends without starting the Java validator.
+It is strongest for FHIR JSON resource validation, StructureDefinition
+constraints, slicing, references, terminology checks, and structured issue
+metadata that downstream applications can store or display.
+
+The package is not a claim of universal FHIR ecosystem coverage. XML resources,
+CDA, HL7 v2, CDS Hooks, SHC, DSIG, JSON5 harnesses, legacy STU3/DSTU versions,
+logical models, and site-level MII certification are outside the current
+headline support scope unless called out by a dedicated conformance lane.
 
 ## Conformance
 
