@@ -45,6 +45,72 @@ function run(command, args, options = {}) {
   });
 }
 
+function structureDefinition(type, elements) {
+  return {
+    resourceType: 'StructureDefinition',
+    url: `http://hl7.org/fhir/StructureDefinition/${type}`,
+    version: '4.0.1',
+    fhirVersion: '4.0.1',
+    name: type,
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type,
+    snapshot: {
+      element: [
+        { id: type, path: type, min: 0, max: '*' },
+        ...elements,
+      ],
+    },
+  };
+}
+
+async function writePackageResource(packageDir, filename, resource) {
+  await writeFile(join(packageDir, filename), `${JSON.stringify(resource, null, 2)}\n`, 'utf8');
+}
+
+async function writeMinimalR4CorePackage(cacheRoot) {
+  const packageDir = join(cacheRoot, 'hl7.fhir.r4.core#4.0.1', 'package');
+  await mkdir(packageDir, { recursive: true });
+  await writePackageResource(packageDir, 'package.json', {
+    name: 'hl7.fhir.r4.core',
+    version: '4.0.1',
+    fhirVersions: ['4.0.1'],
+  });
+  await writePackageResource(packageDir, 'StructureDefinition-Patient.json', structureDefinition('Patient', [
+    {
+      id: 'Patient.gender',
+      path: 'Patient.gender',
+      min: 0,
+      max: '1',
+      type: [{ code: 'code' }],
+      binding: {
+        strength: 'required',
+        valueSet: 'http://hl7.org/fhir/ValueSet/administrative-gender',
+      },
+    },
+    {
+      id: 'Patient.birthDate',
+      path: 'Patient.birthDate',
+      min: 0,
+      max: '1',
+      type: [{ code: 'date' }],
+    },
+  ]));
+  await writePackageResource(packageDir, 'ValueSet-administrative-gender.json', {
+    resourceType: 'ValueSet',
+    url: 'http://hl7.org/fhir/ValueSet/administrative-gender',
+    version: '4.0.1',
+    status: 'active',
+    expansion: {
+      contains: ['male', 'female', 'other', 'unknown'].map((code) => ({
+        system: 'http://hl7.org/fhir/administrative-gender',
+        code,
+      })),
+    },
+  });
+}
+
 async function packWorkspace(workspace, destination) {
   const { stdout } = await run('npm', [
     'pack',
@@ -155,6 +221,11 @@ if (outcome.resourceType !== 'OperationOutcome' || outcome.issue.length === 0) {
   );
   await writeFile(join(packageDir, 'fixtures', 'notes.txt'), 'not fhir json\n');
 
+  const cliHome = join(packageDir, 'home');
+  const cliPackageCache = join(packageDir, 'fhir-package-cache');
+  await mkdir(cliHome, { recursive: true });
+  await writeMinimalR4CorePackage(cliPackageCache);
+
   await run(
     './node_modules/.bin/records-fhir-validator',
     [
@@ -169,7 +240,14 @@ if (outcome.resourceType !== 'OperationOutcome' || outcome.issue.length === 0) {
       'validation-report.json',
       '--fail-on=none',
     ],
-    { cwd: packageDir },
+    {
+      cwd: packageDir,
+      env: {
+        HOME: cliHome,
+        FHIR_PACKAGE_CACHE_PATH: cliPackageCache,
+        RECORDS_BUNDLED_PROFILES_PATH: cliPackageCache,
+      },
+    },
   );
 
   const report = JSON.parse(await readFile(join(packageDir, 'validation-report.json'), 'utf8'));
