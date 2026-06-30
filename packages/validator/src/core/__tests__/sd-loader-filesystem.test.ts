@@ -57,6 +57,21 @@ describe('sd-loader-filesystem', () => {
     expect(sd?.version).toBe('8.0.0-ballot');
   });
 
+  it('does not resolve an explicitly versioned canonical to a different cached version', async () => {
+    const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-'));
+    tempDirs.push(source);
+
+    await writeProfile(source, 'hl7.fhir.us.qicore#8.0.0', '8.0.0');
+
+    await expect(
+      loadFromLocalCache(
+        'http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-procedure|7.0.0',
+        [source],
+        'R4',
+      ),
+    ).resolves.toBeNull();
+  });
+
   it('resolves unversioned EPS canonicals to the agreed xtehr pre-release package', async () => {
     const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-'));
     tempDirs.push(source);

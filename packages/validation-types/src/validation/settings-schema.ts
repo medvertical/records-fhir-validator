@@ -231,6 +231,22 @@ export const HapiConfigSchema = z.object({
     enableBestPractice: z.boolean().optional(),
 });
 
+export const ImposedProfilePolicySchema = z.object({
+    id: z.string().optional(),
+    enabled: z.boolean().optional(),
+    resourceType: z.string().min(1),
+    profileUrl: z.string().min(1),
+    label: z.string().optional(),
+    packageId: z.string().optional(),
+    packageVersion: z.string().optional(),
+    reason: z.string().optional(),
+});
+
+export const ImposedProfilesConfigSchema = z.object({
+    enabled: z.boolean(),
+    policies: z.array(ImposedProfilePolicySchema),
+});
+
 // ============================================================================
 // Main ValidationSettings Schema
 // ============================================================================
@@ -277,6 +293,7 @@ export const ValidationSettingsSchema = z.object({
         profileCachePath: z.string().optional(),
     }).optional(),
     profileSources: ProfileSourcesConfigSchema.optional(),
+    imposedProfiles: ImposedProfilesConfigSchema.optional(),
     advancedTerminology: AdvancedTerminologyConfigSchema.optional(),
     packageDownload: PackageDownloadConfigSchema.optional(),
     autoRevalidateAfterEdit: z.boolean().optional(),

@@ -23,30 +23,95 @@ import { elementExistsInResource, hasEmptyBackboneElement } from './constraint-p
 import { targetMatchesSliceDefinition } from './constraint-slice-targets';
 import { expressionStartsAtResourceRoot } from './constraint-choice-context';
 import { resolveConstraintContext } from './constraint-context-resolver';
-import { evaluateSimpleMemberOfExists, evaluateTrailingMemberOf } from './fhirpath-memberof-precheck';
+import {
+  evaluateOptionalMemberOfUnion,
+  evaluateSimpleMemberOfExists,
+  evaluateTrailingMemberOf,
+} from './fhirpath-memberof-precheck';
+import { evaluateResolveExistsConstraint } from './fhirpath-resolve-precheck';
 import { ValueSetPackageLoader } from './valueset-package-loader';
 
+interface ConstraintValidationState {
+  strictnessMode: 'standard' | 'strict';
+  fhirVersion: 'R4' | 'R5' | 'R6';
+  userInvocationTable: any;
+  bundle?: any;
+}
+
+type FHIRPathConstraintSkipReason =
+  | 'async-function'
+  | 'disallowed-function'
+  | 'unsupported-engine-capability';
+
+export interface FHIRPathConstraintSkipSample {
+  reason: FHIRPathConstraintSkipReason;
+  constraintKey: string;
+  profileUrl: string;
+  path: string;
+  expression: string;
+  errorMessage: string;
+}
+
+export interface FHIRPathConstraintDiagnostics {
+  skippedConstraints: {
+    total: number;
+    byReason: Record<FHIRPathConstraintSkipReason, number>;
+    byConstraintKey: Record<string, number>;
+    byProfile: Record<string, number>;
+    samples: FHIRPathConstraintSkipSample[];
+  };
+}
+
+const MAX_FHIRPATH_SKIP_SAMPLES = 25;
+
+function createEmptyFHIRPathConstraintDiagnostics(): FHIRPathConstraintDiagnostics {
+  return {
+    skippedConstraints: {
+      total: 0,
+      byReason: {
+        'async-function': 0,
+        'disallowed-function': 0,
+        'unsupported-engine-capability': 0,
+      },
+      byConstraintKey: {},
+      byProfile: {},
+      samples: [],
+    },
+  };
+}
+
+function cloneFHIRPathConstraintDiagnostics(
+  diagnostics: FHIRPathConstraintDiagnostics,
+): FHIRPathConstraintDiagnostics {
+  return {
+    skippedConstraints: {
+      total: diagnostics.skippedConstraints.total,
+      byReason: { ...diagnostics.skippedConstraints.byReason },
+      byConstraintKey: { ...diagnostics.skippedConstraints.byConstraintKey },
+      byProfile: { ...diagnostics.skippedConstraints.byProfile },
+      samples: diagnostics.skippedConstraints.samples.map(sample => ({ ...sample })),
+    },
+  };
+}
 
 export class ConstraintValidator {
   private timeout: number = 2000; // 2 seconds timeout per expression
 
-  private strictnessMode: 'compatibility' | 'standard' | 'strict' = 'standard';
-  private fhirVersion: 'R4' | 'R5' | 'R6' = 'R4';
-  private cachedUserInvocationTable: any = null;
   private memberOfValueSetLoader = new ValueSetPackageLoader();
+  private diagnostics: FHIRPathConstraintDiagnostics = createEmptyFHIRPathConstraintDiagnostics();
   async validate(
     resource: any,
     elements: ElementDefinition[],
     profileUrl: string,
-    options?: { strictMode?: boolean; fhirVersion?: 'R4' | 'R5' | 'R6' }
+    options?: { strictMode?: boolean; fhirVersion?: 'R4' | 'R5' | 'R6'; bundle?: any }
   ): Promise<ValidationIssue[]> {
-    // Set strictness mode based on options
-    this.strictnessMode = options?.strictMode ? 'strict' : 'standard';
-    this.fhirVersion = options?.fhirVersion || 'R4';
+    const state: ConstraintValidationState = {
+      strictnessMode: options?.strictMode ? 'strict' : 'standard',
+      fhirVersion: options?.fhirVersion || 'R4',
+      userInvocationTable: buildUserInvocationTable(resource, options?.bundle),
+      bundle: options?.bundle,
+    };
     const issues: ValidationIssue[] = [];
-
-    // Build user invocation table once per validate() call (not per constraint)
-    this.cachedUserInvocationTable = buildUserInvocationTable(resource);
 
     this.logRootCoreConstraints(resource, elements);
 
@@ -93,6 +158,13 @@ export class ConstraintValidator {
         // Resolve the element's declared type once per element so
         // validateConstraint can pre-substitute `%context.type()` literals.
         const elementType = resolveElementType(element as any);
+        let validationTargets: ReturnType<typeof getValidationTargets> | null = null;
+        const getElementValidationTargets = () => {
+          if (validationTargets === null) {
+            validationTargets = getValidationTargets(resource, element.path);
+          }
+          return validationTargets;
+        };
 
         for (const constraint of element.constraint) {
           if (this.shouldSkipGenericConstraint(constraint)) continue;
@@ -108,13 +180,14 @@ export class ConstraintValidator {
               constraint,
               profileUrl,
               elementType,
+              state,
             );
             issues.push(...constraintIssues);
             continue;
           }
 
           // Get validation targets to handle array elements (e.g., Patient.link[0].other, Patient.link[1].other)
-          const validationTargets = getValidationTargets(resource, element.path);
+          const validationTargets = getElementValidationTargets();
 
           if (validationTargets.length === 0) {
             if (!isRootElement && !elementExists) {
@@ -128,6 +201,7 @@ export class ConstraintValidator {
               constraint,
               profileUrl,
               elementType,
+              state,
             );
 
             issues.push(...constraintIssues);
@@ -143,6 +217,7 @@ export class ConstraintValidator {
                 constraint,
                 profileUrl,
                 elementType,
+                state,
               );
 
               issues.push(...constraintIssues);
@@ -175,7 +250,8 @@ export class ConstraintValidator {
     elementPath: string,
     constraint: Constraint,
     profileUrl: string,
-    elementType: string | null = null,
+    elementType: string | null,
+    state: ConstraintValidationState,
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
 
@@ -204,11 +280,11 @@ export class ConstraintValidator {
         resource,
         resource.resourceType,
         this.memberOfValueSetLoader,
-        this.fhirVersion,
+        state.fhirVersion,
       );
       if (memberOfPassed !== null) {
         if (!memberOfPassed) {
-          issues.push(this.buildConstraintViolationIssue(resource, elementPath, constraint, profileUrl));
+          issues.push(this.buildConstraintViolationIssue(resource, elementPath, constraint, profileUrl, state.strictnessMode));
         }
         return issues;
       }
@@ -219,11 +295,11 @@ export class ConstraintValidator {
       const trailingMemberOf = evaluateTrailingMemberOf(
         preprocessedExpression,
         resource,
-        this.fhirVersion,
+        state.fhirVersion,
       );
       if (trailingMemberOf !== null) {
         if (!trailingMemberOf) {
-          issues.push(this.buildConstraintViolationIssue(resource, elementPath, constraint, profileUrl));
+          issues.push(this.buildConstraintViolationIssue(resource, elementPath, constraint, profileUrl, state.strictnessMode));
         }
         return issues;
       }
@@ -231,11 +307,38 @@ export class ConstraintValidator {
       const { context: evaluationContext, expression } =
         resolveConstraintContext(resource, elementPath, preprocessedExpression);
 
+      const optionalMemberOfUnion = evaluateOptionalMemberOfUnion(
+        expression,
+        evaluationContext,
+      );
+      if (optionalMemberOfUnion !== null) {
+        if (!optionalMemberOfUnion) {
+          issues.push(this.buildConstraintViolationIssue(resource, elementPath, constraint, profileUrl, state.strictnessMode));
+        }
+        return issues;
+      }
+
+      const resolveExists = evaluateResolveExistsConstraint({
+        expression,
+        context: evaluationContext,
+        rootResource: resource,
+        fhirVersion: state.fhirVersion,
+        bundle: state.bundle,
+      });
+      if (resolveExists !== null) {
+        if (!resolveExists) {
+          issues.push(this.buildConstraintViolationIssue(resource, elementPath, constraint, profileUrl, state.strictnessMode));
+        }
+        return issues;
+      }
+
       // Evaluate FHIRPath expression with the appropriate context
       const result = await this.evaluateFHIRPath(
         evaluationContext,
         expression,
-        resource  // Pass root resource for %rootResource access
+        resource, // Pass root resource for %rootResource access
+        state.fhirVersion,
+        state.userInvocationTable,
       );
 
       // Check result (should be true or non-empty)
@@ -248,19 +351,15 @@ export class ConstraintValidator {
       }
 
       if (!passed) {
-        issues.push(this.buildConstraintViolationIssue(resource, elementPath, constraint, profileUrl));
+        issues.push(this.buildConstraintViolationIssue(resource, elementPath, constraint, profileUrl, state.strictnessMode));
       }
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
 
-      // Silently skip constraints that use unsupported FHIRPath functions (memberOf, resolve, etc.)
-      // These can't be evaluated client-side and should not produce false-positive issues.
-      if (
-        errorMsg.includes('asynchronous function') ||
-        errorMsg.includes('is not allowed') ||
-        isUnsupportedEngineCapabilityError(errorMsg)
-      ) {
+      const skipReason = classifyUnsupportedEngineCapabilityError(errorMsg);
+      if (skipReason !== null) {
+        this.recordSkippedConstraint(skipReason, constraint, profileUrl, elementPath, errorMsg);
         logger.debug(`[ConstraintValidator] Skipping constraint ${constraint.key} (unsupported FHIRPath function): ${errorMsg}`);
         return issues;
       }
@@ -300,12 +399,13 @@ export class ConstraintValidator {
     elementPath: string,
     constraint: Constraint,
     profileUrl: string,
+    strictnessMode: ConstraintValidationState['strictnessMode'],
   ): ValidationIssue {
-    const escalateToError = this.strictnessMode === 'strict' && constraint.severity === 'warning';
+    const escalateToError = strictnessMode === 'strict' && constraint.severity === 'warning';
     const isDomConstraint = constraint.key?.startsWith('dom-');
     const isDom6 = constraint.key === 'dom-6';
     const isWarningConstraint = constraint.severity === 'warning' && !escalateToError;
-    const shouldDemoteToInfo = (isWarningConstraint && !isDomConstraint) || (isDom6 && this.strictnessMode !== 'strict');
+    const shouldDemoteToInfo = (isWarningConstraint && !isDomConstraint) || (isDom6 && strictnessMode !== 'strict');
     const issueCode = isDom6
       ? 'dom-6'
       : ((isWarningConstraint && (!isDomConstraint || (isDom6 && shouldDemoteToInfo)))
@@ -339,10 +439,12 @@ export class ConstraintValidator {
   private evaluateFHIRPath(
     context: any,
     expression: string,
-    rootResource?: any
+    rootResource: any,
+    fhirVersion: ConstraintValidationState['fhirVersion'],
+    userInvocationTable: any,
   ): any {
     // Use compiled expression cache — avoids re-parsing on every call
-    const compiled = getOrCompileFHIRPathExpression(expression, this.fhirVersion);
+    const compiled = getOrCompileFHIRPathExpression(expression, fhirVersion);
 
     // Evaluate compiled expression synchronously (fhirpath.js is sync;
     // wrapping in Promise + setTimeout was dead code — a setTimeout
@@ -352,7 +454,7 @@ export class ConstraintValidator {
       {
         resource: rootResource || context,
         rootResource: rootResource || context,
-        userInvocationTable: this.cachedUserInvocationTable,
+        userInvocationTable,
       },
       { traceFn: () => { } },
     );
@@ -383,6 +485,38 @@ export class ConstraintValidator {
     this.timeout = timeout;
   }
 
+  getDiagnostics(): FHIRPathConstraintDiagnostics {
+    return cloneFHIRPathConstraintDiagnostics(this.diagnostics);
+  }
+
+  clearDiagnostics(): void {
+    this.diagnostics = createEmptyFHIRPathConstraintDiagnostics();
+  }
+
+  private recordSkippedConstraint(
+    reason: FHIRPathConstraintSkipReason,
+    constraint: Constraint,
+    profileUrl: string,
+    path: string,
+    errorMessage: string,
+  ): void {
+    const skipped = this.diagnostics.skippedConstraints;
+    skipped.total += 1;
+    skipped.byReason[reason] += 1;
+    skipped.byConstraintKey[constraint.key] = (skipped.byConstraintKey[constraint.key] ?? 0) + 1;
+    skipped.byProfile[profileUrl] = (skipped.byProfile[profileUrl] ?? 0) + 1;
+
+    if (skipped.samples.length >= MAX_FHIRPATH_SKIP_SAMPLES) return;
+    skipped.samples.push({
+      reason,
+      constraintKey: constraint.key,
+      profileUrl,
+      path,
+      expression: constraint.expression ?? '',
+      errorMessage,
+    });
+  }
+
   static getCacheStats(): { hits: number; misses: number; compileErrors: number; hitRate: string; size: number } {
     return getConstraintExpressionCacheStats();
   }
@@ -392,8 +526,17 @@ export class ConstraintValidator {
   }
 }
 
-function isUnsupportedEngineCapabilityError(message: string): boolean {
-  return message.includes('Not implemented: htmlChecks');
+function classifyUnsupportedEngineCapabilityError(message: string): FHIRPathConstraintSkipReason | null {
+  if (message.includes('asynchronous function')) {
+    return 'async-function';
+  }
+  if (message.includes('is not allowed')) {
+    return 'disallowed-function';
+  }
+  if (message.includes('Not implemented: htmlChecks')) {
+    return 'unsupported-engine-capability';
+  }
+  return null;
 }
 
 export function getFHIRPathCacheStats() {

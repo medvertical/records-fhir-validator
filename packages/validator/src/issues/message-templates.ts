@@ -42,7 +42,7 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
     'terminology-valueset-error':
         "ValueSet validation failed: {error}",
     'terminology-binding-unverified':
-        "Code '{code}' could not be verified against value set '{valueSet}' (binding strength: {strength}) — no local expansion and no terminology server confirmation available",
+        "Code '{code}' could not be verified against value set '{valueSet}' (binding strength: {strength}); no local expansion and no terminology server confirmation available",
 
     // -------------------------------------------------------------------------
     // Metadata - Version ID
@@ -292,7 +292,7 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
     'profile-extension-url-not-absolute':
         "Extension.url must be an absolute URL (got '{url}')",
     'profile-extension-not-found':
-        "The extension {url} could not be found so is not allowed here",
+        "The extension {url} could not be resolved; verify its StructureDefinition or package availability",
     'profile-extension-not-in-profile':
         "Extension '{url}' is not defined in the profile",
     'profile-extension-modifier-mismatch':

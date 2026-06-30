@@ -8,19 +8,31 @@ export function mergeDifferentialWithBase(
 ): SDElement[] {
   const baseByPath = new Map<string, SDElement>();
   for (const el of baseElements) {
-    baseByPath.set(el.path, { ...el });
+    baseByPath.set(elementMergeKey(el), { ...el });
   }
 
   for (const diff of diffElements) {
-    const existing = baseByPath.get(diff.path);
+    const existing = baseByPath.get(elementMergeKey(diff));
     if (existing) {
       mergeDifferentialElement(existing, diff);
     } else {
-      baseByPath.set(diff.path, { ...diff });
+      baseByPath.set(elementMergeKey(diff), { ...diff });
     }
   }
 
   return Array.from(baseByPath.values());
+}
+
+function elementMergeKey(el: SDElement): string {
+  if (typeof el.id === 'string' && el.id.length > 0) {
+    return el.id;
+  }
+
+  if (typeof el.sliceName === 'string' && el.sliceName.length > 0) {
+    return `${el.path}:${el.sliceName}`;
+  }
+
+  return el.path;
 }
 
 export function resolveElements(
@@ -37,8 +49,12 @@ export function resolveElements(
 
   if (resolveBase && sd.baseDefinition) {
     const baseSd = resolveBase(sd.baseDefinition);
-    if (baseSd?.snapshot?.element?.length) {
-      const baseElements = baseSd.snapshot.element.map(el => ({
+    if (baseSd) {
+      const resolvedBaseElements = resolveElements(baseSd, resolveBase);
+      if (resolvedBaseElements.length === 0) {
+        return sd.differential.element;
+      }
+      const baseElements = resolvedBaseElements.map(el => ({
         ...el,
         path: el.path.replace(new RegExp(`^${baseSd.type}`), sd.type),
       }));
@@ -59,11 +75,9 @@ function mergeDifferentialElement(target: SDElement, diff: SDElement): void {
   }
   if (diff.slicing) target.slicing = diff.slicing;
   if (diff.sliceName) target.sliceName = diff.sliceName;
-  if (diff.fixedString !== undefined) target.fixedString = diff.fixedString;
-  if (diff.fixedCode !== undefined) target.fixedCode = diff.fixedCode;
-  if (diff.fixedUri !== undefined) target.fixedUri = diff.fixedUri;
-  if (diff.fixedBoolean !== undefined) target.fixedBoolean = diff.fixedBoolean;
-  if (diff.patternCodeableConcept) target.patternCodeableConcept = diff.patternCodeableConcept;
-  if (diff.patternCoding) target.patternCoding = diff.patternCoding;
-  if (diff.patternIdentifier) target.patternIdentifier = diff.patternIdentifier;
+  for (const [key, value] of Object.entries(diff)) {
+    if ((key.startsWith('fixed') || key.startsWith('pattern')) && value !== undefined) {
+      (target as Record<string, unknown>)[key] = value;
+    }
+  }
 }

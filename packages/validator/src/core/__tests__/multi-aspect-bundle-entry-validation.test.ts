@@ -633,7 +633,7 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
     );
   });
 
-  it('treats required Bundle.entry slice candidates with child errors as missing conformance matches', async () => {
+  it('reports required Bundle.entry slice candidates with child errors without duplicate missing-slice issues', async () => {
     vi.mocked(loadProfileOrBase).mockImplementation(async (_sdLoader, _snapshotGenerator, profileUrl, resourceType) => ({
       structureDef: {
         id: resourceType,
@@ -721,10 +721,11 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
         ruleId: 'bundle-entry-slice-profile-match-failed',
         path: 'Bundle.entry[0].resource/*Composition/comp-1*/',
       }),
+    ]));
+    expect(profile?.issues).not.toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: 'profile-slice-min-cardinality',
         ruleId: 'bundle-entry-slice-min-composition-conformance',
-        path: 'Bundle.entry',
       }),
     ]));
   });

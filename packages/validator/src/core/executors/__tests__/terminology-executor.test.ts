@@ -38,6 +38,7 @@ vi.mock('../../../validators/valueset-validator', () => ({
 // Now import after mocks are set up
 import { TerminologyExecutor, type TerminologyValidationContext } from '../terminology-executor';
 import { buildInvalidUcumIssueDetails, buildInvalidUcumMessage } from '../terminology-ucum-rules';
+import { getValueAtPath } from '../../validation-utils';
 
 vi.mock('../../../logger', () => ({
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -451,6 +452,130 @@ describe('TerminologyExecutor', () => {
       // Should not call validateBinding for null values
       expect(validateBindingSpy).not.toHaveBeenCalled();
       validatorInstance.validateBinding = originalMethod;
+    });
+
+    it('skips binding validation for primitive sidecar-only values', async () => {
+      mockStructureDef.snapshot!.element = [
+        {
+          path: 'Patient.identifier.value',
+          min: 0,
+          max: '1',
+          type: [{ code: 'string' }],
+          binding: {
+            strength: 'required',
+            valueSet: 'http://example.org/fhir/ValueSet/identifier-value',
+          },
+        } as ElementDefinition,
+      ];
+      const resource = {
+        resourceType: 'Patient',
+        identifier: [{
+          system: 'http://fhir.de/sid/gkv/kvid-10',
+          _value: {
+            extension: [{
+              url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+              valueCode: 'masked',
+            }],
+          },
+        }],
+      };
+
+      const validatorInstance = (executor as any).valuesetValidator;
+      const validateBindingSpy = vi.spyOn(validatorInstance, 'validateBinding');
+
+      const issues = await executor.validate({
+        resource,
+        structureDef: { ...mockStructureDef, type: 'Patient' },
+        getValueAtPath,
+      });
+
+      expect(validateBindingSpy).not.toHaveBeenCalled();
+      expect(issues.some(issue => issue.code === 'binding-required-missing')).toBe(false);
+      validateBindingSpy.mockRestore();
+    });
+
+    it('uses the nearest nested slice owner for primitive sidecar extension bindings', async () => {
+      const profile: StructureDefinition = {
+        id: 'patient-pseudonymized',
+        url: 'http://example.org/StructureDefinition/PatientPseudonymisiert',
+        type: 'Patient',
+        snapshot: {
+          element: [
+            {
+              id: 'Patient.identifier',
+              path: 'Patient.identifier',
+              min: 0,
+              max: '*',
+            } as ElementDefinition,
+            {
+              id: 'Patient.identifier:masked',
+              path: 'Patient.identifier',
+              sliceName: 'masked',
+              min: 0,
+              max: '*',
+            } as ElementDefinition,
+            {
+              id: 'Patient.identifier:masked.value.extension:data-absent-reason',
+              path: 'Patient.identifier.value.extension',
+              sliceName: 'data-absent-reason',
+              min: 0,
+              max: '1',
+              type: [{ code: 'Extension' }],
+            } as ElementDefinition,
+            {
+              id: 'Patient.identifier:masked.value.extension:data-absent-reason.url',
+              path: 'Patient.identifier.value.extension.url',
+              min: 1,
+              max: '1',
+              type: [{ code: 'uri' }],
+              fixedUri: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+            } as ElementDefinition,
+            {
+              id: 'Patient.identifier:masked.value.extension:data-absent-reason.value[x]',
+              path: 'Patient.identifier.value.extension.value[x]',
+              min: 1,
+              max: '1',
+              type: [{ code: 'code' }],
+              binding: {
+                strength: 'required',
+                valueSet: 'http://hl7.org/fhir/ValueSet/data-absent-reason|4.0.1',
+              },
+            } as ElementDefinition,
+          ],
+        },
+      };
+      const resource = {
+        resourceType: 'Patient',
+        identifier: [{
+          system: 'http://fhir.de/sid/gkv/kvid-10',
+          _value: {
+            extension: [{
+              url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+              valueCode: 'masked',
+            }],
+          },
+        }],
+      };
+
+      const validatorInstance = (executor as any).valuesetValidator;
+      validatorInstance.validateBinding.mockResolvedValue([]);
+
+      const issues = await executor.validate({
+        resource,
+        structureDef: profile,
+        getValueAtPath,
+      });
+
+      expect(issues).toEqual([]);
+      expect(validatorInstance.validateBinding).toHaveBeenCalledWith(
+        'masked',
+        expect.objectContaining({
+          strength: 'required',
+          valueSet: 'http://hl7.org/fhir/ValueSet/data-absent-reason|4.0.1',
+        }),
+        'Patient.identifier.value.extension.value[x]',
+        expect.any(Object),
+      );
     });
 
     it('reports a missing required binding for a direct required coded resource element', async () => {

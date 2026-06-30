@@ -135,4 +135,42 @@ describe('multi-aspect-validate-callback — profile fallback', () => {
     const structural = result.aspects.find(a => a.aspect === 'structural');
     expect(structural!.issues[0].code).toBe('structural-cardinality-min');
   });
+
+  it('applies central issue dedupe to multi-aspect results', async () => {
+    const requiredElementCopy: ValidationIssue = {
+      severity: 'error',
+      code: 'structural-required-element-missing',
+      message: 'Required element Observation.status is missing',
+      path: 'Observation.status',
+      details: { fieldPath: 'Observation.status' },
+    };
+    const deps = makeDeps();
+    deps.structuralExecutor = {
+      validate: async () => [
+        {
+          ...cardinalityError,
+          details: { fieldPath: 'Observation.status' },
+        },
+        requiredElementCopy,
+      ],
+    } as any;
+
+    const callback = buildMultiAspectValidateCallback(
+      deps,
+      ['structural'],
+      { validationStrictness: 'standard', aspects: {} },
+    );
+
+    const result = await callback(
+      { resourceType: 'Observation' },
+      'http://example.org/DoesNotExist',
+      'R4',
+    );
+
+    const structural = result.aspects.find(a => a.aspect === 'structural');
+    expect(structural).toBeDefined();
+    expect(structural!.issues.map(issue => issue.code)).toEqual([
+      'structural-cardinality-min',
+    ]);
+  });
 });

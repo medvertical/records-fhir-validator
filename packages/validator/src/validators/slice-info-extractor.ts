@@ -9,7 +9,12 @@
 
 import type { StructureDefinition, ElementDefinition, SlicingDefinition } from '../core/structure-definition-types';
 import type { SliceDefinition } from './slice-types';
-import { extractPatternFromElement, extractFixedFromElement } from './slice-utils';
+import {
+  extractFixedEntry,
+  extractFixedFromElement,
+  extractPatternEntry,
+  extractPatternFromElement,
+} from './slice-utils';
 import { logger } from '../logger';
 
 export type TypeProfileResolverFn = ((url: string) => Promise<StructureDefinition | null>) | null;
@@ -65,11 +70,16 @@ export async function extractSlicingInfo(
   const baseElement = slicingElementId
     ? elements.find(e => e.id === slicingElementId && e.path === elementPath && e.slicing)
     : elements.find(e => e.path === elementPath && e.slicing);
-  if (!baseElement || !baseElement.slicing) return null;
+  const candidateSliceElements = elements.filter(element =>
+    element.path === elementPath &&
+    Boolean(element.sliceName) &&
+    (!slicingElementId || !element.id || element.id.startsWith(`${slicingElementId}:`))
+  );
+  if ((!baseElement || !baseElement.slicing) && candidateSliceElements.length === 0) return null;
 
-  const slicingDef: SlicingDefinition = baseElement.slicing;
+  const slicingDef: SlicingDefinition = baseElement?.slicing ?? inferInheritedSlicing(candidateSliceElements);
   const slices: SliceDefinition[] = [];
-  const nestedSlicePrefix = baseElement.id ? `${baseElement.id}:` : null;
+  const nestedSlicePrefix = baseElement?.id ? `${baseElement.id}:` : null;
 
   for (const element of elements) {
     if (element.path !== elementPath || !element.sliceName) continue;
@@ -84,11 +94,17 @@ export async function extractSlicingInfo(
       type: element.type,
     };
 
-    const rootPattern = extractPatternFromElement(element);
-    if (rootPattern !== undefined) sliceDef.pattern = rootPattern;
+    const rootPattern = extractPatternEntry(element);
+    if (rootPattern !== undefined) {
+      sliceDef.pattern = rootPattern.value;
+      sliceDef.patternKind = rootPattern.key;
+    }
 
-    const rootFixed = extractFixedFromElement(element);
-    if (rootFixed !== undefined) sliceDef.fixed = rootFixed;
+    const rootFixed = extractFixedEntry(element);
+    if (rootFixed !== undefined) {
+      sliceDef.fixed = rootFixed.value;
+      sliceDef.fixedKind = rootFixed.key;
+    }
 
     const slicePrefix = element.id
       ? `${element.id}.`
@@ -138,4 +154,17 @@ export async function extractSlicingInfo(
 
   logger.debug(`[SlicingValidator] Found ${slices.length} slices for ${elementPath}`);
   return { slicing: slicingDef, slices };
+}
+
+function inferInheritedSlicing(sliceElements: ElementDefinition[]): SlicingDefinition {
+  const hasFixedSlice = sliceElements.some(element => extractFixedEntry(element) !== undefined);
+  return {
+    discriminator: [{
+      type: hasFixedSlice ? 'value' : 'pattern',
+      path: '$this',
+    }],
+    rules: 'open',
+    ordered: false,
+    description: 'Inferred from differential slice elements whose slicing declaration is inherited from a base profile.',
+  };
 }

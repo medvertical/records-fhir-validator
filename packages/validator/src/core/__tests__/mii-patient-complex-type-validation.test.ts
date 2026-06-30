@@ -52,8 +52,7 @@ describe('MII Patient Complex Type Validation', () => {
   }, 60000);
 
   describe('Required sub-elements validation', () => {
-    // Requires sub-element cardinality checking within complex types (not yet implemented)
-    it.skip('should report missing family and given in HumanName when validating against MII Patient profile', async () => {
+    it('should report missing family and given in HumanName when validating against MII Patient profile', async () => {
       const issues = await recordsValidator.validate(
         TEST_PATIENT_MISSING_NAME_SUBELEMENTS,
         MII_PATIENT_PROFILE,
@@ -138,8 +137,7 @@ describe('MII Patient Complex Type Validation', () => {
   });
 
   describe('Comparison with expected HAPI behavior', () => {
-    // Requires sub-element cardinality checking within complex types (not yet implemented)
-    it.skip('should report at least the same required-element-missing errors as HAPI', async () => {
+    it('should report at least the same required-element-missing errors as HAPI', async () => {
       const issues = await recordsValidator.validate(
         TEST_PATIENT_MISSING_NAME_SUBELEMENTS,
         MII_PATIENT_PROFILE,
@@ -173,4 +171,3 @@ describe('MII Patient Complex Type Validation', () => {
     }, 120000);
   });
 });
-

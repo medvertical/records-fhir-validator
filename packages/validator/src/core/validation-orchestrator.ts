@@ -29,6 +29,7 @@ export interface ValidationOrchestratorContext {
   strictMode: boolean;
   settings?: any;
   referenceResolver?: ReferenceResolver | null;
+  contextQuestionnaire?: any;
 }
 
 /**
@@ -56,6 +57,7 @@ export async function runAllAspectValidations(
       fhirVersion: context.fhirVersion,
       structureDef: context.structureDef,
       getValueAtPath,
+      contextQuestionnaire: context.contextQuestionnaire,
       settings: context.settings
     }
   );

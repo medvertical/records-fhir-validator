@@ -105,6 +105,36 @@ export interface AdvisorRule {
   enabled?: boolean;
 }
 
+export type ProfileApplicationSource =
+  | 'resource-meta'
+  | 'explicit-run'
+  | 'imposed-policy'
+  | 'structuredefinition-imposeProfile'
+  | 'base-fallback';
+
+export interface ImposedProfilePolicy {
+  /** Stable identifier used in reports and audit evidence. */
+  id?: string;
+  /** Disabled policies are kept for draft/customer-specific configurations. */
+  enabled?: boolean;
+  /** FHIR resource type to which the profile is applied. Use "*" for all. */
+  resourceType: string;
+  /** Canonical URL of the profile to validate against. */
+  profileUrl: string;
+  /** Optional human-readable label shown in UI/report contexts. */
+  label?: string;
+  /** Optional package evidence when the policy is tied to a pinned IG package. */
+  packageId?: string;
+  packageVersion?: string;
+  /** Optional explanation for why this profile is imposed. */
+  reason?: string;
+}
+
+export interface ImposedProfilesConfig {
+  enabled: boolean;
+  policies: ImposedProfilePolicy[];
+}
+
 // ============================================================================
 // Validation Settings
 // ============================================================================
@@ -230,6 +260,12 @@ export interface ValidationSettings {
    * Controls which remote sources are used to fetch profiles (in addition to local cache)
    */
   profileSources?: ProfileSourcesConfig;
+
+  /**
+   * Profiles that Records should apply as validation policy even when a
+   * resource does not declare them in meta.profile.
+   */
+  imposedProfiles?: ImposedProfilesConfig;
 
   /**
    * Advanced Terminology Validation
@@ -359,6 +395,7 @@ export interface ValidationSettingsUpdate {
     profileCachePath?: string;
   };
   profileSources?: ProfileSourcesConfig;
+  imposedProfiles?: Partial<ImposedProfilesConfig>;
   packageDownload?: Partial<ValidationSettings['packageDownload']>;
   autoRevalidateAfterEdit?: boolean;
   autoRevalidateOnVersionChange?: boolean;

@@ -7,7 +7,8 @@ import { sdElementMatcher } from './sd-element-matcher';
 import { fhirPathCustomFunctions, createFHIRPathContext } from './fhirpath-functions';
 import { InvariantRegistry } from './invariant-registry';
 import { preprocessTypeLiterals, resolveElementType } from './fhirpath-type-preprocessor';
-import { evaluateSimpleMemberOfExists } from './fhirpath-memberof-precheck';
+import { evaluateSimpleMemberOfExists, evaluateTrailingMemberOf } from './fhirpath-memberof-precheck';
+import { evaluateResolveExistsConstraint } from './fhirpath-resolve-precheck';
 import { ValueSetPackageLoader } from './valueset-package-loader';
 import { logger } from '../logger';
 import {
@@ -35,14 +36,14 @@ export class SDFHIRPathExecutor {
      * Execute ALL FHIRPath constraints from StructureDefinition
      */
     async execute(context: SDFHIRPathContext): Promise<ValidationIssue[]> {
-        const { resource, resourceType, structureDef, bundleResources, fhirVersion = 'R4' } = context;
+        const { resource, resourceType, structureDef, bundle, bundleResources, fhirVersion = 'R4' } = context;
         const issues: ValidationIssue[] = [];
         const profileUrl = structureDef.url;
 
         if (!structureDef || !resource) return issues;
 
         // Create FHIRPath context and build userInvocationTable once per execute() call
-        const fhirPathContext = createFHIRPathContext(resource, bundleResources ? Array.from(bundleResources.values()) : undefined);
+        const fhirPathContext = createFHIRPathContext(resource, bundleResources ?? bundle);
         const userInvocationTable = fhirPathContext ? {
             resolve: {
                 fn: (inputs: any[]) => fhirPathCustomFunctions.resolve.fn(inputs, fhirPathContext),
@@ -88,7 +89,8 @@ export class SDFHIRPathExecutor {
                     constraint,
                     userInvocationTable,
                     profileUrl,
-                    fhirVersion
+                    fhirVersion,
+                    bundleResources ?? bundle
                 );
                 issues.push(...constraintIssues);
             }
@@ -113,7 +115,8 @@ export class SDFHIRPathExecutor {
                 collected,
                 userInvocationTable,
                 profileUrl,
-                fhirVersion
+                fhirVersion,
+                bundleResources ?? bundle
             );
             issues.push(...constraintIssues);
         }
@@ -133,7 +136,8 @@ export class SDFHIRPathExecutor {
         constraint: Constraint,
         userInvocationTable: any,
         profileUrl?: string,
-        fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
+        fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+        bundle?: any,
     ): Promise<ValidationIssue[]> {
         const issues: ValidationIssue[] = [];
 
@@ -182,6 +186,30 @@ export class SDFHIRPathExecutor {
             );
             if (memberOfPassed !== null) {
                 if (!memberOfPassed) {
+                    issues.push(this.createViolation(constraint, matched.resourcePath, resourceType, profileUrl));
+                }
+                return issues;
+            }
+            const trailingMemberOf = evaluateTrailingMemberOf(
+                resolvedExpression,
+                evaluationContext,
+                fhirVersion,
+            );
+            if (trailingMemberOf !== null) {
+                if (!trailingMemberOf) {
+                    issues.push(this.createViolation(constraint, matched.resourcePath, resourceType, profileUrl));
+                }
+                return issues;
+            }
+            const resolveExists = evaluateResolveExistsConstraint({
+                expression: resolvedExpression,
+                context: evaluationContext,
+                rootResource: resource,
+                fhirVersion,
+                bundle,
+            });
+            if (resolveExists !== null) {
+                if (!resolveExists) {
                     issues.push(this.createViolation(constraint, matched.resourcePath, resourceType, profileUrl));
                 }
                 return issues;
@@ -237,7 +265,8 @@ export class SDFHIRPathExecutor {
         collected: CollectedConstraint,
         userInvocationTable: any,
         profileUrl?: string,
-        fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
+        fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+        bundle?: any,
     ): Promise<ValidationIssue[]> {
         const issues: ValidationIssue[] = [];
         const { constraint, elementPath, isRootConstraint } = collected;
@@ -297,12 +326,52 @@ export class SDFHIRPathExecutor {
 
             // Use ElementContextResolver for proper array handling
             if (isRootConstraint) {
+                const trailingMemberOf = evaluateTrailingMemberOf(effectiveExpression, resource, fhirVersion);
+                if (trailingMemberOf !== null) {
+                    if (!trailingMemberOf) {
+                        issues.push(this.createViolation(constraint, elementPath, resourceType, profileUrl));
+                    }
+                    return issues;
+                }
+                const resolveExists = evaluateResolveExistsConstraint({
+                    expression: effectiveExpression,
+                    context: resource,
+                    rootResource: resource,
+                    fhirVersion,
+                    bundle,
+                });
+                if (resolveExists !== null) {
+                    if (!resolveExists) {
+                        issues.push(this.createViolation(constraint, elementPath, resourceType, profileUrl));
+                    }
+                    return issues;
+                }
                 // Root constraint - evaluate on entire resource
                 const result = this.evaluateExpression(effectiveExpression, resource, resource, userInvocationTable, fhirVersion);
                 if (!constraintPassed(result)) {
                     issues.push(this.createViolation(constraint, elementPath, resourceType, profileUrl));
                 }
             } else if (this.expressionStartsAtResourceRoot(effectiveExpression, resourceType)) {
+                const trailingMemberOf = evaluateTrailingMemberOf(effectiveExpression, resource, fhirVersion);
+                if (trailingMemberOf !== null) {
+                    if (!trailingMemberOf) {
+                        issues.push(this.createViolation(constraint, elementPath, resourceType, profileUrl));
+                    }
+                    return issues;
+                }
+                const resolveExists = evaluateResolveExistsConstraint({
+                    expression: effectiveExpression,
+                    context: resource,
+                    rootResource: resource,
+                    fhirVersion,
+                    bundle,
+                });
+                if (resolveExists !== null) {
+                    if (!resolveExists) {
+                        issues.push(this.createViolation(constraint, elementPath, resourceType, profileUrl));
+                    }
+                    return issues;
+                }
                 const result = this.evaluateExpression(effectiveExpression, resource, resource, userInvocationTable, fhirVersion);
                 if (!constraintPassed(result)) {
                     issues.push(this.createViolation(constraint, elementPath, resourceType, profileUrl));
@@ -312,6 +381,26 @@ export class SDFHIRPathExecutor {
                 const contexts = elementContextResolver.resolveContexts(resource, elementPath, resourceType);
 
                 for (const ctx of contexts) {
+                    const trailingMemberOf = evaluateTrailingMemberOf(effectiveExpression, ctx.value, fhirVersion);
+                    if (trailingMemberOf !== null) {
+                        if (!trailingMemberOf) {
+                            issues.push(this.createViolation(constraint, ctx.fullPath, resourceType, profileUrl));
+                        }
+                        continue;
+                    }
+                    const resolveExists = evaluateResolveExistsConstraint({
+                        expression: effectiveExpression,
+                        context: ctx.value,
+                        rootResource: resource,
+                        fhirVersion,
+                        bundle,
+                    });
+                    if (resolveExists !== null) {
+                        if (!resolveExists) {
+                            issues.push(this.createViolation(constraint, ctx.fullPath, resourceType, profileUrl));
+                        }
+                        continue;
+                    }
                     const result = this.evaluateExpression(effectiveExpression, ctx.value, resource, userInvocationTable, fhirVersion);
                     if (!constraintPassed(result)) {
                         issues.push(this.createViolation(constraint, ctx.fullPath, resourceType, profileUrl));
@@ -325,6 +414,22 @@ export class SDFHIRPathExecutor {
                 return issues;
             }
             logger.warn(`[SDFHIRPathExecutor] Error evaluating ${constraint.key}: ${err}`);
+            issues.push(createValidationIssue({
+                code: 'profile-constraint-evaluation-error',
+                path: elementPath,
+                resourceType,
+                profile: profileUrl,
+                customMessage:
+                    `Constraint '${constraint.key}' could not be evaluated: ${message}. ` +
+                    `The underlying data was NOT checked against this constraint.`,
+                severityOverride: 'information',
+                ruleId: constraint.key,
+                details: {
+                    expression: constraint.expression,
+                    constraintKey: constraint.key,
+                    evaluationError: message,
+                },
+            }));
         }
 
         return issues;
@@ -335,7 +440,9 @@ export class SDFHIRPathExecutor {
      */
     private evaluateExpression(expression: string, context: any, rootResource: any, userInvocationTable?: any, fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'): any {
         const compiled = sdFHIRPathExpressionCache.getOrCompile(expression, fhirVersion);
-        if (!compiled) return true; // Skip if can't compile
+        if (!compiled) {
+            throw new Error(`Failed to compile FHIRPath expression: ${expression}`);
+        }
 
         return this.evaluateCompiled(
             compiled,

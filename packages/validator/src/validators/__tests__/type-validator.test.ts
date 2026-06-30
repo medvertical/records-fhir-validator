@@ -6,6 +6,7 @@
 
 import { TypeValidator } from '../type-validator';
 import type { ElementType } from '../../core/structure-definition-types';
+import { resolveFhirSegmentValue } from '../../core/fhir-primitive-sidecar';
 
 describe('TypeValidator', () => {
   let validator: TypeValidator;
@@ -36,6 +37,49 @@ describe('TypeValidator', () => {
     it('should reject mismatched primitive types', async () => {
       const types: ElementType[] = [{ code: 'integer' }];
       const issues = await validator.validate('not-a-number', types, 'Patient.age');
+      expect(issues).toHaveLength(1);
+      expect(issues[0].code).toBe('structural-type-mismatch');
+    });
+
+    it('accepts primitive sidecar-only values resolved from underscore siblings', async () => {
+      const patient = {
+        _birthDate: {
+          extension: [{
+            url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+            valueCode: 'masked',
+          }],
+        },
+      };
+      const sidecar = resolveFhirSegmentValue(patient, 'birthDate');
+
+      const issues = await validator.validate(sidecar, [{ code: 'date' }], 'Patient.birthDate');
+
+      expect(issues).toHaveLength(0);
+    });
+
+    it('accepts frozen primitive sidecar-only values resolved from underscore siblings', async () => {
+      const patient = {
+        _birthDate: Object.freeze({
+          extension: [{
+            url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+            valueCode: 'masked',
+          }],
+        }),
+      };
+      const sidecar = resolveFhirSegmentValue(patient, 'birthDate');
+
+      const issues = await validator.validate(sidecar, [{ code: 'date' }], 'Patient.birthDate');
+
+      expect(issues).toHaveLength(0);
+    });
+
+    it('still rejects unmarked objects in primitive slots', async () => {
+      const issues = await validator.validate(
+        { extension: [{ url: 'http://example.org/not-a-sidecar' }] },
+        [{ code: 'date' }],
+        'Patient.birthDate',
+      );
+
       expect(issues).toHaveLength(1);
       expect(issues[0].code).toBe('structural-type-mismatch');
     });

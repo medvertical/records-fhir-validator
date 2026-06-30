@@ -5,12 +5,26 @@
  * such as data-absent-reason.
  */
 
+const PRIMITIVE_SIDECAR_VALUE = Symbol.for('records.fhirPrimitiveSidecarValue');
+const primitiveSidecarValues = new WeakSet<object>();
+
+export function isResolvedPrimitiveSidecarValue(value: unknown): boolean {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    (
+      primitiveSidecarValues.has(value) ||
+      (value as Record<PropertyKey, unknown>)[PRIMITIVE_SIDECAR_VALUE] === true
+    ),
+  );
+}
+
 export function getPrimitiveSidecar(container: any, key: string): any | undefined {
   if (!container || typeof container !== 'object' || Array.isArray(container)) return undefined;
   if (!key || key.startsWith('_')) return undefined;
 
   const sidecar = container[`_${key}`];
-  return isMeaningfulPrimitiveSidecar(sidecar) ? sidecar : undefined;
+  return isMeaningfulPrimitiveSidecar(sidecar) ? markPrimitiveSidecarValue(sidecar) : undefined;
 }
 
 export function resolveFhirSegmentValue(container: any, segment: string): any {
@@ -38,11 +52,25 @@ function resolveChoiceSegmentValue(container: any, baseName: string): any {
   if (!sidecarChoiceKey) return undefined;
 
   const sidecar = container[sidecarChoiceKey];
-  return isMeaningfulPrimitiveSidecar(sidecar) ? sidecar : undefined;
+  return isMeaningfulPrimitiveSidecar(sidecar) ? markPrimitiveSidecarValue(sidecar) : undefined;
 }
 
 function isMeaningfulPrimitiveSidecar(sidecar: any): boolean {
   if (!sidecar || typeof sidecar !== 'object' || Array.isArray(sidecar)) return false;
   if (typeof sidecar.id === 'string' && sidecar.id.length > 0) return true;
   return Array.isArray(sidecar.extension) && sidecar.extension.length > 0;
+}
+
+function markPrimitiveSidecarValue(sidecar: any): any {
+  if (!sidecar || typeof sidecar !== 'object') return sidecar;
+  if (isResolvedPrimitiveSidecarValue(sidecar)) return sidecar;
+  primitiveSidecarValues.add(sidecar);
+  if (!Object.isExtensible(sidecar)) return sidecar;
+
+  Object.defineProperty(sidecar, PRIMITIVE_SIDECAR_VALUE, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+  });
+  return sidecar;
 }

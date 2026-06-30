@@ -4,6 +4,7 @@ import type { BestPracticeValidator } from '../validators/best-practice-validato
 import { logger } from '../logger';
 import type { StructureDefinitionLoader } from './structure-definition-loader';
 import type { SnapshotGenerator } from './snapshot-generator';
+import type { QuestionnaireContextRegistry } from './questionnaire-context-registry';
 import {
   createProfileFallbackIssue,
   createProfileResourceTypeMismatchIssue,
@@ -42,6 +43,7 @@ interface RecordsSingleResourceValidationContext {
   metadataExecutor: MetadataExecutor;
   referenceExecutor: ReferenceExecutor;
   bestPracticeValidator: BestPracticeValidator;
+  questionnaireRegistry?: QuestionnaireContextRegistry;
   strictMode: boolean;
   validateBundleEntriesIfNeeded(resource: any, fhirVersion: 'R4' | 'R5' | 'R6'): Promise<ValidationIssue[]>;
 }
@@ -91,6 +93,9 @@ export async function validateRecordsResource(
       : loadResult.usedBaseFallback
         ? createProfileFallbackIssue(declaredProfileUrl, resource.resourceType)
         : null;
+    const contextQuestionnaire = resource.resourceType === 'QuestionnaireResponse'
+      ? context.questionnaireRegistry?.resolveForResponse(resource)
+      : undefined;
 
     const issues = await collectSingleResourceValidationIssues(
       {
@@ -101,6 +106,7 @@ export async function validateRecordsResource(
         strictMode: context.strictMode,
         settings,
         profileFallbackIssue,
+        contextQuestionnaire,
       },
       {
         structuralExecutor: context.structuralExecutor,

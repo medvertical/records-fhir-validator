@@ -9,7 +9,7 @@
  * regardless of whether the target element exists.
  */
 
-import type { StructureDefinition, Constraint } from '../core/structure-definition-types';
+import type { StructureDefinition, Constraint, ElementDefinition } from '../core/structure-definition-types';
 import { logger } from '../logger';
 
 // ============================================================================
@@ -57,6 +57,7 @@ export interface ConstraintCollectionResult {
 // ============================================================================
 
 export class SDConstraintCollector {
+    private collectionCache = new WeakMap<ElementDefinition[], ConstraintCollectionResult>();
 
     /**
      * Collect ALL constraints from a StructureDefinition
@@ -68,6 +69,9 @@ export class SDConstraintCollector {
         if (!structureDef?.snapshot?.element) {
             return this.buildResult(constraints, byKey);
         }
+
+        const cached = this.collectionCache.get(structureDef.snapshot.element);
+        if (cached) return cached;
 
         const resourceType = structureDef.snapshot.element[0]?.path || '';
 
@@ -113,6 +117,7 @@ export class SDConstraintCollector {
         logger.debug(`[SDConstraintCollector] Collected ${result.totalCount} constraints with ${result.uniqueKeys.length} unique keys`);
         logger.debug(`[SDConstraintCollector] Keys: ${result.uniqueKeys.slice(0, 10).join(', ')}${result.uniqueKeys.length > 10 ? '...' : ''}`);
 
+        this.collectionCache.set(structureDef.snapshot.element, result);
         return result;
     }
 

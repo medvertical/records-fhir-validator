@@ -2,6 +2,7 @@ import type { ValidationIssue } from '../../types';
 import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
 import { matchesPattern } from '../../validators/slice-utils';
 import { UCUM_BEARING_TYPES } from './terminology-ucum-rules';
+import { isResolvedPrimitiveSidecarValue } from '../fhir-primitive-sidecar';
 
 /** Quantity unit bindings: required -> extensible. HAPI-aligned; avoids false positives on derived profiles. */
 export function effectiveBindingForElement(elementDef: { binding?: any; type?: { code: string }[] }): any {
@@ -15,6 +16,7 @@ export function shouldValidateBindingForValue(
   elementDef: { path?: string; type?: { code: string }[] },
   value: unknown,
 ): boolean {
+  if (isResolvedPrimitiveSidecarValue(value)) return false;
   if (!elementDef.path?.endsWith('[x]')) return true;
   if (!value || typeof value !== 'object' || Array.isArray(value)) return true;
 
@@ -130,13 +132,13 @@ function getOwningSliceElement(
   if (!elementDef.id || !elementDef.id.includes(':')) return null;
   if (elementDef.sliceName) return elementDef;
 
-  const sliceRootEnd = elementDef.id.indexOf('.', elementDef.id.indexOf(':'));
-  if (sliceRootEnd === -1) return null;
-
-  const sliceRootId = elementDef.id.slice(0, sliceRootEnd);
-  return structureDef.snapshot?.element.find(candidate =>
-    candidate.id === sliceRootId && Boolean(candidate.sliceName),
-  ) ?? null;
+  return structureDef.snapshot?.element
+    .filter(candidate =>
+      Boolean(candidate.sliceName) &&
+      typeof candidate.id === 'string' &&
+      elementDef.id!.startsWith(`${candidate.id}.`),
+    )
+    .sort((a, b) => b.id!.length - a.id!.length)[0] ?? null;
 }
 
 function getRelativePathWithinSlice(elementDef: ElementDefinition, sliceElement: ElementDefinition): string {

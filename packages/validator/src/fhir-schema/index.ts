@@ -13,6 +13,8 @@ export {
     extractExtensionDefs,
     summarizeConversion,
 } from './sd-to-fhir-schema';
+export { compileFHIRSchemaToValidationGraph, summarizeGraph } from './validation-graph-compiler';
+export { validateResourceWithGraph } from './validation-graph-executor';
 
 export type {
     FHIRSchema,
@@ -23,3 +25,8 @@ export type {
     FHIRSchemaConstraint,
     BaseResolver,
 } from './sd-to-fhir-schema';
+export type {
+    ValidationGraph,
+    ValidationGraphNode,
+    ValidationGraphStats,
+} from './validation-graph-types';

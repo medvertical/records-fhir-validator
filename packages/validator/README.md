@@ -89,7 +89,7 @@ depending on your trade-off between freshness and stability:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Always-latest within current major | `medvertical/records-fhir-validator@v0` | Force-moved on every stable release; never advances onto a prerelease |
-| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.3.0` | Immutable once published |
+| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.4.0` | Immutable once published |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | For audit / forensic builds |
 
 The `validator-v<semver>` tag you may see on the public repo's release
@@ -494,12 +494,13 @@ constraints measured by `quality:spec-coverage`.
 
 MII conformance is measured in a separate lane from the HL7
 `FHIR/fhir-test-cases` score. The current scoped MII-2026 reference run was
-generated on 2026-05-09 against the official MII FHIR Validator container at
-`http://localhost:8080`. It matches the reference validator on 241/241 measured
-resources from the refreshed MII 2026 corpus under the `mii-2026-reference`
-profile scope and `mii-local-blaze` terminology mode, with 12 classified
-corpus/profile-drift skips. The source-repository report is
-`conformance-results/mii-triangulation-2026-05-09.json`.
+generated on 2026-05-19 against the official MII FHIR Validator container
+`mii-fhir-validator:0.0.1-alpha.7` at `http://localhost:8081`. It matches the
+reference validator on 241/241 measured resources from the refreshed MII 2026
+corpus under the `mii-2026-reference` profile scope and `mii-local-blaze`
+terminology mode, with 12 classified corpus/profile-drift skips. The
+source-repository report is
+`conformance-results/mii-triangulation-alpha7-2026-05-19.json`.
 
 This is a scoped parity claim for the measured package-example corpus. It is
 not an MII certification claim and does not imply full site-level MII
@@ -509,6 +510,57 @@ The full scope-expansion plan is tracked in
 `docs/product/conformance-scope-roadmap.md` in the Records source repository.
 The public `medvertical/records-fhir-validator` export includes the same
 roadmap under `docs/conformance-scope-roadmap.md`.
+
+### FHIR Schema Dual-Path Scope
+
+FHIR Schema is being evaluated as a cleaner intermediate representation for
+the same StructureDefinition semantics, not as a replacement for conformance
+evidence. The current engine remains StructureDefinition-first. The FHIR Schema
+graph path runs in parallel and is compared against both Records' current
+StructureDefinition path and Java/reference `OperationOutcome` evidence where a
+reference report exists.
+
+The current MII Observation dual-path lane covers 261 real fixtures. Of those,
+131 have Java/reference coverage and 90 reference-comparable issues after
+excluding Java informational open-slice hints and Java-implied core Observation
+profiles (`bp`, `resprate`, `vitalsigns`) that are not part of the explicit MII
+profile contract for the lane. In that scoped lane, the graph path matches 73
+normalized Java/reference issue keys and the current Records comparable issue
+lane now also matches 73 after the slice-aware FHIR Schema merge and
+closed-slicing equivalence normalization loop.
+
+Reference coverage is reported separately from graph-vs-Records correctness. The
+current attached MII HTTP reference report covers 131 fixtures and leaves 130
+reference-coverage gaps: 77 Onkologie fixtures outside the current report scope,
+47 Gematik ISiK/ICU fixtures outside that scope, 2 Person/Base fixtures outside
+that scope, and 4 fixtures without an explicit `meta.profile`. A separate local
+HL7 Java validator CLI supplement can cover the 126 profiled gaps and reduces
+the remaining reference-coverage gaps to the 4 no-profile fixtures. That CLI
+supplement is Java OperationOutcome evidence, not a replacement for the official
+MII HTTP reference validator container.
+
+The report classifies the remaining cases instead of hiding them in one score:
+46 three-way-match cases, no one-sided Graph/Java-vs-Records or
+Records/Java-vs-Graph confirmed gaps, 13 graph-only-unconfirmed cases, 13
+Records-only-unconfirmed cases, 1 both-miss-reference case, 12 intentionally
+unmapped profile-missing cases, and 4 no-profile fixture cases.
+The intentionally excluded classes are part of the evidence model: unsupported
+or unmapped corpus profiles, fixtures without an explicit profile, Java
+informational hints, and Java behavior from implicit core Observation profiles
+outside the measured MII profile contract.
+
+The graph-vs-Records delta keys are also classified into decision buckets:
+forbidden or required `code.coding` slice cardinality, Coding identity versus
+full-pattern differences, component-slice expression granularity, and one
+Records-only `focus` rule. These remain visible until Java/reference coverage
+or an explicit product decision promotes them into runtime behavior. The single
+Java-covered both-miss case is the MII spontaneous respiratory-rate fixture,
+where Java reports a required `sct` `code.coding` slice as missing while both
+TypeScript paths accept the explicit child `system`/`code` pattern.
+
+This lane is therefore an implementation-reduction and convergence signal. It
+does not broaden the public headline parity claim beyond the explicitly measured
+FHIR JSON comparison lanes.
 
 ## License
 

@@ -23,6 +23,7 @@ import {
   matchesPrimitiveType,
   PRIMITIVE_TYPE_CODES,
 } from './type-matching-helpers';
+import { isResolvedPrimitiveSidecarValue } from '../core/fhir-primitive-sidecar';
 
 // ============================================================================
 // Type Validator
@@ -167,6 +168,10 @@ export class TypeValidator {
   private async matchesType(value: any, typeCode: string): Promise<boolean> {
     const normalizedType = normalizeFhirType(typeCode);
     const effectiveType = normalizedType || typeCode;
+
+    if (isResolvedPrimitiveSidecarValue(value) && PRIMITIVE_TYPE_CODES.has(effectiveType)) {
+      return true;
+    }
 
     if (isExtensionOnly(value) && !PRIMITIVE_TYPE_CODES.has(effectiveType)) {
       return true;

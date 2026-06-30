@@ -107,4 +107,39 @@ describe('ConstraintValidator - memberOf (ISO specific)', () => {
         const issuesXXX = await validator.validate(resource, elementsXXX as any, 'http://profile');
         expect(issuesXXX).toHaveLength(1);
     });
+
+    it('evaluates optional ISO country memberOf unions on the resolved element context', async () => {
+        const validator = new ConstraintValidator();
+        const elements = [{
+            path: 'Patient.address',
+            constraint: [{
+                key: 'pat-cnt-2or3-char',
+                severity: 'warning' as const,
+                human: 'Country must be valid ISO alpha-2 or alpha-3',
+                expression: "country.empty() or (country.memberOf('http://hl7.org/fhir/ValueSet/iso3166-1-2') or country.memberOf('http://hl7.org/fhir/ValueSet/iso3166-1-3'))",
+            }],
+        }];
+
+        const issues = await validator.validate(
+            {
+                resourceType: 'Patient',
+                address: [
+                    { country: 'DE' },
+                    { country: 'DEU' },
+                    {},
+                    { country: 'XX' },
+                ],
+            },
+            elements as any,
+            'https://www.medizininformatik-initiative.de/fhir/core/modul-person/StructureDefinition/Patient',
+        );
+
+        expect(issues).toHaveLength(1);
+        expect(issues[0]).toMatchObject({
+            code: 'profile-constraint-warning',
+            path: 'Patient.address[3]',
+            ruleId: 'pat-cnt-2or3-char',
+        });
+        expect(validator.getDiagnostics().skippedConstraints.total).toBe(0);
+    });
 });

@@ -111,4 +111,134 @@ describe('matchDiscriminator', () => {
       codingMatchesBindingCodes,
     )).toBe(false);
   });
+
+  it('uses Coding system and code as a stable identity for whole-Coding pattern slices', () => {
+    const element = {
+      system: 'http://loinc.org',
+      code: '8867-4',
+      version: '2.81',
+      display: 'Heart rate',
+    };
+    const slice: SliceDefinition = {
+      sliceName: 'loinc',
+      path: 'Observation.code.coding',
+      min: 1,
+      max: '1',
+      discriminator: [{ type: 'pattern', path: '$this' }],
+      patternKind: 'patternCoding',
+      pattern: {
+        system: 'http://loinc.org',
+        code: '8867-4',
+        version: '2.77',
+      },
+    };
+
+    expect(matchDiscriminator(
+      element,
+      slice,
+      { type: 'pattern', path: '$this' },
+      null,
+      matchesPattern,
+      codingMatchesBindingCodes,
+      [slice],
+    )).toBe(true);
+  });
+
+  it('does not use the Coding identity fallback when another slice matches exactly', () => {
+    const element = {
+      system: 'http://loinc.org',
+      code: '8867-4',
+      version: '2.81',
+    };
+    const oldVersionSlice: SliceDefinition = {
+      sliceName: 'loinc-old',
+      path: 'Observation.code.coding',
+      min: 1,
+      max: '1',
+      discriminator: [{ type: 'pattern', path: '$this' }],
+      patternKind: 'patternCoding',
+      pattern: {
+        system: 'http://loinc.org',
+        code: '8867-4',
+        version: '2.77',
+      },
+    };
+    const currentVersionSlice: SliceDefinition = {
+      ...oldVersionSlice,
+      sliceName: 'loinc-current',
+      pattern: {
+        system: 'http://loinc.org',
+        code: '8867-4',
+        version: '2.81',
+      },
+    };
+    const slices = [oldVersionSlice, currentVersionSlice];
+
+    expect(matchDiscriminator(
+      element,
+      oldVersionSlice,
+      { type: 'pattern', path: '$this' },
+      null,
+      matchesPattern,
+      codingMatchesBindingCodes,
+      slices,
+    )).toBe(false);
+    expect(matchDiscriminator(
+      element,
+      currentVersionSlice,
+      { type: 'pattern', path: '$this' },
+      null,
+      matchesPattern,
+      codingMatchesBindingCodes,
+      slices,
+    )).toBe(true);
+  });
+
+  it('matches resolve().ofType() discriminators against the resolved resource type', () => {
+    const slice: SliceDefinition = {
+      sliceName: 'observation',
+      path: 'DiagnosticReport.result',
+      min: 0,
+      max: '*',
+      discriminator: [{ type: 'type', path: 'resolve().ofType(Observation)' }],
+    };
+
+    expect(matchDiscriminator(
+      { reference: 'Observation/obs-1' },
+      slice,
+      { type: 'type', path: 'resolve().ofType(Observation)' },
+      () => ({ resourceType: 'Observation', id: 'obs-1' }),
+      matchesPattern,
+      codingMatchesBindingCodes,
+    )).toBe(true);
+  });
+
+  it('applies value discriminator paths after resolve() to the resolved resource', () => {
+    const slice: SliceDefinition = {
+      sliceName: 'final-observation',
+      path: 'DiagnosticReport.result',
+      min: 0,
+      max: '*',
+      discriminator: [{ type: 'value', path: 'resolve().status' }],
+      childFixed: new Map([['status', 'final']]),
+    };
+
+    expect(matchDiscriminator(
+      { reference: 'Observation/obs-1' },
+      slice,
+      { type: 'value', path: 'resolve().status' },
+      () => ({ resourceType: 'Observation', id: 'obs-1', status: 'final' }),
+      matchesPattern,
+      codingMatchesBindingCodes,
+    )).toBe(true);
+
+    expect(matchDiscriminator(
+      { reference: 'Observation/obs-2' },
+      slice,
+      { type: 'value', path: 'resolve().status' },
+      () => ({ resourceType: 'Observation', id: 'obs-2', status: 'preliminary' }),
+      matchesPattern,
+      codingMatchesBindingCodes,
+    )).toBe(false);
+  });
 });

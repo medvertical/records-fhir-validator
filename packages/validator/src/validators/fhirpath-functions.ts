@@ -1,4 +1,5 @@
 import { logger as _logger } from '../logger';
+import { memberOfFunction as cachedMemberOfFunction } from './fhirpath-custom-functions';
 
 // ============================================================================
 // Types
@@ -12,6 +13,11 @@ export interface FHIRPathContext {
     /** ValueSet validator for memberOf */
     valueSetValidator?: any;
 }
+
+type BundleResourceInput =
+    | Map<string, any>
+    | any[]
+    | { entry?: any[] };
 
 // ============================================================================
 // resolve() function
@@ -69,43 +75,21 @@ export function resolveFunction(input: any[], context: FHIRPathContext): any[] {
  * Checks if a code is a member of a ValueSet
  * Used in constraints like: code.memberOf('http://hl7.org/fhir/ValueSet/observation-status')
  */
-export function memberOfFunction(input: any[], valueSetUrl: string, context: FHIRPathContext): boolean[] {
-    const results: boolean[] = [];
+export function memberOfFunction(input: any[], valueSetUrl: string | string[], _context: FHIRPathContext): any[] {
+    const url = Array.isArray(valueSetUrl) ? valueSetUrl[0] : valueSetUrl;
+    if (!url || input.length === 0) return [];
 
+    let sawDeterminate = false;
     for (const item of input) {
-        if (!item) {
-            results.push(false);
+        const result = cachedMemberOfFunction.fn([item], [url]);
+        if (!Array.isArray(result) || result.length === 0) {
             continue;
         }
-
-        // Get code from Coding or code element
-        let code: string | undefined;
-        let _system: string | undefined;
-
-        if (typeof item === 'object') {
-            code = item.code;
-            _system = item.system;
-        } else if (typeof item === 'string') {
-            code = item;
-        }
-
-        if (!code) {
-            results.push(false);
-            continue;
-        }
-
-        // If we have a valueSetValidator, use it
-        if (context.valueSetValidator) {
-            // This would be async in real implementation
-            // For now, return true to avoid blocking
-            results.push(true);
-        } else {
-            // Without validator, we can't check - return true to not block
-            results.push(true);
-        }
+        sawDeterminate = true;
+        if (result[0] === false) return [false];
     }
 
-    return results.length > 0 ? results : [true];
+    return sawDeterminate ? [true] : [];
 }
 
 // ============================================================================
@@ -198,19 +182,34 @@ export const fhirPathCustomFunctions = {
  */
 export function createFHIRPathContext(
     rootResource: any,
-    bundleResources?: any[]
+    bundleResources?: BundleResourceInput
 ): FHIRPathContext {
     const resourceMap = new Map<string, any>();
 
-    if (bundleResources) {
+    const addResource = (resource: any, explicitReference?: string) => {
+        if (!resource || typeof resource !== 'object') return;
+        if (explicitReference) {
+            resourceMap.set(explicitReference, resource);
+        }
+        if (resource.id && resource.resourceType) {
+            resourceMap.set(`${resource.resourceType}/${resource.id}`, resource);
+        }
+        if (typeof resource.fullUrl === 'string') {
+            resourceMap.set(resource.fullUrl, resource);
+        }
+    };
+
+    if (bundleResources instanceof Map) {
+        for (const [reference, resource] of bundleResources) {
+            addResource(resource, typeof reference === 'string' ? reference : undefined);
+        }
+    } else if (Array.isArray(bundleResources)) {
         for (const resource of bundleResources) {
-            if (resource.id) {
-                const ref = `${resource.resourceType}/${resource.id}`;
-                resourceMap.set(ref, resource);
-            }
-            if (resource.fullUrl) {
-                resourceMap.set(resource.fullUrl, resource);
-            }
+            addResource(resource);
+        }
+    } else if (Array.isArray(bundleResources?.entry)) {
+        for (const entry of bundleResources.entry) {
+            addResource(entry?.resource, typeof entry?.fullUrl === 'string' ? entry.fullUrl : undefined);
         }
     }
 

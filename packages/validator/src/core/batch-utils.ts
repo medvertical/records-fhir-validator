@@ -73,6 +73,11 @@ export function groupResourcesByProfile(
   return groups;
 }
 
+function splitVersionedCanonical(url: string): { canonicalUrl: string; version?: string } {
+  const [canonicalUrl, version] = url.split('|');
+  return version ? { canonicalUrl, version } : { canonicalUrl };
+}
+
 // eslint-disable-next-line max-lines-per-function
 export async function preloadProfiles(
   sdLoader: StructureDefinitionLoader,
@@ -135,7 +140,8 @@ export async function preloadProfiles(
       for (const chunk of chunks) {
         await Promise.all(chunk.map(async (url) => {
           try {
-            const profile = await resolveProfile(url, undefined, settings);
+            const { canonicalUrl, version } = splitVersionedCanonical(url);
+            const profile = await resolveProfile(canonicalUrl, version, settings);
             if (profile) {
               profilesMap.set(url, profile);
               // Cache in sdLoader for future runs

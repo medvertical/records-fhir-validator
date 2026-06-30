@@ -114,6 +114,10 @@ export const DEFAULT_VALIDATION_SETTINGS_R4: ValidationSettings = {
     simplifier: true,
     packageRegistry: true
   },
+  imposedProfiles: {
+    enabled: false,
+    policies: []
+  },
   advancedTerminology: DEFAULT_ADVANCED_TERMINOLOGY,
   packageDownload: {
     versionPolicy: 'prefer-stable',
@@ -224,6 +228,10 @@ export const DEFAULT_VALIDATION_SETTINGS_R5: ValidationSettings = {
   profileSources: {
     simplifier: true,
     packageRegistry: true
+  },
+  imposedProfiles: {
+    enabled: false,
+    policies: []
   },
   advancedTerminology: DEFAULT_ADVANCED_TERMINOLOGY,
   packageDownload: {

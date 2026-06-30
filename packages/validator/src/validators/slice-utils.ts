@@ -54,6 +54,31 @@ export function valuesMatch(value1: any, value2: any): boolean {
   return keys1.every(key => valuesMatch(value1[key], value2[key]));
 }
 
+export function splitCanonicalReference(value: unknown): { url: string; version?: string } | null {
+  if (typeof value !== 'string') return null;
+
+  const [url, version] = value.split('|');
+  if (!url || !/^https?:\/\//.test(url)) return null;
+
+  return version ? { url, version } : { url };
+}
+
+export function canonicalBasesMatch(value1: unknown, value2: unknown): boolean {
+  const first = splitCanonicalReference(value1);
+  const second = splitCanonicalReference(value2);
+  return Boolean(first && second && first.url === second.url);
+}
+
+export function canonicalValuesMatch(actualValue: unknown, expectedValue: unknown): boolean {
+  const actual = splitCanonicalReference(actualValue);
+  const expected = splitCanonicalReference(expectedValue);
+  if (!actual || !expected || actual.url !== expected.url) return false;
+
+  // An unversioned fixedCanonical accepts any declaration of the same
+  // canonical. A versioned fixedCanonical still requires that version.
+  return !expected.version || actual.version === expected.version;
+}
+
 export function inferType(value: any): string {
   if (typeof value === 'string') return 'string';
   if (typeof value === 'number') return Number.isInteger(value) ? 'integer' : 'decimal';
@@ -72,55 +97,52 @@ export function inferType(value: any): string {
   return 'unknown';
 }
 
-export function extractPatternFromElement(element: any): any | undefined {
+export function extractPatternEntry(element: any): { key: string; value: any } | undefined {
   if (!element) return undefined;
-  if (element.pattern !== undefined) return element.pattern;
-  for (const key of Object.keys(element)) {
-    if (key.startsWith('pattern') && key !== 'pattern') return element[key];
-  }
-  return undefined;
+  if (element.pattern !== undefined) return { key: 'pattern', value: element.pattern };
+  const key = Object.keys(element).find(k => k.startsWith('pattern') && k !== 'pattern');
+  return key ? { key, value: element[key] } : undefined;
+}
+
+export function extractFixedEntry(element: any): { key: string; value: any } | undefined {
+  if (!element) return undefined;
+  if (element.fixed !== undefined) return { key: 'fixed', value: element.fixed };
+  const key = Object.keys(element).find(k => k.startsWith('fixed') && k !== 'fixed');
+  return key ? { key, value: element[key] } : undefined;
 }
 
 export function extractFixedFromElement(element: any): any | undefined {
-  if (!element) return undefined;
-  if (element.fixed !== undefined) return element.fixed;
-  for (const key of Object.keys(element)) {
-    if (key.startsWith('fixed') && key !== 'fixed') {
-      return element[key];
-    }
-  }
-  return undefined;
+  const entry = extractFixedEntry(element);
+  return entry?.value;
 }
 
-// ============================================================================
-// ElementDefinition fixed[X] / pattern[X] extractors — used by slice
-// discriminator matching. Kept as plain functions so they can be tested in
-// isolation and don't bloat SlicingValidator past its line budget.
-// ============================================================================
+export function extractPatternFromElement(element: any): any | undefined {
+  const entry = extractPatternEntry(element);
+  return entry?.value;
+}
+
+export function valueMatchesFixedConstraint(actualValue: any, fixedValue: any, fixedKind?: string): boolean {
+  if (fixedKind === 'fixedCanonical') {
+    return canonicalValuesMatch(actualValue, fixedValue);
+  }
+
+  return valuesMatch(actualValue, fixedValue);
+}
+
+export function valueCanIdentifyFixedSlice(actualValue: any, fixedValue: any, fixedKind?: string): boolean {
+  if (fixedKind === 'fixedCanonical') {
+    return canonicalValuesMatch(actualValue, fixedValue) || canonicalBasesMatch(actualValue, fixedValue);
+  }
+
+  return valuesMatch(actualValue, fixedValue);
+}
 
 export function extractFixedValue(elementDef: any): any {
-  if (elementDef.fixed !== undefined) return elementDef.fixed;
-  if (elementDef.fixedString !== undefined) return elementDef.fixedString;
-  if (elementDef.fixedUri !== undefined) return elementDef.fixedUri;
-  if (elementDef.fixedCode !== undefined) return elementDef.fixedCode;
-  if (elementDef.fixedBoolean !== undefined) return elementDef.fixedBoolean;
-  if (elementDef.fixedInteger !== undefined) return elementDef.fixedInteger;
-  if (elementDef.fixedDecimal !== undefined) return elementDef.fixedDecimal;
-  if (elementDef.fixedIdentifier !== undefined) return elementDef.fixedIdentifier;
-  if (elementDef.fixedCoding !== undefined) return elementDef.fixedCoding;
-  if (elementDef.fixedCodeableConcept !== undefined) return elementDef.fixedCodeableConcept;
-  return undefined;
+  return extractFixedFromElement(elementDef);
 }
 
 export function extractPatternValue(elementDef: any): any {
-  if (elementDef.pattern !== undefined) return elementDef.pattern;
-  if (elementDef.patternString !== undefined) return elementDef.patternString;
-  if (elementDef.patternUri !== undefined) return elementDef.patternUri;
-  if (elementDef.patternCode !== undefined) return elementDef.patternCode;
-  if (elementDef.patternIdentifier !== undefined) return elementDef.patternIdentifier;
-  if (elementDef.patternCoding !== undefined) return elementDef.patternCoding;
-  if (elementDef.patternCodeableConcept !== undefined) return elementDef.patternCodeableConcept;
-  return undefined;
+  return extractPatternFromElement(elementDef);
 }
 
 export function codingMatchesBindingCodes(element: any, bindingCodes: Set<string>): boolean {

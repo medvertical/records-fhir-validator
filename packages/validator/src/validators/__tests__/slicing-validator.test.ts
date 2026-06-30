@@ -148,6 +148,100 @@ describe('SlicingValidator', () => {
     expect(issues.filter(i => i.code === 'profile-slice-min-cardinality')).toHaveLength(0);
   });
 
+  it('matches primitive fixedCanonical slices on meta.profile', async () => {
+    const kbvPatientProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient',
+      name: 'KBV_PR_FOR_Patient',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Patient',
+      snapshot: {
+        element: [
+          {
+            id: 'Patient.meta.profile',
+            path: 'Patient.meta.profile',
+            min: 1,
+            max: '*',
+            slicing: {
+              discriminator: [{ type: 'value', path: '$this' }],
+              rules: 'open',
+            },
+          },
+          {
+            id: 'Patient.meta.profile:forProfile',
+            path: 'Patient.meta.profile',
+            sliceName: 'forProfile',
+            min: 1,
+            max: '1',
+            fixedCanonical: 'https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.3',
+          },
+        ],
+      },
+    } as any;
+
+    const issues = await validator.validateSlicing(
+      ['https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.3'],
+      'Patient.meta.profile',
+      kbvPatientProfile,
+    );
+
+    expect(issues.filter(i => i.code === 'profile-slice-min-cardinality')).toHaveLength(0);
+    expect(issues.filter(i => i.code?.includes('fixed-value'))).toHaveLength(0);
+  });
+
+  it('reports a concrete fixedCanonical version mismatch instead of a missing meta.profile slice', async () => {
+    const kbvPatientProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient',
+      name: 'KBV_PR_FOR_Patient',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Patient',
+      snapshot: {
+        element: [
+          {
+            id: 'Patient.meta.profile',
+            path: 'Patient.meta.profile',
+            min: 1,
+            max: '*',
+            slicing: {
+              discriminator: [{ type: 'value', path: '$this' }],
+              rules: 'open',
+            },
+          },
+          {
+            id: 'Patient.meta.profile:forProfile',
+            path: 'Patient.meta.profile',
+            sliceName: 'forProfile',
+            min: 1,
+            max: '1',
+            fixedCanonical: 'https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.3',
+          },
+        ],
+      },
+    } as any;
+
+    const issues = await validator.validateSlicing(
+      ['https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.1.0'],
+      'Patient.meta.profile',
+      kbvPatientProfile,
+    );
+
+    expect(issues.filter(i => i.code === 'profile-slice-min-cardinality')).toHaveLength(0);
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-slice-fixed-value-mismatch',
+      path: 'Patient.meta.profile[0]',
+      details: expect.objectContaining({
+        sliceName: 'forProfile',
+        expectedValue: 'https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.3',
+        actualValue: 'https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.1.0',
+      }),
+    }));
+  });
+
   it('matches value $this slices using child patterns from a Coding type profile', async () => {
     const profileUrl = 'http://example.org/StructureDefinition/BodyTempCoding';
     const validatorWithResolver = new SlicingValidator();
@@ -210,6 +304,243 @@ describe('SlicingValidator', () => {
     );
 
     expect(issues.some(i => i.code === 'profile-slice-min-cardinality')).toBe(false);
+  });
+
+  it('reports a concrete pattern mismatch instead of a missing slice for versioned Coding patterns', async () => {
+    const heartRateProfile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'https://fhir.kbv.de/StructureDefinition/KBV_PR_Base_Observation_Heart_Rate',
+      name: 'KBV_PR_Base_Observation_Heart_Rate',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Observation',
+      snapshot: {
+        element: [
+          {
+            id: 'Observation.code.coding',
+            path: 'Observation.code.coding',
+            min: 2,
+            max: '*',
+            type: [{ code: 'Coding' }],
+            slicing: {
+              discriminator: [{ type: 'pattern', path: '$this' }],
+              rules: 'open',
+            },
+          },
+          {
+            id: 'Observation.code.coding:loinc',
+            path: 'Observation.code.coding',
+            sliceName: 'loinc',
+            min: 1,
+            max: '1',
+            type: [{ code: 'Coding' }],
+            patternCoding: {
+              system: 'http://loinc.org',
+              code: '8867-4',
+              version: '2.77',
+            },
+          },
+        ],
+      },
+    } as any;
+
+    const issues = await validator.validateSlicing(
+      [{
+        system: 'http://loinc.org',
+        code: '8867-4',
+        version: '2.81',
+        display: 'Heart rate',
+      }],
+      'Observation.code.coding',
+      heartRateProfile,
+    );
+
+    expect(issues).not.toContainEqual(expect.objectContaining({
+      code: 'profile-slice-min-cardinality',
+    }));
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-slice-pattern-mismatch',
+      path: 'Observation.code.coding[0]',
+      details: expect.objectContaining({
+        sliceName: 'loinc',
+        expectedPattern: expect.objectContaining({
+          system: 'http://loinc.org',
+          code: '8867-4',
+          version: '2.77',
+        }),
+        actualValue: expect.objectContaining({
+          system: 'http://loinc.org',
+          code: '8867-4',
+          version: '2.81',
+        }),
+      }),
+    }));
+  });
+
+  it('reports matched slice content issues at the original repeating element index', async () => {
+    const profile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'https://example.org/StructureDefinition/observation-two-codings',
+      name: 'ObservationTwoCodings',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Observation',
+      snapshot: {
+        element: [
+          {
+            id: 'Observation.code.coding',
+            path: 'Observation.code.coding',
+            min: 2,
+            max: '*',
+            type: [{ code: 'Coding' }],
+            slicing: {
+              discriminator: [{ type: 'pattern', path: '$this' }],
+              rules: 'closed',
+            },
+          },
+          {
+            id: 'Observation.code.coding:sct',
+            path: 'Observation.code.coding',
+            sliceName: 'sct',
+            min: 1,
+            max: '1',
+            type: [{ code: 'Coding' }],
+            patternCoding: {
+              system: 'http://snomed.info/sct',
+              code: '251847006',
+              display: 'Total fluid loss',
+            },
+          },
+          {
+            id: 'Observation.code.coding:loinc',
+            path: 'Observation.code.coding',
+            sliceName: 'loinc',
+            min: 1,
+            max: '1',
+            type: [{ code: 'Coding' }],
+            patternCoding: {
+              system: 'http://loinc.org',
+              code: '9257-7',
+              display: 'Fluid output total Measured',
+            },
+          },
+        ],
+      },
+    } as any;
+
+    const issues = await validator.validateSlicing(
+      [
+        {
+          system: 'http://snomed.info/sct',
+          code: '251847006',
+          display: 'Total fluid loss',
+        },
+        {
+          system: 'http://loinc.org',
+          code: '9257-7',
+        },
+      ],
+      'Observation.code.coding',
+      profile,
+    );
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-slice-pattern-mismatch',
+      path: 'Observation.code.coding[1]',
+      details: expect.objectContaining({
+        sliceName: 'loinc',
+      }),
+    }));
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-slice-min-cardinality',
+      path: 'Observation.code.coding',
+      details: expect.objectContaining({
+        sliceName: 'loinc',
+      }),
+    }));
+    expect(issues).not.toContainEqual(expect.objectContaining({
+      code: 'profile-slice-pattern-mismatch',
+      path: 'Observation.code.coding[0]',
+      details: expect.objectContaining({
+        sliceName: 'loinc',
+      }),
+    }));
+  });
+
+  it('validates differential-only slices whose slicing declaration is inherited from the base profile', async () => {
+    const profile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'https://example.org/StructureDefinition/left-ventricular-stroke-volume',
+      name: 'LeftVentricularStrokeVolume',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Observation',
+      baseDefinition: 'https://example.org/StructureDefinition/base-vitals',
+      derivation: 'constraint',
+      differential: {
+        element: [
+          {
+            id: 'Observation.code.coding',
+            path: 'Observation.code.coding',
+            min: 3,
+          },
+          {
+            id: 'Observation.code.coding:sct',
+            path: 'Observation.code.coding',
+            sliceName: 'sct',
+            min: 1,
+            max: '1',
+            patternCoding: {
+              system: 'http://snomed.info/sct',
+              code: '90096001',
+            },
+          },
+          {
+            id: 'Observation.code.coding:loinc',
+            path: 'Observation.code.coding',
+            sliceName: 'loinc',
+            min: 1,
+            max: '1',
+            patternCoding: {
+              system: 'http://loinc.org',
+              code: '20562-5',
+            },
+          },
+          {
+            id: 'Observation.code.coding:IEEE-11073',
+            path: 'Observation.code.coding',
+            sliceName: 'IEEE-11073',
+            min: 1,
+            max: '1',
+            patternCoding: {
+              system: 'urn:iso:std:iso:11073:10101',
+              code: '150408',
+            },
+          },
+        ],
+      },
+    } as any;
+
+    const issues = await validator.validateSlicing(
+      [
+        { system: 'http://loinc.org', code: '20562-5', display: 'Left ventricular Stroke volume' },
+        { system: 'http://snomed.info/sct', code: '90096001', display: 'Stroke volume (observable entity)' },
+        { system: 'urn:iso:std:iso:11073:10101', code: '150428', display: 'Ventricular stroke' },
+      ],
+      'Observation.code.coding',
+      profile,
+    );
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-slice-min-cardinality',
+      path: 'Observation.code.coding',
+      details: expect.objectContaining({
+        sliceName: 'IEEE-11073',
+      }),
+    }));
   });
 
   it('matches value discriminators backed by fixed child values on Coding', async () => {
@@ -1329,6 +1660,70 @@ describe('SlicingValidator', () => {
   });
 
   describe('slice content validation', () => {
+    it('reports extra fields on object fixed slice roots as child fixed-value errors', async () => {
+      const practitionerProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://hapi.fhir.org/baseR4/StructureDefinition/PractitionerProfile',
+        name: 'PractitionerProfile',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Practitioner',
+        snapshot: {
+          element: [
+            {
+              id: 'Practitioner.telecom',
+              path: 'Practitioner.telecom',
+              min: 1,
+              max: '3',
+              slicing: {
+                discriminator: [{ type: 'value', path: 'use' }],
+                ordered: false,
+                rules: 'open',
+              },
+            } as any,
+            {
+              id: 'Practitioner.telecom:practitioner_home_phone',
+              path: 'Practitioner.telecom',
+              sliceName: 'practitioner_home_phone',
+              min: 1,
+              max: '1',
+              fixedContactPoint: {
+                use: 'home',
+              },
+            } as any,
+          ],
+        },
+      };
+
+      const issues = await validator.validateSlicing(
+        [{
+          system: 'phone',
+          value: '555-101-0987',
+          use: 'home',
+        }],
+        'Practitioner.telecom',
+        practitionerProfile,
+      );
+
+      expect(issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          severity: 'error',
+          code: 'profile-fixed-value-mismatch',
+          path: 'Practitioner.telecom[0].system',
+        }),
+        expect.objectContaining({
+          severity: 'error',
+          code: 'profile-fixed-value-mismatch',
+          path: 'Practitioner.telecom[0].value',
+        }),
+      ]));
+      expect(issues).not.toContainEqual(expect.objectContaining({
+        code: 'profile-slice-fixed-value-mismatch',
+        path: 'Practitioner.telecom[0]',
+      }));
+    });
+
     it('should validate fixed value in nested slice element', async () => {
       // German profile with GKV identifier slice requiring specific assigner system
       const germanProfile: StructureDefinition = {
@@ -1764,6 +2159,145 @@ describe('SlicingValidator', () => {
       );
 
       expect(issues.filter(i => i.code === 'profile-slice-min-cardinality')).toHaveLength(0);
+    });
+
+    it('matches Reference and CodeableConcept values for closed choice-type discriminator slices', async () => {
+      const medicationRequestProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://example.org/StructureDefinition/medication-request-choice',
+        name: 'MedicationRequestChoice',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'MedicationRequest',
+        snapshot: {
+          element: [
+            {
+              id: 'MedicationRequest.medication[x]',
+              path: 'MedicationRequest.medication[x]',
+              min: 1,
+              max: '1',
+              slicing: {
+                discriminator: [{ type: 'type', path: '$this' }],
+                rules: 'closed',
+                ordered: false,
+              },
+            } as any,
+            {
+              id: 'MedicationRequest.medication[x]:medicationCodeableConcept',
+              path: 'MedicationRequest.medication[x]',
+              sliceName: 'medicationCodeableConcept',
+              min: 0,
+              max: '1',
+              type: [{ code: 'CodeableConcept' }],
+            } as any,
+            {
+              id: 'MedicationRequest.medication[x]:medicationReference',
+              path: 'MedicationRequest.medication[x]',
+              sliceName: 'medicationReference',
+              min: 0,
+              max: '1',
+              type: [{ code: 'Reference' }],
+            } as any,
+          ],
+        },
+      };
+
+      const localValidator = new SlicingValidator();
+      const referenceIssues = await localValidator.validateSlicing(
+        [{ reference: 'Medication/med-1' }],
+        'MedicationRequest.medication[x]',
+        medicationRequestProfile,
+      );
+
+      expect(referenceIssues.find(i => i.code === 'profile-slice-closed-unmatched')).toBeUndefined();
+      expect(referenceIssues.find(i => i.code === 'profile-slice-min-cardinality')).toBeUndefined();
+
+      const codeableConceptIssues = await localValidator.validateSlicing(
+        [{ text: '健保藥品 (BC13645100)' }],
+        'MedicationRequest.medication[x]',
+        medicationRequestProfile,
+      );
+
+      expect(codeableConceptIssues.find(i => i.code === 'profile-slice-closed-unmatched')).toBeUndefined();
+      expect(codeableConceptIssues.find(i => i.code === 'profile-slice-min-cardinality')).toBeUndefined();
+    });
+
+    it('does not report closed unmatched when value slices only have unresolved bindings', async () => {
+      const practitionerProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://example.org/StructureDefinition/practitioner-binding-slices',
+        name: 'PractitionerBindingSlices',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Practitioner',
+        snapshot: {
+          element: [
+            {
+              id: 'Practitioner.qualification.code.coding',
+              path: 'Practitioner.qualification.code.coding',
+              min: 0,
+              max: '*',
+              slicing: {
+                discriminator: [{ type: 'value', path: '$this' }],
+                rules: 'closed',
+                ordered: false,
+              },
+              type: [{ code: 'Coding' }],
+            } as any,
+            {
+              id: 'Practitioner.qualification.code.coding:degreeType',
+              path: 'Practitioner.qualification.code.coding',
+              sliceName: 'degreeType',
+              min: 0,
+              max: '1',
+              type: [{ code: 'Coding' }],
+              patternCoding: {
+                system: 'http://example.org/fhir/CodeSystem/known-degree-type',
+                code: 'KNOWN',
+              },
+            } as any,
+            {
+              id: 'Practitioner.qualification.code.coding:degree',
+              path: 'Practitioner.qualification.code.coding',
+              sliceName: 'degree',
+              min: 0,
+              max: '1',
+              type: [{ code: 'Coding' }],
+              binding: {
+                strength: 'required',
+                valueSet: 'http://example.org/fhir/ValueSet/not-in-package-degree',
+              },
+            } as any,
+            {
+              id: 'Practitioner.qualification.code.coding:specialty',
+              path: 'Practitioner.qualification.code.coding',
+              sliceName: 'specialty',
+              min: 0,
+              max: '1',
+              type: [{ code: 'Coding' }],
+              binding: {
+                strength: 'required',
+                valueSet: 'http://example.org/fhir/ValueSet/not-in-package-degree',
+              },
+            } as any,
+          ],
+        },
+      };
+
+      const localValidator = new SlicingValidator();
+      const issues = await localValidator.validateSlicing(
+        [{
+          system: 'https://mos.esante.gouv.fr/NOS/TRE_R36-AutreDiplomeObtenu/FHIR/TRE-R36-AutreDiplomeObtenu',
+          code: 'AUT031',
+        }],
+        'Practitioner.qualification.code.coding',
+        practitionerProfile,
+      );
+
+      expect(issues.find(i => i.code === 'profile-slice-closed-unmatched')).toBeUndefined();
+      expect(issues.find(i => i.code === 'profile-slice-min-cardinality')).toBeUndefined();
     });
 
     it('accepts date-only precision for dateTime type discriminator slices', async () => {

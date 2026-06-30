@@ -120,6 +120,148 @@ describe('SD FHIRPath issue provenance', () => {
   });
 });
 
+describe('SD FHIRPath evaluation diagnostics', () => {
+  it('surfaces compile failures as information instead of silently passing', async () => {
+    const profile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/StructureDefinition/patient-broken-expression',
+      name: 'PatientBrokenExpression',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Patient',
+      snapshot: {
+        element: [
+          {
+            id: 'Patient',
+            path: 'Patient',
+            constraint: [{
+              key: 'broken-fhirpath',
+              severity: 'error',
+              human: 'Broken expression should be visible as an engine diagnostic',
+              expression: 'name.',
+            }],
+          },
+        ],
+      },
+    };
+
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: { resourceType: 'Patient', id: 'p1' },
+      resourceType: 'Patient',
+      structureDef: profile,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-constraint-evaluation-error',
+      severity: 'information',
+      ruleId: 'broken-fhirpath',
+    }));
+  });
+});
+
+describe('SD FHIRPath resolve() bundle context', () => {
+  const subjectActiveProfile = {
+    resourceType: 'StructureDefinition',
+    url: 'http://example.org/StructureDefinition/observation-subject-active',
+    name: 'ObservationSubjectActive',
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type: 'Observation',
+    snapshot: {
+      element: [
+        {
+          id: 'Observation',
+          path: 'Observation',
+          constraint: [{
+            key: 'obs-subject-active',
+            severity: 'error',
+            human: 'Observation subject must resolve to an active Patient',
+            expression: 'subject.resolve().where(active = true).exists()',
+          }],
+        },
+      ],
+    },
+  } satisfies StructureDefinition;
+
+  it('resolves fullUrl references from the supplied bundle', async () => {
+    const bundle = {
+      resourceType: 'Bundle',
+      entry: [
+        {
+          fullUrl: 'urn:uuid:patient-1',
+          resource: { resourceType: 'Patient', id: 'p1', active: true },
+        },
+      ],
+    };
+
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Observation',
+        id: 'obs-1',
+        subject: { reference: 'urn:uuid:patient-1' },
+      },
+      resourceType: 'Observation',
+      structureDef: subjectActiveProfile,
+      bundle,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues.find(issue => issue.ruleId === 'obs-subject-active')).toBeUndefined();
+  });
+
+  it('resolves fullUrl references from supplied bundleResources map keys', async () => {
+    const bundleResources = new Map<string, any>([
+      ['urn:uuid:patient-1', { resourceType: 'Patient', id: 'p1', active: true }],
+    ]);
+
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Observation',
+        id: 'obs-1',
+        subject: { reference: 'urn:uuid:patient-1' },
+      },
+      resourceType: 'Observation',
+      structureDef: subjectActiveProfile,
+      bundleResources,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues.find(issue => issue.ruleId === 'obs-subject-active')).toBeUndefined();
+  });
+
+  it('reports the constraint when the resolved fullUrl target fails it', async () => {
+    const bundle = {
+      resourceType: 'Bundle',
+      entry: [
+        {
+          fullUrl: 'urn:uuid:patient-1',
+          resource: { resourceType: 'Patient', id: 'p1', active: false },
+        },
+      ],
+    };
+
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Observation',
+        id: 'obs-1',
+        subject: { reference: 'urn:uuid:patient-1' },
+      },
+      resourceType: 'Observation',
+      structureDef: subjectActiveProfile,
+      bundle,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'constraint-violation-obs-subject-active',
+      path: 'Observation',
+    }));
+  });
+});
+
 describe('SD FHIRPath array element constraint handling', () => {
   const compositionProfile = {
     resourceType: 'StructureDefinition',
@@ -251,6 +393,67 @@ describe('SD FHIRPath boolean collection handling', () => {
       code: 'constraint-violation-pat-name-given',
       path: 'Patient',
     }));
+  });
+});
+
+describe('SD FHIRPath memberOf handling', () => {
+  const patientCountryProfile = {
+    resourceType: 'StructureDefinition',
+    url: 'http://example.org/StructureDefinition/patient-country',
+    name: 'PatientCountry',
+    status: 'active',
+    kind: 'resource',
+    abstract: false,
+    type: 'Patient',
+    snapshot: {
+      element: [
+        {
+          id: 'Patient',
+          path: 'Patient',
+          constraint: [
+            {
+              key: 'pat-country-iso',
+              severity: 'error',
+              human: 'Patient country must be ISO-3166 alpha-2',
+              expression: "address.country.memberOf('http://hl7.org/fhir/ValueSet/iso3166-1-2')",
+            },
+          ],
+        },
+      ],
+    },
+  } satisfies StructureDefinition;
+
+  it('does not silently pass invalid deterministic memberOf results', async () => {
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Patient',
+        id: 'invalid-country',
+        address: [{ country: 'XX' }],
+      },
+      resourceType: 'Patient',
+      structureDef: patientCountryProfile,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'constraint-violation-pat-country-iso',
+      path: 'Patient',
+    }));
+  });
+
+  it('passes valid deterministic memberOf results', async () => {
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Patient',
+        id: 'valid-country',
+        address: [{ country: 'DE' }],
+      },
+      resourceType: 'Patient',
+      structureDef: patientCountryProfile,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues.filter(issue => issue.code === 'constraint-violation-pat-country-iso')).toHaveLength(0);
   });
 });
 

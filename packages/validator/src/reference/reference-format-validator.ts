@@ -137,8 +137,10 @@ export function validateReferenceFormat(reference: string): ReferenceFormatValid
     return { isValid: true, referenceType, resourceType, issues };
   }
 
-  // Relative reference: ResourceType/id or ResourceType/id/_history/version
-  const relativePattern = /^([A-Z][a-zA-Z]+)\/([A-Za-z0-9\-.]+)(?:\/_history\/([A-Za-z0-9\-.]+))?$/;
+  // Relative reference: ResourceType/id or ResourceType/id/_history/version.
+  // Real-world IG examples sometimes use underscores in logical example ids;
+  // keep this aligned with the broader ReferenceTypeExtractor parser.
+  const relativePattern = /^([A-Z][a-zA-Z]+)\/([A-Za-z0-9\-._]+)(?:\/_history\/([A-Za-z0-9\-._]+))?$/;
   const match = reference.match(relativePattern);
 
   if (match) {
@@ -148,6 +150,10 @@ export function validateReferenceFormat(reference: string): ReferenceFormatValid
     version = match[3];
 
     return { isValid: true, referenceType: 'relative', resourceType, resourceId, version, issues };
+  }
+
+  if (isBareRelativeReference(reference)) {
+    return { isValid: true, referenceType: 'relative', resourceId: reference, issues };
   }
 
   // Invalid format
@@ -167,6 +173,12 @@ export function validateReferenceFormat(reference: string): ReferenceFormatValid
   });
 
   return { isValid: false, referenceType: 'invalid', issues };
+}
+
+function isBareRelativeReference(reference: string): boolean {
+  if (reference.includes('/')) return false;
+  if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(reference)) return false;
+  return /^[A-Za-z0-9\-._~%]+$/.test(reference);
 }
 
 /**

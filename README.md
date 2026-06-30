@@ -46,7 +46,7 @@ jobs:
 For production CI, pin an immutable patch tag:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.3.0
+- uses: medvertical/records-fhir-validator@v0.4.0
   with:
     paths: resources/**/*.json
     profile-url: http://hl7.org/fhir/StructureDefinition/Patient
@@ -59,7 +59,7 @@ Action pinning:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Latest stable in current major | `medvertical/records-fhir-validator@v0` | Floating tag, force-moved on stable releases only |
-| Exact released version | `medvertical/records-fhir-validator@v0.3.0` | Immutable consumer tag |
+| Exact released version | `medvertical/records-fhir-validator@v0.4.0` | Immutable consumer tag |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | Best for audit and forensics |
 
 The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
@@ -68,7 +68,7 @@ The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
 ### npm Package
 
 ```sh
-npm install @records-fhir/validator@0.3.0 @records-fhir/validation-types@0.1.5
+npm install @records-fhir/validator@0.4.0 @records-fhir/validation-types@0.1.5
 ```
 
 Run the CLI against one file or a folder:
@@ -138,7 +138,7 @@ includes `file`, `resourceType`, `profileUrl`, and `issues`. With
 
 ## What Is Included
 
-- `@records-fhir/validator` 0.3.0 - Apache-2.0 validation engine.
+- `@records-fhir/validator` 0.4.0 - Apache-2.0 validation engine.
 - `@records-fhir/validation-types` 0.1.5 - Apache-2.0 validation-domain types.
 - Composite GitHub Action at repository root.
 - Standalone examples under `packages/validator/examples/`.
@@ -257,10 +257,13 @@ Spec dispatch coverage for the measured R4 base package constraints is 100%.
 
 MII conformance is measured in a separate lane from the HL7
 `FHIR/fhir-test-cases` score. The current scoped MII-2026 reference run
-matches the official MII FHIR Validator on 241/241 measured resources from the
-refreshed MII 2026 corpus under the `mii-2026-reference` profile scope and
+was generated on 2026-05-19 against the official MII FHIR Validator container
+`mii-fhir-validator:0.0.1-alpha.7` at `http://localhost:8081`. It matches
+the reference validator on 241/241 measured resources from the refreshed MII
+2026 corpus under the `mii-2026-reference` profile scope and
 `mii-local-blaze` terminology mode, with 12 classified corpus/profile-drift
-skips.
+skips. The source-repository report is
+`conformance-results/mii-triangulation-alpha7-2026-05-19.json`.
 
 This is a scoped parity claim for the measured package-example corpus. It is
 not an MII certification claim and does not imply full site-level MII

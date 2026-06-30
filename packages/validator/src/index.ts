@@ -32,6 +32,8 @@ let _recordsValidatorInstance: RecordsValidator | null = null;
 export { ExtensionValidator } from './validators/extension-validator';
 export { SlicingValidator } from './validators/slicing-validator';
 export { ValueSetValidator } from './validators/valueset-validator';
+export { ConstraintValidator } from './validators/constraint-validator';
+export type { FHIRPathConstraintDiagnostics } from './validators/constraint-validator';
 export { SnapshotGenerator } from './core/snapshot-generator';
 
 /**
@@ -165,6 +167,8 @@ export interface RecordsValidatorSingleton {
   getQuestionnaire(...args: Parameters<RecordsValidator['getQuestionnaire']>): ReturnType<RecordsValidator['getQuestionnaire']>;
   configureTerminologyResolution(config: TerminologyResolutionConfig): Promise<ReturnType<RecordsValidator['configureTerminologyResolution']>>;
   clearTerminologyCache(): Promise<ReturnType<RecordsValidator['clearTerminologyCache']>>;
+  getConstraintDiagnostics(): Promise<ReturnType<RecordsValidator['getConstraintDiagnostics']>>;
+  clearConstraintDiagnostics(): Promise<ReturnType<RecordsValidator['clearConstraintDiagnostics']>>;
   clearProfileCache(): Promise<ReturnType<RecordsValidator['clearProfileCache']> | undefined>;
   evictProfile(...args: Parameters<RecordsValidator['evictProfile']>): ReturnType<RecordsValidator['evictProfile']> | undefined;
   setPinnedCanonicals(...args: Parameters<RecordsValidator['setPinnedCanonicals']>): Promise<ReturnType<RecordsValidator['setPinnedCanonicals']>>;
@@ -288,6 +292,16 @@ export const recordsValidator: RecordsValidatorSingleton = {
   async clearTerminologyCache() {
     const instance = await getRecordsValidator();
     return instance.clearTerminologyCache();
+  },
+
+  async getConstraintDiagnostics() {
+    const instance = await getRecordsValidator();
+    return instance.getConstraintDiagnostics();
+  },
+
+  async clearConstraintDiagnostics() {
+    const instance = await getRecordsValidator();
+    return instance.clearConstraintDiagnostics();
   },
 
   /**

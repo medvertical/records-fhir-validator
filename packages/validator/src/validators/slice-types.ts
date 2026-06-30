@@ -15,6 +15,8 @@ export interface SliceDefinition {
   discriminator?: SlicingDiscriminator[];
   pattern?: any;
   fixed?: any;
+  patternKind?: string;
+  fixedKind?: string;
   type?: Array<{ code: string; profile?: string[]; targetProfile?: string[] }>;
   childPatterns?: Map<string, any>;
   childFixed?: Map<string, any>;

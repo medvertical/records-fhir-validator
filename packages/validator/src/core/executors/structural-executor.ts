@@ -32,6 +32,7 @@ export interface StructuralValidationContext {
   fhirVersion: 'R4' | 'R5' | 'R6';
   structureDef: StructureDefinition;
   getValueAtPath: (resource: any, path: string) => any;
+  contextQuestionnaire?: any;
   settings?: any; // ValidationSettings - using any to avoid circular deps or heavy imports
 }
 
@@ -123,7 +124,7 @@ export class StructuralExecutor {
       // Seventh pass: Resource id format + empty array checks + attachment
       // size/data consistency (post-SD sanity checks that don't depend on the
       // profile snapshot)
-      issues.push(...this.validateResourceIdAndArrays(resource));
+      issues.push(...this.validateResourceIdAndArrays(resource, ctx.contextQuestionnaire));
 
       // Eighth pass: choice-type property shape. Catches `value: true` where
       // the SD declares `value[x]` and `valueInteger` where integer is not

@@ -93,6 +93,65 @@ describe('ConstraintValidator', () => {
 
     expect(issues.find(issue => issue.code === 'profile-constraint-evaluation-error')).toBeUndefined();
     expect(issues.find(issue => issue.ruleId === 'txt-1')).toBeUndefined();
+
+    expect(validator.getDiagnostics().skippedConstraints).toMatchObject({
+      total: 1,
+      byReason: {
+        'unsupported-engine-capability': 1,
+      },
+      byConstraintKey: {
+        'txt-1': 1,
+      },
+      byProfile: {
+        'http://hl7.org/fhir/StructureDefinition/Patient': 1,
+      },
+    });
+    expect(validator.getDiagnostics().skippedConstraints.samples[0]).toMatchObject({
+      reason: 'unsupported-engine-capability',
+      constraintKey: 'txt-1',
+      path: 'Patient.text.div',
+      expression: 'htmlChecks()',
+    });
+  });
+
+  it('returns defensive copies of FHIRPath skip diagnostics and can clear them', async () => {
+    const validator = new ConstraintValidator();
+
+    await validator.validate(
+      {
+        resourceType: 'Patient',
+        text: {
+          status: 'generated',
+          div: '<div xmlns="http://www.w3.org/1999/xhtml">ok</div>',
+        },
+      },
+      [{
+        path: 'Patient.text.div',
+        constraint: [{
+          key: 'txt-1',
+          severity: 'error' as const,
+          human: 'Narrative html checks',
+          expression: 'htmlChecks()',
+        }],
+      }] as any,
+      'http://hl7.org/fhir/StructureDefinition/Patient',
+    );
+
+    const diagnostics = validator.getDiagnostics();
+    diagnostics.skippedConstraints.total = 0;
+    diagnostics.skippedConstraints.samples.length = 0;
+
+    expect(validator.getDiagnostics().skippedConstraints.total).toBe(1);
+    expect(validator.getDiagnostics().skippedConstraints.samples).toHaveLength(1);
+
+    validator.clearDiagnostics();
+
+    expect(validator.getDiagnostics().skippedConstraints).toMatchObject({
+      total: 0,
+      byConstraintKey: {},
+      byProfile: {},
+      samples: [],
+    });
   });
 
   it('treats simple ValueSet in-exists constraints as CodeableConcept membership checks', async () => {
@@ -157,6 +216,128 @@ describe('ConstraintValidator', () => {
     expect(invalidIssues).toContainEqual(expect.objectContaining({
       ruleId: 'us-core-1',
       code: 'profile-constraint-warning',
+    }));
+  });
+
+  it('resolves fullUrl references from bundle context for resolve() constraints', async () => {
+    const validator = new ConstraintValidator();
+    const elements = [{
+      path: 'Observation',
+      constraint: [{
+        key: 'obs-subject-active',
+        severity: 'error' as const,
+        human: 'Observation subject must resolve to an active Patient',
+        expression: 'subject.resolve().where(active = true).exists()',
+      }],
+    }];
+    const bundle = {
+      resourceType: 'Bundle',
+      entry: [{
+        fullUrl: 'urn:uuid:patient-1',
+        resource: { resourceType: 'Patient', id: 'p1', active: true },
+      }],
+    };
+
+    const issues = await validator.validate(
+      {
+        resourceType: 'Observation',
+        id: 'obs-1',
+        subject: { reference: 'urn:uuid:patient-1' },
+      },
+      elements as any,
+      'http://example.org/StructureDefinition/observation-subject-active',
+      { bundle },
+    );
+
+    expect(issues.find(issue => issue.ruleId === 'obs-subject-active')).toBeUndefined();
+  });
+
+  it('reports resolve() constraints when the bundle target fails them', async () => {
+    const validator = new ConstraintValidator();
+    const elements = [{
+      path: 'Observation',
+      constraint: [{
+        key: 'obs-subject-active',
+        severity: 'error' as const,
+        human: 'Observation subject must resolve to an active Patient',
+        expression: 'subject.resolve().where(active = true).exists()',
+      }],
+    }];
+    const bundle = {
+      resourceType: 'Bundle',
+      entry: [{
+        fullUrl: 'urn:uuid:patient-1',
+        resource: { resourceType: 'Patient', id: 'p1', active: false },
+      }],
+    };
+
+    const issues = await validator.validate(
+      {
+        resourceType: 'Observation',
+        id: 'obs-1',
+        subject: { reference: 'urn:uuid:patient-1' },
+      },
+      elements as any,
+      'http://example.org/StructureDefinition/observation-subject-active',
+      { bundle },
+    );
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      ruleId: 'obs-subject-active',
+      code: 'profile-constraint-violation',
+    }));
+  });
+
+  it('does not leak bundle context across parallel validations on the same instance', async () => {
+    const validator = new ConstraintValidator();
+    const elements = [{
+      path: 'Observation',
+      constraint: [{
+        key: 'obs-subject-active',
+        severity: 'error' as const,
+        human: 'Observation subject must resolve to an active Patient',
+        expression: 'subject.resolve().where(active = true).exists()',
+      }],
+    }];
+    const observation = {
+      resourceType: 'Observation',
+      id: 'obs-1',
+      subject: { reference: 'urn:uuid:patient-1' },
+    };
+    const activeBundle = {
+      resourceType: 'Bundle',
+      entry: [{
+        fullUrl: 'urn:uuid:patient-1',
+        resource: { resourceType: 'Patient', id: 'p1', active: true },
+      }],
+    };
+    const inactiveBundle = {
+      resourceType: 'Bundle',
+      entry: [{
+        fullUrl: 'urn:uuid:patient-1',
+        resource: { resourceType: 'Patient', id: 'p1', active: false },
+      }],
+    };
+
+    const [activeIssues, inactiveIssues] = await Promise.all([
+      validator.validate(
+        observation,
+        elements as any,
+        'http://example.org/StructureDefinition/observation-subject-active',
+        { bundle: activeBundle },
+      ),
+      validator.validate(
+        observation,
+        elements as any,
+        'http://example.org/StructureDefinition/observation-subject-active',
+        { bundle: inactiveBundle },
+      ),
+    ]);
+
+    expect(activeIssues.find(issue => issue.ruleId === 'obs-subject-active')).toBeUndefined();
+    expect(inactiveIssues).toContainEqual(expect.objectContaining({
+      ruleId: 'obs-subject-active',
+      code: 'profile-constraint-violation',
     }));
   });
 
@@ -390,10 +571,7 @@ describe('ConstraintValidator', () => {
     });
   });
 
-  // TODO: This test requires integration-level setup with proper element path resolution
-  // The severity escalation logic is implemented in validateConstraint() and works correctly
-  // when called through ProfileExecutor with real StructureDefinition elements
-  it.skip('escalates warnings to errors in strict mode', async () => {
+  it('escalates warnings to errors in strict mode', async () => {
     const validator = new ConstraintValidator();
 
     const resource = {

@@ -22,7 +22,7 @@ import type {
   MetadataExecutor
 } from './executors';
 import type { BestPracticeValidator } from '../validators/best-practice-validator';
-import { createValidationErrorIssue, getValueAtPath } from './validation-utils';
+import { createValidationErrorIssue, dedupeIssues, getValueAtPath, suppressRedundantBindingWarnings } from './validation-utils';
 import {
   createProfileFallbackIssue,
   createProfileResourceTypeMismatchIssue,
@@ -176,6 +176,7 @@ export function buildMultiAspectValidateCallback(
       structureDef,
       strictMode: deps.strictMode,
       settings,
+      enclosingBundle,
       referenceResolver: createBundleReferenceResolver(enclosingBundle ?? (resourceType === 'Bundle' ? res : undefined), res),
     };
 
@@ -224,6 +225,7 @@ export function buildMultiAspectValidateCallback(
             resource: ctx.resource,
             resourceType: ctx.resourceType,
             structureDef: ctx.structureDef,
+            bundle: ctx.enclosingBundle ?? (ctx.resourceType === 'Bundle' ? ctx.resource : undefined),
             fhirVersion: ctx.fhirVersion
           })
           : [];
@@ -345,12 +347,30 @@ export function buildMultiAspectValidateCallback(
       );
     }
 
+    const processedAspects = normalizeIssuesByAspect(collectedAspects);
+
     return {
-      isValid: collectedAspects.every(a => a.isValid),
-      aspects: collectedAspects,
+      isValid: processedAspects.every(a => a.isValid),
+      aspects: processedAspects,
       structureDef,
     };
   };
 
   return (resource, profileUrl, fhirVersion) => validateOne(resource, profileUrl, fhirVersion, 0);
+}
+
+function normalizeIssuesByAspect(aspects: AspectResult[]): AspectResult[] {
+  const suppressedIssues = suppressRedundantBindingWarnings(
+    dedupeIssues(aspects.flatMap(aspect => aspect.issues)),
+  );
+  const keepIssues = new Set(suppressedIssues);
+
+  return aspects.map(aspect => {
+    const issues = aspect.issues.filter(issue => keepIssues.has(issue));
+    return {
+      ...aspect,
+      issues,
+      isValid: issues.every(issue => issue.severity !== 'error' && issue.severity !== 'fatal'),
+    };
+  });
 }

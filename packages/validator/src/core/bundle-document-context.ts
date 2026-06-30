@@ -207,26 +207,6 @@ function buildBundleEntrySliceConformanceIssues(
         },
       }));
     }
-
-    issues.push(createValidationIssue({
-      code: 'profile-slice-min-cardinality',
-      path: 'Bundle.entry',
-      resourceType: 'Bundle',
-      profile: bundleProfile,
-      customMessage: `Slice 'Bundle.entry:${slice.sliceName}': a matching slice is required, but candidate entries failed conformance`,
-      ruleId: `bundle-entry-slice-min-${slice.sliceName}-conformance`,
-      severityOverride: 'error',
-      aspectOverride: 'profile',
-      details: {
-        sliceName: slice.sliceName,
-        min: slice.min,
-        actual: cleanMatchCount,
-        candidateCount: candidates.length,
-        reason: 'bundle-entry-resource-profile-match-failed',
-        targetProfiles: slice.profiles,
-        targetResourceTypes: slice.resourceTypes,
-      },
-    }));
   }
 
   return issues;

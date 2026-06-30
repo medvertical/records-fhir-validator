@@ -30,6 +30,7 @@ export interface ProfileValidationContext {
   strictMode: boolean;
   getValueAtPath: (resource: any, path: string) => any;
   referenceResolver?: ReferenceResolver | null;
+  enclosingBundle?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -64,7 +65,7 @@ export class ProfileExecutor {
     const issues: ValidationIssue[] = [];
 
     try {
-      const { resource, structureDef, profileUrl, fhirVersion, strictMode, getValueAtPath, referenceResolver } = context;
+      const { resource, structureDef, profileUrl, fhirVersion, strictMode, getValueAtPath, referenceResolver, enclosingBundle } = context;
 
       // 1. Validate extensions
       const extensionIssues = await this.extensionValidator.validateExtensions(
@@ -93,7 +94,7 @@ export class ProfileExecutor {
           resource,
           structureDef.snapshot.element,
           profileUrl,
-          { strictMode, fhirVersion } // Pass strictMode for severity escalation + FHIR version for FHIRPath model
+          { strictMode, fhirVersion, bundle: enclosingBundle } // Pass strictMode + FHIR version + Bundle context
         );
         issues.push(...constraintIssues);
       } else {

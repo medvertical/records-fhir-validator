@@ -86,7 +86,7 @@ export const TerminologyCodes = {
     'terminology-binding-unverified': {
         aspect: 'terminology',
         severity: 'information',
-        description: 'Binding could not be verified — ValueSet not expandable locally and no terminology server confirmed the code',
+        description: 'Binding could not be verified; ValueSet not expandable locally and no terminology server confirmed the code',
     },
 } as const satisfies Record<string, ValidationCodeMetadata>;
 

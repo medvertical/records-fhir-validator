@@ -48,6 +48,7 @@ export interface MatchResult {
 // ============================================================================
 
 export class SDElementMatcher {
+    private elementMapCache = new WeakMap<ElementDefinition[], Map<string, ElementDefinition>>();
 
     /**
      * Match all resource data to SD elements
@@ -64,7 +65,7 @@ export class SDElementMatcher {
         const elements = structureDef.snapshot.element;
 
         // Build element map for fast lookup
-        const elementMap = this.buildElementMap(elements);
+        const elementMap = this.getElementMap(elements);
 
         // Traverse resource and match to SD elements
         this.traverseAndMatch(resource, resourceType, elementMap, matches, unmatchedPaths);
@@ -82,6 +83,15 @@ export class SDElementMatcher {
     /**
      * Build a map of SD elements by path
      */
+    private getElementMap(elements: ElementDefinition[]): Map<string, ElementDefinition> {
+        const cached = this.elementMapCache.get(elements);
+        if (cached) return cached;
+
+        const map = this.buildElementMap(elements);
+        this.elementMapCache.set(elements, map);
+        return map;
+    }
+
     private buildElementMap(elements: ElementDefinition[]): Map<string, ElementDefinition> {
         const map = new Map<string, ElementDefinition>();
 

@@ -144,6 +144,7 @@ export interface ValidationMessageGroupDTO {
     serverId?: number; // Server ID (for single-server queries, or first seen for multi-server)
     resourceType?: string; // Primary resource type for this issue group
     resourceTypeCounts?: Record<string, number>; // Per-type resource counts (e.g. { Patient: 5, Encounter: 3 })
+    validatorPackageVersion?: string; // Validator package version observed for the affected resource/aspect results
     validationRulesetVersion?: string; // Ruleset version observed for the affected resource/aspect results
 }
 
@@ -181,6 +182,7 @@ export interface ResourceMessagesDTO {
             text: string;
             signature: string;
             createdAt: Date;
+            validatorPackageVersion?: string;
             validationRulesetVersion?: string;
         }[];
     }[];

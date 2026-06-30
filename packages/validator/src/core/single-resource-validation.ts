@@ -21,6 +21,7 @@ export interface SingleResourceValidationInput {
   strictMode: boolean;
   settings?: ValidationSettings;
   profileFallbackIssue?: ValidationIssue | null;
+  contextQuestionnaire?: any;
 }
 
 export interface SingleResourceValidationDeps {
@@ -48,6 +49,7 @@ export async function collectSingleResourceValidationIssues(
       structureDef: input.structureDef,
       strictMode: input.strictMode,
       settings: input.settings,
+      contextQuestionnaire: input.contextQuestionnaire,
     },
     deps.structuralExecutor,
     deps.profileExecutor,

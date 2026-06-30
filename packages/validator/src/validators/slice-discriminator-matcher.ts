@@ -7,7 +7,12 @@
 
 import type { SlicingDiscriminator } from '../core/structure-definition-types';
 import type { SliceDefinition } from './slice-types';
-import { getValueAtPath, valuesMatch, inferType } from './slice-utils';
+import {
+  getValueAtPath,
+  inferType,
+  valueCanIdentifyFixedSlice,
+  valuesMatch,
+} from './slice-utils';
 import { logger } from '../logger';
 
 export type ReferenceResolverFn = ((ref: string) => any | null) | null;
@@ -40,12 +45,12 @@ export function matchDiscriminator(
     if (conformsToMatch) {
       return toProfileArray(resolvedElement?.meta?.profile).includes(conformsToMatch[1]);
     }
-    return matchValueDiscriminator(element, slice, remainder, matchesPatternFn, codingMatchesBindingCodesFn);
+    return matchValueDiscriminator(resolvedElement, slice, remainder, matchesPatternFn, codingMatchesBindingCodesFn);
   }
 
   switch (discriminator.type) {
     case 'value': return matchValueDiscriminator(element, slice, path, matchesPatternFn, codingMatchesBindingCodesFn);
-    case 'pattern': return matchPatternDiscriminator(element, slice, path, matchesPatternFn, codingMatchesBindingCodesFn);
+    case 'pattern': return matchPatternDiscriminator(element, slice, path, matchesPatternFn, codingMatchesBindingCodesFn, allSlices);
     case 'type': return matchTypeDiscriminator(element, slice, path);
     case 'profile': return matchProfileDiscriminator(element, slice, path, referenceResolver, allSlices);
     case 'exists': return matchExistsDiscriminator(element, path);
@@ -102,7 +107,7 @@ function matchValueDiscriminator(
   const childPath = normalizeChildConstraintPath(path);
 
   if (!path || path === '$this') {
-    if (slice.fixed !== undefined) return valuesMatch(elementValue, slice.fixed);
+    if (slice.fixed !== undefined) return valueCanIdentifyFixedSlice(elementValue, slice.fixed, slice.fixedKind);
     if (slice.pattern !== undefined) return matchesPatternFn(elementValue, slice.pattern);
     const childConstraintMatch = matchWholeElementChildConstraints(elementValue, slice, matchesPatternFn);
     if (childConstraintMatch !== null) return childConstraintMatch;
@@ -142,6 +147,7 @@ function matchPatternDiscriminator(
   element: any, slice: SliceDefinition, path: string,
   matchesPatternFn: (value: any, pattern: any) => boolean,
   codingMatchesBindingCodesFn: (value: any, codes: Set<string>) => boolean,
+  allSlices?: SliceDefinition[],
 ): boolean {
   const elementValue = getValueAtPath(element, path);
   const childPath = normalizeChildConstraintPath(path);
@@ -164,7 +170,13 @@ function matchPatternDiscriminator(
 
   if (slice.pattern) {
     const patternValue = (path === '$this' || !path) ? slice.pattern : getValueAtPath(slice.pattern, path);
-    if (patternValue !== undefined && patternValue !== null) return matchesPatternFn(elementValue, patternValue);
+    if (patternValue !== undefined && patternValue !== null) {
+      if (matchesPatternFn(elementValue, patternValue)) return true;
+      if (canPatternCoreIdentifyCodingSlice(elementValue, slice, patternValue, allSlices, matchesPatternFn)) {
+        return true;
+      }
+      return false;
+    }
   }
 
   if (slice.bindingCodes && slice.bindingCodes.size > 0) {
@@ -172,6 +184,46 @@ function matchPatternDiscriminator(
   }
 
   return !slice.bindingValueSet;
+}
+
+function canPatternCoreIdentifyCodingSlice(
+  elementValue: any,
+  slice: SliceDefinition,
+  patternValue: any,
+  allSlices: SliceDefinition[] | undefined,
+  matchesPatternFn: (value: any, pattern: any) => boolean,
+): boolean {
+  if (slice.patternKind !== 'patternCoding') return false;
+  if (!codingIdentityMatchesPattern(elementValue, patternValue)) return false;
+
+  const candidateSlices = allSlices?.length ? allSlices : [slice];
+  const matchingIdentitySlices = candidateSlices.filter(candidate =>
+    candidate.patternKind === 'patternCoding' &&
+    candidate.pattern !== undefined &&
+    codingIdentityMatchesPattern(elementValue, candidate.pattern),
+  );
+
+  if (matchingIdentitySlices.length !== 1 || matchingIdentitySlices[0] !== slice) {
+    return false;
+  }
+
+  return !candidateSlices.some(candidate =>
+    candidate !== slice &&
+    candidate.pattern !== undefined &&
+    matchesPatternFn(elementValue, candidate.pattern),
+  );
+}
+
+function codingIdentityMatchesPattern(elementValue: any, patternValue: any): boolean {
+  if (!isRecord(elementValue) || !isRecord(patternValue)) return false;
+  if (typeof patternValue.system !== 'string' || typeof patternValue.code !== 'string') {
+    return false;
+  }
+  return elementValue.system === patternValue.system && elementValue.code === patternValue.code;
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function matchWholeElementChildConstraints(
@@ -220,6 +272,13 @@ function typeCodeMatchesValue(expectedType: string | undefined, inferredType: st
     return expectedType === value.resourceType;
   }
 
+  if (expectedType === 'CodeableConcept' && isCodeableConceptLike(value)) {
+    return true;
+  }
+  if (expectedType === 'Coding' && isCodingLike(value)) {
+    return true;
+  }
+
   if (isExtensionOnlyObject(value) && !PRIMITIVE_TYPE_CODES.has(expectedType)) {
     return true;
   }
@@ -262,6 +321,23 @@ function isExtensionOnlyObject(value: unknown): boolean {
   const keys = Object.keys(value);
   return keys.length > 0 && keys.every(k => k === 'extension' || k === 'id');
 }
+
+function isCodeableConceptLike(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const keys = Object.keys(value);
+  if (!keys.every(key => CODEABLE_CONCEPT_KEYS.has(key))) return false;
+  return Array.isArray(value.coding) || typeof value.text === 'string';
+}
+
+function isCodingLike(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  const keys = Object.keys(value);
+  if (!keys.every(key => CODING_KEYS.has(key))) return false;
+  return ['system', 'version', 'code', 'display', 'userSelected'].some(key => key in value);
+}
+
+const CODEABLE_CONCEPT_KEYS = new Set(['id', 'extension', 'coding', 'text']);
+const CODING_KEYS = new Set(['id', 'extension', 'system', 'version', 'code', 'display', 'userSelected']);
 
 function matchProfileDiscriminator(
   element: any, slice: SliceDefinition, path: string,

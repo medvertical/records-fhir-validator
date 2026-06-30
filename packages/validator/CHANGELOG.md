@@ -12,6 +12,44 @@ ship together; package-only changes are noted under each release.
 
 No unreleased changes yet.
 
+## [0.4.0] — 2026-06-30
+
+Runtime slicing and evidence-gate update for the standalone validator and
+GitHub Action. Released with `@records-fhir/validation-types` 0.1.5.
+
+### Added
+
+- Added runtime support for differential-only slices that inherit slicing from
+  their base or snapshot when slice elements do not redeclare slicing locally.
+- Added local-first FHIR Schema dual-path evidence reporting with exported
+  normalization helpers for comparing Records, graph-derived validation, and
+  Java OperationOutcome baselines.
+- Added focused regression coverage for required slices, closed slicing,
+  `memberOf` prechecks, and FHIR Schema StructureDefinition merge behavior.
+
+### Changed
+
+- Merge differential and base StructureDefinition elements by slice-aware
+  identity instead of path alone, keeping same-path slices from sharing
+  cardinality or metadata by accident.
+- Normalize known equivalent closed-slicing diagnostics in the evidence lane so
+  Java pattern differences are measured without hiding real parity gaps.
+- Refresh README evidence around the current MII/ISiK triangulation signal and
+  scoped FHIR Schema dual-path status.
+
+### Fixed
+
+- Fixed required-slice detection for profiled differential-only slices where
+  the slice exists in the differential but the slicing declaration is inherited.
+- Fixed local terminology/memberOf precheck diagnostics so missing local
+  expansions produce stable validation signals without depending on remote TX
+  availability.
+
+### Verification
+
+- Verified locally with validator typecheck/build, targeted Vitest suites, MII
+  reference gate, validator performance gate, and repository lint.
+
 ## [0.3.0] — 2026-06-23
 
 Release-hardening update for the standalone validator and GitHub Action.
@@ -602,7 +640,8 @@ extracted from the Records DataOps Control Plane.
   are explicitly out of scope for this package and are not blended
   into the headline conformance score.
 
-[Unreleased]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.3.0...HEAD
+[Unreleased]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.4.0...HEAD
+[0.4.0]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.3.0...validator-v0.4.0
 [0.3.0]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.2.0...validator-v0.3.0
 [0.2.0]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.1.14...validator-v0.2.0
 [0.1.0]: https://github.com/medvertical/records-fhir-validator/releases/tag/validator-v0.1.0

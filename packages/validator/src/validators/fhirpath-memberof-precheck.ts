@@ -10,6 +10,8 @@ const MEMBER_OF_EXISTS_PATTERN =
   /^\s*where\s*\(\s*([A-Za-z][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])?(?:\.[A-Za-z][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])?)*)\.memberOf\(\s*'([^']+)'\s*\)\s*\)\.exists\(\)\s*$/;
 const VALUE_SET_IN_EXISTS_PATTERN =
   /^\s*where\s*\(\s*([A-Za-z][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])?(?:\.[A-Za-z][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])?)*)\s+in\s+'([^']*\/ValueSet\/[^']+)'\s*\)\.exists\(\)\s*$/;
+const OPTIONAL_MEMBER_OF_UNION_PATTERN =
+  /^\s*([A-Za-z][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])?(?:\.[A-Za-z][A-Za-z0-9_]*(?:\[[A-Za-z0-9_]+\])?)*)\.empty\(\)\s+or\s+\((.*)\)\s*$/s;
 
 // Matches an expression ending in `<prefix>.memberOf('<url>')` (not wrapped in
 // `.exists()`), capturing the prefix and the ValueSet URL. The prefix may
@@ -106,12 +108,81 @@ export function evaluateTrailingMemberOf(
   return sawDeterminate ? true : null;
 }
 
+/**
+ * Evaluates optional element membership constraints of the form:
+ *
+ *   country.empty() or (
+ *     country.memberOf('...iso3166-1-2') or
+ *     country.memberOf('...iso3166-1-3')
+ *   )
+ *
+ * These constraints are often attached to a complex element such as
+ * `Patient.address`, so the caller must pass the already-resolved element
+ * context, not the resource root.
+ */
+export function evaluateOptionalMemberOfUnion(
+  expression: string,
+  context: any,
+): MemberOfPrecheckResult {
+  const parsed = parseOptionalMemberOfUnion(expression);
+  if (!parsed) return null;
+
+  const values = getValuesAtPath(context, parsed.path);
+  if (values.length === 0) return true;
+
+  for (const value of values) {
+    let sawDeterminateMembership = false;
+    let matchedAnyValueSet = false;
+
+    for (const valueSetUrl of parsed.valueSetUrls) {
+      const outcome = memberOfFunction.fn([value], [valueSetUrl]);
+      if (!Array.isArray(outcome) || outcome.length === 0) continue;
+      sawDeterminateMembership = true;
+      if (outcome[0] === true) {
+        matchedAnyValueSet = true;
+        break;
+      }
+    }
+
+    if (!sawDeterminateMembership) return null;
+    if (!matchedAnyValueSet) return false;
+  }
+
+  return true;
+}
+
+function parseOptionalMemberOfUnion(
+  expression: string,
+): { path: string; valueSetUrls: string[] } | null {
+  const match = expression.match(OPTIONAL_MEMBER_OF_UNION_PATTERN);
+  if (!match) return null;
+
+  const path = match[1];
+  const body = match[2].trim();
+  const valueSetUrls: string[] = [];
+  const memberOfParts = body.split(/\s+or\s+/);
+  const pathPattern = escapeRegExp(path);
+  const memberOfPattern = new RegExp(`^${pathPattern}\\.memberOf\\(\\s*'([^']+)'\\s*\\)$`);
+
+  for (const part of memberOfParts) {
+    const partMatch = part.trim().match(memberOfPattern);
+    if (!partMatch) return null;
+    valueSetUrls.push(partMatch[1]);
+  }
+
+  return valueSetUrls.length > 0 ? { path, valueSetUrls } : null;
+}
+
 function stripResourcePrefix(path: string, resourceType: string): string {
   return path === resourceType
     ? ''
     : path.startsWith(`${resourceType}.`)
       ? path.slice(resourceType.length + 1)
       : path;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function getValuesAtPath(resource: any, path: string): any[] {

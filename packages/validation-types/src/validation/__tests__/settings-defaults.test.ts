@@ -15,4 +15,15 @@ describe('validation settings defaults', () => {
     expect(getDefaultValidationSettingsForVersion('R4').resourceTypes.includedTypes).toContain('Bundle');
     expect(getDefaultValidationSettingsForVersion('R5').resourceTypes.includedTypes).toContain('Bundle');
   });
+
+  it('disables imposed profile policies by default', () => {
+    expect(getDefaultValidationSettingsForVersion('R4').imposedProfiles).toEqual({
+      enabled: false,
+      policies: [],
+    });
+    expect(getDefaultValidationSettingsForVersion('R5').imposedProfiles).toEqual({
+      enabled: false,
+      policies: [],
+    });
+  });
 });

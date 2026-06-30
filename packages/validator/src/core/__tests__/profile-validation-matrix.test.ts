@@ -196,8 +196,7 @@ describe('Profile Validation Matrix', () => {
   });
 
   describe('Issue Category Coverage', () => {
-    // Requires sub-element cardinality checking within complex types (not yet implemented)
-    it.skip('should report all expected issue categories', async () => {
+    it('should report all expected issue categories', async () => {
       const issues = await recordsValidator.validate(
         TEST_PATIENT_MII_MISSING_REQUIRED,
         MII_PATIENT_PROFILE,
@@ -216,4 +215,3 @@ describe('Profile Validation Matrix', () => {
     }, 120000);
   });
 });
-

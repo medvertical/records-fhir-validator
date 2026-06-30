@@ -111,6 +111,9 @@ export type {
   ValidationSettingsValidationResult,
   FHIRResourceTypeConfig,
   AdvancedTerminologyConfig,
+  ProfileApplicationSource,
+  ImposedProfilePolicy,
+  ImposedProfilesConfig,
   AdvisorRule,
   AdvisorRuleMatch,
   AdvisorRuleTransform

@@ -252,6 +252,23 @@ describe('Type Integrity - DTO Serialization', () => {
       expect(result.success).toBe(false);
     });
 
+    it('accepts imposed profile policy settings updates', () => {
+      const result = safeParseSettingsUpdate({
+        imposedProfiles: {
+          enabled: true,
+          policies: [{
+            id: 'mii-patient',
+            resourceType: 'Patient',
+            profileUrl: 'https://www.medizininformatik-initiative.de/fhir/core/StructureDefinition/Patient|2025.0.1',
+            packageId: 'de.medizininformatikinitiative.kerndatensatz.person',
+            packageVersion: '2025.0.1',
+          }],
+        },
+      });
+
+      expect(result.success).toBe(true);
+    });
+
     it('does not normalize business rule aliases to custom_rule', () => {
       expect(normalizeValidationAspect('businessRule')).toBe('businessRule');
       expect(normalizeValidationAspect('business-rules')).toBe('business-rules');

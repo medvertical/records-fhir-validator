@@ -224,6 +224,13 @@ export async function loadFromLocalCache(
       }
     }
 
+    // For explicitly versioned canonicals, a different version is not a
+    // usable fallback. Returning it makes the validator apply the wrong IG
+    // rules and can produce false profile-slice errors.
+    if (targetVersion) {
+      return null;
+    }
+
     // Return candidate if found (and no exact match was returned above)
     if (urlMatch) {
       logger.info(`[SDLoader] Loaded version mismatch for ${url} from ${urlMatchSource} (found version ${(urlMatch as StructureDefinition).version})`);

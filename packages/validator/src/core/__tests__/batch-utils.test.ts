@@ -8,13 +8,15 @@
  *   - resetWarmupState
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import {
   deduplicateResources,
   groupResourcesByProfile,
   chunkArray,
   resetWarmupState,
+  preloadProfiles,
 } from '../batch-utils';
+import { setProfileSource } from '../../persistence';
 
 // ============================================================================
 // deduplicateResources
@@ -222,5 +224,63 @@ describe('resetWarmupState', () => {
     resetWarmupState();
     resetWarmupState();
     expect(true).toBe(true); // No exception thrown
+  });
+});
+
+// ============================================================================
+// preloadProfiles
+// ============================================================================
+
+describe('preloadProfiles', () => {
+  beforeEach(() => {
+    resetWarmupState();
+  });
+
+  afterEach(() => {
+    setProfileSource({});
+  });
+
+  it('passes explicit canonical versions to the profile resolver', async () => {
+    const resolveProfile = vi.fn().mockResolvedValue({
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/StructureDefinition/Profile',
+      version: '1.1.0',
+      fhirVersion: '4.0.1',
+      type: 'Patient',
+      snapshot: { element: [{ id: 'Patient', path: 'Patient' }] },
+    });
+
+    setProfileSource({ resolveProfile });
+
+    const sdLoader = {
+      loadProfilesBatch: vi.fn().mockResolvedValue(new Map()),
+      cacheProfile: vi.fn(),
+    };
+    const profileCache = {
+      get: vi.fn(),
+      set: vi.fn(),
+    };
+    const snapshotGenerator = {
+      generateSnapshot: vi.fn(),
+    };
+
+    await preloadProfiles(
+      sdLoader as any,
+      profileCache as any,
+      snapshotGenerator as any,
+      ['http://example.org/StructureDefinition/Profile|1.1.0'],
+      'R4',
+    );
+
+    expect(resolveProfile).toHaveBeenCalledWith(
+      'http://example.org/StructureDefinition/Profile',
+      '1.1.0',
+      undefined,
+    );
+    expect(sdLoader.cacheProfile).toHaveBeenCalledWith(
+      'http://example.org/StructureDefinition/Profile|1.1.0',
+      expect.objectContaining({ version: '1.1.0' }),
+      'R4',
+    );
   });
 });

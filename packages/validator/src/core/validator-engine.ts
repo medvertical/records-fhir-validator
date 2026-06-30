@@ -70,6 +70,7 @@ export class RecordsValidator {
   private profileCache!: RecordsValidatorComponents['profileCache'];
   private sdLoader!: StructureDefinitionLoader;
   private valuesetValidator!: ValueSetValidator;
+  private constraintValidator!: RecordsValidatorComponents['constraintValidator'];
   private snapshotGenerator!: RecordsValidatorComponents['snapshotGenerator'];
   private available: boolean = false;
   private initializationPromise: Promise<void>;
@@ -185,6 +186,7 @@ export class RecordsValidator {
         metadataExecutor: this.metadataExecutor,
         referenceExecutor: this.referenceExecutor,
         bestPracticeValidator: this.bestPracticeValidator,
+        questionnaireRegistry: this.questionnaireRegistry,
         strictMode: this.config.strictMode || false,
         validateBundleEntriesIfNeeded: (target, version) =>
           this.validateBundleEntriesIfNeeded(target, version),
@@ -408,6 +410,14 @@ export class RecordsValidator {
     this.terminologyExecutor.clearCache();
     this.valuesetValidator.clearCache();
     logger.info('[RecordsValidator] Terminology caches cleared');
+  }
+
+  getConstraintDiagnostics(): ReturnType<RecordsValidatorComponents['constraintValidator']['getDiagnostics']> {
+    return this.constraintValidator.getDiagnostics();
+  }
+
+  clearConstraintDiagnostics(): void {
+    this.constraintValidator.clearDiagnostics();
   }
 
   /**

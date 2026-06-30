@@ -35,10 +35,15 @@ export interface FHIRSchemaSlicing {
 }
 
 export interface FHIRSchemaSlice {
+  type?: string;
   min?: number;
   max?: number | '*';
   match?: Record<string, unknown>;
   elements?: Record<string, FHIRSchemaElement>;
+  binding?: FHIRSchemaBinding;
+  constraints?: FHIRSchemaConstraint[];
+  choices?: string[];
+  refers?: string[];
   extensionUrl?: string;
   pattern?: unknown;
   fixed?: unknown;
@@ -57,6 +62,7 @@ export interface FHIRSchemaConstraint {
 }
 
 export interface SDElement {
+  [key: string]: unknown;
   id?: string;
   path: string;
   min?: number;

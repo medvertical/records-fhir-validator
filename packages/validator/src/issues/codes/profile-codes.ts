@@ -12,6 +12,11 @@ export const ProfileCodes = {
         severity: 'error',
         description: 'Profile constraint violated',
     },
+    'profile-fixed-value-mismatch': {
+        aspect: 'profile',
+        severity: 'error',
+        description: 'Element does not match a fixed value declared by the profile',
+    },
     'profile-slice-min-cardinality': {
         aspect: 'profile',
         severity: 'error',

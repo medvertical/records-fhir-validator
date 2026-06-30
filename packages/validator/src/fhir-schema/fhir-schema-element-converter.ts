@@ -51,10 +51,10 @@ export function convertElement(el: SDElement): FHIRSchemaElement {
     }));
   }
 
-  const fixedValue = el.fixedString ?? el.fixedCode ?? el.fixedUri ?? el.fixedBoolean;
+  const fixedValue = getFirstPrefixedValue(el, 'fixed');
   if (fixedValue !== undefined) result.fixed = fixedValue;
 
-  const patternValue = el.patternCodeableConcept ?? el.patternCoding ?? el.patternIdentifier;
+  const patternValue = getFirstPrefixedValue(el, 'pattern');
   if (patternValue !== undefined) result.pattern = patternValue;
 
   return result;
@@ -62,4 +62,13 @@ export function convertElement(el: SDElement): FHIRSchemaElement {
 
 export function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function getFirstPrefixedValue(el: SDElement, prefix: 'fixed' | 'pattern'): unknown {
+  for (const [key, value] of Object.entries(el)) {
+    if (key.startsWith(prefix) && value !== undefined) {
+      return value;
+    }
+  }
+  return undefined;
 }

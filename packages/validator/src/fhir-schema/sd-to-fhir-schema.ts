@@ -164,36 +164,84 @@ export function summarizeConversion(sd: StructureDefinition, resolveBase?: BaseR
     boundFields: number;
     constraintCount: number;
     choiceTypes: number;
+    maxDepth: number;
   };
 } {
   const elements = sd.snapshot?.element || sd.differential?.element || [];
   const schema = convertToFHIRSchema(sd, resolveBase);
 
-  const schemaElements = schema.elements ? Object.keys(schema.elements).length : 0;
-  const convertedSlices = schema.elements
-    ? Object.values(schema.elements).reduce((n, e) => n + (e.slices ? Object.keys(e.slices).length : 0), 0)
-    : 0;
-  const boundFields = schema.elements
-    ? Object.values(schema.elements).filter(e => e.binding).length
-    : 0;
-  const constraintCount = (schema.constraints?.length ?? 0) +
-    (schema.elements
-      ? Object.values(schema.elements).reduce((n, e) => n + (e.constraints?.length ?? 0), 0)
-      : 0);
-  const choiceTypes = schema.elements
-    ? Object.values(schema.elements).filter(e => e.choices).length
-    : 0;
+  const recursiveStats = summarizeSchemaElements(schema.elements ?? {});
+  const constraintCount = (schema.constraints?.length ?? 0) + recursiveStats.constraintCount;
 
   return {
     schema,
     stats: {
       totalElements: elements.length,
-      convertedElements: schemaElements,
-      convertedSlices,
+      convertedElements: recursiveStats.elementCount,
+      convertedSlices: recursiveStats.sliceCount,
       requiredFields: schema.required?.length ?? 0,
-      boundFields,
+      boundFields: recursiveStats.bindingCount,
       constraintCount,
-      choiceTypes,
+      choiceTypes: recursiveStats.choiceCount,
+      maxDepth: recursiveStats.maxDepth,
     },
+  };
+}
+
+function summarizeSchemaElements(elements: Record<string, FHIRSchemaElement>, depth = 1): {
+  elementCount: number;
+  sliceCount: number;
+  bindingCount: number;
+  constraintCount: number;
+  choiceCount: number;
+  maxDepth: number;
+} {
+  let elementCount = 0;
+  let sliceCount = 0;
+  let bindingCount = 0;
+  let constraintCount = 0;
+  let choiceCount = 0;
+  let maxDepth = 0;
+
+  for (const element of Object.values(elements)) {
+    elementCount += 1;
+    if (element.binding) bindingCount += 1;
+    if (element.constraints) constraintCount += element.constraints.length;
+    if (element.choices) choiceCount += 1;
+    maxDepth = Math.max(maxDepth, depth);
+
+    if (element.slices) {
+      sliceCount += Object.keys(element.slices).length;
+      for (const slice of Object.values(element.slices)) {
+        if (slice.elements) {
+          const nested = summarizeSchemaElements(slice.elements, depth + 1);
+          elementCount += nested.elementCount;
+          sliceCount += nested.sliceCount;
+          bindingCount += nested.bindingCount;
+          constraintCount += nested.constraintCount;
+          choiceCount += nested.choiceCount;
+          maxDepth = Math.max(maxDepth, nested.maxDepth);
+        }
+      }
+    }
+
+    if (element.elements) {
+      const nested = summarizeSchemaElements(element.elements, depth + 1);
+      elementCount += nested.elementCount;
+      sliceCount += nested.sliceCount;
+      bindingCount += nested.bindingCount;
+      constraintCount += nested.constraintCount;
+      choiceCount += nested.choiceCount;
+      maxDepth = Math.max(maxDepth, nested.maxDepth);
+    }
+  }
+
+  return {
+    elementCount,
+    sliceCount,
+    bindingCount,
+    constraintCount,
+    choiceCount,
+    maxDepth,
   };
 }

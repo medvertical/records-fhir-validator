@@ -27,6 +27,7 @@ import {
   emitMatchedSliceChildIssues,
   resourceTypeFromPath,
   validateSliceContentConstraints,
+  validateSliceRootConstraints,
 } from './slicing-content-rules';
 import { validateSliceOrdering } from './slicing-ordering';
 import { createIsolatedSlicingValueSetLoader } from './slicing-valueset-loader';
@@ -139,7 +140,8 @@ export class SlicingValidator {
       logger.debug(`[SlicingValidator] Validating ${elements.length} elements for path ${elementPath} with ${compatibleSlices.length} slices`);
 
       // Match each element to its slice
-      const sliceMatches = new Map<string, any[]>(); // sliceName -> elements
+      const sliceMatches = new Map<string, Array<{ element: any; index: number }>>(); // sliceName -> matched elements with original index
+      const cardinalityMatches = new Map<string, Array<{ element: any; index: number }>>();
       const unmatchedElements: Array<{ element: any; index: number }> = [];
 
       for (let index = 0; index < elements.length; index++) {
@@ -155,7 +157,21 @@ export class SlicingValidator {
           if (!sliceMatches.has(matchedSlice.sliceName)) {
             sliceMatches.set(matchedSlice.sliceName, []);
           }
-          sliceMatches.get(matchedSlice.sliceName)!.push(element);
+          sliceMatches.get(matchedSlice.sliceName)!.push({ element, index });
+
+          if (this.elementCountsForSliceCardinality(
+            element,
+            matchedSlice,
+            slicingInfo.slicing.discriminator || [],
+            compatibleSlices,
+            referenceResolverOverride,
+            slicingInfo.slicing.rules,
+          )) {
+            if (!cardinalityMatches.has(matchedSlice.sliceName)) {
+              cardinalityMatches.set(matchedSlice.sliceName, []);
+            }
+            cardinalityMatches.get(matchedSlice.sliceName)!.push({ element, index });
+          }
         } else {
           unmatchedElements.push({ element, index });
         }
@@ -164,7 +180,8 @@ export class SlicingValidator {
       // Validate cardinality for each slice
       for (const slice of compatibleSlices) {
         const matchedElements = sliceMatches.get(slice.sliceName) || [];
-        const count = matchedElements.length;
+        const countedElements = cardinalityMatches.get(slice.sliceName) || [];
+        const count = countedElements.length;
         const resourceType = resourceTypeFromPath(elementPath);
 
         // Check min cardinality
@@ -203,11 +220,18 @@ export class SlicingValidator {
         }
 
         // Validate slice content constraints (fixed/pattern values in nested elements)
-        for (let i = 0; i < matchedElements.length; i++) {
-          const contentIssues = validateSliceContentConstraints(
-            matchedElements[i],
+        for (const matched of matchedElements) {
+          const rootIssues = validateSliceRootConstraints(
+            matched.element,
             slice,
-            `${elementPath}[${i}]`,
+            `${elementPath}[${matched.index}]`,
+          );
+          issues.push(...rootIssues);
+
+          const contentIssues = validateSliceContentConstraints(
+            matched.element,
+            slice,
+            `${elementPath}[${matched.index}]`,
             profileSD
           );
           issues.push(...contentIssues);
@@ -216,9 +240,9 @@ export class SlicingValidator {
           // matched slice element so the tree viewer can render ghosts for
           // them (e.g. name:name exists but lacks required family/given).
           const childIssues = emitMatchedSliceChildIssues(
-            matchedElements[i],
+            matched.element,
             slice,
-            `${elementPath}[${i}]`,
+            `${elementPath}[${matched.index}]`,
             profileSD
           );
           issues.push(...childIssues);
@@ -226,7 +250,11 @@ export class SlicingValidator {
       }
 
       // Check unmatched elements
-      if (unmatchedElements.length > 0 && slicingInfo.slicing.rules === 'closed') {
+      if (
+        unmatchedElements.length > 0 &&
+        slicingInfo.slicing.rules === 'closed' &&
+        !this.shouldSuppressUnresolvedBindingClosedUnmatched(compatibleSlices, slicingInfo.slicing)
+      ) {
         issues.push(createValidationIssue({
           code: 'profile-slice-closed-unmatched',
           path: elementPath,
@@ -301,9 +329,7 @@ export class SlicingValidator {
 
   private shouldSuppressUnresolvedBindingOnlyMin(slice: SliceDefinition, elements: any[]): boolean {
     if (elements.length === 0) return false;
-    if (!slice.bindingValueSet || slice.bindingCodes?.size) return false;
-    if (slice.pattern !== undefined || slice.fixed !== undefined) return false;
-    if ((slice.childPatterns?.size ?? 0) > 0 || (slice.childFixed?.size ?? 0) > 0) return false;
+    if (!this.isUnresolvedBindingOnlySlice(slice)) return false;
 
     const discriminators = slice.discriminator ?? [];
     if (discriminators.length === 0) return false;
@@ -312,6 +338,32 @@ export class SlicingValidator {
       (discriminator.type === 'pattern' || discriminator.type === 'value') &&
       (!discriminator.path || discriminator.path === '$this'),
     );
+  }
+
+  private shouldSuppressUnresolvedBindingClosedUnmatched(
+    slices: SliceDefinition[],
+    slicingDef: SlicingDefinition,
+  ): boolean {
+    const discriminators = slicingDef.discriminator ?? [];
+    if (slices.length === 0) return false;
+    if (discriminators.length === 0) return false;
+    if (!discriminators.every(discriminator =>
+      (discriminator.type === 'pattern' || discriminator.type === 'value') &&
+      (!discriminator.path || discriminator.path === '$this'),
+    )) {
+      return false;
+    }
+
+    return slices.some(slice => this.isUnresolvedBindingOnlySlice(slice));
+  }
+
+  private isUnresolvedBindingOnlySlice(slice: SliceDefinition): boolean {
+    return Boolean(slice.bindingValueSet) &&
+      !slice.bindingCodes?.size &&
+      slice.pattern === undefined &&
+      slice.fixed === undefined &&
+      (slice.childPatterns?.size ?? 0) === 0 &&
+      (slice.childFixed?.size ?? 0) === 0;
   }
 
   private isSliceCompatibleWithFhirVersion(slice: SliceDefinition, fhirVersion: FhirVersionFamily): boolean {
@@ -352,6 +404,45 @@ export class SlicingValidator {
     }
 
     return true;
+  }
+
+  private elementCountsForSliceCardinality(
+    element: any,
+    slice: SliceDefinition,
+    discriminators: SlicingDiscriminator[],
+    allSlices: SliceDefinition[],
+    referenceResolverOverride?: ReferenceResolver | null,
+    slicingRules?: string,
+  ): boolean {
+    if (slicingRules !== 'closed') return true;
+
+    return !this.isRelaxedCodingIdentityMatch(
+      element,
+      slice,
+      discriminators,
+      allSlices,
+      referenceResolverOverride,
+    );
+  }
+
+  private isRelaxedCodingIdentityMatch(
+    element: any,
+    slice: SliceDefinition,
+    discriminators: SlicingDiscriminator[],
+    allSlices: SliceDefinition[],
+    referenceResolverOverride?: ReferenceResolver | null,
+  ): boolean {
+    for (const discriminator of discriminators) {
+      if (!this.matchDiscriminator(element, slice, discriminator, allSlices, referenceResolverOverride)) {
+        return false;
+      }
+
+      if (isCodingIdentityRelaxedPatternMatch(element, slice, discriminator)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -482,4 +573,31 @@ export class SlicingValidator {
     return evidencePaths;
   }
 
+}
+
+function isCodingIdentityRelaxedPatternMatch(
+  element: any,
+  slice: SliceDefinition,
+  discriminator: SlicingDiscriminator,
+): boolean {
+  if (discriminator.type !== 'pattern') return false;
+  if (discriminator.path && discriminator.path !== '$this') return false;
+  if (slice.patternKind !== 'patternCoding' || slice.pattern === undefined) return false;
+
+  const elementValue = getValueAtPath(element, discriminator.path);
+  if (matchesPattern(elementValue, slice.pattern)) return false;
+
+  return codingIdentityMatchesPattern(elementValue, slice.pattern);
+}
+
+function codingIdentityMatchesPattern(elementValue: any, patternValue: any): boolean {
+  if (!isRecord(elementValue) || !isRecord(patternValue)) return false;
+  if (typeof patternValue.system !== 'string' || typeof patternValue.code !== 'string') {
+    return false;
+  }
+  return elementValue.system === patternValue.system && elementValue.code === patternValue.code;
+}
+
+function isRecord(value: unknown): value is Record<string, any> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

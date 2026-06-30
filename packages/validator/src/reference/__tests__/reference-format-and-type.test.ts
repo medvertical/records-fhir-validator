@@ -103,6 +103,24 @@ describe('Reference parsing', () => {
     });
   });
 
+  it('accepts relative references with underscore ids used by IG example fixtures', () => {
+    expect(validateReferenceFormat('Patient/P_0000000')).toMatchObject({
+      isValid: true,
+      referenceType: 'relative',
+      resourceType: 'Patient',
+      resourceId: 'P_0000000',
+    });
+  });
+
+  it('tolerates bare local relative URI references as non-typed references', () => {
+    expect(validateReferenceFormat('UKCore-Observation-Group-FullBloodCount-Example')).toMatchObject({
+      isValid: true,
+      referenceType: 'relative',
+      resourceId: 'UKCore-Observation-Group-FullBloodCount-Example',
+      issues: [],
+    });
+  });
+
   it('does not probe absolute references on a different origin by default', async () => {
     const checker = new BatchedReferenceChecker({
       baseUrl: 'https://server.fire.ly/R4',

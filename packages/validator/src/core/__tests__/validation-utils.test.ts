@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dedupeIssues, getValueAtPath } from '../validation-utils';
+import { dedupeIssues, getValueAtPath, suppressRedundantBindingWarnings } from '../validation-utils';
 import type { ValidationIssue } from '../../types';
 
 function issue(overrides: Partial<ValidationIssue>): ValidationIssue {
@@ -134,6 +134,32 @@ describe('dedupeIssues', () => {
 
     expect(deduped).toHaveLength(1);
     expect(deduped[0].code).toBe('constraint-violation-us-core-7');
+  });
+
+  it('suppresses generic profile constraints when a specific invariant violation code exists', () => {
+    const deduped = dedupeIssues([
+      issue({
+        aspect: 'invariant',
+        code: 'pat-1-violation',
+        severity: 'error',
+        path: 'Patient.contact[0]',
+        resourceType: 'Patient',
+        message: 'pat-1: contact SHALL have at least one of name, telecom, address, or organization',
+      }),
+      issue({
+        aspect: 'profile',
+        code: 'profile-constraint-violation',
+        severity: 'error',
+        path: 'Patient.contact[0]',
+        resourceType: 'Patient',
+        message: "Constraint 'pat-1' failed",
+        ruleId: 'pat-1',
+        details: { constraintKey: 'pat-1', fieldPath: 'Patient.contact[0]' },
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].code).toBe('pat-1-violation');
   });
 
   it('suppresses generic warning constraints when a specific constraint issue exists', () => {
@@ -325,6 +351,188 @@ describe('dedupeIssues', () => {
     expect(deduped).toHaveLength(1);
     expect(deduped[0].code).toBe('profile-extension-min-cardinality');
   });
+
+  it('prefers profile slice minimum issues over generic structural cardinality', () => {
+    const deduped = dedupeIssues([
+      issue({
+        aspect: 'structural',
+        code: 'structural-cardinality-min',
+        path: 'Bundle.entry[0].resource/*Composition*/.section',
+        resourceType: 'Bundle',
+        details: {
+          fieldPath: 'Bundle.entry[0].resource/*Composition*/.section',
+        },
+      }),
+      issue({
+        aspect: 'profile',
+        code: 'profile-slice-min-cardinality',
+        path: 'Bundle.entry[0].resource/*Composition*/.section',
+        resourceType: 'Bundle',
+        details: {
+          fieldPath: 'Bundle.entry[0].resource/*Composition*/.section',
+        },
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].code).toBe('profile-slice-min-cardinality');
+  });
+
+  it('prefers ref-1 invariant errors over duplicate structural reference format warnings', () => {
+    const path = 'Bundle.entry[7].resource/*Claim/c1*/.provider.reference';
+    const deduped = dedupeIssues([
+      issue({
+        aspect: 'invariant',
+        code: 'ref-1-violation',
+        severity: 'error',
+        path,
+        resourceType: 'Claim',
+        details: { fieldPath: path },
+      }),
+      issue({
+        aspect: 'structural',
+        code: 'reference-invalid-format',
+        severity: 'warning',
+        path,
+        resourceType: 'Claim',
+        details: { fieldPath: path, reference: 'provider-1' },
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].code).toBe('ref-1-violation');
+  });
+
+  it('prefers structural invalid URI issues over duplicate terminology not-found warnings on the same system path', () => {
+    const path = 'Condition.clinicalStatus.coding[0].system';
+    const deduped = dedupeIssues([
+      issue({
+        aspect: 'structural',
+        code: 'structural-invalid-uri',
+        severity: 'error',
+        path,
+        resourceType: 'Condition',
+        details: { fieldPath: path, value: 'idk' },
+      }),
+      issue({
+        aspect: 'terminology',
+        code: 'not-found',
+        severity: 'warning',
+        path,
+        resourceType: 'Condition',
+        details: { fieldPath: path },
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].code).toBe('structural-invalid-uri');
+  });
+
+  it('matches structural invalid URI and terminology not-found across choice-type path aliases', () => {
+    const structuralPath = 'MedicationRequest.medicationCodeableConcept.coding[0].system';
+    const terminologyPath = 'MedicationRequest.medication[x].coding[0].system';
+    const deduped = dedupeIssues([
+      issue({
+        aspect: 'structural',
+        code: 'structural-invalid-uri',
+        severity: 'error',
+        path: structuralPath,
+        resourceType: 'MedicationRequest',
+        details: { fieldPath: structuralPath, value: 'Metaformin' },
+      }),
+      issue({
+        aspect: 'terminology',
+        code: 'not-found',
+        severity: 'warning',
+        path: terminologyPath,
+        resourceType: 'MedicationRequest',
+        details: { fieldPath: terminologyPath },
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].code).toBe('structural-invalid-uri');
+  });
+
+  it('keeps the stronger contained-resource invariant over contained-unreferenced warnings', () => {
+    const deduped = dedupeIssues([
+      issue({
+        aspect: 'structural',
+        code: 'invalid',
+        severity: 'error',
+        path: 'Patient.contained[0]',
+        resourceType: 'Patient',
+        message: "The contained resource 'covert' is not referenced to from elsewhere in the containing resource",
+        details: { fieldPath: 'Patient.contained[0]' },
+      }),
+      issue({
+        aspect: 'invariant',
+        code: 'contained-unreferenced',
+        severity: 'warning',
+        path: 'Patient.contained',
+        resourceType: 'Patient',
+        message: "Contained resource 'covert' is not referenced",
+        details: { fieldPath: 'Patient.contained' },
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].code).toBe('invalid');
+  });
+
+  it('keeps required binding violations over redundant AllergyIntolerance presence invariants', () => {
+    const path = 'AllergyIntolerance.clinicalStatus';
+    const deduped = dedupeIssues([
+      issue({
+        aspect: 'invariant',
+        code: 'ait-1-violation',
+        severity: 'error',
+        path,
+        resourceType: 'AllergyIntolerance',
+        message: 'ait-1: AllergyIntolerance.clinicalStatus SHALL be present',
+        details: { fieldPath: path },
+      }),
+      issue({
+        aspect: 'profile',
+        code: 'profile-required-binding-violation',
+        severity: 'error',
+        path,
+        resourceType: 'AllergyIntolerance',
+        message: 'Value does not satisfy required binding',
+        details: { fieldPath: path, textValue: 'active' },
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].code).toBe('profile-required-binding-violation');
+  });
+
+  it('keeps extension no-value issues over generic ext-1 constraint rows', () => {
+    const path = 'Encounter.extension[2].extension[1]';
+    const deduped = dedupeIssues([
+      issue({
+        aspect: 'structural',
+        code: 'profile-constraint-violation',
+        severity: 'error',
+        path,
+        resourceType: 'Extension',
+        message: 'ext-1 violation: Extension must have either extensions or value[x]',
+        details: { fieldPath: path, constraintKey: 'ext-1' },
+      }),
+      issue({
+        aspect: 'profile',
+        code: 'profile-extension-no-value',
+        severity: 'error',
+        path,
+        resourceType: 'Encounter',
+        message: "Extension 'valor' must have either a value or nested extensions",
+        details: { fieldPath: path, url: 'valor' },
+      }),
+    ]);
+
+    expect(deduped).toHaveLength(1);
+    expect(deduped[0].code).toBe('profile-extension-no-value');
+  });
 });
 
 describe('getValueAtPath', () => {
@@ -367,5 +575,27 @@ describe('getValueAtPath', () => {
         valueCode: 'unknown',
       }],
     });
+  });
+});
+
+describe('suppressRedundantBindingWarnings', () => {
+  it('suppresses missing required binding issues when structural min cardinality already reports the same path', () => {
+    const structuralIssue = issue({
+      aspect: 'structural',
+      code: 'structural-cardinality-min',
+      path: 'Encounter.status',
+      message: 'Element Encounter.status has too few values: expected at least 1, found 0',
+    });
+    const terminologyIssue = issue({
+      aspect: 'terminology',
+      code: 'binding-required-missing',
+      path: 'Encounter.status',
+      message: "Required binding for 'Encounter.status' is missing (binding strength: required)",
+    });
+
+    expect(suppressRedundantBindingWarnings([
+      structuralIssue,
+      terminologyIssue,
+    ])).toEqual([structuralIssue]);
   });
 });
