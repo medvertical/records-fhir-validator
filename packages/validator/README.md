@@ -522,11 +522,11 @@ graph path runs in parallel and is compared against both Records' current
 StructureDefinition path and Java/reference `OperationOutcome` evidence where a
 reference report exists.
 
-The current all-scope MII dual-path lane covers 555 real fixtures. Of those, 477
+The current all-scope MII dual-path lane covers 555 real fixtures. Of those, 512
 have Java/reference coverage through the attached Java CLI supplement
-(`conformance-results/fhir-schema-reference-cli-supplement-all-2026-06-30.json`).
+(`conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json`).
 The final report is
-`conformance-results/fhir-schema-dual-path-all-2026-06-30.json`.
+`conformance-results/fhir-schema-dual-path-all-2026-07-01.json`.
 
 The lane reports 416 clean cases, 58 exact Graph/Records comparable matches, 26
 graph-only cases, 0 Records-only cases, 0 divergent cases, 55 missing-profile
@@ -536,20 +536,19 @@ Java/reference issue keys; no Java-covered issue is currently classified as
 `records-aligns-reference-graph-missing`, or `both-miss-reference`.
 
 Reference coverage is reported separately from graph-vs-Records correctness. The
-remaining 78 reference-coverage gaps are 43 fixtures without an explicit
-`meta.profile` and 35 fixtures without a reference-report entry. The CLI
+remaining 43 reference-coverage gaps are fixtures without an explicit
+`meta.profile`. The CLI
 supplement is Java `OperationOutcome` evidence for expanding the dual-path lane;
 it does not replace the official MII HTTP reference validator container for
 headline MII parity claims.
 
 The report classifies the remaining cases instead of hiding them in one score:
 60 three-way-match cases, 25 local-engine-vs-reference-unconfirmed cases, 26
-graph-only-unconfirmed cases, 35 no-reference cases, 43 no-profile cases, and 12
+graph-only-unconfirmed cases, 43 no-profile cases, and 12
 intentionally unmapped profile cases. The intentionally excluded classes are part
 of the evidence model: unsupported or unmapped corpus profiles, fixtures without
-an explicit profile, reference entries that have not yet been generated, Java
-informational hints, and reference-runtime behavior caused by unavailable
-terminology versions.
+an explicit profile, Java informational hints, and reference-runtime behavior
+caused by unavailable terminology versions.
 
 The open decision buckets are explicit. Shared local-vs-reference signals are
 mostly `code.coding` slice cardinality, `category`/`category.coding` strictness,
@@ -563,6 +562,17 @@ runtime behavior.
 This lane is therefore an implementation-reduction and convergence signal. It
 does not broaden the public headline parity claim beyond the explicitly measured
 FHIR JSON comparison lanes.
+
+The release gate for this lane is:
+
+```bash
+npm run quality:fhir-schema-gate -- \
+  --report conformance-results/fhir-schema-dual-path-all-2026-07-01.json
+```
+
+It fails only on hard convergence regressions: execution errors, Records-only
+cases, divergent cases, Java-confirmed Records runtime gaps, Java-confirmed graph
+path gaps, and comparable Java/reference issues missed by both local paths.
 
 ## License
 

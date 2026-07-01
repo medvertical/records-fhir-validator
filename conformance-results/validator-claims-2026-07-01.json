@@ -1,0 +1,109 @@
+{
+  "generatedAt": "2026-07-01T09:54:50.964Z",
+  "hl7": {
+    "report": "conformance-results/report-2026-07-01.json",
+    "fhirTestCasesCommit": "431b37cd06cac878bc23b4a8b457c2f2397fdcdc",
+    "totalCases": 536,
+    "runCases": 496,
+    "skippedCases": 40,
+    "passedCases": 496,
+    "failedCases": 0,
+    "errorCases": 0,
+    "passRate": 100,
+    "claim": "HL7 JSON comparison lane: 496/496 executable comparisons passed (100.0%)."
+  },
+  "mii": {
+    "report": "conformance-results/mii-triangulation-2026-07-01.json",
+    "profileScope": "mii-2026-reference",
+    "terminologyMode": "mii-local-blaze",
+    "totalCases": 253,
+    "measuredCases": 231,
+    "passedCases": 231,
+    "failedCases": 0,
+    "skippedCases": 22,
+    "parityScore": 100,
+    "fhirPathSkippedConstraints": 0,
+    "deltaTaxonomy": {
+      "byCategory": {
+        "pass": 231,
+        "skip:corpus-unmapped-profile": 12,
+        "skip:reference-terminology-incomplete": 10
+      },
+      "byModule": {
+        "bildgebung": {
+          "pass": 16,
+          "skip:reference-terminology-incomplete": 2
+        },
+        "biobank": {
+          "pass": 28
+        },
+        "consent": {
+          "pass": 6
+        },
+        "icu": {
+          "pass": 77,
+          "skip:corpus-unmapped-profile": 12
+        },
+        "laborbefund": {
+          "skip:reference-terminology-incomplete": 4,
+          "pass": 2
+        },
+        "medikation": {
+          "pass": 26
+        },
+        "molgen": {
+          "pass": 53,
+          "skip:reference-terminology-incomplete": 4
+        },
+        "patho": {
+          "pass": 23
+        }
+      },
+      "topReferenceOnlyKeys": {
+        "warning|business-rule|effective.extension": 4,
+        "warning|invalid|relationship.coding.extension": 4,
+        "warning|business-rule|modifierextension": 1
+      },
+      "topRecordsOnlyKeys": {
+        "error|invalid|series.extension.extension.value.coding": 2
+      },
+      "samples": {
+        "pass": [
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-bildgebung-body-structure-body-structure-mii-exa-bildgebung-koerperstruktur.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-bildgebung-care-plan-care-plan-mii-exa-bildgebung-behandlungsempfehlung.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-bildgebung-composition-composition-mii-exa-bildgebung-semistrukt-befundbericht.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-bildgebung-device-device-mii-exa-bildgebung-geraet.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-bildgebung-diagnostic-report-diagnostic-report-mii-exa-bildgebung-radiologischer-befund.json"
+        ],
+        "skip:reference-terminology-incomplete": [
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-nm.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-pt.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-laborbefund-observation-observation-mii-exa-labor-laborwert-data-absent-reason.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-laborbefund-observation-observation-mii-exa-labor-laborwert-range.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-laborbefund-observation-observation-mii-exa-labor-laborwert-ratio.json"
+        ],
+        "skip:corpus-unmapped-profile": [
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-abgepumpte-muttermilch.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-muttermilch.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-oraler-fluessigkeit.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-saeuglingsnahrung.json",
+          "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-spendermilch.json"
+        ]
+      }
+    },
+    "claim": "MII mii-2026-reference lane: 231/231 measured cases passed (100.0%), 0 failed, 22 skipped."
+  },
+  "fhirSchema": {
+    "report": "conformance-results/fhir-schema-dual-path-all-2026-07-01.json",
+    "selectedFixtures": 555,
+    "referenceCases": 512,
+    "clean": 416,
+    "match": 58,
+    "graphOnly": 26,
+    "recordsOnly": 0,
+    "divergent": 0,
+    "profileMissing": 55,
+    "referenceCoverageMissing": 43,
+    "claim": "FHIR Schema dual-path lane: 555 fixtures, 512 reference-covered, 0 Records-only, 0 divergent."
+  }
+}

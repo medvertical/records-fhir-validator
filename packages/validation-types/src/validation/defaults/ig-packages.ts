@@ -22,6 +22,9 @@ export const MII_2026_PACKAGE_VERSIONS = {
   'de.medizininformatikinitiative.kerndatensatz.onkologie': '2026.0.3',
   'de.medizininformatikinitiative.kerndatensatz.patho': '2026.0.2',
   'de.medizininformatikinitiative.kerndatensatz.icu': '2026.0.2',
+  // The ICU 2026 examples reference gematik ISiK `sd-mii-icu-*` profiles
+  // that are not present in the older `de.gematik.isik-basismodul` package.
+  'de.gematik.isik': '5.1.0',
 } as const;
 
 export const MII_2026_PACKAGE_SET: FhirPackagePin[] = Object.entries(

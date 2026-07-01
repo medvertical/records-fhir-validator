@@ -12,7 +12,8 @@ requiring a JVM, database, or Records server.
 [![FHIR](https://img.shields.io/badge/FHIR-R4%20%7C%20R4B%20%7C%20R5%20%7C%20R6-blue)](#fhir-version-support)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 [![HL7 parity](https://img.shields.io/badge/HL7%20JSON%20parity-496%2F496-brightgreen)](#validation-evidence)
-[![MII scope](https://img.shields.io/badge/MII%202026%20scope-241%2F241-brightgreen)](#mii-2026-reference-scope)
+[![MII scope](https://img.shields.io/badge/MII%202026%20scope-231%2F231-brightgreen)](#mii-2026-reference-scope)
+[![FHIR Schema](https://img.shields.io/badge/FHIR%20Schema%20dual--path-0%20Records--only-brightgreen)](#fhir-schema-dual-path-scope)
 
 ## Quick Start
 
@@ -204,9 +205,13 @@ npm run conformance -- --tx-server none --output-file conformance-results/report
 
 Additional historical and scoped evidence artifacts:
 
+- [`conformance-results/validator-claims-2026-07-01.md`](./conformance-results/validator-claims-2026-07-01.md)
+- [`conformance-results/report-2026-07-01.json`](./conformance-results/report-2026-07-01.json)
+- [`conformance-results/mii-triangulation-2026-07-01.json`](./conformance-results/mii-triangulation-2026-07-01.json)
+- [`conformance-results/fhir-schema-dual-path-all-2026-07-01.json`](./conformance-results/fhir-schema-dual-path-all-2026-07-01.json)
+- [`conformance-results/fhir-schema-dual-path-actions-2026-07-01.md`](./conformance-results/fhir-schema-dual-path-actions-2026-07-01.md)
 - [`conformance-results/hl7-validator-testkit-2026-05-20.json`](./conformance-results/hl7-validator-testkit-2026-05-20.json)
 - [`conformance-results/baseline-backlog-discovery-2026-05-03.json`](./conformance-results/baseline-backlog-discovery-2026-05-03.json)
-- [`conformance-results/mii-triangulation-alpha7-2026-05-19.json`](./conformance-results/mii-triangulation-alpha7-2026-05-19.json)
 
 The 438 pre-filtered entries are not counted as failures because they do not
 exercise the thing this harness measures: JSON FHIR resource validation with a
@@ -256,18 +261,40 @@ Spec dispatch coverage for the measured R4 base package constraints is 100%.
 ## MII 2026 Reference Scope
 
 MII conformance is measured in a separate lane from the HL7
-`FHIR/fhir-test-cases` score. The current scoped MII-2026 reference run
-was generated on 2026-05-19 against the official MII FHIR Validator container
-`mii-fhir-validator:0.0.1-alpha.7` at `http://localhost:8081`. It matches
-the reference validator on 241/241 measured resources from the refreshed MII
-2026 corpus under the `mii-2026-reference` profile scope and
-`mii-local-blaze` terminology mode, with 12 classified corpus/profile-drift
-skips. The source-repository report is
-`conformance-results/mii-triangulation-alpha7-2026-05-19.json`.
+`FHIR/fhir-test-cases` score. The current scoped MII-2026 reference run was
+generated on 2026-07-01 against the official MII FHIR Validator container
+`mii-fhir-validator:0.0.1-alpha.7` at `http://localhost:8081`. It matches the
+reference validator on 231/231 measured resources from the refreshed MII 2026
+corpus under the `mii-2026-reference` profile scope and `mii-local-blaze`
+terminology mode, with 22 classified skips: 12 corpus/profile-drift skips and
+10 reference-terminology-incomplete skips. The run prewarmed 128/128
+reference-scope profiles before executing the cases. The source-repository
+report is `conformance-results/mii-triangulation-2026-07-01.json`.
 
 This is a scoped parity claim for the measured package-example corpus. It is
 not an MII certification claim and does not imply full site-level MII
 Must-Support readiness.
+
+## FHIR Schema Dual-Path Scope
+
+FHIR Schema is being evaluated as a cleaner intermediate representation for
+the same StructureDefinition semantics, not as a replacement for conformance
+evidence. The current engine remains StructureDefinition-first. The FHIR Schema
+graph path runs in parallel and is compared against both the current
+StructureDefinition path and Java/reference `OperationOutcome` evidence where a
+reference report exists.
+
+The current all-scope MII dual-path lane covers 555 real fixtures. Of those, 512
+have Java/reference coverage through the attached Java CLI supplement
+`conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json`.
+The final report is
+`conformance-results/fhir-schema-dual-path-all-2026-07-01.json`.
+
+The lane reports 416 clean cases, 58 exact Graph/Records comparable matches, 26
+graph-only cases, 0 Records-only cases, 0 divergent cases, 55 missing-profile
+cases, and 0 execution errors. This lane is an implementation-reduction and
+convergence signal; it does not broaden the public headline parity claim beyond
+the explicitly measured FHIR JSON comparison lanes.
 
 ## Examples
 

@@ -1,0 +1,172 @@
+{
+  "generatedAt": "2026-07-01T09:53:02.717Z",
+  "sourceSummary": {
+    "selectedFixtures": 555,
+    "referenceCases": 512
+  },
+  "actions": [
+    {
+      "id": "shared-local-strictness",
+      "priority": "P2",
+      "bucket": "local-engines-align-reference-unconfirmed",
+      "count": 25,
+      "decision": "Do not change default runtime behavior without explicit product/spec decision.",
+      "rationale": "Both local paths agree, but Java reference evidence does not confirm the comparable key.",
+      "nextStep": "Review each classification as either intentional stricter product policy or reference/runtime normalization.",
+      "issueKeys": {
+        "structure-min|code.coding": 12,
+        "pattern|category.coding": 5,
+        "structure-min|category": 4,
+        "pattern|value.code": 3,
+        "structure-min|code.coding.code": 1
+      },
+      "classifications": {
+        "local-code-coding-slice-cardinality": 12,
+        "local-category-coding-pattern": 5,
+        "local-category-cardinality": 4,
+        "local-value-code-pattern": 3,
+        "local-code-coding-child-cardinality": 1
+      },
+      "sampleFixtures": [
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-consent-consent-example-mii-consent-einwilligung-1.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-consent-consent-example-mii-consent-einwilligung-2.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-consent-consent-example-mii-consent-einwilligung.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-consent-consent-example-mii-consent-result-type-consent-status.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-abnahme-haemofiltration-einzelmesswerte.json"
+      ]
+    },
+    {
+      "id": "graph-only-strictness",
+      "priority": "P2",
+      "bucket": "graph-only-unconfirmed",
+      "count": 26,
+      "decision": "Keep in parallel evidence; do not promote automatically.",
+      "rationale": "The FHIR Schema graph is stricter than Records and not confirmed by Java reference evidence.",
+      "nextStep": "Promote only if Java/spec evidence confirms the category or product policy explicitly opts into stricter validation.",
+      "issueKeys": {
+        "structure-min|category.coding": 14,
+        "fixed|extension:stellungzurop.value.coding.system": 9,
+        "structure-min|identifier:maskierterversichertenidentifer.value": 1,
+        "structure-max|code.coding": 1,
+        "structure-min|code.coding": 1
+      },
+      "classifications": {
+        "category-coding-slice-cardinality": 14,
+        "extension-slice-fixed-value": 9,
+        "identifier-slice-child-cardinality": 1,
+        "code-coding-identity-vs-full-pattern": 1,
+        "forbidden-code-coding-slice-cardinality": 1,
+        "required-code-coding-slice-cardinality": 1
+      },
+      "sampleFixtures": [
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-base-patient-patient-mii-exa-person-patient-pseudonymisiert.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-abnahme-haemofiltration-einzelmesswerte.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-drainage-generisch.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-fluessigkeit-gesamt.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-gallenfluessigkeit.json"
+      ]
+    },
+    {
+      "id": "java-confirmed-records-gaps",
+      "priority": "P3",
+      "bucket": "graph-aligns-reference-records-missing",
+      "count": 0,
+      "decision": "No action: no Java-confirmed Records runtime gap in this report.",
+      "rationale": "This bucket means the schema graph and Java reference agree while Records misses the comparable behavior.",
+      "nextStep": "Keep as release-gate canary; fail if this bucket becomes non-empty.",
+      "issueKeys": {},
+      "sampleFixtures": []
+    },
+    {
+      "id": "java-confirmed-graph-gaps",
+      "priority": "P3",
+      "bucket": "records-aligns-reference-graph-missing",
+      "count": 0,
+      "decision": "No action: no Java-confirmed graph-only gap in this report.",
+      "rationale": "This bucket means Records and Java agree while the schema graph misses the comparable behavior.",
+      "nextStep": "Keep as graph-promotion gate.",
+      "issueKeys": {},
+      "sampleFixtures": []
+    },
+    {
+      "id": "reference-coverage-gaps",
+      "priority": "P3",
+      "bucket": "no-reference",
+      "count": 0,
+      "decision": "Generate or attach reference evidence before making parity claims for these cases.",
+      "rationale": "Cases without reference evidence cannot confirm whether local behavior should change.",
+      "nextStep": "Extend Java CLI supplement or repair the MII HTTP reference environment for these fixtures.",
+      "sampleFixtures": []
+    },
+    {
+      "id": "profile-scope-gaps",
+      "priority": "P3",
+      "bucket": "profile-missing",
+      "count": 55,
+      "decision": "Keep out of parity numerators; this report is the documented scope exclusion set.",
+      "rationale": "No-profile fixtures and intentionally unmapped profiles are corpus/scope issues, not validator runtime failures.",
+      "nextStep": "Add meta.profile to corpus fixtures where valid, or keep the profile in the documented exclusion set.",
+      "classifications": {
+        "noProfile": 43,
+        "intentionallyUnmapped": 12
+      },
+      "sampleFixtures": [
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-biobank-document-reference-document-reference-kulturprotokoll.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-biobank-document-reference-document-reference-protocol-crisprtp53.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-biobank-service-request-service-request-gewebe-biopsie.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-medikation-procedure-procedure-mii-exa-medikation-procedure-thiotepa.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-device-device-mii-exa-molgen-device-illumina-novaseq.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-device-device-mii-exa-molgen-device-sequencer-2.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-device-device-mii-exa-molgen-device-sequencer-nextseq.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-device-device-mii-exa-molgen-device-sequencer.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-device-device-mii-exa-molgen-device-thermofisher-ionchef.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-document-reference-document-reference-mii-exa-molgen-documentreference-bed-file.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-document-reference-document-reference-mii-exa-molgen-documentreference-fastq.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-media-media-mii-exa-molgen-media-coverage-plot.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-observation-observation-mii-exa-molgen-phenotypic-feature-1.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-observation-observation-mii-exa-molgen-phenotypic-feature-2.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-observation-observation-mii-exa-molgen-phenotypic-feature-3.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-observation-observation-mii-exa-molgen-phenotypic-feature-4.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-patient-patient-mii-exa-molgen-patient-2.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-patient-patient-mii-exa-molgen-patient-brca1.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-patient-patient-mii-exa-molgen-patient-fgfr2-fusion.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-patient-patient-mii-exa-molgen-patient-srcc.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-patient-patient-mii-exa-molgen-patient.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-plan-definition-plan-definition-mii-exa-molgen-protocol-agilent-sureselect.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-practitioner-practitioner-mii-exa-molgen-practitioner-lab.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-practitioner-practitioner-mii-exa-molgen-practitioner-ordering.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-practitioner-practitioner-mii-exa-molgen-practitioner-physician.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-specimen-specimen-mii-exa-molgen-specimen-blood-edta.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-molgen-specimen-specimen-mii-exa-molgen-specimen-dna-library.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-adverse-event-adverse-event-mii-exa-onko-oxaliplatin-neuropathy.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-diagnostic-report-diagnostic-report-patient-kim-musterperson-patho-report-1.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-encounter-encounter-mii-exa-onko-krk-bundle-encounter.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-encounter-encounter-mii-exa-onko-mamma-bundle-encounter.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-encounter-encounter-mii-exa-onko-melanom-bundle-encounter.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-encounter-encounter-mii-exa-onko-prostata-bundle-encounter.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-patient-patient-mii-exa-onko-folfox-patient.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-patient-patient-mii-exa-onko-krk-bundle-patient.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-patient-patient-mii-exa-onko-mamma-bundle-patient.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-patient-patient-mii-exa-onko-melanom-bundle-patient.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-patient-patient-mii-exa-onko-molecular-board-patient.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-patient-patient-mii-exa-onko-prostata-bundle-patient.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-patient-patient-patient-kim-musterperson.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-research-study-research-study-mii-exa-onko-studie-prob.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-service-request-service-request-mii-exa-onko-molecular-surgery-request.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-onkologie-specimen-specimen-patient-kim-musterperson-specimen-1.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-abgepumpte-muttermilch.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-muttermilch.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-oraler-fluessigkeit.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-saeuglingsnahrung.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-spendermilch.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-score-rass.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillenbefund.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillenform.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillengroesse.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillenlichtreaktion-direkt.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillenlichtreaktion-indirekt.json",
+        "quality-corpus/r4/profiled/mii-2026/mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillensymmetrie.json"
+      ]
+    }
+  ]
+}
