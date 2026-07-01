@@ -2,9 +2,15 @@ import type {
   FHIRSchemaBinding,
   FHIRSchemaElement,
   SDElement,
+  StructureDefinition,
 } from './fhir-schema-types';
 
-export function convertElement(el: SDElement): FHIRSchemaElement {
+export type TargetProfileTypeResolver = (canonical: string) => StructureDefinition | undefined;
+
+export function convertElement(
+  el: SDElement,
+  resolveTargetProfile?: TargetProfileTypeResolver,
+): FHIRSchemaElement {
   const result: FHIRSchemaElement = {};
 
   if (el.type && el.type.length === 1) {
@@ -13,6 +19,10 @@ export function convertElement(el: SDElement): FHIRSchemaElement {
 
     if (typeCode === 'Reference' && el.type[0].targetProfile) {
       result.refers = el.type[0].targetProfile;
+      const targetTypes = resolveReferenceTargetTypes(el.type[0].targetProfile, resolveTargetProfile);
+      if (targetTypes) {
+        result.referenceTargetTypes = targetTypes;
+      }
     }
 
     if ((typeCode === 'Extension') && el.type[0].profile?.length) {
@@ -71,4 +81,42 @@ function getFirstPrefixedValue(el: SDElement, prefix: 'fixed' | 'pattern'): unkn
     }
   }
   return undefined;
+}
+
+function resolveReferenceTargetTypes(
+  targetProfiles: string[],
+  resolveTargetProfile?: TargetProfileTypeResolver,
+): string[] | undefined {
+  const targetTypes = new Set<string>();
+
+  for (const profile of targetProfiles) {
+    const targetType = resolveReferenceTargetType(profile, resolveTargetProfile);
+    if (!targetType) {
+      return undefined;
+    }
+    targetTypes.add(targetType);
+  }
+
+  return targetTypes.size > 0 ? Array.from(targetTypes) : undefined;
+}
+
+function resolveReferenceTargetType(
+  canonical: string,
+  resolveTargetProfile?: TargetProfileTypeResolver,
+): string | undefined {
+  const stripped = canonical.split('|')[0];
+  if (
+    stripped === 'http://hl7.org/fhir/StructureDefinition/Resource' ||
+    stripped === 'http://hl7.org/fhir/StructureDefinition/DomainResource'
+  ) {
+    return undefined;
+  }
+
+  const coreMatch = stripped.match(/^http:\/\/hl7\.org\/fhir\/StructureDefinition\/([A-Z][A-Za-z]+)$/);
+  if (coreMatch) {
+    return coreMatch[1];
+  }
+
+  const resolved = resolveTargetProfile?.(stripped) ?? resolveTargetProfile?.(canonical);
+  return typeof resolved?.type === 'string' ? resolved.type : undefined;
 }

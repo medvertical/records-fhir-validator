@@ -35,8 +35,7 @@ import {
 } from './valueset-server-routing';
 import { TwoPhaseShadowEvaluator } from './valueset-two-phase-shadow';
 import {
-  hasUnsupportedFilterForSystem,
-  isUnresolvableSnomedExtensionFilterCode,
+  classifyUnverifiableFilterReason,
 } from './valueset-filter-checks';
 import { expandValueSet } from './valueset-expansion-loader';
 import { validateCodeInCodeSystemWithFallbacks } from './valueset-code-system-validator';
@@ -48,6 +47,7 @@ import {
 import {
   cloneTerminologyDiagnostics,
   createEmptyTerminologyDiagnostics,
+  recordTerminologyDelegation,
   recordTerminologyReason,
 } from './valueset-diagnostics';
 import { validateCodeViaTerminologyServerWithFilters } from './valueset-terminology-server-validation';
@@ -248,6 +248,7 @@ export class ValueSetValidator {
       const override = this.resolveServerForSystem(system);
       if (this.hasTerminologyServer(override) && (expandedCodes.size === 0 || this.resolutionConfig.serverDelegation?.validateCodes)) {
         logger.debug(`[ValueSetValidator] Code not found in local expansion for ${valueSetUrl}. Attempting server $validate-code...`);
+        recordTerminologyDelegation(this.terminologyDiagnostics.delegatedBindings, 'server-validate-code');
         const isValidOnServer = await this.validateCodeViaTerminologyServer(
           code,
           system,
@@ -262,20 +263,13 @@ export class ValueSetValidator {
       }
 
       const filteredIncludes = await this.packageLoader.getIncludeConceptFilters(valueSetUrl, fhirVersion);
-      if (hasUnsupportedFilterForSystem(filteredIncludes, system)) {
+      const unverifiableReason = classifyUnverifiableFilterReason(system, code, filteredIncludes);
+      if (unverifiableReason) {
         logger.debug(
-          `[ValueSetValidator] Unsupported include filter in ${valueSetUrl} ` +
+          `[ValueSetValidator] Unverifiable include filter (${unverifiableReason}) in ${valueSetUrl} ` +
           `for '${system ? `${system}|` : ''}${code}' – direct ValueSet membership cannot be verified locally`,
         );
-        recordTerminologyReason(this.terminologyDiagnostics.failOpenMembershipChecks, 'unsupported-filter');
-        return this.twoPhaseShadow.finish(twoPhaseLookup, true, { code, system, valueSetUrl });
-      }
-      if (isUnresolvableSnomedExtensionFilterCode(system, code, filteredIncludes)) {
-        logger.debug(
-          `[ValueSetValidator] SNOMED national-extension code '${code}' in filtered ` +
-          `${valueSetUrl} cannot be subsumed by an International Edition terminology server – failing open`,
-        );
-        recordTerminologyReason(this.terminologyDiagnostics.failOpenMembershipChecks, 'unresolvable-snomed-extension-filter');
+        recordTerminologyReason(this.terminologyDiagnostics.failOpenMembershipChecks, unverifiableReason);
         return this.twoPhaseShadow.finish(twoPhaseLookup, true, { code, system, valueSetUrl });
       }
 
@@ -405,6 +399,7 @@ export class ValueSetValidator {
 
     if (this.hasTerminologyServer(override) && shouldDelegateToServer) {
       logger.debug(`[ValueSetValidator] Code not found in local expansion for ${valueSetUrl}. Attempting server $validate-code...`);
+      recordTerminologyDelegation(this.terminologyDiagnostics.delegatedBindings, 'server-validate-code');
       const isValidOnServer = await this.validateCodeViaTerminologyServer(
         code,
         system,
@@ -423,28 +418,14 @@ export class ValueSetValidator {
     // package expansion is necessarily incomplete. If the remote server also
     // cannot confirm a non-required binding, report "not verified" rather
     // than a false-positive binding warning.
-    if (
-      bindingStrength !== 'required'
-      && hasUnsupportedFilterForSystem(filteredIncludes, system)
-    ) {
+    const unverifiableReason = classifyUnverifiableFilterReason(system, code, filteredIncludes);
+    if (bindingStrength !== 'required' && unverifiableReason) {
       logger.debug(
-        `[ValueSetValidator] Unsupported include filter in ${valueSetUrl} ` +
+        `[ValueSetValidator] Unverifiable include filter (${unverifiableReason}) in ${valueSetUrl} ` +
         `for '${system ? `${system}|` : ''}${code}' – skipping non-required binding check`,
       );
       this.twoPhaseShadow.finish(twoPhaseLookup, true, { code, system, valueSetUrl });
-      recordTerminologyReason(this.terminologyDiagnostics.unverifiedBindings, 'unsupported-filter');
-      return 'unverified';
-    }
-    if (
-      bindingStrength !== 'required'
-      && isUnresolvableSnomedExtensionFilterCode(system, code, filteredIncludes)
-    ) {
-      logger.debug(
-        `[ValueSetValidator] SNOMED national-extension code '${code}' in filtered ` +
-        `${valueSetUrl} cannot be subsumed by an International Edition terminology server – skipping non-required binding check`,
-      );
-      this.twoPhaseShadow.finish(twoPhaseLookup, true, { code, system, valueSetUrl });
-      recordTerminologyReason(this.terminologyDiagnostics.unverifiedBindings, 'unresolvable-snomed-extension-filter');
+      recordTerminologyReason(this.terminologyDiagnostics.unverifiedBindings, unverifiableReason);
       return 'unverified';
     }
 

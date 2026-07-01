@@ -12,6 +12,45 @@ ship together; package-only changes are noted under each release.
 
 No unreleased changes yet.
 
+## [0.4.1] — 2026-07-01
+
+Patch release for the standalone validator evidence lanes and MII reference
+workflow. Released with `@records-fhir/validation-types` 0.1.5.
+
+### Added
+
+- Added validator claim summary generation for publishing the current HL7,
+  MII reference, and FHIR Schema dual-path evidence in one machine-readable
+  artifact.
+- Added FHIR Schema dual-path action reporting so unconfirmed graph/reference
+  buckets remain explicit follow-up work instead of hidden parity debt.
+- Added package-backed terminology diagnostics and local terminology server
+  helpers for deterministic MII/FHIR Schema quality lanes.
+
+### Changed
+
+- Hardened the MII reference triangulation workflow with reference-health
+  probes, policy-rule extraction, skip taxonomy, and failed-profile prewarm
+  details.
+- Refreshed the public validator documentation around the 2026-07-01 evidence:
+  496/496 HL7 executable JSON comparisons, 231/231 measured MII reference
+  parity, and 555-fixture FHIR Schema dual-path coverage.
+- Tightened FHIR Schema graph slicing, reference-target extraction, and pattern
+  diagnostics while keeping the graph path in parallel evidence mode.
+
+### Fixed
+
+- Fixed MII package relevance detection so package names containing substrings
+  such as `isik` are not misclassified as Gematik ISiK packages.
+- Fixed nested profile slice scoping and choice/FHIRPath edge cases uncovered
+  by the MII and FHIR Schema dual-path lanes.
+
+### Verification
+
+- Verified with repository lint, stable tests, targeted validator Vitest
+  suites, full affected conformance, MII reference gate, HL7 parity gate, and
+  FHIR Schema dual-path report generation.
+
 ## [0.4.0] — 2026-06-30
 
 Runtime slicing and evidence-gate update for the standalone validator and

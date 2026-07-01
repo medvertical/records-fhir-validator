@@ -102,6 +102,9 @@ export async function scanPackageDirectory(
 
         if (sd?.resourceType === 'StructureDefinition' && sd.url) {
           availableProfiles.add(sd.url);
+          if (typeof sd.version === 'string' && sd.version.length > 0) {
+            availableProfiles.add(`${sd.url}|${sd.version}`);
+          }
         }
       } catch (error) {
         logger.debug(`[SDLoader] Error reading ${file}:`, error);

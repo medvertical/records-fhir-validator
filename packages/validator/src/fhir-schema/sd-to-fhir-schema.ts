@@ -84,7 +84,7 @@ export function convertToFHIRSchema(sd: StructureDefinition, resolveBase?: BaseR
     }));
   }
 
-  populateSchemaElements(schema, childElements, sd.type);
+  populateSchemaElements(schema, childElements, sd.type, resolveBase);
 
   // Clean up empty arrays
   if (schema.required!.length === 0) delete schema.required;

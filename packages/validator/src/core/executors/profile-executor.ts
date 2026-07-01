@@ -16,6 +16,10 @@ import { ConstraintValidator } from '../../validators/constraint-validator';
 import { GermanIdentifierValidator } from '../../validators/german-identifier-validator';
 import { GermanExtensionValidator } from '../../validators/german-extension-validator';
 import { logger } from '../../logger';
+import {
+  resolveNestedSliceParentItems,
+  scopeParentItemsToNestedSlice,
+} from './profile-nested-slice-scoping';
 
 // ============================================================================
 // Types
@@ -149,7 +153,7 @@ export class ProfileExecutor {
     for (const elementDef of structureDef.snapshot!.element!) {
       if (!elementDef.slicing) continue;
       const path = elementDef.path;
-      const nestedSliceParentItems = this.resolveNestedSliceParentItems(
+      const nestedSliceParentItems = resolveNestedSliceParentItems(
         resource,
         elementDef,
         structureDef,
@@ -160,7 +164,7 @@ export class ProfileExecutor {
 
       if (parentItems) {
         const scopedParents = nestedSliceParentItems
-          ?? this.scopeParentItemsToNestedSlice(parentItems, elementDef, structureDef)
+          ?? scopeParentItemsToNestedSlice(parentItems, elementDef, structureDef)
           ?? parentItems;
         for (const parentItem of scopedParents) {
           const leafKey = path.split('.').pop()!;
@@ -190,116 +194,6 @@ export class ProfileExecutor {
       }
     }
     return issues;
-  }
-
-  private isSlicingNestedUnderSlice(elementDef: { id?: string; path?: string }): boolean {
-    const id = elementDef.id;
-    if (!id || !elementDef.path) return false;
-    const segments = id.split('.');
-    const pathDepth = elementDef.path.split('.').length;
-    return segments.length >= pathDepth && segments.slice(0, -1).some(segment => segment.includes(':'));
-  }
-
-  private resolveNestedSliceParentItems(
-    resource: any,
-    elementDef: { id?: string; path?: string },
-    structureDef: StructureDefinition,
-    getValueAtPath: (resource: any, path: string) => any,
-  ): any[] | null {
-    const id = elementDef.id;
-    if (!id || !elementDef.path || !this.isSlicingNestedUnderSlice(elementDef)) return null;
-
-    const parentIdEnd = id.lastIndexOf('.');
-    if (parentIdEnd < 0) return null;
-
-    const parentSliceElementId = id.slice(0, parentIdEnd);
-    const parentSlice = structureDef.snapshot?.element?.find(e => e.id === parentSliceElementId);
-    if (!parentSlice?.path) return null;
-
-    const parentValue = getValueAtPath(resource, parentSlice.path);
-    const parentItems = this.coerceToArray(parentValue);
-    if (parentItems.length === 0) return [];
-
-    return this.scopeParentItemsToNestedSlice(parentItems, elementDef, structureDef);
-  }
-
-  private scopeParentItemsToNestedSlice(
-    parentItems: any[],
-    elementDef: { id?: string; path?: string },
-    structureDef: StructureDefinition,
-  ): any[] | null {
-    const id = elementDef.id;
-    if (!id || !elementDef.path || !this.isSlicingNestedUnderSlice(elementDef)) return null;
-
-    const parentPathEnd = elementDef.path.lastIndexOf('.');
-    const parentIdEnd = id.lastIndexOf('.');
-    if (parentIdEnd < 0 || parentPathEnd < 0) return null;
-
-    const parentSliceElementId = id.slice(0, parentIdEnd);
-    if (!parentSliceElementId.includes(':')) return null;
-    const parentSlice = structureDef.snapshot?.element?.find(e => e.id === parentSliceElementId);
-    if (!parentSlice?.sliceName || !parentSlice.path) return null;
-
-    const parentSlicingBase = structureDef.snapshot?.element?.find(
-      e => e.path === parentSlice.path && e.slicing,
-    );
-    if (!parentSlicingBase?.slicing?.discriminator?.length) return null;
-
-    const discriminator = parentSlicingBase.slicing.discriminator[0];
-    if (discriminator.type !== 'value') return null;
-
-    const discriminatorConstraint = structureDef.snapshot?.element?.find(
-      e => e.id === `${parentSliceElementId}.${discriminator.path}`,
-    );
-    const expectedPattern = this.extractPattern(discriminatorConstraint ?? parentSlice);
-    const expectedFixed = this.extractFixed(discriminatorConstraint ?? parentSlice);
-    const expected = expectedPattern ?? expectedFixed;
-    if (expected === undefined) return null;
-
-    return parentItems.filter(item => this.valueContainsPattern(
-      this.getPathValue(item, discriminator.path),
-      expected,
-    ));
-  }
-
-  private extractPattern(elementDef: any): any {
-    for (const [key, value] of Object.entries(elementDef)) {
-      if (key.startsWith('pattern')) return value;
-    }
-    return undefined;
-  }
-
-  private extractFixed(elementDef: any): any {
-    for (const [key, value] of Object.entries(elementDef)) {
-      if (key.startsWith('fixed')) return value;
-    }
-    return undefined;
-  }
-
-  private getPathValue(value: any, path: string): any {
-    if (!path || path === '$this') return value;
-    return path.split('.').reduce((current, segment) => {
-      if (current == null) return undefined;
-      return current[segment];
-    }, value);
-  }
-
-  private valueContainsPattern(actual: any, expected: any): boolean {
-    if (expected === undefined || expected === null) return true;
-    if (actual === undefined || actual === null) return false;
-    if (Array.isArray(expected)) {
-      if (!Array.isArray(actual)) return false;
-      return expected.every(expectedItem =>
-        actual.some(actualItem => this.valueContainsPattern(actualItem, expectedItem)),
-      );
-    }
-    if (typeof expected === 'object') {
-      if (typeof actual !== 'object') return false;
-      return Object.entries(expected).every(([key, expectedValue]) =>
-        this.valueContainsPattern(actual[key], expectedValue),
-      );
-    }
-    return actual === expected;
   }
 
   private elementMin(elementDef: { min?: number | string }): number {

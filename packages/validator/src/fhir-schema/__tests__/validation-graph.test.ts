@@ -230,6 +230,161 @@ describe('FHIR Schema validation graph', () => {
     ]));
   });
 
+  it('does not match whole-element $this slices from child-only patterns', () => {
+    const schema = convertToFHIRSchema({
+      url: 'http://example.org/StructureDefinition/ObservationChildOnlyThisSliceProfile',
+      name: 'ObservationChildOnlyThisSliceProfile',
+      type: 'Observation',
+      kind: 'resource',
+      snapshot: {
+        element: [
+          { path: 'Observation', min: 0, max: '*' },
+          { path: 'Observation.code', min: 1, max: '1', type: [{ code: 'CodeableConcept' }] },
+          {
+            id: 'Observation.code.coding',
+            path: 'Observation.code.coding',
+            min: 1,
+            max: '*',
+            type: [{ code: 'Coding' }],
+            slicing: { discriminator: [{ type: 'pattern', path: '$this' }], rules: 'open' },
+          },
+          {
+            id: 'Observation.code.coding:sct',
+            path: 'Observation.code.coding',
+            sliceName: 'sct',
+            min: 1,
+            max: '1',
+          },
+          {
+            id: 'Observation.code.coding:sct.code',
+            path: 'Observation.code.coding.code',
+            min: 1,
+            max: '1',
+            patternCode: '271625008',
+          },
+        ],
+      },
+    });
+    const graph = compileFHIRSchemaToValidationGraph(schema);
+
+    const issues = validateResourceWithGraph({
+      resourceType: 'Observation',
+      code: {
+        coding: [
+          { system: 'http://snomed.info/sct', code: '271625008' },
+        ],
+      },
+    }, graph);
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'profile-slice-min-cardinality',
+      path: 'Observation.code.coding',
+    }));
+  });
+
+  it('reports required unresolved resolve() slices as missing', () => {
+    const schema = convertToFHIRSchema({
+      url: 'http://example.org/StructureDefinition/ObservationFocusResolveProfile',
+      name: 'ObservationFocusResolveProfile',
+      type: 'Observation',
+      kind: 'resource',
+      snapshot: {
+        element: [
+          { path: 'Observation', min: 0, max: '*' },
+          {
+            id: 'Observation.focus',
+            path: 'Observation.focus',
+            min: 2,
+            max: '*',
+            type: [{ code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/Resource'] }],
+            slicing: { discriminator: [{ type: 'profile', path: 'resolve()' }], rules: 'open' },
+          },
+          {
+            id: 'Observation.focus:Diagnose',
+            path: 'Observation.focus',
+            sliceName: 'Diagnose',
+            min: 1,
+            max: '1',
+            type: [{ code: 'Reference', targetProfile: ['http://example.org/StructureDefinition/Diagnosis'] }],
+          },
+          {
+            id: 'Observation.focus:Operation',
+            path: 'Observation.focus',
+            sliceName: 'Operation',
+            min: 1,
+            max: '1',
+            type: [{ code: 'Reference', targetProfile: ['http://example.org/StructureDefinition/Operation'] }],
+          },
+        ],
+      },
+    }, url => ({
+      url,
+      name: url.split('/').at(-1) ?? 'Profile',
+      type: url.endsWith('/Operation') ? 'Procedure' : 'Condition',
+      kind: 'resource',
+      snapshot: { element: [] },
+    }));
+    const graph = compileFHIRSchemaToValidationGraph(schema);
+
+    const issues = validateResourceWithGraph({
+      resourceType: 'Observation',
+      focus: [
+        { reference: 'Condition/example' },
+        { reference: 'Procedure/example' },
+      ],
+    }, graph);
+
+    expect(issues.filter(issue => issue.code === 'profile-slice-min-cardinality')).toHaveLength(2);
+  });
+
+  it('reports closed unresolved resolve() slices as unmatched and missing', () => {
+    const schema = convertToFHIRSchema({
+      url: 'http://example.org/StructureDefinition/DiagnosticReportResolveProfile',
+      name: 'DiagnosticReportResolveProfile',
+      type: 'DiagnosticReport',
+      kind: 'resource',
+      snapshot: {
+        element: [
+          { path: 'DiagnosticReport', min: 0, max: '*' },
+          {
+            id: 'DiagnosticReport.result',
+            path: 'DiagnosticReport.result',
+            min: 1,
+            max: '*',
+            type: [{ code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/Observation'] }],
+            slicing: { discriminator: [{ type: 'value', path: 'resolve().code' }], rules: 'closed' },
+          },
+          {
+            id: 'DiagnosticReport.result:diagnostic-conclusion',
+            path: 'DiagnosticReport.result',
+            sliceName: 'diagnostic-conclusion',
+            min: 1,
+            max: '1',
+            type: [{ code: 'Reference', targetProfile: ['http://example.org/StructureDefinition/DiagnosticConclusion'] }],
+          },
+        ],
+      },
+    }, url => ({
+      url,
+      name: 'DiagnosticConclusion',
+      type: 'Observation',
+      kind: 'resource',
+      snapshot: { element: [] },
+    }));
+    const graph = compileFHIRSchemaToValidationGraph(schema);
+
+    const issues = validateResourceWithGraph({
+      resourceType: 'DiagnosticReport',
+      result: [
+        { reference: 'Observation/a' },
+        { reference: 'Observation/b' },
+      ],
+    }, graph);
+
+    expect(issues.map(issue => issue.code)).toContain('profile-slice-min-cardinality');
+    expect(issues.map(issue => issue.code)).toContain('profile-pattern-mismatch');
+  });
+
   it('keeps inherited slice cardinalities isolated when merging differentials', () => {
     const baseProfile = {
       url: 'http://example.org/StructureDefinition/BaseObservation',
@@ -400,6 +555,45 @@ describe('FHIR Schema validation graph', () => {
 
     expect(issues.map(issue => issue.code)).toContain('structural-required-element-missing');
     expect(issues.map(issue => issue.path)).toContain('Observation.component:SystolicBP.code.coding');
+  });
+
+  it('validates core Reference target types from graph refers metadata', () => {
+    const schema = convertToFHIRSchema({
+      url: 'http://example.org/StructureDefinition/ObservationReferenceProfile',
+      name: 'ObservationReferenceProfile',
+      type: 'Observation',
+      kind: 'resource',
+      snapshot: {
+        element: [
+          { path: 'Observation', min: 0, max: '*' },
+          {
+            path: 'Observation.subject',
+            min: 1,
+            max: '1',
+            type: [{
+              code: 'Reference',
+              targetProfile: [
+                'http://hl7.org/fhir/StructureDefinition/Patient',
+                'http://hl7.org/fhir/StructureDefinition/Group',
+              ],
+            }],
+          },
+        ],
+      },
+    });
+    const graph = compileFHIRSchemaToValidationGraph(schema);
+
+    const validIssues = validateResourceWithGraph({
+      resourceType: 'Observation',
+      subject: { reference: 'Patient/example' },
+    }, graph);
+    const invalidIssues = validateResourceWithGraph({
+      resourceType: 'Observation',
+      subject: { reference: 'Organization/example' },
+    }, graph);
+
+    expect(validIssues).toHaveLength(0);
+    expect(invalidIssues.map(issue => issue.code)).toContain('reference-target-type-invalid');
   });
 
   it('does not enforce child required fields when the optional parent is absent', () => {

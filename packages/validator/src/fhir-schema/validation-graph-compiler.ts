@@ -75,6 +75,7 @@ function compileElement(
     binding: element.binding,
     constraints: element.constraints,
     refers: element.refers,
+    referenceTargetTypes: element.referenceTargetTypes,
     slicing: element.slicing,
     source: {
       schemaUrl: schema.url,
@@ -107,6 +108,7 @@ function compileSlice(
     binding: slice.binding,
     constraints: slice.constraints,
     refers: slice.refers,
+    referenceTargetTypes: slice.referenceTargetTypes,
     source: {
       schemaUrl: schema.url,
       schemaType: schema.type,
@@ -156,4 +158,3 @@ export function summarizeGraph(nodes: ValidationGraphNode[]): ValidationGraphSta
 
   return stats;
 }
-

@@ -59,6 +59,44 @@ describe('convertToFHIRSchema', () => {
     expect(schema.elements!.managingOrganization.refers).toEqual([
       'http://hl7.org/fhir/StructureDefinition/Organization',
     ]);
+    expect(schema.elements!.managingOrganization.referenceTargetTypes).toEqual(['Organization']);
+  });
+
+  it('resolves profiled Reference targetProfiles to base resource types when possible', () => {
+    const targetProfile = {
+      url: 'http://example.org/StructureDefinition/SpecialPatient',
+      name: 'SpecialPatient',
+      type: 'Patient',
+      kind: 'resource',
+      snapshot: {
+        element: [
+          { path: 'Patient', min: 0, max: '*' },
+        ],
+      },
+    };
+    const schema = convertToFHIRSchema({
+      url: 'http://test/Observation',
+      name: 'Observation',
+      type: 'Observation',
+      kind: 'resource',
+      snapshot: {
+        element: [
+          { path: 'Observation', min: 0, max: '*' },
+          {
+            path: 'Observation.subject',
+            min: 1,
+            max: '1',
+            type: [{
+              code: 'Reference',
+              targetProfile: [targetProfile.url],
+            }],
+          },
+        ],
+      },
+    }, url => (url === targetProfile.url ? targetProfile : undefined));
+
+    expect(schema.elements!.subject.refers).toEqual([targetProfile.url]);
+    expect(schema.elements!.subject.referenceTargetTypes).toEqual(['Patient']);
   });
 
   it('handles required fields', () => {

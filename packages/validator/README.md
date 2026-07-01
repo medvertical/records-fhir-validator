@@ -403,10 +403,10 @@ headline support scope unless called out by a dedicated conformance lane.
 ## Conformance
 
 Current HL7 `FHIR/fhir-test-cases` status: 100.0% of executable comparison
-tests passing. The latest local report was generated on 2026-06-23 from pinned
+tests passing. The latest local report was generated on 2026-06-30 from pinned
 upstream commit `431b37cd06cac878bc23b4a8b457c2f2397fdcdc`. The local artifact
 used for this update was
-`conformance-results/report-local-review-2026-06-23.json`.
+`conformance-results/report-2026-06-30.json`.
 
 The upstream manifest contains more than 900 entries. Records does not claim
 that all manifest entries are executable in the current TypeScript validator
@@ -494,13 +494,15 @@ constraints measured by `quality:spec-coverage`.
 
 MII conformance is measured in a separate lane from the HL7
 `FHIR/fhir-test-cases` score. The current scoped MII-2026 reference run was
-generated on 2026-05-19 against the official MII FHIR Validator container
+generated on 2026-07-01 against the official MII FHIR Validator container
 `mii-fhir-validator:0.0.1-alpha.7` at `http://localhost:8081`. It matches the
-reference validator on 241/241 measured resources from the refreshed MII 2026
+reference validator on 231/231 measured resources from the refreshed MII 2026
 corpus under the `mii-2026-reference` profile scope and `mii-local-blaze`
-terminology mode, with 12 classified corpus/profile-drift skips. The
+terminology mode, with 22 classified skips: 12 corpus/profile-drift skips and
+10 reference-terminology-incomplete skips. The run prewarmed 128/128
+reference-scope profiles before executing the cases. The
 source-repository report is
-`conformance-results/mii-triangulation-alpha7-2026-05-19.json`.
+`conformance-results/mii-triangulation-2026-07-01.json`.
 
 This is a scoped parity claim for the measured package-example corpus. It is
 not an MII certification claim and does not imply full site-level MII
@@ -520,43 +522,43 @@ graph path runs in parallel and is compared against both Records' current
 StructureDefinition path and Java/reference `OperationOutcome` evidence where a
 reference report exists.
 
-The current MII Observation dual-path lane covers 261 real fixtures. Of those,
-131 have Java/reference coverage and 90 reference-comparable issues after
-excluding Java informational open-slice hints and Java-implied core Observation
-profiles (`bp`, `resprate`, `vitalsigns`) that are not part of the explicit MII
-profile contract for the lane. In that scoped lane, the graph path matches 73
-normalized Java/reference issue keys and the current Records comparable issue
-lane now also matches 73 after the slice-aware FHIR Schema merge and
-closed-slicing equivalence normalization loop.
+The current all-scope MII dual-path lane covers 555 real fixtures. Of those, 477
+have Java/reference coverage through the attached Java CLI supplement
+(`conformance-results/fhir-schema-reference-cli-supplement-all-2026-06-30.json`).
+The final report is
+`conformance-results/fhir-schema-dual-path-all-2026-06-30.json`.
+
+The lane reports 416 clean cases, 58 exact Graph/Records comparable matches, 26
+graph-only cases, 0 Records-only cases, 0 divergent cases, 55 missing-profile
+cases, and 0 execution errors. Both TypeScript paths match 75 normalized
+Java/reference issue keys; no Java-covered issue is currently classified as
+`graph-aligns-reference-records-missing`,
+`records-aligns-reference-graph-missing`, or `both-miss-reference`.
 
 Reference coverage is reported separately from graph-vs-Records correctness. The
-current attached MII HTTP reference report covers 131 fixtures and leaves 130
-reference-coverage gaps: 77 Onkologie fixtures outside the current report scope,
-47 Gematik ISiK/ICU fixtures outside that scope, 2 Person/Base fixtures outside
-that scope, and 4 fixtures without an explicit `meta.profile`. A separate local
-HL7 Java validator CLI supplement can cover the 126 profiled gaps and reduces
-the remaining reference-coverage gaps to the 4 no-profile fixtures. That CLI
-supplement is Java OperationOutcome evidence, not a replacement for the official
-MII HTTP reference validator container.
+remaining 78 reference-coverage gaps are 43 fixtures without an explicit
+`meta.profile` and 35 fixtures without a reference-report entry. The CLI
+supplement is Java `OperationOutcome` evidence for expanding the dual-path lane;
+it does not replace the official MII HTTP reference validator container for
+headline MII parity claims.
 
 The report classifies the remaining cases instead of hiding them in one score:
-46 three-way-match cases, no one-sided Graph/Java-vs-Records or
-Records/Java-vs-Graph confirmed gaps, 13 graph-only-unconfirmed cases, 13
-Records-only-unconfirmed cases, 1 both-miss-reference case, 12 intentionally
-unmapped profile-missing cases, and 4 no-profile fixture cases.
-The intentionally excluded classes are part of the evidence model: unsupported
-or unmapped corpus profiles, fixtures without an explicit profile, Java
-informational hints, and Java behavior from implicit core Observation profiles
-outside the measured MII profile contract.
+60 three-way-match cases, 25 local-engine-vs-reference-unconfirmed cases, 26
+graph-only-unconfirmed cases, 35 no-reference cases, 43 no-profile cases, and 12
+intentionally unmapped profile cases. The intentionally excluded classes are part
+of the evidence model: unsupported or unmapped corpus profiles, fixtures without
+an explicit profile, reference entries that have not yet been generated, Java
+informational hints, and reference-runtime behavior caused by unavailable
+terminology versions.
 
-The graph-vs-Records delta keys are also classified into decision buckets:
-forbidden or required `code.coding` slice cardinality, Coding identity versus
-full-pattern differences, component-slice expression granularity, and one
-Records-only `focus` rule. These remain visible until Java/reference coverage
-or an explicit product decision promotes them into runtime behavior. The single
-Java-covered both-miss case is the MII spontaneous respiratory-rate fixture,
-where Java reports a required `sct` `code.coding` slice as missing while both
-TypeScript paths accept the explicit child `system`/`code` pattern.
+The open decision buckets are explicit. Shared local-vs-reference signals are
+mostly `code.coding` slice cardinality, `category`/`category.coding` strictness,
+and `value.code` pattern checks. Graph-only unconfirmed signals are
+`category.coding` slice cardinality, oncology extension fixed-value strictness,
+one masked-identifier child cardinality case, and single required/forbidden
+`code.coding` slice-cardinality cases. These remain visible until
+Java/reference coverage or an explicit product decision promotes them into
+runtime behavior.
 
 This lane is therefore an implementation-reduction and convergence signal. It
 does not broaden the public headline parity claim beyond the explicitly measured

@@ -121,6 +121,52 @@ describe('SD FHIRPath issue provenance', () => {
 });
 
 describe('SD FHIRPath evaluation diagnostics', () => {
+  it('evaluates htmlChecks through the narrative XHTML validator', async () => {
+    const profile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/StructureDefinition/patient-htmlchecks',
+      name: 'PatientHtmlChecks',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Patient',
+      snapshot: {
+        element: [
+          {
+            id: 'Patient.text.div',
+            path: 'Patient.text.div',
+            constraint: [{
+              key: 'txt-1',
+              severity: 'error',
+              human: 'Narrative html checks',
+              expression: 'htmlChecks()',
+            }],
+          },
+        ],
+      },
+    };
+
+    const issues = await sdFHIRPathExecutor.execute({
+      resource: {
+        resourceType: 'Patient',
+        id: 'p1',
+        text: {
+          status: 'generated',
+          div: '<div xmlns="http://www.w3.org/1999/xhtml"><script>alert(1)</script></div>',
+        },
+      },
+      resourceType: 'Patient',
+      structureDef: profile,
+      fhirVersion: 'R4',
+    });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'narrative-forbidden-content',
+      path: 'Patient.text.div',
+      profile: profile.url,
+    }));
+  });
+
   it('surfaces compile failures as information instead of silently passing', async () => {
     const profile: StructureDefinition = {
       resourceType: 'StructureDefinition',

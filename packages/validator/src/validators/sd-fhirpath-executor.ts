@@ -9,6 +9,7 @@ import { InvariantRegistry } from './invariant-registry';
 import { preprocessTypeLiterals, resolveElementType } from './fhirpath-type-preprocessor';
 import { evaluateSimpleMemberOfExists, evaluateTrailingMemberOf } from './fhirpath-memberof-precheck';
 import { evaluateResolveExistsConstraint } from './fhirpath-resolve-precheck';
+import { appendHtmlChecksConstraintIssues } from './fhirpath-html-checks';
 import { ValueSetPackageLoader } from './valueset-package-loader';
 import { logger } from '../logger';
 import {
@@ -177,6 +178,8 @@ export class SDFHIRPathExecutor {
             const evaluationContext = this.expressionStartsAtResourceRoot(resolvedExpression, resourceType)
                 ? resource
                 : matched.data;
+            if (appendHtmlChecksConstraintIssues(issues, resolvedExpression, evaluationContext, matched.resourcePath, resourceType, profileUrl)) return issues;
+
             const memberOfPassed = await evaluateSimpleMemberOfExists(
                 resolvedExpression,
                 resource,
@@ -225,8 +228,7 @@ export class SDFHIRPathExecutor {
             // (memberOf, resolve, etc.) — these cannot be evaluated client-side.
             if (
                 message.includes('asynchronous function') ||
-                message.includes('is not allowed') ||
-                isUnsupportedEngineCapabilityError(message)
+                message.includes('is not allowed')
             ) {
                 logger.debug(`[SDFHIRPathExecutor] Skipping ${constraint.key} (unsupported async function)`);
                 return issues;
@@ -310,6 +312,11 @@ export class SDFHIRPathExecutor {
         });
 
         try {
+            if (
+                isRootConstraint &&
+                appendHtmlChecksConstraintIssues(issues, effectiveExpression, resource, elementPath, resourceType, profileUrl)
+            ) return issues;
+
             const memberOfPassed = await evaluateSimpleMemberOfExists(
                 effectiveExpression,
                 resource,
@@ -381,6 +388,8 @@ export class SDFHIRPathExecutor {
                 const contexts = elementContextResolver.resolveContexts(resource, elementPath, resourceType);
 
                 for (const ctx of contexts) {
+                    if (appendHtmlChecksConstraintIssues(issues, effectiveExpression, ctx.value, ctx.fullPath, resourceType, profileUrl)) continue;
+
                     const trailingMemberOf = evaluateTrailingMemberOf(effectiveExpression, ctx.value, fhirVersion);
                     if (trailingMemberOf !== null) {
                         if (!trailingMemberOf) {
@@ -500,10 +509,6 @@ export class SDFHIRPathExecutor {
         );
     }
 
-}
-
-function isUnsupportedEngineCapabilityError(message: string): boolean {
-    return message.includes('Not implemented: htmlChecks');
 }
 
 // Singleton

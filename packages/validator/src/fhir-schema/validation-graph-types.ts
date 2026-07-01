@@ -28,6 +28,7 @@ export interface ValidationGraphNode {
   binding?: FHIRSchemaBinding;
   constraints?: FHIRSchemaConstraint[];
   refers?: string[];
+  referenceTargetTypes?: string[];
   slicing?: FHIRSchemaSlicing;
   sliceName?: string;
   children?: ValidationGraphNode[];
@@ -49,4 +50,3 @@ export interface ValidationGraphStats {
   constraintCount: number;
   slicingCount: number;
 }
-

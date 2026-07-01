@@ -36,6 +36,14 @@ describe('slicing ValueSet loader boundary', () => {
     expect(loader.getPackageDirectories()[0]).toBe(explicitPath);
   });
 
+  it('searches the current bundled profile package directory for slicing ValueSets', () => {
+    const loader = createIsolatedSlicingValueSetLoader();
+
+    expect(loader.getPackageDirectories()).toContain(
+      join(process.cwd(), 'packages', 'bundled-profiles', 'storage', 'profiles', 'bundled'),
+    );
+  });
+
   it('restores literal $HOME paths when loader creation throws', () => {
     process.env.FHIR_PACKAGE_CACHE_PATH = '$HOME/.fhir/packages';
 

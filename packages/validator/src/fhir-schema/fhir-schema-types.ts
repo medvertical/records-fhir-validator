@@ -23,6 +23,7 @@ export interface FHIRSchemaElement {
   choiceOf?: string;
   choices?: string[];
   refers?: string[];
+  referenceTargetTypes?: string[];
   extensionUrl?: string;
   slicing?: FHIRSchemaSlicing;
   slices?: Record<string, FHIRSchemaSlice>;
@@ -44,6 +45,7 @@ export interface FHIRSchemaSlice {
   constraints?: FHIRSchemaConstraint[];
   choices?: string[];
   refers?: string[];
+  referenceTargetTypes?: string[];
   extensionUrl?: string;
   pattern?: unknown;
   fixed?: unknown;

@@ -1,4 +1,5 @@
 import { isSnomedNationalExtensionCode } from './terminology-api-client';
+import type { TerminologyUnverifiedReason } from './valueset-types';
 
 /**
  * Pure include-filter predicates shared by the ValueSet membership paths.
@@ -43,4 +44,18 @@ export function isUnresolvableSnomedExtensionFilterCode(
     && filter.property === 'concept'
     && (filter.op === 'is-a' || filter.op === 'descendent-of')
   );
+}
+
+export function classifyUnverifiableFilterReason(
+  system: string | undefined,
+  code: string,
+  filters: IncludeConceptFilter[],
+): TerminologyUnverifiedReason | undefined {
+  if (hasUnsupportedFilterForSystem(filters, system)) {
+    return 'unsupported-filter';
+  }
+  if (isUnresolvableSnomedExtensionFilterCode(system, code, filters)) {
+    return 'unresolvable-snomed-extension-filter';
+  }
+  return undefined;
 }

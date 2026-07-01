@@ -180,6 +180,7 @@ interface AllowedTargetsIndex {
 function buildAllowedTargetsIndex(sd: StructureDefinition, profileTypeResolver?: ProfileTypeResolver): AllowedTargetsIndex {
   const byPath = new Map<string, Set<string> | null>();
   for (const el of sd.snapshot?.element ?? []) {
+    if (el.sliceName) continue;
     if (!el.type || el.type.length === 0) continue;
     const referenceTypes = el.type.filter(t => t.code === 'Reference');
     if (referenceTypes.length === 0) continue;

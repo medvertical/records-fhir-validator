@@ -14,7 +14,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { logger } from '../logger';
 
-const INDEX_VERSION = 2; // Bumped: v1 index may have cached empty-package dedup results
+const INDEX_VERSION = 3; // Bumped: v2 omitted versioned canonical aliases from local profile scans
 const INDEX_FILENAME = 'sdloader-profile-index.json';
 
 interface PackageIndexEntry {

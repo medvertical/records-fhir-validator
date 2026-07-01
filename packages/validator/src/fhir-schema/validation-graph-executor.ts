@@ -1,6 +1,12 @@
-import { isDeepStrictEqual } from 'node:util';
-
 import type { ValidationIssue } from '../types';
+import { valuesMatch } from '../validators/slice-utils';
+import { matchPatternWithDiagnostic } from './validation-graph-pattern-diagnostics';
+import { validateReferenceTarget } from './validation-graph-reference-targets';
+import {
+  isSliceMatchableByValue,
+  matchesSliceForParent,
+  shouldReportUnmatchableRequiredSlice,
+} from './validation-graph-slice-matching';
 import type { ValidationGraph, ValidationGraphNode } from './validation-graph-types';
 
 export function validateResourceWithGraph(resource: unknown, graph: ValidationGraph): ValidationIssue[] {
@@ -80,7 +86,7 @@ function validateNodeForParents(
   }
 
   for (const value of values) {
-    if (node.fixed !== undefined && !isDeepStrictEqual(value, node.fixed)) {
+    if (node.fixed !== undefined && !valuesMatch(value, node.fixed)) {
       issues.push(createIssue(
         'profile-fixed-value-mismatch',
         node.path,
@@ -89,7 +95,7 @@ function validateNodeForParents(
       ));
     }
     if (node.pattern !== undefined) {
-      const pattern = matchesPattern(value, node.pattern, node.path);
+      const pattern = matchPatternWithDiagnostic(value, node.pattern, node.path);
       if (!pattern.matches) {
         issues.push(createIssue(
           'profile-pattern-mismatch',
@@ -99,6 +105,9 @@ function validateNodeForParents(
         ));
       }
     }
+
+    const referenceIssue = validateReferenceTarget(value, node, graph);
+    if (referenceIssue) issues.push(referenceIssue);
   }
 
   const children = node.children ?? [];
@@ -122,14 +131,18 @@ function validateSliceChildren(
   graph: ValidationGraph,
   issues: ValidationIssue[],
 ): void {
-  const enforceableSlices = sliceNodes.filter(isPatternMatchableSlice);
-  if (enforceableSlices.length === 0) {
+  const enforceableSlices = sliceNodes.filter(slice => isSliceMatchableByValue(parentNode, slice));
+  const unmatchableRequiredSlices = sliceNodes.filter(slice =>
+    !enforceableSlices.includes(slice) &&
+    shouldReportUnmatchableRequiredSlice(parentNode, slice)
+  );
+  if (enforceableSlices.length === 0 && unmatchableRequiredSlices.length === 0) {
     return;
   }
 
   const matchCounts = new Map<ValidationGraphNode, number>();
   for (const slice of enforceableSlices) {
-    const matchedValues = values.filter(value => matchesSlice(value, slice));
+    const matchedValues = values.filter(value => matchesSliceForParent(value, parentNode, slice));
     matchCounts.set(slice, matchedValues.length);
     for (const child of slice.children ?? []) {
       if (child.sliceName) {
@@ -139,7 +152,7 @@ function validateSliceChildren(
     }
   }
 
-  for (const slice of enforceableSlices) {
+  for (const slice of [...enforceableSlices, ...unmatchableRequiredSlices]) {
     const count = matchCounts.get(slice) ?? 0;
     const min = slice.min ?? 0;
     if (min > 0 && count < min) {
@@ -170,7 +183,7 @@ function validateSliceChildren(
 
   const allowedSlices = enforceableSlices.filter(slice => slice.max !== 0);
   for (const value of values) {
-    const hasAllowedMatch = allowedSlices.some(slice => matchesSlice(value, slice));
+    const hasAllowedMatch = allowedSlices.some(slice => matchesSliceForParent(value, parentNode, slice));
     if (!hasAllowedMatch) {
       issues.push(createIssue(
         'profile-pattern-mismatch',
@@ -180,30 +193,6 @@ function validateSliceChildren(
       ));
     }
   }
-}
-
-function matchesSlice(value: unknown, slice: ValidationGraphNode): boolean {
-  if (slice.fixed !== undefined && !isDeepStrictEqual(value, slice.fixed)) {
-    return false;
-  }
-  if (slice.pattern !== undefined && !matchesPattern(value, slice.pattern, slice.path).matches) {
-    return false;
-  }
-  if (slice.fixed !== undefined || slice.pattern !== undefined) {
-    return true;
-  }
-
-  const matchableChildren = (slice.children ?? []).filter(isPatternMatchableSlice);
-  return matchableChildren.length > 0 && matchableChildren.every(child => {
-    const childValues = getDirectValues(value, child.name);
-    return childValues.some(childValue => matchesSlice(childValue, child));
-  });
-}
-
-function isPatternMatchableSlice(slice: ValidationGraphNode): boolean {
-  return slice.fixed !== undefined
-    || slice.pattern !== undefined
-    || (slice.children ?? []).some(isPatternMatchableSlice);
 }
 
 function validateChoiceNode(
@@ -239,11 +228,11 @@ function validateChoiceNode(
 
     const choiceValues = presentEntries.map(entry => entry.value);
     for (const value of choiceValues) {
-      if (node.fixed !== undefined && !isDeepStrictEqual(value, node.fixed)) {
+      if (node.fixed !== undefined && !valuesMatch(value, node.fixed)) {
         issues.push(createIssue('profile-fixed-value-mismatch', node.path, `Choice '${node.path}' does not match fixed value`, graph));
       }
       if (node.pattern !== undefined) {
-        const pattern = matchesPattern(value, node.pattern, node.path);
+        const pattern = matchPatternWithDiagnostic(value, node.pattern, node.path);
         if (!pattern.matches) {
           issues.push(createIssue(
             'profile-pattern-mismatch',
@@ -258,7 +247,7 @@ function validateChoiceNode(
     for (const entry of presentEntries) {
       const choiceSlice = (node.children ?? []).find(child => child.sliceName === entry.name);
       if (choiceSlice?.pattern !== undefined) {
-        const pattern = matchesPattern(entry.value, choiceSlice.pattern, choiceSlice.path);
+        const pattern = matchPatternWithDiagnostic(entry.value, choiceSlice.pattern, choiceSlice.path);
         if (!pattern.matches) {
           issues.push(createIssue(
             'profile-pattern-mismatch',
@@ -268,7 +257,7 @@ function validateChoiceNode(
           ));
         }
       }
-      if (choiceSlice?.fixed !== undefined && !isDeepStrictEqual(entry.value, choiceSlice.fixed)) {
+      if (choiceSlice?.fixed !== undefined && !valuesMatch(entry.value, choiceSlice.fixed)) {
         issues.push(createIssue(
           'profile-fixed-value-mismatch',
           choiceSlice.path,
@@ -361,78 +350,6 @@ function getDirectValues(parent: unknown, property: string): unknown[] {
   }
   const value = parent[property];
   return Array.isArray(value) ? value : [value];
-}
-
-function matchesPattern(value: unknown, pattern: unknown, basePath: string): { matches: boolean; message?: string; path?: string } {
-  if (pattern === undefined || pattern === null) {
-    return { matches: true };
-  }
-
-  if (!isRecord(pattern)) {
-    if (Array.isArray(pattern)) {
-      if (!Array.isArray(value)) {
-        return {
-          matches: false,
-          message: `Element '${basePath}' is not an array but pattern requires array`,
-          path: basePath,
-        };
-      }
-      for (let i = 0; i < pattern.length; i += 1) {
-        const patternItem = pattern[i];
-        const hasMatch = value.some(actualItem => matchesPattern(actualItem, patternItem, `${basePath}[${i}]`).matches);
-        if (!hasMatch) {
-          return {
-            matches: false,
-            message: `Element '${basePath}' does not contain an item matching pattern entry ${i}`,
-            path: basePath,
-          };
-        }
-      }
-      return { matches: true };
-    }
-
-    return {
-      matches: isDeepStrictEqual(value, pattern),
-      message: `Element '${basePath}' does not match pattern`,
-      path: basePath,
-    };
-  }
-
-  if (Array.isArray(value)) {
-    const match = value.find(item => matchesPattern(item, pattern, basePath).matches);
-    if (match !== undefined) {
-      return { matches: true };
-    }
-    return {
-      matches: false,
-      message: `Element '${basePath}' does not contain an item matching pattern`,
-      path: basePath,
-    };
-  }
-
-  if (!isRecord(value)) {
-    return {
-      matches: false,
-      message: `Element '${basePath}' is not an object but pattern requires object structure`,
-      path: basePath,
-    };
-  }
-
-  for (const [key, expected] of Object.entries(pattern)) {
-    if (!(key in value)) {
-      return {
-        matches: false,
-        message: `Element '${basePath}.${key}' is missing but required by pattern`,
-        path: `${basePath}.${key}`,
-      };
-    }
-    const child = matchesPattern(value[key], expected, `${basePath}.${key}`);
-    if (!child.matches) {
-      return child;
-    }
-  }
-
-  return { matches: true };
 }
 
 function createIssue(code: string, path: string, message: string, graph?: ValidationGraph): ValidationIssue {

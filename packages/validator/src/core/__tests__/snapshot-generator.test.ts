@@ -213,6 +213,79 @@ describe('SnapshotGenerator', () => {
         code: '150276',
       });
     });
+
+    it('merges nested slices by id instead of path and repeated slice name', async () => {
+      const baseProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://example.org/Profile/BaseBloodPressure',
+        name: 'BaseBloodPressure',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Observation',
+        snapshot: {
+          element: [
+            { id: 'Observation', path: 'Observation', min: 0, max: '*' } as ElementDefinition,
+            {
+              id: 'Observation.component:SystolicBP.code.coding:loinc',
+              path: 'Observation.component.code.coding',
+              sliceName: 'loinc',
+              min: 1,
+              max: '1',
+              patternCoding: { system: 'http://loinc.org', code: '8480-6' },
+            } as ElementDefinition,
+            {
+              id: 'Observation.component:meanBP.code.coding:loinc',
+              path: 'Observation.component.code.coding',
+              sliceName: 'loinc',
+              min: 1,
+              max: '1',
+              patternCoding: { system: 'http://loinc.org', code: '8478-0' },
+            } as ElementDefinition,
+          ],
+        },
+      };
+
+      const childProfile: StructureDefinition = {
+        resourceType: 'StructureDefinition',
+        url: 'http://example.org/Profile/LeftAtrialPressure',
+        name: 'LeftAtrialPressure',
+        status: 'active',
+        kind: 'resource',
+        abstract: false,
+        type: 'Observation',
+        baseDefinition: baseProfile.url,
+        differential: {
+          element: [
+            {
+              id: 'Observation.component:SystolicBP.code.coding:loinc',
+              path: 'Observation.component.code.coding',
+              sliceName: 'loinc',
+              min: 1,
+              max: '1',
+              patternCoding: { system: 'http://loinc.org', code: '60989-1' },
+            } as ElementDefinition,
+            {
+              id: 'Observation.component:meanBP.code.coding:loinc',
+              path: 'Observation.component.code.coding',
+              sliceName: 'loinc',
+              min: 1,
+              max: '1',
+              patternCoding: { system: 'http://loinc.org', code: '8399-8' },
+            } as ElementDefinition,
+          ],
+        },
+      };
+
+      vi.spyOn(sdLoader, 'loadProfile').mockResolvedValue(baseProfile);
+
+      const snapshot = await generator.generateSnapshot(childProfile, { cacheResults: false });
+      const systolicLoinc = snapshot.find(e => e.id === 'Observation.component:SystolicBP.code.coding:loinc');
+      const meanLoinc = snapshot.find(e => e.id === 'Observation.component:meanBP.code.coding:loinc');
+
+      expect(systolicLoinc?.patternCoding).toEqual({ system: 'http://loinc.org', code: '60989-1' });
+      expect(meanLoinc?.patternCoding).toEqual({ system: 'http://loinc.org', code: '8399-8' });
+    });
     
     it('should clear cache', () => {
       generator.clearCache();

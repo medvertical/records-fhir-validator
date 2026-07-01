@@ -62,6 +62,13 @@ export class ValueSetPackageLoader {
         // Bundled packages shipped with the application
         directories.push(path.join(process.cwd(), 'server', 'data', 'fhir-packages'));
 
+        // Current workspace package bundle used by the local validator and
+        // conformance tooling.
+        directories.push(path.join(process.cwd(), 'packages', 'bundled-profiles', 'storage', 'profiles', 'bundled'));
+
+        // Legacy bundled IG location kept for server-side deployments.
+        directories.push(path.join(process.cwd(), 'server', 'data', 'bundled-igs'));
+
         // Bundled profiles (FHIR R4 Core, IGs, etc.)
         directories.push(path.join(process.cwd(), 'server', 'storage', 'profiles', 'bundled'));
 

@@ -444,6 +444,264 @@ describe('ProfileExecutor', () => {
       );
     });
 
+    it('should scope nested child slicing to pattern-matched parent slice items', async () => {
+      const systolic = {
+        code: {
+          coding: [
+            { system: 'http://loinc.org', code: '8480-6' },
+            { system: 'http://snomed.info/sct', code: '271649006' },
+          ],
+        },
+      };
+      const mean = {
+        code: {
+          coding: [
+            { system: 'http://loinc.org', code: '8478-0' },
+            { system: 'http://snomed.info/sct', code: '6797001' },
+          ],
+        },
+      };
+      const diastolic = {
+        code: {
+          coding: [
+            { system: 'http://loinc.org', code: '8462-4' },
+            { system: 'http://snomed.info/sct', code: '271650006' },
+          ],
+        },
+      };
+
+      mockContext.resource = {
+        resourceType: 'Observation',
+        component: [systolic, mean, diastolic],
+      };
+      mockContext.resourceType = 'Observation';
+      mockContext.structureDef.type = 'Observation';
+      mockStructureDef.type = 'Observation';
+      mockContext.getValueAtPath = (resource: any, path: string) => {
+        const parts = path.split('.').slice(1);
+        let current = resource;
+        for (const part of parts) {
+          if (Array.isArray(current)) {
+            current = current.flatMap((item: any) => item?.[part]).filter((item: any) => item !== undefined);
+          } else {
+            current = current?.[part];
+          }
+        }
+        return current;
+      };
+      mockStructureDef.snapshot!.element = [
+        {
+          id: 'Observation.component',
+          path: 'Observation.component',
+          min: 2,
+          max: '3',
+          slicing: {
+            discriminator: [{ type: 'pattern', path: 'code' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:SystolicBP',
+          path: 'Observation.component',
+          sliceName: 'SystolicBP',
+          min: 1,
+          max: '1',
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:SystolicBP.code',
+          path: 'Observation.component.code',
+          patternCodeableConcept: {
+            coding: [{ system: 'http://loinc.org', code: '8480-6' }],
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:SystolicBP.code.coding',
+          path: 'Observation.component.code.coding',
+          min: 2,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'pattern', path: '$this' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:SystolicBP.code.coding:loinc',
+          path: 'Observation.component.code.coding',
+          sliceName: 'loinc',
+          min: 1,
+          max: '1',
+          patternCoding: { system: 'http://loinc.org', code: '8480-6' },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:DiastolicBP',
+          path: 'Observation.component',
+          sliceName: 'DiastolicBP',
+          min: 1,
+          max: '1',
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:DiastolicBP.code',
+          path: 'Observation.component.code',
+          patternCodeableConcept: {
+            coding: [{ system: 'http://loinc.org', code: '8462-4' }],
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:DiastolicBP.code.coding',
+          path: 'Observation.component.code.coding',
+          min: 2,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'pattern', path: '$this' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:DiastolicBP.code.coding:loinc',
+          path: 'Observation.component.code.coding',
+          sliceName: 'loinc',
+          min: 1,
+          max: '1',
+          patternCoding: { system: 'http://loinc.org', code: '8462-4' },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:meanBP',
+          path: 'Observation.component',
+          sliceName: 'meanBP',
+          min: 0,
+          max: '1',
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:meanBP.code',
+          path: 'Observation.component.code',
+          patternCodeableConcept: {
+            coding: [{ system: 'http://loinc.org', code: '8478-0' }],
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:meanBP.code.coding',
+          path: 'Observation.component.code.coding',
+          min: 2,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'pattern', path: '$this' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:meanBP.code.coding:loinc',
+          path: 'Observation.component.code.coding',
+          sliceName: 'loinc',
+          min: 1,
+          max: '1',
+          patternCoding: { system: 'http://loinc.org', code: '8478-0' },
+        } as ElementDefinition,
+      ];
+
+      const validateSlicingSpy = vi.fn().mockResolvedValue([]);
+      mockSlicingValidator.validateSlicing = validateSlicingSpy;
+
+      await executor.validate(mockContext);
+
+      const nestedCalls = validateSlicingSpy.mock.calls.filter(
+        call => call[1] === 'Observation.component.code.coding',
+      );
+      expect(nestedCalls).toHaveLength(3);
+      expect(nestedCalls.map(call => [call[4], call[0][0].code])).toEqual([
+        ['Observation.component:SystolicBP.code.coding', '8480-6'],
+        ['Observation.component:DiastolicBP.code.coding', '8462-4'],
+        ['Observation.component:meanBP.code.coding', '8478-0'],
+      ]);
+    });
+
+    it('should scope nested child slicing by child patterns when parent slice patterns are inherited', async () => {
+      const systolic = {
+        code: {
+          coding: [
+            { system: 'http://loinc.org', code: '8480-6' },
+            { system: 'urn:iso:std:iso:11073:10101', code: '150065' },
+          ],
+        },
+      };
+      const diastolic = {
+        code: {
+          coding: [
+            { system: 'http://loinc.org', code: '8462-4' },
+            { system: 'urn:iso:std:iso:11073:10101', code: '150066' },
+          ],
+        },
+      };
+
+      mockContext.resource = {
+        resourceType: 'Observation',
+        component: [systolic, diastolic],
+      };
+      mockContext.resourceType = 'Observation';
+      mockContext.structureDef.type = 'Observation';
+      mockStructureDef.type = 'Observation';
+      mockContext.getValueAtPath = (resource: any, path: string) => {
+        const parts = path.split('.').slice(1);
+        let current = resource;
+        for (const part of parts) {
+          if (Array.isArray(current)) {
+            current = current.flatMap((item: any) => item?.[part]).filter((item: any) => item !== undefined);
+          } else {
+            current = current?.[part];
+          }
+        }
+        return current;
+      };
+      mockStructureDef.snapshot!.element = [
+        {
+          id: 'Observation.component',
+          path: 'Observation.component',
+          min: 2,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'pattern', path: 'code' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:SystolicBP',
+          path: 'Observation.component',
+          sliceName: 'SystolicBP',
+          min: 1,
+          max: '1',
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:SystolicBP.code.coding',
+          path: 'Observation.component.code.coding',
+          min: 2,
+          max: '*',
+          slicing: {
+            discriminator: [{ type: 'pattern', path: '$this' }],
+            rules: 'open',
+          },
+        } as ElementDefinition,
+        {
+          id: 'Observation.component:SystolicBP.code.coding:IEEE-11073',
+          path: 'Observation.component.code.coding',
+          sliceName: 'IEEE-11073',
+          min: 1,
+          max: '1',
+          patternCoding: { system: 'urn:iso:std:iso:11073:10101', code: '150065' },
+        } as ElementDefinition,
+      ];
+
+      const validateSlicingSpy = vi.fn().mockResolvedValue([]);
+      mockSlicingValidator.validateSlicing = validateSlicingSpy;
+
+      await executor.validate(mockContext);
+
+      const nestedCalls = validateSlicingSpy.mock.calls.filter(
+        call => call[1] === 'Observation.component.code.coding',
+      );
+      expect(nestedCalls).toHaveLength(1);
+      expect(nestedCalls[0][4]).toBe('Observation.component:SystolicBP.code.coding');
+      expect(nestedCalls[0][0][0].code).toBe('8480-6');
+    });
+
     it('should validate child slicing per parent when max is numeric and repeating', async () => {
       mockContext.resource = {
         resourceType: 'Observation',

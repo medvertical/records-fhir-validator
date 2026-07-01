@@ -167,9 +167,7 @@ export class SnapshotGenerator {
         // differential properties into it so pattern/fixed/cardinality
         // refinements are not lost. Without this, the base slice (without
         // patterns) would shadow the derived one.
-        const existingIdx = mergedElements.findIndex(
-          e => e.path === path && e.sliceName === diffElement.sliceName
-        );
+        const existingIdx = this.findExistingSliceIndex(mergedElements, diffElement);
         if (existingIdx >= 0) {
           mergedElements[existingIdx] = this.mergeElementProperties(
             mergedElements[existingIdx],
@@ -200,6 +198,33 @@ export class SnapshotGenerator {
 
   private isSliceScopedElement(element: ElementDefinition): boolean {
     return typeof element.id === 'string' && element.id.includes(':');
+  }
+
+  private findExistingSliceIndex(
+    elements: ElementDefinition[],
+    diffElement: ElementDefinition,
+  ): number {
+    if (diffElement.id) {
+      const exactIdIndex = elements.findIndex(element => element.id === diffElement.id);
+      if (exactIdIndex >= 0) return exactIdIndex;
+    }
+
+    const diffScope = this.sliceParentScope(diffElement);
+    return elements.findIndex(element =>
+      element.path === diffElement.path &&
+      element.sliceName === diffElement.sliceName &&
+      this.sliceParentScope(element) === diffScope
+    );
+  }
+
+  private sliceParentScope(element: ElementDefinition): string {
+    if (!element.id || !element.sliceName) return '';
+
+    const sliceSuffix = `:${element.sliceName}`;
+    const sliceStart = element.id.lastIndexOf(sliceSuffix);
+    if (sliceStart < 0) return '';
+
+    return element.id.slice(0, sliceStart);
   }
 
   /**

@@ -4,7 +4,7 @@ import type {
   FHIRSchemaSlice,
   SDElement,
 } from './fhir-schema-types';
-import { capitalize, convertElement } from './fhir-schema-element-converter';
+import { capitalize, convertElement, type TargetProfileTypeResolver } from './fhir-schema-element-converter';
 
 interface SlicingDefinition {
   discriminator: Array<{ type: string; path: string }>;
@@ -16,6 +16,7 @@ export function populateSchemaElements(
   schema: FHIRSchema,
   childElements: SDElement[],
   rootType: string,
+  resolveTargetProfile?: TargetProfileTypeResolver,
 ): void {
   const slicingDefs = collectSlicingDefinitions(childElements);
   schema.elements ??= {};
@@ -23,9 +24,9 @@ export function populateSchemaElements(
 
   for (const el of childElements) {
     if (el.sliceName) {
-      addSliceElement(schema.elements, el, rootType, slicingDefs);
+      addSliceElement(schema.elements, el, rootType, slicingDefs, resolveTargetProfile);
     } else {
-      addRegularElement(schema.elements, schema.required, el, rootType);
+      addRegularElement(schema.elements, schema.required, el, rootType, resolveTargetProfile);
     }
   }
 }
@@ -50,6 +51,7 @@ function addSliceElement(
   el: SDElement,
   rootType: string,
   slicingDefs: Map<string, SlicingDefinition>,
+  resolveTargetProfile?: TargetProfileTypeResolver,
 ): void {
   const relativePath = getRelativePath(el, rootType);
   if (!relativePath) {
@@ -81,7 +83,7 @@ function addSliceElement(
 
   parent.slices ??= {};
   const existingSlice = parent.slices[el.sliceName!] ?? {};
-  const nextSlice = createSliceDefinition(el);
+  const nextSlice = createSliceDefinition(el, resolveTargetProfile);
   parent.slices[el.sliceName!] = {
     ...existingSlice,
     ...nextSlice,
@@ -94,6 +96,7 @@ function addRegularElement(
   required: string[],
   el: SDElement,
   rootType: string,
+  resolveTargetProfile?: TargetProfileTypeResolver,
 ): void {
   const relativePath = getRelativePath(el, rootType);
   if (!relativePath) {
@@ -107,7 +110,7 @@ function addRegularElement(
 
   if (originalFieldName.endsWith('[x]')) {
     const baseName = fieldName;
-    const choiceElement = convertElementWithSlicing(el);
+    const choiceElement = convertElementWithSlicing(el, resolveTargetProfile);
     choiceElement.type ??= 'choice';
     if (el.type) {
       choiceElement.choices = el.type.map(t => baseName + capitalize(t.code));
@@ -115,9 +118,9 @@ function addRegularElement(
     target[baseName] = choiceElement;
     fieldName = baseName;
   } else if (target[fieldName]) {
-    Object.assign(target[fieldName], convertElementWithSlicing(el));
+    Object.assign(target[fieldName], convertElementWithSlicing(el, resolveTargetProfile));
   } else {
-    target[fieldName] = convertElementWithSlicing(el);
+    target[fieldName] = convertElementWithSlicing(el, resolveTargetProfile);
   }
 
   if (relativePath.length === 1 && el.min && el.min > 0) {
@@ -205,8 +208,11 @@ function parseIdPart(part: string): {
   };
 }
 
-function convertElementWithSlicing(el: SDElement): FHIRSchemaElement {
-  const converted = convertElement(el);
+function convertElementWithSlicing(
+  el: SDElement,
+  resolveTargetProfile?: TargetProfileTypeResolver,
+): FHIRSchemaElement {
+  const converted = convertElement(el, resolveTargetProfile);
   if (el.slicing) {
     converted.slicing = toFHIRSchemaSlicing({
       discriminator: (el.slicing as any).discriminator || [],
@@ -239,18 +245,22 @@ function getOrCreateParent(
   return target;
 }
 
-function createSliceDefinition(el: SDElement): FHIRSchemaSlice {
+function createSliceDefinition(
+  el: SDElement,
+  resolveTargetProfile?: TargetProfileTypeResolver,
+): FHIRSchemaSlice {
   const sliceDef: FHIRSchemaSlice = {};
   if (el.min !== undefined) sliceDef.min = el.min;
   if (el.max && el.max !== '*') sliceDef.max = parseInt(el.max, 10);
   else if (el.max === '*') sliceDef.max = '*';
 
-  const converted = convertElement(el);
+  const converted = convertElement(el, resolveTargetProfile);
   if (converted.type) sliceDef.type = converted.type;
   if (converted.binding) sliceDef.binding = converted.binding;
   if (converted.constraints) sliceDef.constraints = converted.constraints;
   if (converted.choices) sliceDef.choices = converted.choices;
   if (converted.refers) sliceDef.refers = converted.refers;
+  if (converted.referenceTargetTypes) sliceDef.referenceTargetTypes = converted.referenceTargetTypes;
   if (converted.pattern) sliceDef.pattern = converted.pattern;
   if (converted.fixed) sliceDef.fixed = converted.fixed;
   if (converted.extensionUrl) sliceDef.extensionUrl = converted.extensionUrl;

@@ -19,7 +19,7 @@ import {
   getOrCompileFHIRPathExpression,
 } from './constraint-expression-cache';
 import { validateDom3Constraint } from './constraint-dom-rules';
-import { elementExistsInResource, hasEmptyBackboneElement } from './constraint-path-utils';
+import { elementExistsInResource, getEvaluationContext, hasEmptyBackboneElement } from './constraint-path-utils';
 import { targetMatchesSliceDefinition } from './constraint-slice-targets';
 import { expressionStartsAtResourceRoot } from './constraint-choice-context';
 import { resolveConstraintContext } from './constraint-context-resolver';
@@ -29,6 +29,7 @@ import {
   evaluateTrailingMemberOf,
 } from './fhirpath-memberof-precheck';
 import { evaluateResolveExistsConstraint } from './fhirpath-resolve-precheck';
+import { appendHtmlChecksConstraintIssues } from './fhirpath-html-checks';
 import { ValueSetPackageLoader } from './valueset-package-loader';
 
 interface ConstraintValidationState {
@@ -275,6 +276,8 @@ export class ConstraintValidator {
     });
 
     try {
+      if (appendHtmlChecksConstraintIssues(issues, preprocessedExpression, getEvaluationContext(resource, elementPath), elementPath, resource.resourceType, profileUrl)) return issues;
+
       const memberOfPassed = await evaluateSimpleMemberOfExists(
         preprocessedExpression,
         resource,
@@ -532,9 +535,6 @@ function classifyUnsupportedEngineCapabilityError(message: string): FHIRPathCons
   }
   if (message.includes('is not allowed')) {
     return 'disallowed-function';
-  }
-  if (message.includes('Not implemented: htmlChecks')) {
-    return 'unsupported-engine-capability';
   }
   return null;
 }

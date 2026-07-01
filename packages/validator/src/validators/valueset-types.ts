@@ -117,9 +117,22 @@ export interface TerminologyReasonCounters {
     byReason: Record<TerminologyUnverifiedReason, number>;
 }
 
+export const TERMINOLOGY_DELEGATION_REASONS = [
+    'server-validate-code',
+] as const;
+
+export type TerminologyDelegationReason = typeof TERMINOLOGY_DELEGATION_REASONS[number];
+
+export interface TerminologyDelegationCounters {
+    total: number;
+    byReason: Record<TerminologyDelegationReason, number>;
+}
+
 export interface TerminologyDiagnostics {
     /** Bindings that failed open because the validator could not prove validity locally or remotely. */
     unverifiedBindings: TerminologyReasonCounters;
+    /** Bindings or membership checks delegated to a terminology server. */
+    delegatedBindings: TerminologyDelegationCounters;
     /** Direct ValueSet membership checks that failed open to avoid false negatives. */
     failOpenMembershipChecks: TerminologyReasonCounters;
 }

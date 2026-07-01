@@ -68,7 +68,7 @@ describe('ConstraintValidator', () => {
     expect(issues.find(issue => issue.ruleId === 'con-3')).toBeUndefined();
   });
 
-  it('skips unsupported htmlChecks constraints instead of surfacing engine diagnostics as issues', async () => {
+  it('evaluates htmlChecks constraints through the narrative XHTML validator', async () => {
     const validator = new ConstraintValidator();
 
     const issues = await validator.validate(
@@ -93,36 +93,18 @@ describe('ConstraintValidator', () => {
 
     expect(issues.find(issue => issue.code === 'profile-constraint-evaluation-error')).toBeUndefined();
     expect(issues.find(issue => issue.ruleId === 'txt-1')).toBeUndefined();
-
-    expect(validator.getDiagnostics().skippedConstraints).toMatchObject({
-      total: 1,
-      byReason: {
-        'unsupported-engine-capability': 1,
-      },
-      byConstraintKey: {
-        'txt-1': 1,
-      },
-      byProfile: {
-        'http://hl7.org/fhir/StructureDefinition/Patient': 1,
-      },
-    });
-    expect(validator.getDiagnostics().skippedConstraints.samples[0]).toMatchObject({
-      reason: 'unsupported-engine-capability',
-      constraintKey: 'txt-1',
-      path: 'Patient.text.div',
-      expression: 'htmlChecks()',
-    });
+    expect(validator.getDiagnostics().skippedConstraints.total).toBe(0);
   });
 
-  it('returns defensive copies of FHIRPath skip diagnostics and can clear them', async () => {
+  it('reports htmlChecks failures as narrative XHTML issues', async () => {
     const validator = new ConstraintValidator();
 
-    await validator.validate(
+    const issues = await validator.validate(
       {
         resourceType: 'Patient',
         text: {
           status: 'generated',
-          div: '<div xmlns="http://www.w3.org/1999/xhtml">ok</div>',
+          div: '<div xmlns="http://www.w3.org/1999/xhtml"><script>alert(1)</script></div>',
         },
       },
       [{
@@ -136,6 +118,39 @@ describe('ConstraintValidator', () => {
       }] as any,
       'http://hl7.org/fhir/StructureDefinition/Patient',
     );
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'narrative-forbidden-content',
+      path: 'Patient.text.div',
+      profile: 'http://hl7.org/fhir/StructureDefinition/Patient',
+    }));
+    expect(validator.getDiagnostics().skippedConstraints.total).toBe(0);
+  });
+
+  it('returns defensive copies of FHIRPath skip diagnostics and can clear them', async () => {
+    const validator = new ConstraintValidator();
+
+    const evaluateSpy = vi.spyOn(validator as any, 'evaluateFHIRPath').mockImplementation(() => {
+      throw new Error('asynchronous function memberOf is not allowed');
+    });
+
+    await validator.validate(
+      {
+        resourceType: 'Patient',
+        active: true,
+      },
+      [{
+        path: 'Patient.active',
+        constraint: [{
+          key: 'async-only',
+          severity: 'error' as const,
+          human: 'Async-only function',
+          expression: 'active.exists()',
+        }],
+      }] as any,
+      'http://hl7.org/fhir/StructureDefinition/Patient',
+    );
+    evaluateSpy.mockRestore();
 
     const diagnostics = validator.getDiagnostics();
     diagnostics.skippedConstraints.total = 0;

@@ -1,4 +1,6 @@
 import type {
+  TerminologyDelegationCounters,
+  TerminologyDelegationReason,
   TerminologyDiagnostics,
   TerminologyReasonCounters,
   TerminologyUnverifiedReason,
@@ -16,9 +18,19 @@ function createEmptyTerminologyReasonCounters(): TerminologyReasonCounters {
   };
 }
 
+function createEmptyTerminologyDelegationCounters(): TerminologyDelegationCounters {
+  return {
+    total: 0,
+    byReason: {
+      'server-validate-code': 0,
+    },
+  };
+}
+
 export function createEmptyTerminologyDiagnostics(): TerminologyDiagnostics {
   return {
     unverifiedBindings: createEmptyTerminologyReasonCounters(),
+    delegatedBindings: createEmptyTerminologyDelegationCounters(),
     failOpenMembershipChecks: createEmptyTerminologyReasonCounters(),
   };
 }
@@ -30,9 +42,19 @@ function cloneTerminologyReasonCounters(counters: TerminologyReasonCounters): Te
   };
 }
 
+function cloneTerminologyDelegationCounters(
+  counters: TerminologyDelegationCounters,
+): TerminologyDelegationCounters {
+  return {
+    total: counters.total,
+    byReason: { ...counters.byReason },
+  };
+}
+
 export function cloneTerminologyDiagnostics(diagnostics: TerminologyDiagnostics): TerminologyDiagnostics {
   return {
     unverifiedBindings: cloneTerminologyReasonCounters(diagnostics.unverifiedBindings),
+    delegatedBindings: cloneTerminologyDelegationCounters(diagnostics.delegatedBindings),
     failOpenMembershipChecks: cloneTerminologyReasonCounters(diagnostics.failOpenMembershipChecks),
   };
 }
@@ -40,6 +62,14 @@ export function cloneTerminologyDiagnostics(diagnostics: TerminologyDiagnostics)
 export function recordTerminologyReason(
   counters: TerminologyReasonCounters,
   reason: TerminologyUnverifiedReason,
+): void {
+  counters.total += 1;
+  counters.byReason[reason] += 1;
+}
+
+export function recordTerminologyDelegation(
+  counters: TerminologyDelegationCounters,
+  reason: TerminologyDelegationReason,
 ): void {
   counters.total += 1;
   counters.byReason[reason] += 1;

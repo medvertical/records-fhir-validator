@@ -81,12 +81,12 @@ export function isRelevantPackage(
   }
 
   // ISiP profiles (nursing care – de.gematik.isip package)
-  if (url.includes('isip')) {
+  if (url.includes('gematik.de') && url.includes('/fhir/isip/')) {
     return packageName.startsWith('de.gematik.isip');
   }
 
   // ISiK profiles (hospital interoperability – de.gematik.isik packages)
-  if (url.includes('gematik.de') || url.includes('isik')) {
+  if (url.includes('gematik.de') && url.includes('/fhir/isik/')) {
     return packageName.startsWith('de.gematik.isik') || packageName.startsWith('de.gematik.isip');
   }
 

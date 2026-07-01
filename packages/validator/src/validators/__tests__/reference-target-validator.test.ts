@@ -127,4 +127,52 @@ describe('ReferenceTargetValidator', () => {
     );
     expect(issues).toHaveLength(0);
   });
+
+  it('does not apply sliced targetProfiles to every reference at the base path', () => {
+    const validator = new ReferenceTargetValidator();
+    const profile: StructureDefinition = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/StructureDefinition/obs-derived-from-sliced',
+      name: 'ObsDerivedFromSliced',
+      status: 'active',
+      kind: 'resource',
+      abstract: false,
+      type: 'Observation',
+      snapshot: {
+        element: [
+          { id: 'Observation', path: 'Observation' },
+          {
+            id: 'Observation.derivedFrom',
+            path: 'Observation.derivedFrom',
+            type: [{
+              code: 'Reference',
+              targetProfile: [
+                'http://hl7.org/fhir/StructureDefinition/Observation',
+                'http://hl7.org/fhir/StructureDefinition/MolecularSequence',
+              ],
+            }],
+          } as any,
+          {
+            id: 'Observation.derivedFrom:molecular-sequence',
+            path: 'Observation.derivedFrom',
+            sliceName: 'molecular-sequence',
+            type: [{
+              code: 'Reference',
+              targetProfile: ['http://hl7.org/fhir/StructureDefinition/MolecularSequence'],
+            }],
+          } as any,
+        ],
+      },
+    };
+
+    const issues = validator.validate(
+      {
+        resourceType: 'Observation',
+        derivedFrom: [{ reference: 'Observation/source-observation' }],
+      },
+      profile,
+    );
+
+    expect(issues).toHaveLength(0);
+  });
 });

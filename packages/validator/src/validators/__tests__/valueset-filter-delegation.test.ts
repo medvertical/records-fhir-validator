@@ -115,6 +115,12 @@ describe('ValueSet filtered include server delegation', () => {
     await expect(
       validator.isCodeValidForBinding('descendant-code', SNOMED, VALUE_SET_URL, 'required')
     ).resolves.toBe(true);
+    expect(validator.getCacheStats().terminologyDiagnostics.delegatedBindings).toEqual({
+      total: 1,
+      byReason: {
+        'server-validate-code': 1,
+      },
+    });
     expect(get).toHaveBeenCalledWith(
       'https://tx.example/fhir/ValueSet/$validate-code',
       expect.objectContaining({

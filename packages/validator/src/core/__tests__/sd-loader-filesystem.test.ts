@@ -98,6 +98,45 @@ describe('sd-loader-filesystem', () => {
     expect(sd?.version).toBe('1.0.0-xtehr');
   });
 
+  it('does not misroute MII polygener risiko profiles through the ISiK package filter', async () => {
+    const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-'));
+    tempDirs.push(source);
+
+    const packageDir = path.join(
+      source,
+      'de.medizininformatikinitiative.kerndatensatz.molgen#2026.0.4',
+      'package',
+    );
+    await mkdir(packageDir, { recursive: true });
+    await writeFile(
+      path.join(packageDir, 'StructureDefinition-mii-pr-molgen-polygener-risiko-score.json'),
+      JSON.stringify({
+        resourceType: 'StructureDefinition',
+        url: 'https://www.medizininformatik-initiative.de/fhir/ext/modul-molgen/StructureDefinition/polygener-risiko-score',
+        version: '2026.0.4',
+        fhirVersion: '4.0.1',
+        type: 'RiskAssessment',
+      }),
+    );
+
+    const profileUrl =
+      'https://www.medizininformatik-initiative.de/fhir/ext/modul-molgen/StructureDefinition/polygener-risiko-score|2026.0.4';
+
+    expect(isRelevantPackage(
+      'de.medizininformatikinitiative.kerndatensatz.molgen#2026.0.4',
+      profileUrl,
+      'R4',
+    )).toBe(true);
+    expect(isRelevantPackage(
+      'de.gematik.isik-basismodul#4.0.3',
+      profileUrl,
+      'R4',
+    )).toBe(false);
+
+    const sd = await loadFromLocalCache(profileUrl, [source], 'R4');
+    expect(sd?.type).toBe('RiskAssessment');
+  });
+
   it('restricts European and IHE Pharmacy canonicals to their owning packages', () => {
     expect(isRelevantPackage(
       'hl7.fhir.eu.eps#1.0.0-xtehr',
