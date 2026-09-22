@@ -1,4 +1,4 @@
-import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
+import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar.js';
 
 export interface ValueOccurrence {
   value: unknown;

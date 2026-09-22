@@ -1,7 +1,7 @@
 /** Metadata validation code catalog. */
 
 import type { ValidationSeverity } from '@records-fhir/validation-types';
-import type { ValidationCodeMetadata } from './validation-code-types';
+import type { ValidationCodeMetadata } from './validation-code-types.js';
 
 function metadataCode(
   severity: ValidationSeverity,
@@ -60,7 +60,9 @@ export const MetadataCodes = {
   'metadata-security-invalid-system': metadataCode('error', 'Security system is not a valid URI'),
   'metadata-security-invalid-code-type': metadataCode('error', 'Security code must be a string'),
   'metadata-security-invalid-display-type': metadataCode('warning', 'Security display must be a string'),
-  'metadata-security-duplicate': metadataCode('info', 'Duplicate security label detected'),
+  // A repeated label carries no additional meaning, and the reference
+  // validator reports it as an error.
+  'metadata-security-duplicate': metadataCode('error', 'Duplicate security label'),
   'metadata-security-missing-display': metadataCode('info', 'Security label missing display'),
   'metadata-security-unknown-code': metadataCode('warning', 'Unknown security code'),
   'metadata-security-unknown-system': metadataCode('warning', 'Unknown security system'),

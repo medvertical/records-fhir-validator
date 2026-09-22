@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../types';
-import { normalizeChoiceTypePath } from './choice-type-path';
-import { getDetailsRecord, getIssuePath } from './validation-issue-dedupe-common';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { normalizeChoiceTypePath } from './choice-type-path.js';
+import { getDetailsRecord, getIssuePath } from './validation-issue-dedupe-common.js';
 
 export function isSliceSpecificMustSupportIssue(issue: ValidationIssue): boolean {
   if (issue.code !== 'profile-mustsupport-missing') return false;

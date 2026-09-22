@@ -1,4 +1,4 @@
-import type { FixSuggestion } from './types';
+import type { FixSuggestion } from './types.js';
 
 // ============================================================================
 // Aspect-based Fallbacks (when no specific code match exists)

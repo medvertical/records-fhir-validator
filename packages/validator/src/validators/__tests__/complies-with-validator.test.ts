@@ -426,11 +426,10 @@ describe('CompliesWithValidator', () => {
     expect(issues[0].message).toContain("extra slice 'dl' not found in the claimed profile");
   });
 
-  it('strips canonical version pin from the claimed url', async () => {
+  it('resolves the exact versioned canonical named by the compliance claim', async () => {
     v = new CompliesWithValidator({
       loadProfile: async (url: string) => {
-        // contract: validator must not pass the |version suffix to loader
-        if (url.includes('|')) return null;
+        if (url !== `${baseUrl}|1.0.0`) return makeBase([]);
         return makeBase([
           { id: 'Patient.name', path: 'Patient.name', min: 1 },
         ]);
@@ -446,6 +445,20 @@ describe('CompliesWithValidator', () => {
     };
     const issues = await v.validate(derived);
     expect(issues).toHaveLength(1);
+  });
+
+  it.each(['preferred', 'example'] as const)('reports weakened %s binding without an unrelated ValueSet mismatch', async strength => {
+    v = new CompliesWithValidator(fakeLoader({ [baseUrl]: makeBase([{
+      id: 'Patient.maritalStatus', path: 'Patient.maritalStatus',
+      binding: { strength: 'required', valueSet: 'http://example.org/required' },
+    }]) }));
+    const issues = await v.validate(makeDerived([{
+      id: 'Patient.maritalStatus', path: 'Patient.maritalStatus',
+      binding: { strength, valueSet: 'http://example.org/suggested' },
+    }]));
+    expect(issues).toHaveLength(1);
+    expect(issues[0].message).toContain('binding.strength');
+    expect(issues[0].message).not.toContain('binding.valueSet');
   });
 
   it('handles malformed public inputs without throwing', async () => {
@@ -471,7 +484,7 @@ describe('CompliesWithValidator', () => {
     ], {
       extension: [
         { ...COMPLIES_WITH_EXT, valueCanonical: baseUrl },
-        { ...COMPLIES_WITH_EXT, valueCanonical: `${baseUrl}|1.0.0` },
+        { ...COMPLIES_WITH_EXT, valueCanonical: baseUrl },
       ],
     });
 

@@ -1,8 +1,8 @@
-import { createValidationIssue } from "../issues";
-import type { ValidationIssue } from "../types";
-import { matchesPattern, valueMatchesFixedConstraint, valuesMatch } from "./slice-utils";
-import type { SliceDefinition } from "./slice-types";
-import { formatConstraintValue, resourceTypeFromPath } from "./slicing-content-format";
+import { createValidationIssue } from "../issues/index.js";
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { matchesPattern, valueMatchesFixedConstraint, valuesMatch } from "./slice-utils.js";
+import type { SliceDefinition } from "./slice-types.js";
+import { formatConstraintValue, resourceTypeFromPath } from "./slicing-content-format.js";
 
 export function validateSliceRootConstraints(
   element: unknown,

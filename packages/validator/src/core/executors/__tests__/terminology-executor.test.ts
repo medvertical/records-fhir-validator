@@ -2139,10 +2139,10 @@ describe("TerminologyExecutor", () => {
         resourceType: "Observation",
         referenceRange: [
           {
-            low: { value: 5, system: "http://unitsofmeasure.org", code: "pH" },
+            low: { value: 5, system: "http://unitsofmeasure.org", code: "invalid-unit" },
           },
           {
-            low: { value: 6, system: "http://unitsofmeasure.org", code: "pH" },
+            low: { value: 6, system: "http://unitsofmeasure.org", code: "invalid-unit" },
           },
         ],
       };

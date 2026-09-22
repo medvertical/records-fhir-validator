@@ -1,11 +1,22 @@
-import type { ValidationIssue } from '../types';
-import { extractReferences } from './reference-format-validator';
-import { createReferenceValidationIssue } from './reference-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { extractReferences } from './reference-format-validator.js';
+import { createReferenceValidationIssue } from './reference-utils.js';
 
 export function validateContainedReferenceIssues(
   resource: unknown,
   resourceType: string = getResourceType(resource),
 ): ValidationIssue[] {
+  return validateResourceContainedReferences(resource, resourceType, new Set());
+}
+
+function validateResourceContainedReferences(
+  resource: unknown,
+  resourceType: string,
+  ancestors: Set<object>,
+): ValidationIssue[] {
+  const record = toRecord(resource);
+  if (!record || ancestors.has(record)) return [];
+  const branch = new Set(ancestors).add(record);
   if (!resource) {
     return [];
   }
@@ -53,6 +64,20 @@ export function validateContainedReferenceIssues(
     }));
   }
 
+  if (resourceType === 'Bundle' && Array.isArray(record.entry)) {
+    record.entry.forEach((entry, index) => {
+      const child = toRecord(entry)?.resource;
+      const childType = getResourceType(child);
+      const childIssues = validateResourceContainedReferences(child, childType, branch);
+      for (const issue of childIssues) {
+        const suffix = issue.path?.startsWith(`${childType}.`)
+          ? issue.path.slice(childType.length + 1)
+          : issue.path;
+        const childPath = `${resourceType}.entry[${index}].resource${suffix ? `.${suffix}` : ''}`;
+        issues.push({ ...issue, path: childPath, expression: childPath });
+      }
+    });
+  }
   return issues;
 }
 

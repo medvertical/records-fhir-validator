@@ -3,25 +3,25 @@
  * Supports fullUrl-based resolution, UUID references, and Bundle entry validation.
  */
 
-import { extractResourceType as _extractResourceType, parseReference } from './reference-type-extractor';
+import { extractResourceType as _extractResourceType, parseReference } from './reference-type-extractor.js';
 import { isErrorValidationSeverity } from '@records-fhir/validation-types';
 import {
   extractBundleEntries as extractEntriesFromBundle,
   findAllBundleReferences as findBundleReferences,
-} from './bundle-reference-finder';
-import { validateBundleFullUrls } from './bundle-fullurl-validation';
+} from './bundle-reference-finder.js';
+import { validateBundleFullUrls } from './bundle-fullurl-validation.js';
 import {
   getBundleStatistics,
   getBundleType,
   isTransactionOrBatchBundle,
   validateBundleStructure,
-} from './bundle-inspection';
+} from './bundle-inspection.js';
 import {
   buildFullUrlIndex,
   findEntryByFullUrl,
   findEntryByResourceTypeAndId,
   getAllBundleResources,
-} from './bundle-entry-index';
+} from './bundle-entry-index.js';
 import type {
   BundleEntry,
   BundleIssue,
@@ -30,7 +30,7 @@ import type {
   BundleStatistics,
   BundleValidationResult,
   FhirResourceRecord,
-} from './bundle-reference-types';
+} from './bundle-reference-types.js';
 
 export class BundleReferenceResolver {
   extractBundleEntries(bundle: unknown): BundleEntry[] {

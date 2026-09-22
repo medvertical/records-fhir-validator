@@ -13,22 +13,22 @@
  * This brings Records to full parity with HAPI's profile validation depth.
  */
 
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import type {
     StructureDefinition,
     ElementDefinition,
-} from '../core/structure-definition-types';
-import { createValidationIssue } from '../issues';
+} from '../core/structure-definition-types.js';
+import { createValidationIssue } from '../issues/index.js';
 import {
     matchesPattern,
     valueMatchesFixedConstraint,
-} from './slice-utils';
-import { logger } from '../logger';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+} from './slice-utils.js';
+import { logger } from '../logger.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 import {
     getValidationTargets,
     type ValidationTarget,
-} from '../business-rules/element-validation-targets';
+} from '../business-rules/element-validation-targets.js';
 import {
     buildRequiredBindingDetails,
     describePatternMismatch,
@@ -38,7 +38,7 @@ import {
     extractPatternValue,
     formatProfileIssueValue,
     hasRequiredBindingValue,
-} from './deep-profile-constraint-utils';
+} from './deep-profile-constraint-utils.js';
 
 // ============================================================================
 // Types

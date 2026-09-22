@@ -1,13 +1,13 @@
-import type { SliceDefinition } from './slice-types';
-import { getValueAtPath } from './slice-utils';
+import type { SliceDefinition } from './slice-types.js';
+import { getValueAtPath } from './slice-utils.js';
 import {
   getTypeSpecsForDiscriminator,
   stripCanonicalVersion,
-} from './slice-type-discriminator';
-import { matchWholeElementChildConstraints } from './slice-discriminator-constraints';
-import { declaredProfileAncestryContains } from './slice-profile-ancestry';
-import { logger } from '../logger';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+} from './slice-type-discriminator.js';
+import { matchWholeElementChildConstraints } from './slice-discriminator-constraints.js';
+import { declaredProfileAncestryContains } from './slice-profile-ancestry.js';
+import { logger } from '../logger.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 export type ReferenceResolverFn = ((ref: string) => unknown | null) | null;
 type PatternMatcherFn = ((value: unknown, pattern: unknown) => boolean) | null;
@@ -19,8 +19,11 @@ export function matchProfileDiscriminator(
   referenceResolver: ReferenceResolverFn,
   allSlices?: SliceDefinition[],
   matchesPattern?: PatternMatcherFn,
+  // After `item.resolve()` the value is read on the resolved target while the
+  // identifying type constraint still sits on `item` in the slice definition.
+  typeSpecPath: string = path,
 ): boolean {
-  const typeSpecs = getTypeSpecsForDiscriminator(slice, path);
+  const typeSpecs = getTypeSpecsForDiscriminator(slice, typeSpecPath);
   if (typeSpecs.length === 0) return false;
 
   const value = getValueAtPath(element, path);
@@ -39,7 +42,7 @@ export function matchProfileDiscriminator(
     requiredProfiles,
     allowedTypeCodes,
     slice,
-    path,
+    typeSpecPath,
     referenceResolver,
     allSlices,
     matchesPattern ?? null,
@@ -51,7 +54,7 @@ function matchProfileValue(
   requiredProfiles: string[],
   allowedTypeCodes: string[],
   slice: SliceDefinition,
-  path: string,
+  typeSpecPath: string,
   referenceResolver: ReferenceResolverFn,
   allSlices?: SliceDefinition[],
   matchesPattern: PatternMatcherFn = null,
@@ -87,7 +90,7 @@ function matchProfileValue(
 
   if (typeof value.resourceType === 'string' && allowedTypeCodes.length > 0) {
     if (allowedTypeCodes.includes(value.resourceType) &&
-        typeCodesAreDistinguishing(slice, path, allSlices)) {
+        typeCodesAreDistinguishing(slice, typeSpecPath, allSlices)) {
       return true;
     }
   }

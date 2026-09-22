@@ -9,17 +9,17 @@
  * Issue-type ValueSet: https://www.hl7.org/fhir/valueset-issue-type.html
  */
 
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import { computeValidationIssueId } from '@records-fhir/validation-types';
-import { getCodeMetadata } from '../issues/message-catalog';
+import { getCodeMetadata } from '../issues/message-catalog.js';
 import {
   HL7_ISSUE_TYPE_SYSTEM,
   RECORDS_CODE_SYSTEM,
   mapToHl7IssueType,
   normalizeToHl7Severity,
-} from './operation-outcome-issue-mapping';
+} from './operation-outcome-issue-mapping.js';
 
-export { mapToHl7IssueType, normalizeToHl7Severity } from './operation-outcome-issue-mapping';
+export { mapToHl7IssueType, normalizeToHl7Severity } from './operation-outcome-issue-mapping.js';
 
 // ============================================================================
 // FHIR OperationOutcome Types (minimal, spec-conformant)

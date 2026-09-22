@@ -8,7 +8,7 @@
  * These rules ship as defaults — users can disable them individually.
  */
 
-import type { AdvisorRule } from './advisor-rules';
+import type { AdvisorRule } from './advisor-rules.js';
 
 export const CANONICAL_URL_SANITY_RULES: AdvisorRule[] = [
   // SNOMED typo: srt instead of sct

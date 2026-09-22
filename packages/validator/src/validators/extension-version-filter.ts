@@ -7,11 +7,11 @@
  * into the wrong validation pass.
  */
 
-import { urlMatchesRequestedFhirVersion, type FhirVersionFamily } from '../core/sd-loader-version-utils';
-import { logger } from '../logger';
-import type { ExtensionDefinition } from './extension-types';
-import type { extractExtensionDefinitions } from './extension-definition-extractor';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+import { urlMatchesRequestedFhirVersion, type FhirVersionFamily } from '../core/sd-loader-version-utils.js';
+import { logger } from '../logger.js';
+import type { ExtensionDefinition } from './extension-types.js';
+import type { extractExtensionDefinitions } from './extension-definition-extractor.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 
 type ExtensionDefinitionContext = ReturnType<typeof extractExtensionDefinitions>;
 

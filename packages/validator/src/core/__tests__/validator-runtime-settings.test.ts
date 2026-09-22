@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ValidationSettings } from '../../types';
+import type { ValidationSettings } from '@records-fhir/validation-types';
 import {
   applyProfileLoadingSettings,
   buildTerminologyResolutionConfig,

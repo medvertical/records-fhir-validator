@@ -1,11 +1,11 @@
-import { logger } from '../logger';
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { StructureDefinitionLoader } from '../core/structure-definition-loader';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { extractSubExtensionDefinitions } from './extension-definition-extractor';
-import type { ExtensionProfileCache } from './extension-profile-cache';
-import type { ExtensionDefinition } from './extension-types';
+import { logger } from '../logger.js';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { StructureDefinitionLoader } from '../core/structure-definition-loader.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { extractSubExtensionDefinitions } from './extension-definition-extractor.js';
+import type { ExtensionProfileCache } from './extension-profile-cache.js';
+import type { ExtensionDefinition } from './extension-types.js';
 
 /** Load and cache the nested definitions owned by one extension profile. */
 export async function getSubExtensionDefinitions(

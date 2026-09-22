@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types.js';
 
 export function validateBundleFullUrls(
     bundle: unknown,
@@ -114,14 +114,38 @@ export function validateBundleEntryIdConsistency(bundle: unknown): ValidationIss
     return issues;
 }
 
+// Paging relations describe a position in a result set, so they only mean
+// anything where there is one. `searchset` and `history` are paged; every other
+// bundle type is a single self-contained payload, and the reference validator
+// rejects a paging link there.
+const PAGING_LINK_RELATIONS = new Set(['first', 'previous', 'prev', 'next', 'last']);
+const PAGED_BUNDLE_TYPES = new Set(['searchset', 'history']);
+
 export function validateBundleLinkRelations(bundle: unknown): ValidationIssue[] {
     const issues: ValidationIssue[] = [];
     const links = getArrayProperty(bundle, 'link');
     const seen = new Map<string, number>();
+    const bundleType = getNonEmptyString(toRecord(bundle)?.type);
+    // With no declared type there is nothing to judge the relation against, and
+    // the missing required element is reported on its own. Stay quiet rather
+    // than guess.
+    const checkPaging = bundleType !== undefined && !PAGED_BUNDLE_TYPES.has(bundleType);
 
     for (let index = 0; index < links.length; index++) {
         const relation = getNonEmptyString(toRecord(links[index])?.relation);
         if (!relation) continue;
+
+        if (checkPaging && PAGING_LINK_RELATIONS.has(relation)) {
+            issues.push(createValidationIssue({
+                code: 'bundle-link-relation-prohibited',
+                path: `Bundle.link[${index}].relation`,
+                resourceType: 'Bundle',
+                customMessage:
+                    `The link relationship type '${relation}' used in search sets ` +
+                    'is prohibited in this context',
+                severityOverride: 'error',
+            }));
+        }
 
         const firstIndex = seen.get(relation);
         if (firstIndex !== undefined) {

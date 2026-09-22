@@ -1,20 +1,16 @@
 /**
- * Cross-IG counterpart to `pinBindingToProfileVersion`: a profile's binding
- * to a ValueSet from a *dependency* IG must resolve to the version that IG
- * release was published against, not to whichever package version is newest
- * in the local stores. The profile's provenance (recorded when it was loaded
- * from a package) selects its IG's dependency pins; the binding canonical is
- * version-qualified so the ValueSet loader's exact-match/same-major/cross-
- * major machinery — and its version-keyed caches — stay authoritative.
+ * Pin bindings to the actual ValueSet version shipped by the profile's owning
+ * package, then its dependencies. Profile and ValueSet business versions are
+ * independent, even within the same IG release.
  */
 import {
   derivePackagePinContext,
   isPinExemptCanonical,
   resolvePinnedVersionForCanonical,
-} from '../../package/canonical-pin-context';
-import { lookupProfilePackageProvenance } from '../../package/canonical-pin-provenance';
-import { resolveValueSetPackageDirectories } from '../../validators/valueset-package-resource-access';
-import type { Binding, StructureDefinition } from '../structure-definition-types';
+} from '../../package/canonical-pin-context.js';
+import { lookupProfilePackageProvenance } from '../../package/canonical-pin-provenance.js';
+import { resolveValueSetPackageDirectories } from '../../validators/valueset-package-resource-access.js';
+import type { Binding, StructureDefinition } from '../structure-definition-types.js';
 
 export async function pinBindingToDependencyPins<T extends Binding | undefined>(
   binding: T,

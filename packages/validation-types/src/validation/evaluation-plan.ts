@@ -1,5 +1,5 @@
-import type { ValidationAspect } from './enums';
-import type { QualityRuleScope } from './quality-rule-pack';
+import type { ValidationAspect } from './enums.js';
+import type { QualityRuleScope } from './quality-rule-pack.js';
 
 export type EvaluationScopeRequirement = 'selected-scope' | 'complete-selected-scope';
 

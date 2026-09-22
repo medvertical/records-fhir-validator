@@ -20,7 +20,7 @@ import type {
   ValidationSeverity,
 } from '@records-fhir/validation-types';
 import { VALIDATION_ASPECTS } from '@records-fhir/validation-types';
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 
 export type ValidationStrictness = 'compatibility' | 'standard' | 'strict';
 
@@ -123,6 +123,29 @@ export function applyStrictnessSeverity(
     }
     return issue;
   });
+}
+
+/** Apply policy to the finding's semantic aspect, independent of its executor. */
+export function applyStrictnessByIssueAspect(
+  issues: ValidationIssue[],
+  strictness: ValidationStrictness,
+  aspectSeverityFor: (aspect: string) => ValidationSeverity | undefined,
+  fallbackAspect: string,
+): ValidationIssue[] {
+  const groups = new Map<string, number[]>();
+  issues.forEach((issue, index) => {
+    const aspect = typeof issue.aspect === 'string' && isValidationAspect(issue.aspect)
+      ? issue.aspect : fallbackAspect;
+    const indices = groups.get(aspect) ?? [];
+    indices.push(index);
+    groups.set(aspect, indices);
+  });
+  const adjusted = [...issues];
+  for (const [aspect, indices] of groups) {
+    applyStrictnessSeverity(indices.map(index => issues[index]), strictness, aspectSeverityFor(aspect))
+      .forEach((issue, offset) => { adjusted[indices[offset]] = issue; });
+  }
+  return adjusted;
 }
 
 /**

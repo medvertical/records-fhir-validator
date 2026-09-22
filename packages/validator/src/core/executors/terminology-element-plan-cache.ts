@@ -1,13 +1,13 @@
 import {
   ContentReferenceElementsCache,
   expandContentReferenceElements,
-} from '../content-reference-elements';
-import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
+} from '../content-reference-elements.js';
+import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
 import {
   getElementTypeCodes,
   isUsableElementDefinition,
-} from './terminology-executor-helpers';
-import { UCUM_BEARING_TYPES } from './terminology-ucum-rules';
+} from './terminology-executor-helpers.js';
+import { UCUM_BEARING_TYPES } from './terminology-ucum-rules.js';
 
 export class TerminologyElementPlanCache {
   private readonly plans = new WeakMap<StructureDefinition, ElementDefinition[]>();

@@ -1,25 +1,30 @@
-import { logger } from '../logger';
-import { codeSystemCanonicalCandidates } from './code-system-canonical-aliases';
-import type { FhirVersion } from './valueset-expansion-cache-key';
+import type {
+  TerminologyServerAttempt,
+  UnverifiedBindingDiagnostic,
+} from '../issues/unverified-binding-diagnostic.js';
+import { logger } from '../logger.js';
+import { codeSystemCanonicalCandidates } from './code-system-canonical-aliases.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
 import {
   classifyUnverifiableComposeReason,
   isLocallyUnprovableMissReason,
-} from './valueset-filter-checks';
-import { isLanguageBinding, validateBCP47 } from './valueset-language-utils';
-import { isMimeTypesValueSet, validateMimeTypeBindingCode } from './valueset-mimetype-utils';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import type { TwoPhaseShadowEvaluator } from './valueset-two-phase-shadow';
-import type { BindingStrength } from './valueset-display-utils';
+} from './valueset-filter-checks.js';
+import { isLanguageBinding, validateBCP47 } from './valueset-language-utils.js';
+import { isMimeTypesValueSet, validateMimeTypeBindingCode } from './valueset-mimetype-utils.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import type { TwoPhaseShadowEvaluator } from './valueset-two-phase-shadow.js';
+import type { BindingStrength } from './valueset-display-utils.js';
 import type {
   CodeBindingOutcome,
   TerminologyDiagnostics,
   TerminologyResolutionConfig,
   TerminologyServerOverride,
-} from './valueset-types';
-import { recordTerminologyDelegation, recordTerminologyReason } from './valueset-diagnostics';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
-import { canDelegateCodeValidation } from './valueset-delegation-policy';
-import { isSnomedEditionRouteMissing } from './valueset-server-routing';
+  TerminologyUnverifiedReason,
+} from './valueset-types.js';
+import { recordTerminologyDelegation, recordTerminologyReason } from './valueset-diagnostics.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
+import { canDelegateCodeValidation } from './valueset-delegation-policy.js';
+import { isSnomedEditionRouteMissing } from './valueset-server-routing.js';
 
 interface CodeBindingResolutionDeps {
   getExpandedValueSet: (valueSetUrl: string, fhirVersion?: FhirVersion) => Promise<Set<string>>;
@@ -33,6 +38,8 @@ interface CodeBindingResolutionDeps {
   ) => TerminologyServerOverride | undefined;
   terminologyDiagnostics: TerminologyDiagnostics;
   twoPhaseShadow: TwoPhaseShadowEvaluator;
+  /** Receives the explanation whenever the outcome is `unverified`. */
+  recordUnverifiedBinding?: (diagnostic: UnverifiedBindingDiagnostic) => void;
   validateViaServer: (
     code: string,
     system: string | undefined,
@@ -41,7 +48,34 @@ interface CodeBindingResolutionDeps {
     override: TerminologyServerOverride | undefined,
     fhirVersion?: FhirVersion,
     codeSystemVersion?: string,
+    attempts?: TerminologyServerAttempt[],
   ) => Promise<CodeBindingOutcome>;
+}
+
+interface UnverifiedContext {
+  localExpansion: UnverifiedBindingDiagnostic['localExpansion'];
+  attempts: TerminologyServerAttempt[];
+  hasServer: boolean;
+  canDelegate: boolean;
+}
+
+function noteUnverified(
+  deps: CodeBindingResolutionDeps,
+  cause: TerminologyUnverifiedReason,
+  context: UnverifiedContext,
+): 'unverified' {
+  recordTerminologyReason(deps.terminologyDiagnostics.unverifiedBindings, cause);
+  const serverSkipped = context.attempts.length > 0
+    ? undefined
+    : !context.canDelegate ? 'delegation-disabled' : !context.hasServer ? 'no-server' : 'not-needed';
+  deps.recordUnverifiedBinding?.({
+    cause,
+    localExpansion: context.localExpansion,
+    serverAttempts: context.attempts,
+    ...(serverSkipped ? { serverSkipped } : {}),
+    packageScope: deps.packageLoader.hasHostPackageScope?.() ? 'tenant' : 'none',
+  });
+  return 'unverified';
 }
 
 export async function resolveValueSetCodeBinding(
@@ -103,12 +137,14 @@ export async function resolveValueSetCodeBinding(
     override,
   );
   const hasServer = !editionRouteMissing && deps.hasTerminologyServer(override, fhirVersion);
-  const shouldDelegate = canDelegateCodeValidation(deps.resolutionConfig) && (
+  const canDelegate = canDelegateCodeValidation(deps.resolutionConfig);
+  const shouldDelegate = canDelegate && (
     expandedCodes.size === 0
     || filteredIncludes.length > 0
     || unverifiableReason === 'unenumerable-system-include'
     || bindingStrength !== 'required'
   );
+  const attempts: TerminologyServerAttempt[] = [];
   if (hasServer && shouldDelegate) {
     recordTerminologyDelegation(deps.terminologyDiagnostics.delegatedBindings, 'server-validate-code');
     const serverOutcome = await deps.validateViaServer(
@@ -119,6 +155,7 @@ export async function resolveValueSetCodeBinding(
       override,
       fhirVersion,
       codeSystemVersion,
+      attempts,
     );
     if (serverOutcome === 'valid') {
       return deps.twoPhaseShadow.finish(lookup, true, { code, system, valueSetUrl })
@@ -135,21 +172,24 @@ export async function resolveValueSetCodeBinding(
   // A compose filter the local expander cannot evaluate (e.g. LOINC
   // SCALE_TYP=...) or a whole-system include whose CodeSystem is not locally
   // enumerable makes the local expansion provably incomplete for the coded
-  // system, so without a terminology server even a required-binding miss
+  // system, so without a definitive server result even a required-binding miss
   // cannot be asserted. Fully enumerated composes keep their authoritative
   // required-binding error.
   const requiredMissUnprovable = bindingStrength === 'required'
-    && isLocallyUnprovableMissReason(unverifiableReason)
-    && !hasServer;
+    && isLocallyUnprovableMissReason(unverifiableReason);
+  const unverifiedContext: UnverifiedContext = {
+    localExpansion: expandedCodes.size === 0 ? 'none' : 'incomplete',
+    attempts,
+    hasServer,
+    canDelegate,
+  };
   if (unverifiableReason && (bindingStrength !== 'required' || requiredMissUnprovable)) {
     deps.twoPhaseShadow.finish(lookup, true, { code, system, valueSetUrl });
-    recordTerminologyReason(deps.terminologyDiagnostics.unverifiedBindings, unverifiableReason);
-    return 'unverified';
+    return noteUnverified(deps, unverifiableReason, unverifiedContext);
   }
   if (expandedCodes.size === 0) {
     deps.twoPhaseShadow.finish(lookup, true, { code, system, valueSetUrl });
-    recordTerminologyReason(deps.terminologyDiagnostics.unverifiedBindings, 'empty-expansion');
-    return 'unverified';
+    return noteUnverified(deps, 'empty-expansion', unverifiedContext);
   }
   return deps.twoPhaseShadow.finish(lookup, false, { code, system, valueSetUrl })
     ? 'valid'
@@ -166,10 +206,11 @@ async function resolveVersionedCodeBinding(
   codeSystemVersion: string,
 ): Promise<CodeBindingOutcome> {
   const override = deps.resolveServerForSystem(system, fhirVersion, codeSystemVersion);
+  const canDelegate = canDelegateCodeValidation(deps.resolutionConfig);
   const hasServer = !isSnomedEditionRouteMissing(system, codeSystemVersion, override)
-    && deps.hasTerminologyServer(override, fhirVersion)
-    && canDelegateCodeValidation(deps.resolutionConfig);
-  if (hasServer) {
+    && deps.hasTerminologyServer(override, fhirVersion);
+  const attempts: TerminologyServerAttempt[] = [];
+  if (hasServer && canDelegate) {
     recordTerminologyDelegation(deps.terminologyDiagnostics.delegatedBindings, 'server-validate-code');
     const serverOutcome = await deps.validateViaServer(
       code,
@@ -179,15 +220,17 @@ async function resolveVersionedCodeBinding(
       override,
       fhirVersion,
       codeSystemVersion,
+      attempts,
     );
     if (serverOutcome === 'valid') return 'valid';
     if (serverOutcome === 'invalid') return 'invalid';
   }
-  recordTerminologyReason(
-    deps.terminologyDiagnostics.unverifiedBindings,
-    'versioned-binding-unverified',
-  );
-  return 'unverified';
+  return noteUnverified(deps, 'versioned-binding-unverified', {
+    localExpansion: 'none',
+    attempts,
+    hasServer,
+    canDelegate,
+  });
 }
 
 function logRequiredBindingMiss(

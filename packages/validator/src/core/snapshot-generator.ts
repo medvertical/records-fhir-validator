@@ -1,15 +1,21 @@
-import type { StructureDefinition, ElementDefinition } from './structure-definition-types';
-import { StructureDefinitionLoader } from './structure-definition-loader';
-import { logger } from '../logger';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { SnapshotCache } from './snapshot-cache';
-import { SnapshotElementMerger } from './snapshot-element-merger';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+import type { StructureDefinition, ElementDefinition } from './structure-definition-types.js';
+import { StructureDefinitionLoader } from './structure-definition-loader.js';
+import { logger } from '../logger.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { SnapshotCache } from './snapshot-cache.js';
+import { SnapshotElementMerger } from './snapshot-element-merger.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export interface SnapshotGenerationOptions {
   includeBaseElements?: boolean;
   applyConstraints?: boolean;
   cacheResults?: boolean;
+  /**
+   * Release whose core definitions the base profile is resolved from. Without
+   * it every base resolved as R4, so a profile validated under R5 inherited R4
+   * cardinality — `Encounter.class` is `1..1` in R4 and `0..*` in R5.
+   */
+  fhirVersion?: 'R4' | 'R5' | 'R6';
 }
 
 export class SnapshotGenerator {
@@ -40,7 +46,7 @@ export class SnapshotGenerator {
 
       logger.info('[SnapshotGenerator] Generating snapshot', profileCanonicalMetadata(profileSD.url));
 
-      const baseProfile = await this.loadBaseProfile(profileSD.baseDefinition);
+      const baseProfile = await this.loadBaseProfile(profileSD.baseDefinition, options.fhirVersion);
 
       if (!baseProfile) {
         logger.warn('[SnapshotGenerator] No base profile found; using differential', profileCanonicalMetadata(profileSD.url));
@@ -78,14 +84,17 @@ export class SnapshotGenerator {
     }
   }
 
-  private async loadBaseProfile(baseUrl?: string): Promise<StructureDefinition | null> {
+  private async loadBaseProfile(
+    baseUrl?: string,
+    fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+  ): Promise<StructureDefinition | null> {
     if (!baseUrl) {
       return null;
     }
 
     try {
       logger.debug('[SnapshotGenerator] Loading base profile', profileCanonicalMetadata(baseUrl));
-      const baseProfile = await this.sdLoader.loadProfile(baseUrl);
+      const baseProfile = await this.sdLoader.loadProfile(baseUrl, fhirVersion);
       return baseProfile;
     } catch (error: unknown) {
       logger.warn(

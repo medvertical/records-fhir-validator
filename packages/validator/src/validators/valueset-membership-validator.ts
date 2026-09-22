@@ -1,19 +1,19 @@
-import { logger } from '../logger';
-import type { TerminologyApiClient } from './terminology-api-client';
-import type { FhirVersion } from './valueset-expansion-cache-key';
-import { classifyUnverifiableFilterReason } from './valueset-filter-checks';
-import { isLanguageBinding, validateBCP47 } from './valueset-language-utils';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import type { TwoPhaseShadowEvaluator } from './valueset-two-phase-shadow';
-import { recordTerminologyReason } from './valueset-diagnostics';
+import { logger } from '../logger.js';
+import type { TerminologyApiClient } from './terminology-api-client.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
+import { classifyUnverifiableFilterReason } from './valueset-filter-checks.js';
+import { isLanguageBinding, validateBCP47 } from './valueset-language-utils.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import type { TwoPhaseShadowEvaluator } from './valueset-two-phase-shadow.js';
+import { recordTerminologyReason } from './valueset-diagnostics.js';
 import type {
   TerminologyDiagnostics,
   TerminologyResolutionConfig,
-} from './valueset-types';
-import { codeSystemCanonicalCandidates } from './code-system-canonical-aliases';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
-import { tryValidateValueSetMembershipViaServer } from './valueset-membership-server-delegation';
+} from './valueset-types.js';
+import { codeSystemCanonicalCandidates } from './code-system-canonical-aliases.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
+import { tryValidateValueSetMembershipViaServer } from './valueset-membership-server-delegation.js';
 
 interface ValueSetMembershipValidationDeps {
   apiClient: TerminologyApiClient;

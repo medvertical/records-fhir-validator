@@ -1,7 +1,7 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import { validateQuestionnaireAnswerTypes } from './questionnaire-answer-validator';
-import { isQuestionnaireItemEnabled } from './questionnaire-enable-when';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateQuestionnaireAnswerTypes } from './questionnaire-answer-validator.js';
+import { isQuestionnaireItemEnabled } from './questionnaire-enable-when.js';
 import type {
   AnswerOption,
   EnableWhen,
@@ -9,9 +9,9 @@ import type {
   QuestionnaireItem,
   QuestionnaireResponseAnswer,
   QuestionnaireResponseItem,
-} from './questionnaire-types';
-import type { ValueSetCache } from './valueset-cache';
-import { visitQuestionnaireResponseItems } from './questionnaire-response-traversal';
+} from './questionnaire-types.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import { visitQuestionnaireResponseItems } from './questionnaire-response-traversal.js';
 
 export function buildQuestionnaireItemMap(
   items: unknown[],

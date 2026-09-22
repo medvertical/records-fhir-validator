@@ -1,10 +1,36 @@
-import type { ValidationIssue } from '../../types';
-import { createValidationIssue } from '../../issues';
-import { UcumCodeValidator, ucumCodeHasAnnotation } from '../../validators/ucum-validator';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../../issues/index.js';
+import { UcumCodeValidator, ucumCodeHasAnnotation } from '../../validators/ucum-validator.js';
+import { hasInvalidSnomedCheckDigit } from '../../validators/snomed-id-validator.js';
 import {
   buildInvalidUcumIssueDetails,
   buildInvalidUcumMessage,
-} from './terminology-ucum-rules';
+} from './terminology-ucum-rules.js';
+
+type CodingHygieneIssue = {
+  severity: 'error' | 'warning' | 'information';
+  code: string;
+  message: string;
+  path: string;
+  details?: Record<string, unknown>;
+};
+
+function snomedCheckDigitIssue(value: Record<string, unknown>, path: string): CodingHygieneIssue | undefined {
+  if (value.system !== 'http://snomed.info/sct' || typeof value.code !== 'string'
+    || !hasInvalidSnomedCheckDigit(value.code)) return undefined;
+  return {
+    severity: 'error',
+    code: 'terminology-code-invalid',
+    message: `SNOMED CT identifier '${value.code}' has an invalid Verhoeff check digit`,
+    path: `${path}.code`,
+    details: {
+      code: value.code,
+      system: value.system,
+      reason: 'snomed-check-digit',
+      fixHint: 'Verify the intended concept against its source terminology; changing the check digit alone does not establish the intended clinical meaning.',
+    },
+  };
+}
 
 function isCodingHygienePath(path: string): boolean {
   return (
@@ -46,13 +72,7 @@ export function validateCodingHygiene(
   const root = resourceTypeOf(resource);
   const visited = new WeakSet<object>();
 
-  const pushOnce = (issue: {
-    severity: 'error' | 'warning' | 'information';
-    code: string;
-    message: string;
-    path: string;
-    details?: Record<string, unknown>;
-  }): void => {
+  const pushOnce = (issue: CodingHygieneIssue): void => {
     const key = `${issue.code}|${issue.path}`;
     if (seen.has(key)) return;
     seen.add(key);
@@ -127,6 +147,9 @@ export function validateCodingHygiene(
       });
     }
 
+    const snomedIssue = snomedCheckDigitIssue(value, path);
+    if (snomedIssue) pushOnce(snomedIssue);
+
     if (value.system === 'http://unitsofmeasure.org' && typeof value.code === 'string') {
       const result = ucumValidator.validate(value.code);
       if (result.valid && ucumCodeHasAnnotation(value.code)) {
@@ -140,9 +163,9 @@ export function validateCodingHygiene(
         pushOnce({
           severity: 'error',
           code: 'terminology-code-invalid',
-          message: buildInvalidUcumMessage(value.code, `${path}.code`, result.message),
+          message: buildInvalidUcumMessage(value.code, `${path}.code`, result.message, result.suggestion),
           path: `${path}.code`,
-          details: buildInvalidUcumIssueDetails(value.code, `${path}.code`, result.message),
+          details: buildInvalidUcumIssueDetails(value.code, `${path}.code`, result.message, result.suggestion),
         });
       }
     }

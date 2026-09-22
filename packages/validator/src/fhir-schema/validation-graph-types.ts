@@ -2,7 +2,7 @@ import type {
   FHIRSchemaBinding,
   FHIRSchemaConstraint,
   FHIRSchemaSlicing,
-} from './fhir-schema-types';
+} from './fhir-schema-types.js';
 
 export interface ValidationGraph {
   url: string;

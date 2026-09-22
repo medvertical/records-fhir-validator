@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../../types';
-import { createValidationIssue } from '../../issues';
-import { hasBareReferenceToContainer } from './structural-reference-traversal';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../../issues/index.js';
+import { hasBareReferenceToContainer } from './structural-reference-traversal.js';
 
 type ObjectRecord = Record<string, unknown>;
 
@@ -224,7 +224,7 @@ export {
   validateOrphanPrimitiveSidecars,
   validatePrimitiveSidecarArrayAlignment,
   validateWhitespaceOnlyPrimitives,
-} from './structural-primitive-sanity-rules';
+} from './structural-primitive-sanity-rules.js';
 
 function isObjectRecord(value: unknown): value is ObjectRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

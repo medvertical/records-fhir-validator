@@ -1,18 +1,18 @@
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { FhirVersionFamily } from '../core/sd-loader-version-utils';
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import type { ConstraintValidator } from './constraint-validator';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { FhirVersionFamily } from '../core/sd-loader-version-utils.js';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ConstraintValidator } from './constraint-validator.js';
 import {
   emitMatchedSliceChildIssues,
   resourceTypeFromPath,
   validateSliceContentConstraints,
   validateSliceRootConstraints,
-} from './slicing-content-rules';
-import type { SliceElementMatch } from './slicing-match-assignment';
-import { shouldSuppressUnresolvedBindingOnlyMin } from './slicing-match-policy';
-import type { SliceDefinition } from './slice-types';
-import { validateSliceTypeProfileConstraints } from './slicing-type-profile-constraints';
+} from './slicing-content-rules.js';
+import type { SliceElementMatch } from './slicing-match-assignment.js';
+import { shouldSuppressUnresolvedBindingOnlyMin } from './slicing-match-policy.js';
+import type { SliceDefinition } from './slice-types.js';
+import { validateSliceTypeProfileConstraints } from './slicing-type-profile-constraints.js';
 
 interface ValidateMatchedSlicesOptions {
   elements: unknown[];

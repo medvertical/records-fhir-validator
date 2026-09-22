@@ -1,13 +1,20 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   clearProfilePackageProvenance,
   recordProfilePackageProvenance,
 } from '../../package/canonical-pin-provenance';
 import { findResourceInPackages } from '../../validators/valueset-package-search';
 import { pinBindingToDependencyPins } from './terminology-binding-dependency-pins';
+import { resolveValueSetPackageDirectories } from '../../validators/valueset-package-resource-access';
+import { clearCanonicalPinCaches } from '../../package/canonical-pin-context';
+
+vi.mock('../../validators/valueset-package-resource-access', async importOriginal => ({
+  ...await importOriginal<typeof import('../../validators/valueset-package-resource-access')>(),
+  resolveValueSetPackageDirectories: vi.fn(() => []),
+}));
 
 const PROFILE_URL = 'http://example.org/fhir/igx/StructureDefinition/pinned-profile';
 const VALUE_SET = 'http://example.org/fhir/dep/ValueSet/dep-codes';
@@ -17,6 +24,8 @@ describe('pinBindingToDependencyPins', () => {
 
   afterEach(async () => {
     clearProfilePackageProvenance();
+    clearCanonicalPinCaches();
+    vi.mocked(resolveValueSetPackageDirectories).mockReturnValue([]);
     await Promise.all(tempDirs.map(dir => rm(dir, { recursive: true, force: true })));
     tempDirs.length = 0;
   });
@@ -24,6 +33,7 @@ describe('pinBindingToDependencyPins', () => {
   async function createStore(): Promise<string> {
     const dir = await mkdtemp(path.join(tmpdir(), 'binding-pins-'));
     tempDirs.push(dir);
+    vi.mocked(resolveValueSetPackageDirectories).mockReturnValue([dir]);
     return dir;
   }
 
@@ -41,16 +51,37 @@ describe('pinBindingToDependencyPins', () => {
     await writeValueSetPackage(store, '2.0.0', '2.0.0');
     recordProfilePackageProvenance(PROFILE_URL, '1.0.0', 'example.igx#1.0.0');
 
-    // The provenance-driven context resolves against the live store set, so
-    // exercise the pin resolution directly through the same helpers with the
-    // fixture store to keep the test hermetic.
-    const { derivePackagePinContext, resolvePinnedVersionForCanonical } =
-      await import('../../package/canonical-pin-context');
-    const context = await derivePackagePinContext([store], { name: 'example.igx', version: '1.0.0' });
+    await expect(pinBindingToDependencyPins(
+      { strength: 'required', valueSet: VALUE_SET },
+      { url: PROFILE_URL, version: '1.0.0' }, 'R4',
+    )).resolves.toMatchObject({ valueSet: `${VALUE_SET}|1.0.0` });
+  });
 
-    expect(context).not.toBeNull();
-    await expect(resolvePinnedVersionForCanonical([store], context!, VALUE_SET, 'R4'))
-      .resolves.toBe('1.0.0');
+  it('pins a same-IG binding to its ValueSet version rather than the profile or package version', async () => {
+    const store = await createStore();
+    await writeSourcePackage(store, {});
+    const valueSet = 'http://example.org/fhir/igx/ValueSet/own-codes';
+    const packageDir = path.join(store, 'example.igx#1.0.0', 'package');
+    await writeFile(path.join(packageDir, '.index.json'), JSON.stringify({
+      'index-version': 2,
+      files: [{ filename: 'ValueSet-own-codes.json', resourceType: 'ValueSet', url: valueSet, version: '3.2.0' }],
+    }));
+    recordProfilePackageProvenance(PROFILE_URL, '2.1.0', 'example.igx#1.0.0');
+
+    await expect(pinBindingToDependencyPins(
+      { strength: 'required', valueSet },
+      { url: PROFILE_URL, version: '2.1.0' }, 'R4',
+    )).resolves.toMatchObject({ valueSet: `${valueSet}|3.2.0` });
+  });
+
+  it.each([
+    'http://example.org/fhir/igx/ValueSet/own-codes',
+    `${VALUE_SET}|9.0.0`,
+    'http://hl7.org/fhir/ValueSet/observation-status',
+  ])('does not invent a version without owning-package evidence for %s', async valueSet => {
+    const binding = { strength: 'required' as const, valueSet };
+    await expect(pinBindingToDependencyPins(binding, { url: PROFILE_URL, version: '1.0.0' }, 'R4'))
+      .resolves.toBe(binding);
   });
 
   it('lets the cross-major guard reject a pinned version with no same-major candidate', async () => {

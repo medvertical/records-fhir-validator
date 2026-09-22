@@ -1,7 +1,7 @@
-import type { SlicingDiscriminator } from '../core/structure-definition-types';
-import type { SliceDefinition } from './slice-types';
-import { getValueAtPath, valuesMatch } from './slice-utils';
-import { getTypeSpecsForDiscriminator, stripCanonicalVersion } from './slice-type-discriminator';
+import type { SlicingDiscriminator } from '../core/structure-definition-types.js';
+import type { SliceDefinition } from './slice-types.js';
+import { getValueAtPath, valuesMatch } from './slice-utils.js';
+import { getTypeSpecsForDiscriminator, stripCanonicalVersion } from './slice-type-discriminator.js';
 
 export function sliceHasDiscriminatorEvidence(
   slice: SliceDefinition,
@@ -24,7 +24,26 @@ export function sliceHasDiscriminatorEvidence(
     ));
   }
   if (path === 'url' && getExtensionProfileUrls(slice).length > 0) return true;
+  if (hasResolvedTargetProfileEvidence(slice, discriminator.type, path)) return true;
   return hasDirectDiscriminatorEvidence(slice, path);
+}
+
+/**
+ * A `resolve()` discriminator names a property of the *referenced* resource, so
+ * a slice cannot fix that value on itself — it identifies its members by the
+ * target profile they must conform to. Counting `targetProfile` as evidence is
+ * what lets `matchResolvedDiscriminator` reach its declared-profile fallback;
+ * without it such slicing is never evaluated at all.
+ */
+function hasResolvedTargetProfileEvidence(
+  slice: SliceDefinition,
+  discriminatorType: string,
+  path: string,
+): boolean {
+  if (discriminatorType !== 'value' && discriminatorType !== 'pattern') return false;
+  if (!path.startsWith('resolve()')) return false;
+  return getTypeSpecsForDiscriminator(slice, '$this')
+    .some(spec => (spec.targetProfile?.length ?? 0) > 0);
 }
 
 export function normalizeDiscriminatorPath(path: string): string {

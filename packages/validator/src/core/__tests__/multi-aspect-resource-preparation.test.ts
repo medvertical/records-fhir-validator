@@ -64,7 +64,28 @@ describe('MultiAspectResourcePreparation', () => {
       resource,
       expect.anything(),
       { organizationId: 7, serverId: 314, fhirVersion: 'R4' },
+      null,
     );
+  });
+
+  it('hands questionnaire resolution a resolver over the enclosing Bundle entries', async () => {
+    const questionnaireUrn = 'urn:uuid:bc52dbf4-fd67-52e3-ba75-731a76805872';
+    const bundledQuestionnaire = { resourceType: 'Questionnaire', status: 'active' };
+    const response = { resourceType: 'QuestionnaireResponse', questionnaire: questionnaireUrn };
+    const bundle = {
+      resourceType: 'Bundle',
+      type: 'transaction',
+      entry: [
+        { fullUrl: questionnaireUrn, resource: bundledQuestionnaire },
+        { fullUrl: 'urn:uuid:response', resource: response },
+      ],
+    };
+    const preparation = new MultiAspectResourcePreparation({ deps: makeDeps(), settings: {} });
+
+    await preparation.prepare(response, structureDef.url, 'R4', bundle);
+
+    const resolveBundleCanonical = vi.mocked(resolveContextQuestionnaire).mock.calls[0]?.[3];
+    expect(resolveBundleCanonical?.(questionnaireUrn, 'Questionnaire')).toBe(bundledQuestionnaire);
   });
 
   it('combines bundle-local and host reference resolution with local precedence', async () => {

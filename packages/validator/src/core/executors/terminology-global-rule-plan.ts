@@ -1,10 +1,10 @@
-import type { ProfileSourceContext } from '../../persistence';
-import type { ValidationIssue } from '../../types';
-import type { UcumCodeValidator } from '../../validators/ucum-validator';
-import { validateCodingHygiene } from './terminology-coding-hygiene-rules';
-import { validateKnownLoincDisplays } from './terminology-display-rules';
-import { validateDeepLocalCodings } from './terminology-local-coding-rules';
-import type { TerminologyValidationPort } from './terminology-validation-port';
+import type { ProfileSourceContext } from '../../persistence/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { UcumCodeValidator } from '../../validators/ucum-validator.js';
+import { validateCodingHygiene } from './terminology-coding-hygiene-rules.js';
+import { validateKnownLoincDisplays } from './terminology-display-rules.js';
+import { validateDeepLocalCodings } from './terminology-local-coding-rules.js';
+import type { TerminologyValidationPort } from './terminology-validation-port.js';
 
 interface TerminologyGlobalRuleContext {
   resource: unknown;

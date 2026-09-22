@@ -1,9 +1,9 @@
-import type { ValidationIssue } from '../types';
-import { normalizeChoiceTypePath } from './choice-type-path';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { normalizeChoiceTypePath } from './choice-type-path.js';
 import {
   isIndexedBundleEntryResourcePath,
   normalizeIndexedBundleEntryResourcePath,
-} from './validation-issue-dedupe-bundle-path-utils';
+} from './validation-issue-dedupe-bundle-path-utils.js';
 
 export function isBundleDuplicateFullUrlIssue(issue: ValidationIssue): boolean {
   return issue.code === 'reference-bundle-duplicate-fullurl' ||

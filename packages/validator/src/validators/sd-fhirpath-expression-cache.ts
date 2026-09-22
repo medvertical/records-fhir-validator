@@ -1,10 +1,10 @@
 import fhirpath from 'fhirpath';
 
-import { getFhirPathModel } from '../core/fhirpath-context';
-import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite';
-import { logger } from '../logger';
-import { VersionedExpressionCache } from './fhirpath-expression-cache-core';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+import { getFhirPathModel } from '../core/fhirpath-context.js';
+import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite.js';
+import { logger } from '../logger.js';
+import { VersionedExpressionCache } from './fhirpath-expression-cache-core.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 function compileSDFHIRPathExpression(expression: string, fhirVersion: 'R4' | 'R5' | 'R6') {
     return fhirpath.compile(

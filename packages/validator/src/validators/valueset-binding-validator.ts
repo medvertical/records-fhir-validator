@@ -1,26 +1,27 @@
-import type { ValidationIssue } from '../types';
-import type { ValidationSeverity } from '@records-fhir/validation-types';
-import type { Binding } from '../core/structure-definition-types';
+import type { ValidationIssue, ValidationSeverity } from '@records-fhir/validation-types';
+import type { Binding } from '../core/structure-definition-types.js';
 import {
   createBindingViolation,
+  createValidationIssue,
   createBindingUnverified,
   createValueSetUnavailable,
-} from '../issues';
-import { logger } from '../logger';
+} from '../issues/index.js';
+import { logger } from '../logger.js';
 
-import type { TerminologyResolutionConfig, CodeBindingOutcome } from './valueset-types';
-import { extractCodeInfo, extractCodeInfos } from './valueset-code-info';
+import type { TerminologyResolutionConfig, CodeBindingOutcome } from './valueset-types.js';
+import { extractCodeInfo, extractCodeInfos } from './valueset-code-info.js';
 import {
   resourceTypeFromElementPath,
   type BindingStrength,
   type CodeInfo,
-} from './valueset-display-utils';
-import { type FhirVersion } from './valueset-expansion-cache-key';
-import { validateDisplayMatchesCodeSystem } from './valueset-display-validator';
-import type { ValueSetCache } from './valueset-cache';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import { validateCodeSystemVersions } from './valueset-binding-version-validator';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+} from './valueset-display-utils.js';
+import { type FhirVersion } from './valueset-expansion-cache-key.js';
+import { validateDisplayMatchesCodeSystem } from './valueset-display-validator.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import { validateCodeSystemVersions } from './valueset-binding-version-validator.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import type { UnverifiedBindingDiagnostic } from '../issues/unverified-binding-diagnostic.js';
 
 export type ValidateBindingOptions = {
   valueSetUrl?: string;
@@ -47,6 +48,14 @@ export interface BindingValidationDeps {
     codeSystemVersion?: string,
   ): Promise<CodeBindingOutcome>;
   isValueSetAvailable(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<boolean>;
+  /** Why the resolver left this binding unverified, when it recorded that. */
+  getUnverifiedBindingDiagnostic?(
+    code: string,
+    system: string | undefined,
+    valueSetUrl: string,
+    fhirVersion?: FhirVersion,
+    codeSystemVersion?: string,
+  ): UnverifiedBindingDiagnostic | undefined;
 }
 
 /**
@@ -71,6 +80,7 @@ export async function validateBinding(
 
   try {
     const valueSetUrl = options?.valueSetUrl || binding.valueSet;
+    issues.push(...await reportUnresolvedPinnedVersion(deps, valueSetUrl, elementPath, options));
     const codeInfos = extractCodeInfos(code);
     if (codeInfos.length === 0) {
       if (!valueSetUrl) return issues;
@@ -206,6 +216,9 @@ async function validateExtractedCodeBindings(
         resourceType: resourceTypeFromElementPath(elementPath),
         profile: options?.profileUrl,
         severityOverride,
+        diagnostic: deps.getUnverifiedBindingDiagnostic?.(
+          codeInfo.code, codeInfo.system, valueSetUrl, options?.fhirVersion, codeInfo.version,
+        ),
       }));
     }
   }
@@ -234,9 +247,36 @@ async function validateExtractedCodeBindings(
       resourceType: resourceTypeFromElementPath(elementPath),
       profile: options?.profileUrl,
     }));
+    // Only a required primitive binding must establish its implicit system.
+    // Coding.system is optional and has its own hygiene warning; a preferred
+    // or extensible binding must not turn that omission into a hard error.
+    if (binding.strength === 'required' && typeof rawCode === 'string'
+      && !firstCodeInfo.system && !systemLivesOnSiblingCoding(elementPath)) {
+      issues.push(createValidationIssue({
+        code: 'terminology-system-undetermined',
+        path: elementPath,
+        resourceType: resourceTypeFromElementPath(elementPath),
+        profile: options?.profileUrl,
+        messageParams: { code: firstCodeInfo.code, valueSet: valueSetUrl },
+      }));
+    }
+
   }
 
   return issues;
+}
+
+/**
+ * A profile may bind `X.coding.code` rather than the CodeableConcept — MII and
+ * other IGs do this routinely. The value handed to the binding walk is then the
+ * bare primitive, but the system is not unknown: it sits on the sibling
+ * `Coding.system`, which this walk simply never looked at. Claiming it could
+ * not be determined would be an error-severity finding about the validator's
+ * own traversal. A Coding that genuinely carries no system is already reported
+ * as `terminology-coding-missing-system`.
+ */
+function systemLivesOnSiblingCoding(elementPath: string): boolean {
+  return /\.coding(\[\d+\])?\.code$/.test(elementPath);
 }
 
 async function validateDisplaysForCodeInfos(
@@ -268,4 +308,37 @@ async function validateDisplaysForCodeInfos(
     }
   }
   return issues;
+}
+
+/**
+ * A binding may pin the value set version it means. Records resolves a pinned
+ * version by falling back within the same major, so `|4.0.0` quietly resolved
+ * to the bundled `4.0.1`. The fallback keeps validation working, but the
+ * reference validator says when the pinned version was not the one found, and
+ * silently substituting a different version is exactly the kind of thing a
+ * reader needs told.
+ */
+async function reportUnresolvedPinnedVersion(
+  deps: BindingValidationDeps,
+  valueSetUrl: string | undefined,
+  elementPath: string,
+  options?: ValidateBindingOptions,
+): Promise<ValidationIssue[]> {
+  if (!valueSetUrl) return [];
+  const [canonical, pinnedVersion] = valueSetUrl.split('|');
+  if (!pinnedVersion || !canonical) return [];
+
+  const resolved = await deps.packageLoader.loadValueSetResource(valueSetUrl, options?.fhirVersion);
+  if (!resolved) return [];
+  const resolvedVersion = typeof resolved.version === 'string' ? resolved.version : undefined;
+  if (resolvedVersion === pinnedVersion) return [];
+
+  return [createValidationIssue({
+    code: 'terminology-valueset-version-unresolved',
+    path: elementPath,
+    resourceType: resourceTypeFromElementPath(elementPath),
+    profile: options?.profileUrl,
+    messageParams: { valueSet: valueSetUrl },
+    details: { valueSet: canonical, pinnedVersion, ...(resolvedVersion ? { resolvedVersion } : {}) },
+  })];
 }

@@ -604,7 +604,7 @@ describe('FHIR Schema validation graph', () => {
     }));
   });
 
-  it('reports required unresolved resolve() slices as missing', () => {
+  it('leaves required resolve() slices unverified when no target can be reached', () => {
     const schema = convertToFHIRSchema({
       url: 'http://example.org/StructureDefinition/ObservationFocusResolveProfile',
       name: 'ObservationFocusResolveProfile',
@@ -648,18 +648,39 @@ describe('FHIR Schema validation graph', () => {
     }));
     const graph = compileFHIRSchemaToValidationGraph(schema);
 
-    const issues = validateResourceWithGraph({
+    const resource = {
       resourceType: 'Observation',
       focus: [
         { reference: 'Condition/example' },
         { reference: 'Procedure/example' },
       ],
-    }, graph);
+    };
 
-    expect(issues.filter(issue => issue.code === 'profile-slice-min-cardinality')).toHaveLength(2);
+    // Without a resolver the targets decide nothing, so neither slice may be
+    // declared missing on the strength of evidence that was never gathered.
+    expect(validateResourceWithGraph(resource, graph)
+      .filter(issue => issue.code === 'profile-slice-min-cardinality')).toHaveLength(0);
+
+    const targets: Record<string, unknown> = {
+      'Condition/example': {
+        resourceType: 'Condition',
+        meta: { profile: ['http://example.org/StructureDefinition/Diagnosis'] },
+      },
+      'Procedure/example': {
+        resourceType: 'Procedure',
+        meta: { profile: ['http://example.org/StructureDefinition/Operation'] },
+      },
+    };
+    expect(validateResourceWithGraph(resource, graph, {
+      resolveReference: reference => targets[reference] ?? null,
+    }).filter(issue => issue.code === 'profile-slice-min-cardinality')).toHaveLength(0);
+
+    expect(validateResourceWithGraph(resource, graph, {
+      resolveReference: () => ({ resourceType: 'Condition', meta: { profile: ['http://example.org/other'] } }),
+    }).filter(issue => issue.code === 'profile-slice-min-cardinality')).toHaveLength(2);
   });
 
-  it('reports closed unresolved resolve() slices as unmatched and missing', () => {
+  it('decides closed resolve() slices from the resolved target', () => {
     const schema = convertToFHIRSchema({
       url: 'http://example.org/StructureDefinition/DiagnosticReportResolveProfile',
       name: 'DiagnosticReportResolveProfile',
@@ -695,16 +716,33 @@ describe('FHIR Schema validation graph', () => {
     }));
     const graph = compileFHIRSchemaToValidationGraph(schema);
 
-    const issues = validateResourceWithGraph({
+    const resource = {
       resourceType: 'DiagnosticReport',
       result: [
         { reference: 'Observation/a' },
         { reference: 'Observation/b' },
       ],
-    }, graph);
+    };
 
-    expect(issues.map(issue => issue.code)).toContain('profile-slice-min-cardinality');
-    expect(issues.map(issue => issue.code)).toContain('profile-pattern-mismatch');
+    expect(validateResourceWithGraph(resource, graph).map(issue => issue.code))
+      .not.toContain('profile-slice-min-cardinality');
+
+    const conclusion = {
+      resourceType: 'Observation',
+      meta: { profile: ['http://example.org/StructureDefinition/DiagnosticConclusion'] },
+    };
+    const satisfied = validateResourceWithGraph(resource, graph, {
+      resolveReference: reference => (reference === 'Observation/a' ? conclusion : { resourceType: 'Observation' }),
+    }).map(issue => issue.code);
+    expect(satisfied).not.toContain('profile-slice-min-cardinality');
+    // 'Observation/b' resolves but fits no slice, which closed slicing forbids.
+    expect(satisfied).toContain('profile-pattern-mismatch');
+
+    const unsatisfied = validateResourceWithGraph(resource, graph, {
+      resolveReference: () => ({ resourceType: 'Observation' }),
+    }).map(issue => issue.code);
+    expect(unsatisfied).toContain('profile-slice-min-cardinality');
+    expect(unsatisfied).toContain('profile-pattern-mismatch');
   });
 
   it('keeps inherited slice cardinalities isolated when merging differentials', () => {

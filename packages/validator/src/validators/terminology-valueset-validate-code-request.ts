@@ -1,23 +1,22 @@
 import axios, { isAxiosError } from 'axios';
 
-import { logger } from '../logger';
-import type { CircuitBreaker } from '../terminology';
-import { makeValueSetNotResolvableCacheKey } from './terminology-api-cache';
+import { logger } from '../logger.js';
+import type { CircuitBreaker } from '../terminology/index.js';
 import {
   DEFAULT_REMOTE_TERMINOLOGY_TIMEOUT_MS,
   getRemoteTerminologyTimeoutMs,
   recordTerminologyResponse,
-} from './terminology-api-remote-policy';
-import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config';
+} from './terminology-api-remote-policy.js';
+import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config.js';
 import {
   operationOutcomeCannotResolveBinding,
-  validateCodeSucceeded,
-} from './terminology-parameters';
-import type { TerminologyResolutionConfig, TerminologyServerOverride } from './valueset-types';
-import type { TerminologyOperationCache } from './terminology-operation-cache';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import type { TerminologyRequestBroker } from './terminology-request-broker';
-import type { RemoteValueSetValidationResult } from './terminology-api-types';
+  valueSetValidationOutcome,
+} from './terminology-parameters.js';
+import type { TerminologyResolutionConfig, TerminologyServerOverride, ValueSet } from './valueset-types.js';
+import type { TerminologyOperationCache } from './terminology-operation-cache.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import type { TerminologyRequestBroker } from './terminology-request-broker.js';
+import type { RemoteValueSetValidationResult } from './terminology-api-types.js';
 
 interface ValueSetValidateCodeRequest {
   bindingStrength?: 'required' | 'extensible' | 'preferred' | 'example';
@@ -33,6 +32,8 @@ interface ValueSetValidateCodeRequest {
   serverUrl: string;
   system?: string;
   valueSetUrl: string;
+  valueSet?: ValueSet;
+  valueSetNotResolvableKey: string;
 }
 
 export async function executeValueSetValidateCodeRequest(
@@ -54,10 +55,17 @@ export async function executeValueSetValidateCodeRequest(
     serverUrl,
     system,
     valueSetUrl,
+    valueSet,
   } = request;
   try {
-    const params: Record<string, string> = { url: valueSetUrl, code, _format: 'json' };
+    const [canonical, valueSetVersion] = valueSetUrl.split('|');
+    const params: Record<string, string> = { url: canonical, code, _format: 'json' };
+    if (valueSetVersion) params.valueSetVersion = valueSetVersion;
+    // A binding on a string or code element carries no system. The server
+    // infers it from the value set; without the flag it rejects the request
+    // as incomplete instead of answering.
     if (system) params.system = system;
+    else params.inferSystem = 'true';
     if (codeSystemVersion) params.systemVersion = codeSystemVersion;
     let startedAt = Date.now();
     const response = await broker.run(
@@ -66,6 +74,20 @@ export async function executeValueSetValidateCodeRequest(
       maxConcurrency,
       async () => {
         startedAt = Date.now();
+        if (valueSet) {
+          const requestConfig = await requestConfigBuilder.build(
+            override?.auth,
+            getRemoteTerminologyTimeoutMs(config, DEFAULT_REMOTE_TERMINOLOGY_TIMEOUT_MS),
+          );
+          return axios.post(`${serverUrl}/ValueSet/$validate-code`, {
+            resourceType: 'Parameters', parameter: [
+              { name: 'code', valueCode: code },
+              ...(system ? [{ name: 'system', valueUri: system }] : [{ name: 'inferSystem', valueBoolean: true }]),
+              ...(codeSystemVersion ? [{ name: 'systemVersion', valueString: codeSystemVersion }] : []),
+              { name: 'valueSet', resource: valueSet },
+            ],
+          }, { ...requestConfig, headers: { ...requestConfig.headers, 'Content-Type': 'application/fhir+json' } });
+        }
         return axios.get(`${serverUrl}/ValueSet/$validate-code`, {
           ...(await requestConfigBuilder.build(
             override?.auth,
@@ -76,10 +98,13 @@ export async function executeValueSetValidateCodeRequest(
       },
     );
 
-    const valid = validateCodeSucceeded(response.data);
+    const outcome = valueSetValidationOutcome(response.data);
     const result: RemoteValueSetValidationResult = {
-      accepted: valid,
-      outcome: valid ? 'valid' : 'invalid',
+      accepted: outcome === 'valid',
+      outcome,
+      serverUrl,
+      // An undecidable 200 carries no binding answer the server would stand behind.
+      ...(outcome === 'unverified' ? { reason: 'value-set-not-found' as const } : {}),
     };
     recordTerminologyResponse(
       circuitBreaker,
@@ -103,22 +128,19 @@ export async function executeValueSetValidateCodeRequest(
       const failOpen = cannotResolve || bindingStrength !== 'required';
       if (cannotResolve) {
         operationCache.storeValueSetNotResolvable(
-          makeValueSetNotResolvableCacheKey(
-            serverScope,
-            valueSetUrl,
-            system,
-            codeSystemVersion,
-          ),
+          request.valueSetNotResolvableKey,
         );
       }
       const result: RemoteValueSetValidationResult = {
         accepted: failOpen,
         outcome: cannotResolve ? 'unverified' : 'invalid',
+        serverUrl,
+        ...(cannotResolve ? { reason: 'value-set-not-found' as const } : {}),
       };
       operationCache.storeValidateCode(cacheKey, result);
       return result;
     }
     circuitBreaker.recordFailure();
-    return { accepted: false, outcome: 'unverified' };
+    return { accepted: false, outcome: 'unverified', reason: 'server-failure', serverUrl };
   }
 }

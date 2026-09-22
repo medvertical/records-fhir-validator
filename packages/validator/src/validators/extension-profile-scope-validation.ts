@@ -1,15 +1,15 @@
-import type { ValidationIssue } from '../types';
-import { isRecord, resourceTypeOf } from '../core/fhir-resource';
-import type { ExtensionDefinitionContext } from './extension-definition-extractor';
-import { normalizeExtensionUrlForMatching } from './extension-definition-extractor';
-import { checkExtensionPathCardinality } from './extension-cardinality-rules';
-import { selectDefinitionsForResourceContext } from './extension-context-selection';
-import { getExtensionGroupsByParent } from './extension-group-resolver';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { isRecord, resourceTypeOf } from '../core/fhir-resource.js';
+import type { ExtensionDefinitionContext } from './extension-definition-extractor.js';
+import { normalizeExtensionUrlForMatching } from './extension-definition-extractor.js';
+import { checkExtensionPathCardinality } from './extension-cardinality-rules.js';
+import { selectDefinitionsForResourceContext } from './extension-context-selection.js';
+import { getExtensionGroupsByParent } from './extension-group-resolver.js';
 import {
   checkSliceScopedExtensionCardinality,
   getParentSliceAncestors,
-} from './extension-sliced-cardinality';
-import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types';
+} from './extension-sliced-cardinality.js';
+import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types.js';
 
 type ExtensionType = 'extension' | 'modifierExtension';
 

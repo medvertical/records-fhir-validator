@@ -1,7 +1,7 @@
-import type { ElementDefinition } from '../core/structure-definition-types';
-import { getValidationTargets } from '../business-rules/element-validation-targets';
-import { targetMatchesSliceDefinition } from './constraint-slice-targets';
-import type { ExtensionDefinition } from './extension-types';
+import type { ElementDefinition } from '../core/structure-definition-types.js';
+import { getValidationTargets } from '../business-rules/element-validation-targets.js';
+import { targetMatchesSliceDefinition } from './constraint-slice-targets.js';
+import type { ExtensionDefinition } from './extension-types.js';
 
 export function selectDefinitionsForResourceContext(
   candidatesByUrl: Map<string, ExtensionDefinition[]>,

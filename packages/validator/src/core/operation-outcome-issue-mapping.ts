@@ -6,10 +6,10 @@
  * match wins, so preserve more-specific prefixes before generic families.
  */
 
-import { QUESTIONNAIRE_PREFIX_TO_HL7_ISSUE_TYPE } from './operation-outcome-issue-mapping-questionnaire';
-import { HL7_ISSUE_TYPES, type Hl7IssueType } from './operation-outcome-issue-types';
+import { QUESTIONNAIRE_PREFIX_TO_HL7_ISSUE_TYPE } from './operation-outcome-issue-mapping-questionnaire.js';
+import { HL7_ISSUE_TYPES, type Hl7IssueType } from './operation-outcome-issue-types.js';
 
-export { normalizeToHl7Severity } from './operation-outcome-severity';
+export { normalizeToHl7Severity } from './operation-outcome-severity.js';
 
 /**
  * Prefix-based mapping: Records code prefix → HL7 issue-type.
@@ -177,6 +177,10 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   // Repeated Bundle.link relation — Java emits `invalid` ("The link
   // relationship type … can only occur once").
   ['bundle-link-relation-duplicate', 'invalid'],
+  // Paging relation in a bundle type that is not paged — Java emits `invalid`
+  // ("The link relationship type … used in search sets is prohibited in this
+  // context").
+  ['bundle-link-relation-prohibited', 'invalid'],
   // Reachability orphan diagnostic — Java emits these as `informational`
   // even though the severity is error.
   ['bundle-entry-not-reachable', 'informational'],

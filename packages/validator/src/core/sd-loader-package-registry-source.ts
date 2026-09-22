@@ -1,11 +1,11 @@
-import { logger } from '../logger';
-import { packageTargetMetadata } from '../package/package-artifact-policy';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
-import type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context';
-import { cacheDownloadedProfile } from './sd-loader-downloaded-profile-cache';
-import { loadFromLocalCache } from './sd-loader-filesystem';
-import { isPackageAllowed } from './sd-loader-package-config';
-import type { StructureDefinition } from './structure-definition-types';
+import { logger } from '../logger.js';
+import { packageTargetMetadata } from '../package/package-artifact-policy.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
+import type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context.js';
+import { cacheDownloadedProfile } from './sd-loader-downloaded-profile-cache.js';
+import { loadFromLocalCache } from './sd-loader-filesystem.js';
+import { isPackageAllowed } from './sd-loader-package-config.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 
 /** Resolve a profile by detecting, installing, and reading its FHIR package. */
 export async function tryPackageRegistrySource(

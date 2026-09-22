@@ -1,14 +1,23 @@
 import { SaxesParser } from 'saxes';
-import type { FhirInputLimits, ParsedFhirInput } from './fhir-input-types';
+import type { FhirInputDiagnostic, FhirInputLimits, ParsedFhirInput } from './fhir-input-types.js';
 import {
   convertFhirXmlRoot,
   createXmlNode,
   FHIR_XML_NAMESPACE,
   XHTML_XML_NAMESPACE,
   type XmlNode,
-} from './fhir-xml-node-converter';
+} from './fhir-xml-node-converter.js';
 
 const XMLNS_NAMESPACE = 'http://www.w3.org/2000/xmlns/';
+
+export interface FhirXmlParseOptions {
+  /**
+   * FHIR release whose definitions decide primitive types and cardinality.
+   * R4 and R5 disagree on roughly 200 elements, so passing the release the
+   * document belongs to matters. Defaults to R4.
+   */
+  fhirVersion?: string;
+}
 const DEFAULT_MAX_BYTES = 20 * 1024 * 1024;
 const DEFAULT_MAX_DEPTH = 200;
 const DEFAULT_MAX_NODES = 1_000_000;
@@ -16,6 +25,7 @@ const DEFAULT_MAX_NODES = 1_000_000;
 export function parseFhirXml(
   source: string,
   limits: FhirInputLimits = {},
+  options: FhirXmlParseOptions = {},
 ): ParsedFhirInput {
   if (typeof source !== 'string') throw new Error('FHIR XML input must be a string');
   const maxBytes = positiveLimit(limits.maxBytes, DEFAULT_MAX_BYTES);
@@ -89,10 +99,13 @@ export function parseFhirXml(
   }
 
   const sourceMap: ParsedFhirInput['sourceMap'] = {};
+  const diagnostics: FhirInputDiagnostic[] = [];
+  const resource = convertFhirXmlRoot(root, sourceMap, options.fhirVersion, diagnostics);
   return {
     format: 'xml',
-    resources: [convertFhirXmlRoot(root, sourceMap)],
+    resources: [resource],
     sourceMap,
+    ...(diagnostics.length > 0 ? { diagnostics } : {}),
   };
 }
 

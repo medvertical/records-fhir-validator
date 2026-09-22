@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 import {
   isSafePackageId,
   isSafePackageVersion,
@@ -8,8 +8,8 @@ import {
   packageReferenceMetadata,
 } from '../package/package-artifact-policy.js';
 import { PackageInstallationStore } from '../package/package-installation-store.js';
-import type { StructureDefinition } from './structure-definition-types';
-import { scanPackageDirectory } from './sd-loader-package-scanner';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { scanPackageDirectory } from './sd-loader-package-scanner.js';
 
 export interface LoadedIGPackage {
   packageId: string;

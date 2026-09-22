@@ -1,8 +1,8 @@
 import {
     fhirPathCustomFunctions,
     type FHIRPathContext,
-} from './fhirpath-functions';
-import type { CompiledSDFHIRPathExpression } from './sd-fhirpath-expression-cache';
+} from './fhirpath-functions.js';
+import type { CompiledSDFHIRPathExpression } from './sd-fhirpath-expression-cache.js';
 
 type FHIRPathAdditionalOptions = NonNullable<Parameters<CompiledSDFHIRPathExpression>[2]>;
 type LibraryInvocationTable = NonNullable<FHIRPathAdditionalOptions['userInvocationTable']>;

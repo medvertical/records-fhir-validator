@@ -54,8 +54,15 @@ export const PackageDownloadConfigSchema = z.object({
     versionPolicy: z.enum(['prefer-stable', 'prefer-latest']),
     pinnedVersions: z.record(z.string(), z.string()),
     approvedPackages: z.array(z.string()),
+    // Legacy evidence field; automatic downloads are governed by the allowlist and network policy.
     requireApproval: z.boolean(),
     autoDownload: z.boolean(),
+    workspaceTemplates: z.array(z.object({
+        id: z.string().min(1).max(80),
+        revision: z.string().min(1).max(80),
+        modules: z.array(z.string().max(80)).max(32),
+        packages: z.record(z.string(), z.string()),
+    })).max(32).optional(),
 });
 
 export const RecursiveReferenceValidationSchema = z.object({

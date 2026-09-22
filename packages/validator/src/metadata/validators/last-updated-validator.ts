@@ -6,10 +6,10 @@
  */
 
 import { parseISO, isValid, isAfter, isBefore, isSameSecond, subYears, differenceInYears, differenceInSeconds, getHours, getMinutes, getSeconds } from 'date-fns';
-import type { ValidationIssue } from '../../types';
-import { createValidationIssue } from '../../issues';
-import { logger } from '../../logger';
-import { validationFailureMetadata } from '../../utils/validation-execution-failure';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../../issues/index.js';
+import { logger } from '../../logger.js';
+import { validationFailureMetadata } from '../../utils/validation-execution-failure.js';
 
 const PATH = 'meta.lastUpdated';
 

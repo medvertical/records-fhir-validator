@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import { DiagnosticFormatter } from './diagnostic-formatter';
 
 function issue(severity: ValidationIssue['severity']): ValidationIssue {

@@ -11,8 +11,8 @@
  * Output: a deterministic map of `url|version` → PinnedCanonical.
  */
 
-import type { PinnedCanonical, CanonicalCandidate, PinOverride } from './types';
-import { compareVersions, detectVersionAlgorithm } from './version-comparator';
+import type { PinnedCanonical, CanonicalCandidate, PinOverride } from './types.js';
+import { compareVersions, detectVersionAlgorithm } from './version-comparator.js';
 
 const STATUS_PRIORITY: Record<string, number> = {
   active: 0,

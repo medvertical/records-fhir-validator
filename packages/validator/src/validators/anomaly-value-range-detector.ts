@@ -1,11 +1,11 @@
-import type { AnomalyFinding } from './anomaly-types';
+import type { AnomalyFinding } from './anomaly-types.js';
 import {
   getCodings,
   getResourceId,
   getString,
   toRecord,
   type FhirRecord,
-} from './anomaly-resource-utils';
+} from './anomaly-resource-utils.js';
 
 interface PlausibilityRange {
   loincCode: string;

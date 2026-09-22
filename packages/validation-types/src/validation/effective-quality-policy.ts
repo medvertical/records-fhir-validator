@@ -4,7 +4,7 @@ import type {
   QualityRuleDefinition,
   QualityRuleOverride,
   QualityRuleSeverity,
-} from './quality-rule-pack';
+} from './quality-rule-pack.js';
 
 export interface EffectiveQualityRule {
   packId: string;
@@ -37,6 +37,8 @@ export interface EffectiveQualityPolicySnapshot {
   siteId: number;
   serverId: number;
   environment: string;
+  /** Defaults to true for snapshots captured before scoped DQA enablement existed. */
+  qualityAssessmentEnabled?: boolean;
   commonBaselineFingerprint: `sha256:${string}`;
   localExtensionsFingerprint: `sha256:${string}`;
   effectivePolicyFingerprint: `sha256:${string}`;

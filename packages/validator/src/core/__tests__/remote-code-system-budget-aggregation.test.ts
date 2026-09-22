@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import { aggregateRemoteCodeSystemBudgetIssues } from '../validation-utils';
 import { validationIssue as issue } from './validation-issue-test-builders';
 

@@ -1,11 +1,11 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   childMatchesBundleEntrySliceCandidate,
   getBundleEntrySliceDefinitions,
-} from './bundle-entry-slice-definitions';
-import type { BundleDocumentContextChildResult } from './bundle-document-context-types';
-import type { StructureDefinition } from './structure-definition-types';
+} from './bundle-entry-slice-definitions.js';
+import type { BundleDocumentContextChildResult } from './bundle-document-context-types.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 
 export function buildBundleEntrySliceConformanceIssues(
   bundle: Record<string, unknown>,
@@ -132,7 +132,8 @@ function getTargetProfileBlockingIssues(issues: ValidationIssue[]): ValidationIs
     if (issue.aspect === 'structural' || issue.aspect === 'profile' || issue.aspect === 'invariant') {
       return true;
     }
-    return issue.aspect === 'terminology' && issue.code === 'terminology-binding-required';
+    return issue.aspect === 'terminology' &&
+      (issue.code === 'terminology-binding-required' || issue.code === 'terminology-binding-required-code');
   });
 }
 

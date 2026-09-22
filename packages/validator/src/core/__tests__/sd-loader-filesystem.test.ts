@@ -170,19 +170,40 @@ describe('sd-loader-filesystem', () => {
     );
   }
 
-  it('does not resolve unversioned canonicals to pre-release profiles', async () => {
+  it('prefers the released profile over a pre-release of the same canonical', async () => {
+    const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-'));
+    tempDirs.push(source);
+
+    await writeProfile(source, 'hl7.fhir.us.qicore#8.0.0-ballot', '8.0.0-ballot');
+    await writeProfile(source, 'hl7.fhir.us.qicore#7.0.0', '7.0.0');
+
+    const sd = await loadFromLocalCache(
+      'http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-procedure',
+      [source],
+      'R4',
+    );
+
+    // The ballot sorts above 7.0.0 by version, and is still the draft of a
+    // canonical that has a published answer.
+    expect(sd?.version).toBe('7.0.0');
+  });
+
+  // Refusing the ballot here reaches no safer profile — there is none. It
+  // validates against the base resource and reports the profile as
+  // unresolvable while it sits in the package the reader installed.
+  it('falls back to the pre-release when no release of the canonical is installed', async () => {
     const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-'));
     tempDirs.push(source);
 
     await writeProfile(source, 'hl7.fhir.us.qicore#8.0.0-ballot', '8.0.0-ballot');
 
-    await expect(
-      loadFromLocalCache(
-        'http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-procedure',
-        [source],
-        'R4',
-      ),
-    ).resolves.toBeNull();
+    const sd = await loadFromLocalCache(
+      'http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-procedure',
+      [source],
+      'R4',
+    );
+
+    expect(sd?.version).toBe('8.0.0-ballot');
   });
 
   it('still resolves explicitly version-pinned pre-release canonicals', async () => {
@@ -295,7 +316,7 @@ describe('sd-loader-filesystem', () => {
     expect(sd?.version).toBe('2.7.0');
   });
 
-  it('resolves unversioned EPS canonicals to the agreed xtehr pre-release package', async () => {
+  it('resolves unversioned EPS canonicals to the only installed pre-release package', async () => {
     const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-'));
     tempDirs.push(source);
 
@@ -412,7 +433,10 @@ describe('sd-loader-filesystem', () => {
       'R4',
     )).toBe(false);
 
-    await expect(loadFromLocalCache(vulcanUrl, [source], 'R4')).resolves.toBeNull();
+    // The ips package ships a file with the same canonical at a higher
+    // version. Routing, not the version, decides which one answers.
+    await expect(loadFromLocalCache(vulcanUrl, [source], 'R4'))
+      .resolves.toMatchObject({ url: vulcanUrl, version: '1.0.0-ballot' });
   });
 
   it('does not resolve local profiles from a different FHIR version family', async () => {

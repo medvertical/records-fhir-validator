@@ -1,5 +1,5 @@
-import { ValueSetCache } from './valueset-cache';
-import { ValueSetPackageLoader } from './valueset-package-loader';
+import { ValueSetCache } from './valueset-cache.js';
+import { ValueSetPackageLoader } from './valueset-package-loader.js';
 
 export function createIsolatedSlicingValueSetLoader(): ValueSetPackageLoader {
   // ValueSetPackageLoader expands home placeholders itself. Keeping loader

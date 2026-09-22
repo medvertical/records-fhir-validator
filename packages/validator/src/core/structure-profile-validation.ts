@@ -1,17 +1,17 @@
-import { logger } from '../logger';
-import type { ProfileCache } from '../cache/profile-cache';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { StructuralExecutor } from './executors';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { ValidationIssue } from '../types';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
-import type { FhirResource } from './fhir-resource';
-import { loadProfileWithSnapshot } from './profile-loader-utils';
+import { logger } from '../logger.js';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { StructuralExecutor } from './executors/index.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
+import type { FhirResource } from './fhir-resource.js';
+import { loadProfileWithSnapshot } from './profile-loader-utils.js';
 import {
   createProfileResourceTypeMismatchIssue,
   getIncompatibleProfileResourceType,
-} from './profile-resource-type';
-import { getValueAtPath } from './validation-utils';
+} from './profile-resource-type.js';
+import { getValueAtPath } from './validation-utils.js';
 
 export interface StructureProfileValidationDeps {
   sdLoader: StructureDefinitionLoader;

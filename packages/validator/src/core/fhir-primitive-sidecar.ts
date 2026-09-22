@@ -8,7 +8,7 @@
 import {
   findChoiceSidecarProperty,
   findConcreteChoiceProperty,
-} from './fhir-choice-property';
+} from './fhir-choice-property.js';
 
 const PRIMITIVE_SIDECAR_VALUE = Symbol.for('records.fhirPrimitiveSidecarValue');
 const PRIMITIVE_SIDECAR_TYPE = Symbol.for('records.fhirPrimitiveSidecarType');

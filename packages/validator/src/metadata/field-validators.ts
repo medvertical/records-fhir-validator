@@ -13,6 +13,6 @@
  * the validators/ subdirectory to comply with global.mdc guidelines.
  */
 
-export { LastUpdatedValidator } from './validators/last-updated-validator';
-export { VersionIdValidator } from './validators/version-id-validator';
-export { SourceValidator } from './validators/source-validator';
+export { LastUpdatedValidator } from './validators/last-updated-validator.js';
+export { VersionIdValidator } from './validators/version-id-validator.js';
+export { SourceValidator } from './validators/source-validator.js';

@@ -1,21 +1,22 @@
 /** Loads and caches FHIR StructureDefinitions from bundled, local, and remote sources. */
 
-import type { StructureDefinition } from './structure-definition-types';
-import type { ProfileSourcesConfig, ValidationSettings } from '../types';
-import type { ProfileSourceContext } from '../persistence';
-import { loadIGPackageIntoAvailableProfiles } from './sd-loader-ig-package';
-import { cacheLoadedIGPackage } from './sd-loader-ig-package-cache';
-import { loadProfilesBatchWithCache } from './sd-loader-batch-loader';
-import { getCachedBaseResourceType } from './sd-loader-base-resource-type';
-import { storeExternalProfile } from './sd-loader-external-profile-cache';
-import type { PinnedCanonicalFingerprint } from './sd-loader-pinned-canonical';
+import type { StructureDefinition } from './structure-definition-types.js';
+import type { ProfileSourcesConfig, ValidationSettings } from '@records-fhir/validation-types';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import { captureValidationDependency } from '../validation-dependency-snapshot.js';
+import { loadIGPackageIntoAvailableProfiles } from './sd-loader-ig-package.js';
+import { cacheLoadedIGPackage } from './sd-loader-ig-package-cache.js';
+import { loadProfilesBatchWithCache } from './sd-loader-batch-loader.js';
+import { getCachedBaseResourceType } from './sd-loader-base-resource-type.js';
+import { clearExternalProfiles, storeExternalProfile } from './sd-loader-external-profile-cache.js';
+import type { PinnedCanonicalFingerprint } from './sd-loader-pinned-canonical.js';
 import {
   StructureDefinitionLoaderRuntime,
   type StructureDefinitionLoaderOptions,
-} from './sd-loader-runtime';
-export { normalizeKnownStructureDefinitionCanonicalUrl } from './sd-loader-version-utils';
+} from './sd-loader-runtime.js';
+export { normalizeKnownStructureDefinitionCanonicalUrl } from './sd-loader-version-utils.js';
 
-export type { Binding, Constraint, ElementDefinition, ElementType, StructureDefinition } from './structure-definition-types';
+export type { Binding, Constraint, ElementDefinition, ElementType, StructureDefinition } from './structure-definition-types.js';
 
 export class StructureDefinitionLoader {
   private readonly runtime: StructureDefinitionLoaderRuntime;
@@ -101,12 +102,13 @@ export class StructureDefinitionLoader {
     url: string,
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
   ): Promise<StructureDefinition | null> {
-    return this.runtime.loadProfile(
+    return captureValidationDependency('profile', 'load-profile',
+      [url, fhirVersion, this.profileSourceContext, this.profileResolutionSettings], () => this.runtime.loadProfile(
       url,
       fhirVersion,
       this.profileSourceContext,
       this.profileResolutionSettings,
-    );
+    ));
   }
 
   async hasBaseProfiles(): Promise<boolean> {
@@ -216,6 +218,16 @@ export class StructureDefinitionLoader {
   ): boolean {
     return storeExternalProfile({
       url: sd?.url, profile: sd, fhirVersion,
+      cache: this.runtime.cache,
+      externalProfileCacheKeys: this.runtime.externalProfileCacheKeys,
+      availableProfiles: this.runtime.availableProfiles,
+      profileLoadPromises: this.runtime.profileLoadPromises,
+    });
+  }
+
+  /** Drop externally registered profiles only. Returns how many were removed. */
+  clearExternalProfiles(): number {
+    return clearExternalProfiles({
       cache: this.runtime.cache,
       externalProfileCacheKeys: this.runtime.externalProfileCacheKeys,
       availableProfiles: this.runtime.availableProfiles,

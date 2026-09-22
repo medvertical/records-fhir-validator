@@ -4,18 +4,18 @@
  * Validation logic for validation settings.
  */
 
-import type { ValidationSettings, ValidationSettingsValidationResult } from './settings';
-import type { ValidationAspect, FHIRVersion } from './enums';
-import { PERFORMANCE_LIMITS } from './settings';
-import { safeParseSettings } from './settings-schema';
+import type { ValidationSettings, ValidationSettingsValidationResult } from './settings.js';
+import type { ValidationAspect, FHIRVersion } from './enums.js';
+import { PERFORMANCE_LIMITS } from './settings.js';
+import { safeParseSettings } from './settings-schema.js';
 import {
   getAllResourceTypesForVersion,
   getR5SpecificResourceTypes
-} from './settings-transformers';
+} from './settings-transformers.js';
 import {
   getEnabledAspects,
   getAspectSeverity
-} from './settings-aspect-helpers';
+} from './settings-aspect-helpers.js';
 
 // ============================================================================
 // Performance Settings Validation

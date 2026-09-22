@@ -1,20 +1,20 @@
-import type { BoundedLruCache } from '../cache/bounded-lru-cache';
-import { resourceTypeOf } from '../core/fhir-resource';
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { StructureDefinitionLoader } from '../core/structure-definition-loader';
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import { validateAgainstExtensionProfile } from './extension-profile-validation';
+import type { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { resourceTypeOf } from '../core/fhir-resource.js';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { StructureDefinitionLoader } from '../core/structure-definition-loader.js';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateAgainstExtensionProfile } from './extension-profile-validation.js';
 import {
   validateExtensionStructure,
   validateExtensionValueType,
-} from './extension-structure-rules';
-import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types';
-import { validateExtensionValueElements } from './extension-value-profile-validation';
-import type { ElementRulesValidator } from './element-rules-validator';
-import type { SDFHIRPathExecutor } from './sd-fhirpath-executor';
-import type { TypeValidator } from './type-validator';
-import type { ValueSetValidator } from './valueset-validator';
+} from './extension-structure-rules.js';
+import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types.js';
+import { validateExtensionValueElements } from './extension-value-profile-validation.js';
+import type { ElementRulesValidator } from './element-rules-validator.js';
+import type { SDFHIRPathExecutor } from './sd-fhirpath-executor.js';
+import type { TypeValidator } from './type-validator.js';
+import type { ValueSetValidator } from './valueset-validator.js';
 
 export interface ExtensionInstanceRuleDependencies {
   elementRulesValidator: ElementRulesValidator;

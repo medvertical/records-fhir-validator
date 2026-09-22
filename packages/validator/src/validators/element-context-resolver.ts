@@ -13,11 +13,11 @@
  * - Returns all matching contexts for array elements
  */
 
-import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
+import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar.js';
 import {
     findChoiceSidecarProperty,
     findConcreteChoiceProperty,
-} from '../core/fhir-choice-property';
+} from '../core/fhir-choice-property.js';
 
 // ============================================================================
 // Types

@@ -1,14 +1,14 @@
 import type {
   Constraint,
   ElementDefinition,
-} from '../core/structure-definition-types';
-import type { BundleResourceInput } from './fhirpath-resolve-precheck';
-import type { buildUserInvocationTable } from './fhirpath-custom-functions';
-import { isRecord } from '../core/fhir-resource';
-import type { FhirResource } from '../core/fhir-resource';
+} from '../core/structure-definition-types.js';
+import type { BundleResourceInput } from './fhirpath-resolve-precheck.js';
+import type { buildUserInvocationTable } from './fhirpath-custom-functions.js';
+import { isRecord } from '../core/fhir-resource.js';
+import type { FhirResource } from '../core/fhir-resource.js';
 
-export { isFhirResource, isRecord } from '../core/fhir-resource';
-export type { FhirResource } from '../core/fhir-resource';
+export { isFhirResource, isRecord } from '../core/fhir-resource.js';
+export type { FhirResource } from '../core/fhir-resource.js';
 
 export interface ConstraintValidationState {
   strictnessMode: 'standard' | 'strict';

@@ -1,17 +1,17 @@
 /** Validates StructureDefinition FHIRPath constraints against resource and slice targets. */
-import type { ElementDefinition } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
-import { ConstraintEvaluationEngine } from './constraint-evaluation-engine';
-import { evaluateConstraintFHIRPath } from './constraint-fhirpath-evaluator';
-import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology';
-import type { ConstraintValidationOptions } from './constraint-validation-input';
-import type { FHIRPathConstraintDiagnostics } from './fhirpath-constraint-diagnostics';
-import { ValueSetCache } from './valueset-cache';
-import { ConstraintExpressionCache } from './constraint-expression-cache';
-import type { TerminologyOperationCache } from './terminology-operation-cache';
-import { ConstraintValidationPipeline } from './constraint-validation-pipeline';
+import type { ElementDefinition } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { ConstraintEvaluationEngine } from './constraint-evaluation-engine.js';
+import { evaluateConstraintFHIRPath } from './constraint-fhirpath-evaluator.js';
+import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology.js';
+import type { ConstraintValidationOptions } from './constraint-validation-input.js';
+import type { FHIRPathConstraintDiagnostics } from './fhirpath-constraint-diagnostics.js';
+import { ValueSetCache } from './valueset-cache.js';
+import { ConstraintExpressionCache } from './constraint-expression-cache.js';
+import type { TerminologyOperationCache } from './terminology-operation-cache.js';
+import { ConstraintValidationPipeline } from './constraint-validation-pipeline.js';
 
-export type { FHIRPathConstraintDiagnostics, FHIRPathConstraintSkipSample } from './fhirpath-constraint-diagnostics';
+export type { FHIRPathConstraintDiagnostics, FHIRPathConstraintSkipSample } from './fhirpath-constraint-diagnostics.js';
 
 export class ConstraintValidator {
   private readonly evaluationEngine: ConstraintEvaluationEngine;

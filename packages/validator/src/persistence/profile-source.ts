@@ -1,5 +1,6 @@
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { ValidationSettings } from '../types';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { ValidationSettings } from '@records-fhir/validation-types';
+import { captureValidationDependency, isValidationDependencySnapshotActive } from '../validation-dependency-snapshot.js';
 
 /** A transferable result for warming the validator's in-memory profile cache. */
 export interface ProfileResolutionEntry {
@@ -107,6 +108,18 @@ export function setProfileSource(source: ProfileSource): void {
 }
 
 export function getProfileSource(): ProfileSource {
+    if (isValidationDependencySnapshotActive()) return new Proxy(activeProfileSource, {
+        get(target, property) {
+            const method: unknown = Reflect.get(target, property);
+            if (typeof method !== 'function' || typeof property !== 'string'
+                || !['findByUrl', 'resolveProfile', 'fetchExternalProfile', 'findCanonicalResource', 'hasCodeSystem'].includes(property)) {
+                return typeof method === 'function' ? method.bind(target) : method;
+            }
+            const kind = property === 'hasCodeSystem' ? 'terminology' : 'profile';
+            return (...args: unknown[]) => captureValidationDependency(kind, `host-${property}`, args,
+                () => Reflect.apply(method, target, args) as Promise<unknown>);
+        },
+    });
     return activeProfileSource;
 }
 

@@ -7,8 +7,8 @@
  * lives on a nested extension slice's `value[x]` element rather than at a
  * literal element id concatenation.
  */
-import { resolveFhirSegmentValue } from '../fhir-primitive-sidecar';
-import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
+import { resolveFhirSegmentValue } from '../fhir-primitive-sidecar.js';
+import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
 
 const EXTENSION_SEGMENT_RE = /^extension\(\s*(['"])(.+)\1\s*\)$/;
 const OF_TYPE_SEGMENT_RE = /^ofType\([^)]+\)$/;

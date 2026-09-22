@@ -1,18 +1,19 @@
-import { getValueAtPath } from './slice-utils';
-import type { SliceDefinition } from './slice-types';
-import { getTypeSpecsForDiscriminator } from './slice-type-discriminator';
+import { getValueAtPath } from './slice-utils.js';
+import type { SliceDefinition } from './slice-types.js';
+import { getTypeSpecsForDiscriminator } from './slice-type-discriminator.js';
 import {
   profileListContains,
   toProfileArray,
   type ReferenceResolverFn,
-} from './slice-profile-discriminator-matcher';
+} from './slice-profile-discriminator-matcher.js';
 
 export function resolvedResourceMatchesSliceTargetProfile(
   resolvedElement: unknown,
   slice: SliceDefinition,
+  typeSpecPath = '$this',
 ): boolean {
   if (!isRecord(resolvedElement)) return false;
-  const targetProfiles = getTypeSpecsForDiscriminator(slice, '$this')
+  const targetProfiles = getTypeSpecsForDiscriminator(slice, typeSpecPath)
     .flatMap(spec => spec.targetProfile ?? []);
   if (targetProfiles.length === 0) return false;
   const meta = isRecord(resolvedElement.meta) ? resolvedElement.meta : null;
@@ -54,7 +55,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export { matchWholeElementChildConstraints } from './slice-discriminator-constraints';
+export { matchWholeElementChildConstraints } from './slice-discriminator-constraints.js';
 
 export function matchExistsDiscriminator(element: unknown, path: string): boolean {
   const value = getValueAtPath(element, path);

@@ -1,18 +1,18 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 import {
   ALLOWED_FILTER_OPS,
   codeSystemHasCode,
   getCachedCodeSystem,
   isTxOnlySystem,
   parseSystemVersionCode,
-} from './terminology-resource-utils';
+} from './terminology-resource-utils.js';
 import type {
   CodeSystem,
   CodeSystemFilterDefinition,
   CodeSystemPropertyDefinition,
-} from './valueset-types';
-import { ValueSetCache } from './valueset-cache';
+} from './valueset-types.js';
+import { ValueSetCache } from './valueset-cache.js';
 
 type ObjectRecord = Record<string, unknown>;
 

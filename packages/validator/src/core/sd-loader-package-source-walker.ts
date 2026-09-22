@@ -1,13 +1,14 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import type { StructureDefinition } from './structure-definition-types';
-import { logger } from '../logger';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { packageTargetMetadata } from '../package/package-artifact-policy';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
-import { selectPackageVersions } from './sd-loader-package-selection';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { logger } from '../logger.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { packageTargetMetadata } from '../package/package-artifact-policy.js';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
+import { selectPackageVersions } from './sd-loader-package-selection.js';
 
 const MAX_PACKAGE_PROFILE_BYTES = 32 * 1024 * 1024;
+const MAX_PACKAGE_INDEX_BYTES = 8 * 1024 * 1024;
 
 export interface PackageSourceWalkOptions {
   packageVersionPins: Record<string, string>;
@@ -45,6 +46,14 @@ export async function scanPackageDirectory(
       .filter(file => file.isFile() && file.name.endsWith('.json'))
       .sort((left, right) => left.name.localeCompare(right.name));
 
+    // Inventory needs canonical identities only. Profile loading still reads
+    // and validates the actual StructureDefinition when it is requested.
+    const indexed = !onProfile && await readIndexedProfiles(packagePath, files.map(file => file.name));
+    if (indexed) {
+      for (const canonical of indexed) availableProfiles.add(canonical);
+      return;
+    }
+
     for (const file of files) {
       const filePath = path.join(packagePath, file.name);
 
@@ -78,6 +87,39 @@ export async function scanPackageDirectory(
       '[SDLoader] Package directory could not be scanned',
       validationFailureMetadata(error),
     );
+  }
+}
+
+async function readIndexedProfiles(packagePath: string, files: string[]): Promise<Set<string> | null> {
+  try {
+    const indexPath = path.join(packagePath, '.index.json');
+    const stats = await fs.stat(indexPath);
+    if (!stats.isFile() || stats.size > MAX_PACKAGE_INDEX_BYTES) return null;
+    const index = parsePackageJson(await fs.readFile(indexPath, 'utf-8'));
+    if (!index || typeof index !== 'object' || !('files' in index) || !Array.isArray(index.files)) return null;
+
+    const indexedFiles = new Set<string>();
+    const actualFiles = new Set(files);
+    const profiles = new Set<string>();
+    for (const entry of index.files as unknown[]) {
+      if (!entry || typeof entry !== 'object' || !('filename' in entry)
+        || typeof entry.filename !== 'string' || !('resourceType' in entry)
+        || typeof entry.resourceType !== 'string') return null;
+      indexedFiles.add(entry.filename);
+      if (entry.resourceType !== 'StructureDefinition') continue;
+      if (!('url' in entry) || typeof entry.url !== 'string' || !entry.url) return null;
+      // Stale entries must not make a removed profile appear available.
+      if (!actualFiles.has(entry.filename)) return null;
+      profiles.add(entry.url);
+      if ('version' in entry && typeof entry.version === 'string' && entry.version) {
+        profiles.add(`${entry.url}|${entry.version}`);
+      }
+    }
+    // Third-party packages may ship partial indexes; keep those discoverable.
+    if (files.some(file => file !== 'package.json' && file !== '.index.json' && !indexedFiles.has(file))) return null;
+    return profiles;
+  } catch {
+    return null;
   }
 }
 

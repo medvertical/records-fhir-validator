@@ -1,10 +1,10 @@
-import type { RecordsValidator } from './core/validator-engine';
-import type { ValidationSettings } from './types';
+import type { RecordsValidator } from './core/validator-engine.js';
+import type { ValidationSettings } from '@records-fhir/validation-types';
 import {
   resolveFhirReleaseContext,
   type FhirReleaseContext,
   type PublicFhirVersion,
-} from './public-validation-api';
+} from './public-validation-api.js';
 
 const R4B_DEFAULT_RUNTIME_SCOPE = '__records-public-release__';
 const R4B_RUNTIME_SCOPE_SUFFIX = ':release:R4B';

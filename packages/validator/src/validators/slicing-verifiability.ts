@@ -1,12 +1,12 @@
 import type {
   SlicingDefinition,
   SlicingDiscriminator,
-} from '../core/structure-definition-types';
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import { sliceHasDiscriminatorEvidence } from './slice-discriminator-matcher';
-import type { SliceDefinition } from './slice-types';
-import { resourceTypeFromPath } from './slicing-content-rules';
+} from '../core/structure-definition-types.js';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { sliceHasDiscriminatorEvidence } from './slice-discriminator-matcher.js';
+import type { SliceDefinition } from './slice-types.js';
+import { resourceTypeFromPath } from './slicing-content-rules.js';
 
 export interface SlicingVerifiabilityAssessment {
   blockingIssues: ValidationIssue[];

@@ -1,11 +1,11 @@
-import { BatchedReferenceChecker } from './batched-reference-checker';
-import { BundleReferenceResolver } from './bundle-reference-resolver';
-import { CanonicalReferenceValidator } from './canonical-reference-validator';
-import { CircularReferenceDetector } from './circular-reference-detector';
-import { ContainedReferenceResolver } from './contained-reference-resolver';
-import { RecursiveReferenceValidator } from './recursive-reference-validator';
-import { ReferenceTypeConstraintValidator } from './reference-type-constraint-validator';
-import { VersionSpecificReferenceValidator } from './version-specific-reference-validator';
+import { BatchedReferenceChecker } from './batched-reference-checker.js';
+import { BundleReferenceResolver } from './bundle-reference-resolver.js';
+import { CanonicalReferenceValidator } from './canonical-reference-validator.js';
+import { CircularReferenceDetector } from './circular-reference-detector.js';
+import { ContainedReferenceResolver } from './contained-reference-resolver.js';
+import { RecursiveReferenceValidator } from './recursive-reference-validator.js';
+import { ReferenceTypeConstraintValidator } from './reference-type-constraint-validator.js';
+import { VersionSpecificReferenceValidator } from './version-specific-reference-validator.js';
 
 export interface ReferenceValidatorDependencies {
   batchedChecker: BatchedReferenceChecker;

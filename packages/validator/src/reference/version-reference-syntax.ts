@@ -1,10 +1,10 @@
-import { parseReference } from './reference-type-extractor';
-import { isCanonicalResourceType } from './canonical-reference-definitions';
+import { parseReference } from './reference-type-extractor.js';
+import { isCanonicalResourceType } from './canonical-reference-definitions.js';
 import type {
   VersionConsistencyCheckResult,
   VersionedReferenceInfo,
   VersionIntegrityCheckResult,
-} from './version-specific-reference-types';
+} from './version-specific-reference-types.js';
 
 const VERSIONED_REFERENCE_PATTERN = /^(.+)\/_history\/([^/]+)$/;
 const VERSION_ID_PATTERN = /^[0-9]+$/;

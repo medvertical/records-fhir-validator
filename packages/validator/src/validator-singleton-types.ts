@@ -1,15 +1,15 @@
-import type { RecordsValidator } from './core/validator-engine';
-import type { FhirClientLike } from './core/profile-loader-utils';
+import type { RecordsValidator } from './core/validator-engine.js';
+import type { FhirClientLike } from './core/profile-loader-utils.js';
 import type {
   PublicBatchValidationOptions,
   PublicFhirVersion,
   PublicValidationInput,
   PublicValidationRequest,
   PublicValidationResult,
-} from './public-validation-api';
-import type { ValidationIssue, ValidationSettings } from './types';
-import type { AnomalyDetectorConfig, AnomalyFinding } from './validators/anomaly-detector';
-import type { TerminologyResolutionConfig } from './validators/valueset-validator';
+} from './public-validation-api.js';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import type { AnomalyDetectorConfig, AnomalyFinding } from './validators/anomaly-detector.js';
+import type { TerminologyResolutionConfig } from './validators/valueset-validator.js';
 
 export type RecordsBatchValidationOptions =
   Omit<NonNullable<Parameters<RecordsValidator['validateBatch']>[1]>, 'fhirVersion'> & {
@@ -102,7 +102,8 @@ export interface RecordsValidatorInspection {
 
 export interface RecordsValidatorAdministration {
   configureTerminologyResolution(config: TerminologyResolutionConfig): Promise<ReturnType<RecordsValidator['configureTerminologyResolution']>>;
-  clearTerminologyCache(): Promise<ReturnType<RecordsValidator['clearTerminologyCache']>>;
+  /** Scoped invalidation retires matching runtimes; in-flight leases stay isolated on the old instances. */
+  clearTerminologyCache(options?: { runtimeScopePrefix: string }): Promise<ReturnType<RecordsValidator['clearTerminologyCache']>>;
   registerTerminologyResource(
     resource: unknown,
     fhirVersion?: PublicFhirVersion,

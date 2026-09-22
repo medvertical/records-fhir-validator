@@ -1,18 +1,18 @@
 import {
   COMMON_CANONICAL_BASE_URLS,
   type CanonicalResourceType,
-} from './canonical-reference-definitions';
-import { extractCanonicalUrlsFromResource } from './canonical-url-extraction';
-import { classifyReferenceRequestFailure } from './reference-request-failure';
+} from './canonical-reference-definitions.js';
+import { extractCanonicalUrlsFromResource } from './canonical-url-extraction.js';
+import { classifyReferenceRequestFailure } from './reference-request-failure.js';
 import {
   extractCanonicalResourceType,
   matchesCanonicalPattern,
   parseCanonicalReference,
   type CanonicalReferenceInfo,
-} from './canonical-reference-format';
+} from './canonical-reference-format.js';
 
-export type { CanonicalResourceType } from './canonical-reference-definitions';
-export type { CanonicalReferenceInfo } from './canonical-reference-format';
+export type { CanonicalResourceType } from './canonical-reference-definitions.js';
+export type { CanonicalReferenceInfo } from './canonical-reference-format.js';
 
 export interface CanonicalValidationResult {
   isValid: boolean;

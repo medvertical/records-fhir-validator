@@ -1,14 +1,14 @@
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
-import { expressionStartsAtResourceRoot } from './constraint-choice-context';
-import { SDConstraintCollector } from './sd-constraint-collector';
-import type { MatchResult } from './sd-element-matcher';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { expressionStartsAtResourceRoot } from './constraint-choice-context.js';
+import { SDConstraintCollector } from './sd-constraint-collector.js';
+import type { MatchResult } from './sd-element-matcher.js';
 import {
   SDFHIRPathConstraintEvaluator,
   type SDFHIRPathEvaluationScope,
-} from './sd-fhirpath-constraint-evaluator';
-import { SDFHIRPathExpressionCache } from './sd-fhirpath-expression-cache';
-import { ValueSetCache } from './valueset-cache';
+} from './sd-fhirpath-constraint-evaluator.js';
+import { SDFHIRPathExpressionCache } from './sd-fhirpath-expression-cache.js';
+import { ValueSetCache } from './valueset-cache.js';
 
 export class SDFHIRPathConstraintRunner {
   private readonly constraintEvaluator: SDFHIRPathConstraintEvaluator;

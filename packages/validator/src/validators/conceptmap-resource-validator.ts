@@ -1,12 +1,13 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 import {
   codeSystemDisplayFor,
   codeSystemHasCode,
   getCachedCodeSystem,
   isTxOnlySystem,
-} from './terminology-resource-utils';
-import { ValueSetCache } from './valueset-cache';
+  stripVersion,
+} from './terminology-resource-utils.js';
+import { ValueSetCache } from './valueset-cache.js';
 
 /**
  * Validate ConceptMap target displays against the target CodeSystem,
@@ -37,7 +38,8 @@ export function validateConceptMapResource(
       }));
     }
 
-    const targetCs = getCachedCodeSystem(targetSystem, cache);
+    const targetCs = getCachedCodeSystem(targetSystem, cache)
+      ?? getCachedCodeSystem(targetSystem && stripVersion(targetSystem), cache);
     if (!targetCs) continue;
 
     const elements = Array.isArray(group?.element) ? group.element : [];

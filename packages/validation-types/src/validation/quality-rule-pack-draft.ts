@@ -7,7 +7,7 @@ import {
   qualityReferenceSetDefinitionSchema,
   qualityRuleDefinitionSchema,
   qualityRuleSourceSchema,
-} from './quality-rule-pack';
+} from './quality-rule-pack.js';
 
 /** Mutable authoring shape; immutable publication still requires one rule. */
 export const qualityRulePackDraftManifestSchema = z.object({

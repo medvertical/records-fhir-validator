@@ -1,4 +1,4 @@
-import type { SliceDefinition } from './slice-types';
+import type { SliceDefinition } from './slice-types.js';
 
 export function inferChoiceSliceType(sliceDef: SliceDefinition, elementPath: string): void {
   if (sliceDef.type && sliceDef.type.length > 0) return;

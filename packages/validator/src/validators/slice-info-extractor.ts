@@ -7,18 +7,18 @@
  * binding codes.
  */
 
-import type { StructureDefinition, ElementDefinition, SlicingDefinition } from '../core/structure-definition-types';
-import type { SliceDefinition } from './slice-types';
+import type { StructureDefinition, ElementDefinition, SlicingDefinition } from '../core/structure-definition-types.js';
+import type { SliceDefinition } from './slice-types.js';
 import {
   extractFixedFromElement,
   extractPatternFromElement,
-} from './slice-utils';
-import { inferChoiceSliceType } from './slice-choice-type-inference';
-import { logger } from '../logger';
+} from './slice-utils.js';
+import { inferChoiceSliceType } from './slice-choice-type-inference.js';
+import { logger } from '../logger.js';
 import {
   sensitiveValueMetadata,
   terminologyTargetMetadata,
-} from '../utils/sensitive-logging-metadata';
+} from '../utils/sensitive-logging-metadata.js';
 import {
   childBindingAppliesToDiscriminatorPath,
   collectChildBindingDiscriminatorPaths,
@@ -29,15 +29,16 @@ import {
   inferInheritedSlicing,
   isSliceInScope,
   normalizeCodes,
-} from './slice-info-input';
+} from './slice-info-input.js';
 import {
   applyRootSliceConstraints,
   mergeAncestorTypeProfileSliceMetadata,
+  mergeChildTypeProfileConstraints,
   mergeTypeProfilePatterns,
   type TypeProfileResolverFn,
-} from './slice-info-inheritance';
+} from './slice-info-inheritance.js';
 
-export type { TypeProfileResolverFn } from './slice-info-inheritance';
+export type { TypeProfileResolverFn } from './slice-info-inheritance.js';
 
 export interface ValueSetLoaderLike {
   loadValueSet(url: string): Promise<string[] | null>;
@@ -146,7 +147,7 @@ export async function extractSlicingInfo(
       }
     }
 
-    await mergeTypeProfilePatterns(element, childPatterns, childFixed, childMin, typeProfileResolver);
+    await mergeProfiledTypeMetadata({ element, childTypes, childPatterns, childFixed, childMin, typeProfileResolver });
     await mergeAncestorTypeProfileSliceMetadata({
       element,
       elements,
@@ -174,6 +175,21 @@ export async function extractSlicingInfo(
 
   logSliceExtraction(slices.length, elementPath);
   return { slicing: slicingDef, slices };
+}
+
+async function mergeProfiledTypeMetadata(input: {
+  element: ElementDefinition;
+  childTypes: Map<string, Array<{ code: string; profile?: string[]; targetProfile?: string[] }>>;
+  childPatterns: Map<string, unknown>;
+  childFixed: Map<string, unknown>;
+  childMin: Map<string, number>;
+  typeProfileResolver: TypeProfileResolverFn;
+}): Promise<void> {
+  const { element, childTypes, childPatterns, childFixed, childMin, typeProfileResolver } = input;
+  await mergeTypeProfilePatterns(element, childPatterns, childFixed, childMin, typeProfileResolver);
+  await mergeChildTypeProfileConstraints(
+    childTypes, childPatterns, childFixed, typeProfileResolver,
+  );
 }
 
 async function mergeRootBindingCodes(

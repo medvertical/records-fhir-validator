@@ -1,15 +1,17 @@
-import type { ValidationIssue } from '../types';
-import type { ProfileCache } from '../cache/profile-cache';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { SnapshotGenerator } from './snapshot-generator';
-import { buildBundleDocumentContextIssues, type BundleDocumentContextChildResult } from './bundle-document-context';
-import { loadProfileWithSnapshot } from './profile-loader-utils';
-import { getBundleEntryRequiredProfile } from './bundle-entry-slice-definitions';
-import { isFhirResource, type FhirResource } from './fhir-resource';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import { buildBundleDocumentContextIssues, type BundleDocumentContextChildResult } from './bundle-document-context.js';
+import { loadProfileWithSnapshot } from './profile-loader-utils.js';
+import { inferCodeBasedProfiles } from './code-inferred-profiles.js';
+import { getBundleEntryRequiredProfile } from './bundle-entry-slice-definitions.js';
+import { isFhirResource, type FhirResource } from './fhir-resource.js';
+import { validateBundleCompositionTargets } from './bundle-composition-target-validation.js';
 import {
   createBundleEntryValidationFailureIssue,
   mapBundleEntryIssues,
-} from './bundle-entry-validation-output';
+} from './bundle-entry-validation-output.js';
 
 export interface BundleEntryValidationDeps {
   sdLoader: StructureDefinitionLoader;
@@ -57,10 +59,14 @@ export async function validateBundleEntryResources(
     const entryResource = entry?.resource;
     if (!isFhirResource(entryResource)) continue;
 
+    // The base canonical is the last resort, not the second: between the two
+    // sit the profiles the specification implies from the resource's own code,
+    // and naming the base instead told the engine to stop looking.
     const profileUrl = getDeclaredProfile(entryResource) || getBundleEntryRequiredProfile(
       { entryResource, resourceType: entryResource.resourceType },
       bundleStructureDef,
-    ) || `http://hl7.org/fhir/StructureDefinition/${entryResource.resourceType}`;
+    ) || inferCodeBasedProfiles(entryResource)[0]
+      || `http://hl7.org/fhir/StructureDefinition/${entryResource.resourceType}`;
 
     let entryIssues: ValidationIssue[];
     try {
@@ -95,6 +101,7 @@ export async function validateBundleEntryResources(
       entryResource,
       resourceType: entryResource.resourceType,
       issues: mappedIssues.childIssues,
+      validatedProfile: profileUrl,
       structureDef: entryResource.resourceType === 'Composition'
         ? await loadProfileWithSnapshot(
           deps.sdLoader,
@@ -107,6 +114,23 @@ export async function validateBundleEntryResources(
     });
   }
 
+  const additional = await validateBundleCompositionTargets(bundle, childResults, async (resource, profile) => {
+    if (!isFhirResource(resource)) throw new Error('Bundle target is not a FHIR resource');
+    const structureDef = await loadProfileWithSnapshot(
+      deps.sdLoader, deps.profileCache, deps.snapshotGenerator, profile, fhirVersion,
+    );
+    if (structureDef?.type && structureDef.type !== resource.resourceType) {
+      return { issues: [], resourceType: structureDef.type };
+    }
+    const issues = await deps.validateResource(resource, profile, fhirVersion);
+    return { issues, resourceType: structureDef?.type, value: issues };
+  });
+  for (const { child, assessment } of additional) {
+    out.push(...mapBundleEntryIssues(assessment.issues, {
+      entryIndex: child.index, resourceType: child.resourceType,
+      resourceId: typeof child.entryResource.id === 'string' ? child.entryResource.id : undefined,
+    }).parentIssues);
+  }
   out.push(...buildBundleDocumentContextIssues(bundle, childResults, bundleStructureDef));
   return out;
 }

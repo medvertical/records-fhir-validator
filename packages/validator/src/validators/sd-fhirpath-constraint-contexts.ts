@@ -1,4 +1,4 @@
-import type { ElementContextResolver } from './element-context-resolver';
+import type { ElementContextResolver } from './element-context-resolver.js';
 
 export interface ConstraintTarget {
     context: unknown;

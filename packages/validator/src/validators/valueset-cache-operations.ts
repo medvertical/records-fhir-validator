@@ -1,12 +1,12 @@
-import { logger } from '../logger';
-import type { EpochSingleflight } from './epoch-singleflight';
-import type { TerminologyOperationCache } from './terminology-operation-cache';
-import type { ValueSetCache } from './valueset-cache';
-import { cloneTerminologyDiagnostics } from './valueset-diagnostics';
-import { KNOWN_VALUE_SET_EXPANSIONS } from './valueset-known-expansions';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import type { TwoPhaseShadowEvaluator } from './valueset-two-phase-shadow';
-import type { CodeBindingOutcome, TerminologyDiagnostics } from './valueset-types';
+import { logger } from '../logger.js';
+import type { EpochSingleflight } from './epoch-singleflight.js';
+import type { TerminologyOperationCache } from './terminology-operation-cache.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import { cloneTerminologyDiagnostics } from './valueset-diagnostics.js';
+import { KNOWN_VALUE_SET_EXPANSIONS } from './valueset-known-expansions.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import type { TwoPhaseShadowEvaluator } from './valueset-two-phase-shadow.js';
+import type { CodeBindingOutcome, TerminologyDiagnostics } from './valueset-types.js';
 
 interface CacheOperationDeps {
   bindingResolutions: EpochSingleflight<CodeBindingOutcome>;

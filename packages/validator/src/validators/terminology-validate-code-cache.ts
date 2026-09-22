@@ -1,4 +1,4 @@
-import type { BindingStrength } from './valueset-display-utils';
+import type { BindingStrength } from './valueset-display-utils.js';
 
 export function makeValidateCodeCacheKey(
   serverUrl: string,

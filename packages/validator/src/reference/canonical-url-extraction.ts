@@ -1,4 +1,4 @@
-import { CANONICAL_FIELDS } from './canonical-reference-definitions';
+import { CANONICAL_FIELDS } from './canonical-reference-definitions.js';
 
 interface CanonicalReferenceInfoLike {
   isValidFormat: boolean;

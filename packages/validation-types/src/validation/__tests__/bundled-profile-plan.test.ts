@@ -4,8 +4,25 @@ import {
   getBundledProfilePlan,
   parseBundledProfilePreset,
 } from '../defaults/bundled-profile-plan';
+import { HL7_EU_EHDS_2026_PACKAGE_SET } from '../defaults/ig-packages';
 
 describe('bundled profile plan', () => {
+  it('ships both IPS targets while activating only the EPS dependency version', () => {
+    const ipsVersions = (packages: readonly { id: string; version: string }[]) => packages
+      .filter(pkg => pkg.id === 'hl7.fhir.uv.ips')
+      .map(pkg => pkg.version);
+    expect(ipsVersions(getBundledProfilePlan('ehds-2026').packages)).toEqual(['2.0.0', '2.0.1']);
+    expect(ipsVersions(HL7_EU_EHDS_2026_PACKAGE_SET)).toEqual(['2.0.0']);
+  });
+
+  it('bundles only neutral infrastructure by default and keeps EHDS separate from MII', () => {
+    const defaults = getBundledProfilePlan('default');
+    expect(defaults.packages.every(pkg => /^(hl7\.fhir\.(r\d+b?\.core|uv\.extensions\.)|hl7\.terminology\.)/.test(pkg.id))).toBe(true);
+    const ehds = getBundledProfilePlan('ehds-2026');
+    expect(ehds.packages.some(pkg => pkg.id.startsWith('de.'))).toBe(false);
+    expect(ehds.ownedDependencyPrefixes).not.toContain('de.medizininformatikinitiative.');
+    expect(ehds.requiredDependencyIds).toEqual([]);
+  });
   it('parses configured presets strictly while retaining the explicit default', () => {
     expect(parseBundledProfilePreset(undefined)).toBe('default');
     expect(parseBundledProfilePreset(' mii-2026 ')).toBe('mii-2026');

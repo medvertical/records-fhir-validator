@@ -1,6 +1,6 @@
-import { extractReferencesFromBundle, extractReferencesFromResource } from './reference-extraction';
-import { parseReference } from './reference-type-extractor';
-import type { ParsedReferenceCheck } from './reference-batch-types';
+import { extractReferencesFromBundle, extractReferencesFromResource } from './reference-extraction.js';
+import { parseReference } from './reference-type-extractor.js';
+import type { ParsedReferenceCheck } from './reference-batch-types.js';
 
 export function parseReferenceBatch(references: string[]): ParsedReferenceCheck[] {
   return references.map(reference => ({

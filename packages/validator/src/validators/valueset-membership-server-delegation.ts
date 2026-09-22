@@ -1,19 +1,20 @@
-import { logger } from '../logger';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
-import type { TerminologyApiClient } from './terminology-api-client';
-import { canDelegateCodeValidation } from './valueset-delegation-policy';
-import { recordTerminologyDelegation } from './valueset-diagnostics';
-import type { FhirVersion } from './valueset-expansion-cache-key';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
+import { logger } from '../logger.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
+import type { TerminologyApiClient } from './terminology-api-client.js';
+import { canDelegateCodeValidation } from './valueset-delegation-policy.js';
+import { recordTerminologyDelegation } from './valueset-diagnostics.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
 import {
   hasTerminologyServer,
+  listFallbackTerminologyServers,
   resolveTerminologyServerForSystem,
-} from './valueset-server-routing';
-import { validateCodeViaTerminologyServerWithFilters } from './valueset-terminology-server-validation';
+} from './valueset-server-routing.js';
+import { validateCodeViaTerminologyServerWithFilters } from './valueset-terminology-server-validation.js';
 import type {
   TerminologyDiagnostics,
   TerminologyResolutionConfig,
-} from './valueset-types';
+} from './valueset-types.js';
 
 interface ValueSetMembershipServerDelegationDeps {
   apiClient: TerminologyApiClient;
@@ -76,6 +77,13 @@ export async function tryValidateValueSetMembershipViaServer(
     bindingStrength: undefined,
     override,
     fhirVersion,
+    fallbackServers: listFallbackTerminologyServers(
+      deps.resolutionConfig,
+      override,
+      system,
+      undefined,
+      fhirVersion,
+    ),
   });
   return outcome === 'valid';
 }

@@ -1,14 +1,16 @@
-import type { SliceDefinition } from './slice-types';
+import type { SliceDefinition } from './slice-types.js';
+import { splitResolveDiscriminatorPath } from './slice-discriminator-path.js';
 import {
   getValueAtPath,
   inferType,
-} from './slice-utils';
+} from './slice-utils.js';
 
 export function matchResolvedTypeDiscriminator(
   resolvedElement: unknown,
   slice: SliceDefinition,
   remainder: string,
   allSlices?: SliceDefinition[],
+  typeSpecPath = '$this',
 ): boolean {
   if (!isRecord(resolvedElement)) return false;
 
@@ -17,7 +19,7 @@ export function matchResolvedTypeDiscriminator(
     if (ofTypeMatch) return resolvedElement.resourceType === ofTypeMatch[1];
   }
 
-  const typeSpecs = getTypeSpecsForDiscriminator(slice, '$this');
+  const typeSpecs = getTypeSpecsForDiscriminator(slice, typeSpecPath);
   if (typeSpecs.length === 0) return false;
 
   const targetProfiles = typeSpecs.flatMap(spec => spec.targetProfile ?? []);
@@ -30,7 +32,7 @@ export function matchResolvedTypeDiscriminator(
     if (
       typeof resolvedElement.resourceType === 'string' &&
       allowedTargetTypes.has(resolvedElement.resourceType) &&
-      targetProfilesAreDistinguishing(slice, allSlices)
+      targetProfilesAreDistinguishing(slice, allSlices, typeSpecPath)
     ) {
       return true;
     }
@@ -62,6 +64,15 @@ export function getTypeSpecsForDiscriminator(
   if (slice.childTypes && path && path !== '$this') {
     const childSpecs = slice.childTypes.get(path);
     if (childSpecs && childSpecs.length > 0) return childSpecs;
+    // `item.resolve()` discriminates on what the reference at `item` points
+    // to, so the constraint lives on `item` itself. Looking up the literal
+    // path with the call attached finds nothing and the discriminator counts
+    // as unresolvable.
+    const resolveStep = splitResolveDiscriminatorPath(path);
+    if (resolveStep && resolveStep.referencePath !== '$this') {
+      const referenceSpecs = slice.childTypes.get(resolveStep.referencePath);
+      if (referenceSpecs && referenceSpecs.length > 0) return referenceSpecs;
+    }
   }
   return slice.type ?? [];
 }
@@ -164,16 +175,17 @@ function numericTypeCodeMatches(expectedType: string, value: number): boolean {
 
 function targetProfilesAreDistinguishing(
   currentSlice: SliceDefinition,
-  allSlices?: SliceDefinition[],
+  allSlices: SliceDefinition[] | undefined,
+  typeSpecPath: string,
 ): boolean {
   if (!allSlices || allSlices.length <= 1) return false;
 
-  const currentProfiles = collectTargetProfiles(currentSlice);
+  const currentProfiles = collectTargetProfiles(currentSlice, typeSpecPath);
   if (currentProfiles.size === 0) return false;
 
   for (const otherSlice of allSlices) {
     if (otherSlice.sliceName === currentSlice.sliceName) continue;
-    const otherProfiles = collectTargetProfiles(otherSlice);
+    const otherProfiles = collectTargetProfiles(otherSlice, typeSpecPath);
     if (otherProfiles.size === 0) continue;
     for (const profile of currentProfiles) {
       if (otherProfiles.has(profile)) return false;
@@ -183,9 +195,9 @@ function targetProfilesAreDistinguishing(
   return true;
 }
 
-function collectTargetProfiles(slice: SliceDefinition): Set<string> {
+function collectTargetProfiles(slice: SliceDefinition, typeSpecPath: string): Set<string> {
   const profiles = new Set<string>();
-  for (const spec of getTypeSpecsForDiscriminator(slice, '$this')) {
+  for (const spec of getTypeSpecsForDiscriminator(slice, typeSpecPath)) {
     for (const profile of spec.targetProfile ?? []) profiles.add(stripCanonicalVersion(profile));
   }
   return profiles;

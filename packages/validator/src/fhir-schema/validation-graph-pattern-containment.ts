@@ -1,5 +1,5 @@
-import { isGraphRecord } from './validation-graph-issues';
-import { graphValuesMatch } from './validation-graph-value-matching';
+import { isGraphRecord } from './validation-graph-issues.js';
+import { graphValuesMatch } from './validation-graph-value-matching.js';
 
 interface PatternContainment {
   contains: boolean;

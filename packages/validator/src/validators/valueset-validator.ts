@@ -1,26 +1,27 @@
-import type { Binding } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
-import type { CodeSystemValidationResult } from './terminology-api-client';
-import type { SubsumptionOutcome } from './terminology-api-types';
-import { TerminologyOperationCache } from './terminology-operation-cache';
-import type { ValidateBindingOptions } from './valueset-binding-validator';
-import { ValueSetCache } from './valueset-cache';
-import type { BindingStrength } from './valueset-display-utils';
-import type { FhirVersion } from './valueset-expansion-cache-key';
+import type { Binding } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import type { CodeSystemValidationResult } from './terminology-api-client.js';
+import type { SubsumptionOutcome } from './terminology-api-types.js';
+import { TerminologyOperationCache } from './terminology-operation-cache.js';
+import type { ValidateBindingOptions } from './valueset-binding-validator.js';
+import { ValueSetCache } from './valueset-cache.js';
+import type { BindingStrength } from './valueset-display-utils.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
 import {
   EXTERNAL_CODE_SYSTEMS,
   type CodeBindingOutcome,
   type TerminologyResolutionConfig,
-} from './valueset-types';
-import { ValueSetValidationPipeline } from './valueset-validation-pipeline';
-import { ValueSetValidatorRuntime } from './valueset-validator-runtime';
+} from './valueset-types.js';
+import { ValueSetValidationPipeline } from './valueset-validation-pipeline.js';
+import { ValueSetValidatorRuntime } from './valueset-validator-runtime.js';
 
 export type {
   CodeSystem,
   TerminologyResolutionConfig,
   TerminologyResolutionStrategy,
   ValueSet,
-} from './valueset-types';
+} from './valueset-types.js';
 
 export class ValueSetValidator {
   private readonly runtime: ValueSetValidatorRuntime;
@@ -53,6 +54,11 @@ export class ValueSetValidator {
 
   getResolutionConfig(): TerminologyResolutionConfig {
     return this.runtime.getResolutionConfig();
+  }
+
+  /** Bind package lookups to the host tenant scope before validation work starts. */
+  setSourceContext(context: ProfileSourceContext | undefined): void {
+    this.runtime.setSourceContext(context);
   }
 
   getOperationCache(): TerminologyOperationCache {

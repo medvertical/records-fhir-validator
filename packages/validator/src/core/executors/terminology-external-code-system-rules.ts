@@ -1,13 +1,13 @@
-import type { ValidationIssue } from '../../types';
-import { createTerminologyIssue } from '../../terminology/terminology-issue';
-import { buildInvalidUcumIssueDetails, buildInvalidUcumMessage } from './terminology-ucum-rules';
-import { UcumCodeValidator } from '../../validators/ucum-validator';
-import { isValidFhirCodePrimitive, missingCodingSystemSeverity } from './terminology-coding-hygiene-rules';
-import { CodeSystemReferenceLookupCache, validateCodeSystemReference } from './terminology-code-system-reference-rules';
-import type { ProfileSourceContext } from '../../persistence';
-import { ValueSetCache } from '../../validators/valueset-cache';
-import { buildCodeSystemResultIssues, type CodingValue } from './terminology-code-system-result-issues';
-import type { TerminologyCodeSystemValidationPort } from './terminology-validation-port';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createTerminologyIssue } from '../../terminology/terminology-issue.js';
+import { buildInvalidUcumIssueDetails, buildInvalidUcumMessage } from './terminology-ucum-rules.js';
+import { UcumCodeValidator } from '../../validators/ucum-validator.js';
+import { isValidFhirCodePrimitive, missingCodingSystemSeverity } from './terminology-coding-hygiene-rules.js';
+import { CodeSystemReferenceLookupCache, validateCodeSystemReference } from './terminology-code-system-reference-rules.js';
+import type { ProfileSourceContext } from '../../persistence/index.js';
+import { ValueSetCache } from '../../validators/valueset-cache.js';
+import { buildCodeSystemResultIssues, type CodingValue } from './terminology-code-system-result-issues.js';
+import type { TerminologyCodeSystemValidationPort } from './terminology-validation-port.js';
 
 export async function validateExternalCodeSystems(
   value: unknown,

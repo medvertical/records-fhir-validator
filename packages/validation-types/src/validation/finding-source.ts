@@ -1,4 +1,4 @@
-import type { ValidationAspectType } from './aspect-enums';
+import type { ValidationAspectType } from './aspect-enums.js';
 
 export const FindingSource = {
   FHIR_CONFORMANCE: 'fhir-conformance',

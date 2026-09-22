@@ -1,13 +1,13 @@
 // Baseline validation settings (R4/R5) and quick-setup config presets.
 
-import type { ValidationSettings } from '../settings';
-import { R4_DEFAULT_INCLUDED_RESOURCE_TYPES, R5_DEFAULT_INCLUDED_RESOURCE_TYPES } from '../settings-types';
+import type { ValidationSettings } from '../settings.js';
+import { R4_DEFAULT_INCLUDED_RESOURCE_TYPES, R5_DEFAULT_INCLUDED_RESOURCE_TYPES } from '../settings-types.js';
 import {
   DEFAULT_TERMINOLOGY_SERVERS,
   DEFAULT_CIRCUIT_BREAKER_CONFIG,
   DEFAULT_CACHE_CONFIG,
   DEFAULT_ADVANCED_TERMINOLOGY,
-} from './terminology-defaults';
+} from './terminology-defaults.js';
 
 // Common validation configurations for quick setup
 export const VALIDATION_CONFIGS = {
@@ -71,6 +71,7 @@ export const VALIDATION_CONFIGS = {
 // ============================================================================
 
 export const DEFAULT_VALIDATION_SETTINGS_R4: ValidationSettings = {
+  fhirVersion: 'R4',
   aspects: {
     structural: { enabled: true, severity: 'inherit', engine: 'records' },
     profile: { enabled: true, severity: 'inherit', engine: 'records' },
@@ -123,12 +124,7 @@ export const DEFAULT_VALIDATION_SETTINGS_R4: ValidationSettings = {
   advancedTerminology: DEFAULT_ADVANCED_TERMINOLOGY,
   packageDownload: {
     versionPolicy: 'prefer-stable',
-    pinnedVersions: {
-      // German profiles — pinned to known-good versions
-      'de.medizininformatikinitiative.kerndatensatz.person': '2025.0.1',
-      'de.gematik.isik-basismodul': '4.0.3',
-      'fhir.r4.ukcore.stu3.currentbuild': '0.0.6-pre-release'
-    },
+    pinnedVersions: {},
     approvedPackages: [
       // Core FHIR
       'hl7.fhir.r4.core',
@@ -148,6 +144,7 @@ export const DEFAULT_VALIDATION_SETTINGS_R4: ValidationSettings = {
       'rki.demis.*',
       // HL7 Europe (EHDS)
       'hl7.eu.*',
+      'hl7.fhir.eu.*',
       // US Core + US realm
       'hl7.fhir.us.*',
       // UK Core
@@ -157,7 +154,9 @@ export const DEFAULT_VALIDATION_SETTINGS_R4: ValidationSettings = {
       'uk.core',
       // IHE + international
       'ihe.*',
-      'hl7.fhir.uv.*'
+      'hl7.fhir.uv.*',
+      // Saudi Arabia: NPHIES healthcare financial services
+      'nphies-fs'
     ],
     requireApproval: false,
     autoDownload: true
@@ -187,6 +186,7 @@ export const DEFAULT_VALIDATION_SETTINGS_R4: ValidationSettings = {
 };
 
 export const DEFAULT_VALIDATION_SETTINGS_R5: ValidationSettings = {
+  fhirVersion: 'R5',
   aspects: {
     structural: { enabled: true, severity: 'inherit', engine: 'records' },
     profile: { enabled: true, severity: 'inherit', engine: 'records' },
@@ -239,9 +239,7 @@ export const DEFAULT_VALIDATION_SETTINGS_R5: ValidationSettings = {
   advancedTerminology: DEFAULT_ADVANCED_TERMINOLOGY,
   packageDownload: {
     versionPolicy: 'prefer-stable',
-    pinnedVersions: {
-      'de.medizininformatikinitiative.kerndatensatz.person': '2025.0.1',
-    },
+    pinnedVersions: {},
     approvedPackages: [
       'hl7.fhir.r5.core',
       'hl7.fhir.r5.examples',

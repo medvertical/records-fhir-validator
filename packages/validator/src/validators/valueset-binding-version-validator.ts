@@ -1,9 +1,9 @@
-import type { ValidationIssue } from '../types';
-import { createTerminologyIssue } from '../terminology/terminology-issue';
-import { codeSystemCanonicalsEquivalent } from './code-system-canonical-aliases';
-import type { FhirVersion } from './valueset-expansion-cache-key';
-import { resourceTypeFromElementPath, type BindingStrength, type CodeInfo } from './valueset-display-utils';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createTerminologyIssue } from '../terminology/terminology-issue.js';
+import { codeSystemCanonicalsEquivalent } from './code-system-canonical-aliases.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
+import { resourceTypeFromElementPath, type BindingStrength, type CodeInfo } from './valueset-display-utils.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
 
 interface BindingVersionValidationOptions {
   fhirVersion?: FhirVersion;

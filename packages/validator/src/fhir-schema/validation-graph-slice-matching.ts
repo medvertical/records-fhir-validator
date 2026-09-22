@@ -1,9 +1,9 @@
-import type { ValidationGraphNode } from './validation-graph-types';
-import { getPrimitiveSidecar } from '../core/fhir-primitive-sidecar';
+import type { ValidationGraphNode } from './validation-graph-types.js';
+import { getPrimitiveSidecar } from '../core/fhir-primitive-sidecar.js';
 import {
   graphPatternMatches,
   graphValuesMatch,
-} from './validation-graph-value-matching';
+} from './validation-graph-value-matching.js';
 
 export function matchesSliceForParent(
   value: unknown,

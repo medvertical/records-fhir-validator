@@ -1,12 +1,12 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import type { StructureDefinition } from '../core/structure-definition-types';
-import { getValidationTargets } from '../business-rules';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import { getValidationTargets } from '../business-rules/index.js';
 import {
     isValueEmpty,
     getDirectValue
-} from '../core/executors/structural-executor-helpers';
-import { shouldSkipMustSupportForResource } from './must-support-applicability';
+} from '../core/executors/structural-executor-helpers.js';
+import { shouldSkipMustSupportForResource } from './must-support-applicability.js';
 
 /**
  * Validator for MustSupport elements

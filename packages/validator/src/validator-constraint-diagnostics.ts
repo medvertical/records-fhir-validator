@@ -1,4 +1,4 @@
-import type { RecordsValidator } from './core/validator-engine';
+import type { RecordsValidator } from './core/validator-engine.js';
 
 type ConstraintDiagnostics = ReturnType<RecordsValidator['getConstraintDiagnostics']>;
 const MAX_AGGREGATED_SAMPLES = 25;

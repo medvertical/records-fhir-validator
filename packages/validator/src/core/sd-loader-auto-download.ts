@@ -1,17 +1,17 @@
-import type { StructureDefinition } from './structure-definition-types';
+import type { StructureDefinition } from './structure-definition-types.js';
 import { normalizeProfileSourcesConfig } from '@records-fhir/validation-types';
-import { logger } from '../logger';
-import { getProfileSourceRevision } from '../persistence';
-import { isPublicProfileUrl } from './remote-profile-url-policy';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+import { logger } from '../logger.js';
+import { getProfileSourceRevision } from '../persistence/index.js';
+import { isPublicProfileUrl } from './remote-profile-url-policy.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 import {
   executeAutoDownload,
   type AutoDownloadAttemptResult,
   type AutoDownloadSourceContext,
-} from './sd-loader-auto-download-sources';
+} from './sd-loader-auto-download-sources.js';
 
-export type { AutoDownloadAttemptResult } from './sd-loader-auto-download-sources';
+export type { AutoDownloadAttemptResult } from './sd-loader-auto-download-sources.js';
 
 export interface AutoDownloadContext extends AutoDownloadSourceContext {
   /** Mutable deduplication/miss state owned by one StructureDefinitionLoader. */

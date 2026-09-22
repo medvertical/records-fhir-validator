@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   normalizeValidationRequests,
   validateAllResources,
@@ -35,6 +35,22 @@ function makeDeps(): PublicValidationDeps & {
 }
 
 describe('public validation API helpers', () => {
+  it.each([
+    ['warning', true],
+    ['information', true],
+    ['error', false],
+    ['fatal', false],
+  ] as const)('derives validity from %s severity without dropping issues', async (severity, isValid) => {
+    const resource = patient('severity');
+    const finding = { ...issue('finding'), severity };
+    const deps = makeDeps();
+    deps.validateBatch.mockResolvedValue(new Map([[resource, [finding]]]));
+
+    const [result] = await validateAllResources(deps, [resource]);
+
+    expect(result).toMatchObject({ isValid, issues: [finding] });
+  });
+
   it('normalizes raw resources and request wrappers with default options', () => {
     const raw = patient('raw');
     const wrapped = { resource: patient('wrapped'), profileUrl: 'http://example.org/Profile' };

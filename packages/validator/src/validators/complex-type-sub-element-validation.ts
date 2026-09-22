@@ -1,24 +1,24 @@
-import { isRecord, resourceTypeOf } from '../core/fhir-resource';
+import { isRecord, resourceTypeOf } from '../core/fhir-resource.js';
 import {
   getNestedValue,
   isPrimitiveType,
-} from '../core/executors/structural-executor-helpers';
+} from '../core/executors/structural-executor-helpers.js';
 import {
   getValidationTargets,
   type ValidationTarget,
-} from '../business-rules/element-validation-targets';
-import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types';
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+} from '../business-rules/element-validation-targets.js';
+import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types.js';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import {
   narrowChoiceTypeElement,
   narrowChoiceTypeForConcreteSegment,
   parentComplexElementAbsent,
-} from './complex-type-path-rules';
-import type { TypeValidator } from './type-validator';
-import type { ValueSetValidator } from './valueset-validator';
+} from './complex-type-path-rules.js';
+import type { TypeValidator } from './type-validator.js';
+import type { ValueSetValidator } from './valueset-validator.js';
 
 interface ComplexTypeSubElementInput {
   value: unknown;

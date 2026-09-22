@@ -1,36 +1,38 @@
+import { markValidationDependencyUnattested } from '../validation-dependency-snapshot.js';
 /**
  * HTTP client facade for terminology server operations.
  */
 
-import { TerminologyApiClientRuntime } from './terminology-api-client-runtime';
+import { TerminologyApiClientRuntime } from './terminology-api-client-runtime.js';
 import type {
   CodeSystemValidationResult,
   RemoteValueSetValidationOutcome,
+  RemoteValueSetValidationResult,
   SubsumptionOutcome,
-} from './terminology-api-types';
-import type { TerminologyCircuitBreakerRegistry } from './terminology-circuit-breakers';
-import { validateCodeSystemRemotely } from './terminology-code-system-validation-operation';
-import type { TerminologyOperationCache } from './terminology-operation-cache';
-import type { TerminologyRequestBroker } from './terminology-request-broker';
-import { executeRemoteSubsumption } from './terminology-subsumption-operation';
+} from './terminology-api-types.js';
+import type { TerminologyCircuitBreakerRegistry } from './terminology-circuit-breakers.js';
+import { validateCodeSystemRemotely } from './terminology-code-system-validation-operation.js';
+import type { TerminologyOperationCache } from './terminology-operation-cache.js';
+import type { TerminologyRequestBroker } from './terminology-request-broker.js';
+import { executeRemoteSubsumption } from './terminology-subsumption-operation.js';
 import {
   executeRemoteValueSetExpansion,
   isRemoteValueSetNotResolvable,
   validateCodeAgainstRemoteValueSet,
-} from './terminology-valueset-operations';
-import type { ValueSetCache } from './valueset-cache';
-import { canDelegateCodeValidation } from './valueset-delegation-policy';
+} from './terminology-valueset-operations.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import { canDelegateCodeValidation } from './valueset-delegation-policy.js';
 import type {
   TerminologyResolutionConfig,
   TerminologyServerOverride,
-} from './valueset-types';
+} from './valueset-types.js';
 
 export type {
   CodeSystemValidationIssue,
   CodeSystemValidationResult,
   SubsumptionOutcome,
-} from './terminology-api-types';
-export { isSnomedNationalExtensionCode } from './terminology-code-system-result';
+} from './terminology-api-types.js';
+export { isSnomedNationalExtensionCode } from './terminology-code-system-result.js';
 
 export class TerminologyApiClient {
   private readonly runtime: TerminologyApiClientRuntime;
@@ -59,6 +61,7 @@ export class TerminologyApiClient {
     valueSetUrl: string,
     override?: TerminologyServerOverride,
   ): Promise<Set<string> | null> {
+    markValidationDependencyUnattested('Online terminology does not attest an immutable dataset for this comparison.');
     return executeRemoteValueSetExpansion(
       this.runtime.valueSetOperationsContext(),
       valueSetUrl,
@@ -74,6 +77,7 @@ export class TerminologyApiClient {
     override?: TerminologyServerOverride,
     codeSystemVersion?: string,
   ): Promise<boolean> {
+    markValidationDependencyUnattested('Online terminology does not attest an immutable dataset for this comparison.');
     const result = await validateCodeAgainstRemoteValueSet(
       this.runtime.valueSetOperationsContext(),
       { code, system, valueSetUrl, bindingStrength, override, codeSystemVersion },
@@ -88,12 +92,29 @@ export class TerminologyApiClient {
     bindingStrength?: 'required' | 'extensible' | 'preferred' | 'example',
     override?: TerminologyServerOverride,
     codeSystemVersion?: string,
+    valueSet?: import('./valueset-types.js').ValueSet,
   ): Promise<RemoteValueSetValidationOutcome> {
-    const result = await validateCodeAgainstRemoteValueSet(
-      this.runtime.valueSetOperationsContext(),
-      { code, system, valueSetUrl, bindingStrength, override, codeSystemVersion },
+    const result = await this.validateCodeAttempt(
+      code, system, valueSetUrl, bindingStrength, override, codeSystemVersion, valueSet,
     );
     return result.outcome;
+  }
+
+  /** The outcome together with why the server left it undecided, for binding diagnostics. */
+  async validateCodeAttempt(
+    code: string,
+    system: string | undefined,
+    valueSetUrl: string,
+    bindingStrength?: 'required' | 'extensible' | 'preferred' | 'example',
+    override?: TerminologyServerOverride,
+    codeSystemVersion?: string,
+    valueSet?: import('./valueset-types.js').ValueSet,
+  ): Promise<RemoteValueSetValidationResult> {
+    markValidationDependencyUnattested('Online terminology does not attest an immutable dataset for this comparison.');
+    return validateCodeAgainstRemoteValueSet(
+      this.runtime.valueSetOperationsContext(),
+      { code, system, valueSetUrl, bindingStrength, override, codeSystemVersion, valueSet },
+    );
   }
 
   isValueSetNotResolvable(
@@ -118,6 +139,7 @@ export class TerminologyApiClient {
     override?: TerminologyServerOverride,
     codeSystemVersion?: string,
   ): Promise<CodeSystemValidationResult> {
+    markValidationDependencyUnattested('Online terminology does not attest an immutable dataset for this comparison.');
     if (!canDelegateCodeValidation(this.runtime.getConfig())) return { valid: true };
     return validateCodeSystemRemotely(
       this.runtime.codeSystemValidationContext(),
@@ -135,6 +157,7 @@ export class TerminologyApiClient {
     codeB: string,
     override?: TerminologyServerOverride,
   ): Promise<SubsumptionOutcome> {
+    markValidationDependencyUnattested('Online terminology does not attest an immutable dataset for this comparison.');
     return executeRemoteSubsumption(
       this.runtime.subsumptionContext(),
       { codeA, codeB, system, override },

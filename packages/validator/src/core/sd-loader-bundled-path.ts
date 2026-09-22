@@ -1,6 +1,6 @@
 import { createRequire } from 'module';
 import * as path from 'path';
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 
 export function resolveDefaultBundledProfilesPath(): string | null {
   const fromEnv =

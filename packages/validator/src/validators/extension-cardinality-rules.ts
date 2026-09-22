@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import type { ExtensionDefinition } from './extension-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import type { ExtensionDefinition } from './extension-types.js';
 
 export function checkExtensionPathCardinality(
   elementPath: string,

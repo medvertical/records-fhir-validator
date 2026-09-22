@@ -5,9 +5,9 @@
  * Extracted from validator-engine.ts to comply with global.mdc guidelines.
  */
 
-import type { ValidationIssue, ValidationSettings } from '../types';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import { computeValidationIssueId } from '@records-fhir/validation-types';
-import type { StructureDefinition } from './structure-definition-types';
+import type { StructureDefinition } from './structure-definition-types.js';
 import {
   StructuralExecutor,
   ProfileExecutor,
@@ -16,12 +16,12 @@ import {
   InvariantExecutor,
   CustomRuleExecutor,
   MetadataExecutor
-} from './executors';
-import { getValueAtPath } from './validation-utils';
-import type { ReferenceResolver } from '../validators/slicing-validator';
-import { TerminologyResourceValidator } from '../validators/terminology-resource-validator';
-import type { FhirResource } from './fhir-resource';
-import { universalConstraintsValidator } from '../validators/universal-constraints-validator';
+} from './executors/index.js';
+import { getValueAtPath } from './validation-utils.js';
+import type { ReferenceResolver } from '../validators/slicing-validator.js';
+import { TerminologyResourceValidator } from '../validators/terminology-resource-validator.js';
+import type { FhirResource } from './fhir-resource.js';
+import { shouldRunCustomRules } from './validation-settings-predicates.js';
 
 export interface ValidationOrchestratorContext {
   resource: FhirResource;
@@ -52,6 +52,12 @@ export async function runAllAspectValidations(
   composedTerminologyResourceValidator: TerminologyResourceValidator,
 ): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
+  const sourceContext = {
+    organizationId: context.organizationId,
+    serverId: context.serverId,
+    fhirVersion: context.fhirVersion,
+  };
+  terminologyExecutor.setSourceContext?.(sourceContext);
 
   // Structural validation (cardinality, types, element rules)
   if (isAspectEnabled(context.settings, 'structural')) {
@@ -83,6 +89,7 @@ export async function runAllAspectValidations(
       strictMode: context.strictMode,
       getValueAtPath,
       referenceResolver: context.referenceResolver,
+      terminologyResolver: terminologyExecutor.getFHIRPathTerminologyResolver?.(),
     });
     issues.push(...profileIssues);
   }
@@ -91,14 +98,11 @@ export async function runAllAspectValidations(
   if (isAspectEnabled(context.settings, 'terminology')) {
     const terminologyIssues = await terminologyExecutor.validate({
       resource: context.resource,
+      resourceType: context.resourceType,
       structureDef: context.structureDef,
       getValueAtPath,
       fhirVersion: context.fhirVersion,
-      sourceContext: {
-        organizationId: context.organizationId,
-        serverId: context.serverId,
-        fhirVersion: context.fhirVersion,
-      },
+      sourceContext,
     });
     issues.push(...terminologyIssues);
 
@@ -111,19 +115,25 @@ export async function runAllAspectValidations(
     issues.push(...terminologyResourceIssues);
   }
 
-  // Invariant validation (FHIRPath constraints)
-  if (isAspectEnabled(context.settings, 'invariant')) {
+  // Base-spec invariants (ele-1, pat-1, dom-2, obs-*). These are gated by the
+  // structural switch, not by `invariant`: their findings are labelled
+  // `structural`, the batch path already runs them whenever structural is
+  // requested (see resolveSemanticAspectPlan), and gating them differently here
+  // made the same resource validate differently depending on which path saw it.
+  if (isAspectEnabled(context.settings, 'structural')) {
     const invariantIssues = await invariantExecutor.validate({
       resource: context.resource,
       structureDef: context.structureDef,
       profileUrl: context.profileUrl,
       existingIssues: issues
     });
-    issues.push(...invariantIssues, ...universalConstraintsValidator.validate(context.resource));
+    issues.push(...invariantIssues);
   }
 
   // Custom Rule validation (User-defined business rules)
-  if (context.settings && isAspectEnabled(context.settings, 'custom_rule')) {
+  if (context.settings
+    && isAspectEnabled(context.settings, 'custom_rule')
+    && shouldRunCustomRules(context.settings)) {
     const customRuleIssues = await customRuleExecutor.validate({
       resource: context.resource,
       structureDef: context.structureDef,

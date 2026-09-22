@@ -1,5 +1,5 @@
-import type { Binding, ElementDefinition } from '../core/structure-definition-types';
-import { constraintTypeMatchesElement } from './element-constraint-type';
+import type { Binding, ElementDefinition } from '../core/structure-definition-types.js';
+import { constraintTypeMatchesElement } from './element-constraint-type.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);

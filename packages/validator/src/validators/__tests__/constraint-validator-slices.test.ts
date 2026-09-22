@@ -3,6 +3,23 @@ import { ConstraintValidator } from '../constraint-validator';
 import type { ElementDefinition } from '../../core/structure-definition-types';
 
 describe('ConstraintValidator slice constraints', () => {
+  it('rebuilds slice lookups when the same profile definitions change between validations', async () => {
+    const validator = new ConstraintValidator();
+    const resource = { resourceType: 'Patient', identifier: [{ system: 'urn:first', value: 'invalid' }] };
+    const system: ElementDefinition = { id: 'Patient.identifier:scoped.system',
+      path: 'Patient.identifier.system', fixedUri: 'urn:first' };
+    const elements: ElementDefinition[] = [
+      { id: 'Patient.identifier:scoped', path: 'Patient.identifier', sliceName: 'scoped',
+        constraint: [{ key: 'scoped-value', severity: 'error', human: 'Value must be numeric',
+          expression: "value.matches('^[0-9]+$')" }] }, system,
+    ];
+    expect((await validator.validate(resource, elements, 'urn:profile')).map(issue => issue.ruleId)).toEqual(['scoped-value']);
+    system.fixedUri = 'urn:second';
+    expect(await validator.validate(resource, elements, 'urn:profile')).toEqual([]);
+    system.fixedUri = 'urn:first';
+    expect((await validator.validate(resource, elements, 'urn:profile')).map(issue => issue.ruleId)).toEqual(['scoped-value']);
+  });
+
   it('evaluates patternIdentifier slice constraints only for matching slice instances', async () => {
     const validator = new ConstraintValidator();
     const resource = {

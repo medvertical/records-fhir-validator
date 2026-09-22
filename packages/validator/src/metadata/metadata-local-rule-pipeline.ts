@@ -1,10 +1,10 @@
-import type { ValidationIssue } from '../types';
-import { logger } from '../logger';
-import { validateRequiredMetadata } from './completeness-checker';
-import { validateMetaField } from './meta-field-validator';
-import { isObjectRecord, type FhirObject } from './metadata-boundary-utils';
-import { MetadataFieldRuleSet } from './metadata-field-rule-set';
-import { validateProvenanceChain } from './provenance-chain-validator';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { logger } from '../logger.js';
+import { validateRequiredMetadata } from './completeness-checker.js';
+import { validateMetaField } from './meta-field-validator.js';
+import { isObjectRecord, type FhirObject } from './metadata-boundary-utils.js';
+import { MetadataFieldRuleSet } from './metadata-field-rule-set.js';
+import { validateProvenanceChain } from './provenance-chain-validator.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 

@@ -16,7 +16,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { buildMultiAspectValidateCallback } from '../multi-aspect-validate-callback';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 vi.mock('../profile-loader-utils', () => ({
   // loadProfileOrBase: declared URL fails, base SD succeeds → usedBaseFallback=true
@@ -36,22 +36,6 @@ vi.mock('../profile-loader-utils', () => ({
     details: { profile: profileUrl },
   }),
   createProfileResourceTypeMismatchIssue: vi.fn(),
-}));
-
-vi.mock('../validators/deep-profile-validator', () => ({
-  deepProfileValidator: { validate: () => [] },
-}));
-vi.mock('../validators/deep-binding-validator', () => ({
-  deepBindingValidator: { validate: () => [] },
-}));
-vi.mock('../validators/sd-fhirpath-executor', () => ({
-  sdFHIRPathExecutor: { execute: async () => [] },
-}));
-vi.mock('../validators/contained-resource-validator', () => ({
-  containedResourceValidator: { validate: () => [] },
-}));
-vi.mock('../validators/universal-constraints-validator', () => ({
-  universalConstraintsValidator: { validate: () => [] },
 }));
 
 const cardinalityError: ValidationIssue = {
@@ -75,6 +59,7 @@ function makeDeps() {
     customRuleExecutor: { validate: async () => [] } as any,
     metadataExecutor: { validate: async () => [] } as any,
     bestPracticeValidator: { validate: () => [] } as any,
+    terminologyResourceValidator: { validate: () => [] } as any,
     strictMode: false,
   };
 }
@@ -113,28 +98,14 @@ describe('multi-aspect-validate-callback — profile fallback', () => {
     expect(aspectNames).toEqual(['invariant', 'metadata', 'profile', 'reference', 'structural']);
   });
 
-  it('surfaces fallback warning even when profile aspect is not requested', async () => {
+  it('preserves base findings but marks the projected aspect incomplete', async () => {
     const callback = buildMultiAspectValidateCallback(
-      makeDeps(),
-      ['structural'],
-      { validationStrictness: 'standard', aspects: {} },
+      makeDeps(), ['structural'], { validationStrictness: 'standard', aspects: {} },
     );
-
-    const result = await callback(
-      { resourceType: 'Observation' },
-      'http://example.org/DoesNotExist',
-      'R4',
-    );
-
-    // Synthetic profile aspect holds just the warning.
-    const profile = result.aspects.find(a => a.aspect === 'profile');
-    expect(profile).toBeDefined();
-    expect(profile!.issues).toHaveLength(1);
-    expect(profile!.issues[0].code).toBe('profile-not-resolved');
-
-    // Structural still ran.
-    const structural = result.aspects.find(a => a.aspect === 'structural');
-    expect(structural!.issues[0].code).toBe('structural-cardinality-min');
+    const result = await callback({ resourceType: 'Observation' }, 'http://example.org/DoesNotExist', 'R4');
+    expect(result.isValid).toBe(false);
+    expect(result.aspects).toMatchObject([{ aspect: 'structural', isValid: false,
+      issues: [{ code: 'structural-cardinality-min' }] }]);
   });
 
   it('never reports a successful validation when only the base fallback was applied', async () => {
@@ -177,7 +148,7 @@ describe('multi-aspect-validate-callback — profile fallback', () => {
 
     const callback = buildMultiAspectValidateCallback(
       deps,
-      ['structural'],
+      ['structural', 'profile'],
       { validationStrictness: 'standard', aspects: {} },
     );
 
@@ -197,7 +168,7 @@ describe('multi-aspect-validate-callback — profile fallback', () => {
   it('stamps multi-aspect issues with the requested FHIR version', async () => {
     const callback = buildMultiAspectValidateCallback(
       makeDeps(),
-      ['structural'],
+      ['structural', 'profile'],
       { validationStrictness: 'standard', aspects: {} },
     );
 

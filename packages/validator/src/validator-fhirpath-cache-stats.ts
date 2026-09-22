@@ -1,9 +1,9 @@
-import type { RecordsValidator } from './core/validator-engine';
+import type { RecordsValidator } from './core/validator-engine.js';
 import {
   combineFHIRPathCacheStats,
   emptyFHIRPathCacheStats,
-} from './validators/fhirpath-cache-diagnostics';
-import type { FHIRPathExpressionCacheStats } from './validators/fhirpath-expression-cache-core';
+} from './validators/fhirpath-cache-diagnostics.js';
+import type { FHIRPathExpressionCacheStats } from './validators/fhirpath-expression-cache-core.js';
 
 type CombinedStats = ReturnType<RecordsValidator['getFHIRPathCacheStats']>;
 

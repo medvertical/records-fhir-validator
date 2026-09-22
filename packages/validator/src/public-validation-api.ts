@@ -1,8 +1,8 @@
-import type { BatchValidationOptions } from './core/batch-validator';
-import type { FhirClientLike } from './core/profile-loader-utils';
-import type { ValidationIssue, ValidationSettings } from './types';
+import type { BatchValidationOptions } from './core/batch-validator.js';
+import type { FhirClientLike } from './core/profile-loader-utils.js';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import { computeValidationIssueId } from '@records-fhir/validation-types';
-import { createSafeValidationFailureMessage } from './utils/validation-execution-failure';
+import { createSafeValidationFailureMessage } from './utils/validation-execution-failure.js';
 
 type InternalFhirVersion = 'R4' | 'R5' | 'R6';
 
@@ -275,7 +275,7 @@ function createPublicValidationResult(
     ...metadata,
     profileUrl: request.profileUrl,
     fhirVersion: request.fhirVersion,
-    isValid: issues.length === 0,
+    isValid: !issues.some(issue => issue.severity === 'error' || issue.severity === 'fatal'),
     issues,
   };
 }

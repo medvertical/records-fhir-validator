@@ -6,8 +6,8 @@
  * validation-advanced-metrics.ts.
  */
 
-import type { ValidationStatus } from './enums';
-import type { ValidationIssue } from './messages';
+import type { ValidationStatus } from './enums.js';
+import type { ValidationIssue } from './messages.js';
 
 // ============================================================================
 // Validation Result

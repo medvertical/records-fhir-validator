@@ -1,4 +1,4 @@
-import type { Hl7IssueType } from './operation-outcome-issue-types';
+import type { Hl7IssueType } from './operation-outcome-issue-types.js';
 
 /**
  * Questionnaire / QuestionnaireResponse prefix mappings, spread into the main

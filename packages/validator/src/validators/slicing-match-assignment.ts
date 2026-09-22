@@ -1,10 +1,10 @@
-import type { SlicingDefinition } from '../core/structure-definition-types';
+import type { SlicingDefinition } from '../core/structure-definition-types.js';
 import {
   elementCountsForSliceCardinality,
   matchElementToSlice,
   referenceDiscriminatorCouldNotBeResolved,
-} from './slicing-match-policy';
-import type { ReferenceResolver, SliceDefinition } from './slice-types';
+} from './slicing-match-policy.js';
+import type { ReferenceResolver, SliceDefinition } from './slice-types.js';
 
 export interface SliceElementMatch {
   element: unknown;

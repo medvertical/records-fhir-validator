@@ -8,7 +8,7 @@ import {
   getResourceType,
   parseFhirDateTime,
   type UnknownRecord,
-} from './validator-utils';
+} from './validator-utils.js';
 
 const ONSET_DATE_RULE = 'condition-onset-date-validation';
 

@@ -1,18 +1,18 @@
-import type { ValidationIssue } from '../types';
-import { normalizeChoiceTypePath } from './choice-type-path';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { normalizeChoiceTypePath } from './choice-type-path.js';
 import {
   getDetailsRecord,
   getIssuePath,
   getIssueResourceType,
-} from './validation-issue-dedupe-common';
+} from './validation-issue-dedupe-common.js';
 import {
   hasBundleEntryResourceIdentity,
   isIndexedBundleEntryResourcePath,
   normalizeIndexedBundleEntryResourcePath,
-} from './validation-issue-dedupe-bundle-path-utils';
+} from './validation-issue-dedupe-bundle-path-utils.js';
 import {
   normalizeInvalidUriDedupePath,
-} from './validation-issue-dedupe-path-utils';
+} from './validation-issue-dedupe-path-utils.js';
 
 export function getTerminologyDisplayMismatchKey(issue: ValidationIssue): string | null {
   if (issue.code !== 'terminology-display-mismatch') return null;

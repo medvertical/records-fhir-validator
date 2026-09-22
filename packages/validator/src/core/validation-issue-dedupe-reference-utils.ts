@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../types';
-import { getDetailsRecord, getIssuePath } from './validation-issue-dedupe-common';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { getDetailsRecord, getIssuePath } from './validation-issue-dedupe-common.js';
 
 export function getIssueReferenceValue(issue: ValidationIssue): string | null {
   const reference = getDetailsRecord(issue)?.reference;

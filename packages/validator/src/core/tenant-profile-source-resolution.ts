@@ -1,10 +1,10 @@
 import {
   getProfileSource,
   type ProfileSourceContext,
-} from '../persistence';
-import type { ValidationSettings } from '../types';
-import { profileMatchesCanonical } from './sd-loader-profile-identity';
-import type { StructureDefinition } from './structure-definition-types';
+} from '../persistence/index.js';
+import type { ValidationSettings } from '@records-fhir/validation-types';
+import { profileMatchesCanonical } from './sd-loader-profile-identity.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 

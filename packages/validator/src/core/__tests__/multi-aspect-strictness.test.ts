@@ -20,7 +20,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { buildMultiAspectValidateCallback } from '../multi-aspect-validate-callback';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 // Mock the profile loader — we don't want real DB/profile-cache lookups.
 vi.mock('../profile-loader-utils', () => ({
@@ -45,22 +45,6 @@ vi.mock('../profile-loader-utils', () => ({
 
 // Mock auxiliary validators — they run in addition to the executor issues,
 // and we don't want their noise in this test.
-vi.mock('../validators/deep-profile-validator', () => ({
-  deepProfileValidator: { validate: () => [] },
-}));
-vi.mock('../validators/deep-binding-validator', () => ({
-  deepBindingValidator: { validate: () => [] },
-}));
-vi.mock('../validators/sd-fhirpath-executor', () => ({
-  sdFHIRPathExecutor: { execute: async () => [] },
-}));
-vi.mock('../validators/contained-resource-validator', () => ({
-  containedResourceValidator: { validate: () => [] },
-}));
-vi.mock('../validators/universal-constraints-validator', () => ({
-  universalConstraintsValidator: { validate: () => [] },
-}));
-
 const errorIssue: ValidationIssue = {
   severity: 'error',
   code: 'test-error',
@@ -88,6 +72,7 @@ function makeDeps() {
     customRuleExecutor: { validate: async () => [] } as any,
     metadataExecutor: { validate: async () => [] } as any,
     bestPracticeValidator: { validate: () => [] } as any,
+    terminologyResourceValidator: { validate: () => [] } as any,
     strictMode: false,
   };
 }
@@ -156,4 +141,16 @@ describe('multi-aspect-validate-callback — strictness propagation', () => {
     const structural = result.aspects.find(a => a.aspect === 'structural')!;
     expect(structural.issues[0].severity).toBe('error');
   });
+});
+
+
+it('rejects a structural-only session when its real runner catches a profile dependency failure', async () => {
+  const deps = makeDeps();
+  deps.profileExecutor.validate = async () => { throw new Error('Synthetic profile transport unavailable'); };
+  const validate = buildMultiAspectValidateCallback(deps, ['structural'], {
+    validationStrictness: 'standard', aspects: {},
+    advisorRules: [{ id: 'hide-errors', enabled: true, action: 'suppress', match: { code: 'internal-error' } }],
+  });
+  await expect(validate({ resourceType: 'Patient' }, 'http://test', 'R4'))
+    .rejects.toThrow('dependency could not be completed');
 });

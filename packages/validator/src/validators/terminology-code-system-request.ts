@@ -1,26 +1,26 @@
 import axios, { isAxiosError } from 'axios';
-import type { CircuitBreaker } from '../terminology';
-import { logger } from '../logger';
+import type { CircuitBreaker } from '../terminology/index.js';
+import { logger } from '../logger.js';
 import {
   buildSnomedNationalExtensionUnverifiedResult,
   isSnomedNationalExtensionSystemCode,
   operationOutcomeToCodeSystemResult,
   parseCodeSystemValidationParameters,
-} from './terminology-code-system-result';
+} from './terminology-code-system-result.js';
 import {
   DEFAULT_REMOTE_TERMINOLOGY_TIMEOUT_MS,
   getRemoteTerminologyTimeoutMs,
   recordTerminologyResponse,
-} from './terminology-api-remote-policy';
-import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config';
-import type { CodeSystemValidationResult } from './terminology-api-types';
+} from './terminology-api-remote-policy.js';
+import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config.js';
+import type { CodeSystemValidationResult } from './terminology-api-types.js';
 import type {
   TerminologyResolutionConfig,
   TerminologyServerOverride,
-} from './valueset-types';
-import type { TerminologyOperationCache } from './terminology-operation-cache';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+} from './valueset-types.js';
+import type { TerminologyOperationCache } from './terminology-operation-cache.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 
 interface CodeSystemValidationRequestOptions {
   cacheKey: string;

@@ -5,8 +5,8 @@
  * Extracted from the former shared validation type module.
  */
 
-import type { ValidationSeverity } from './enums';
-import type { AdvisorRuleApplication } from './settings-policies';
+import type { ValidationSeverity } from './enums.js';
+import type { AdvisorRuleApplication } from './settings-policies.js';
 
 // ============================================================================
 // Validation Issue
@@ -27,7 +27,6 @@ export interface ValidationIssueTarget {
 }
 
 export interface ValidationIssue {
-  [key: string]: unknown;
   id?: string;
   aspect: string;
   severity: ValidationSeverity;

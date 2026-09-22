@@ -1,5 +1,13 @@
 import type { SaxesAttributeNS, SaxesTagNS } from 'saxes';
-import type { FhirInputLocation, ParsedFhirInput } from './fhir-input-types';
+import type { FhirInputDiagnostic, FhirInputLocation, ParsedFhirInput } from './fhir-input-types.js';
+import { primitiveValue } from './fhir-xml-primitive-value.js';
+import {
+  PRIMITIVE_TYPE_NAMES,
+  createSchemaCursor,
+  cursorVersion,
+  resolveChild,
+  type SchemaCursor,
+} from './fhir-xml-schema-cursor.js';
 
 export const FHIR_XML_NAMESPACE = 'http://hl7.org/fhir';
 export const XHTML_XML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
@@ -13,6 +21,9 @@ const COMMON_REPEATING_ELEMENTS = new Set([
   'performer', 'profile', 'reasonCode', 'reasonReference', 'referenceRange',
   'section', 'security', 'specialty', 'supportingInfo', 'tag', 'telecom',
 ]);
+const UNSAFE_PROPERTY_NAMES = new Set(['__proto__', 'constructor', 'prototype']);
+const PRIMITIVE_CHOICE_ELEMENT = /^value(?:Base64Binary|Boolean|Canonical|Code|Date|DateTime|Decimal|Id|Instant|Integer|Integer64|Markdown|Oid|PositiveInt|String|Time|UnsignedInt|Uri|Url|Uuid)$/;
+
 const REPEATING_PARENT_CHILD = new Set([
   'Encounter.location', 'Encounter.type', 'EpisodeOfCare.type',
   'HealthcareService.location', 'HealthcareService.type', 'Location.type',
@@ -20,20 +31,6 @@ const REPEATING_PARENT_CHILD = new Set([
   'PractitionerRole.location', 'RelatedPerson.name',
   'SubscriptionStatus.notificationEvent',
 ]);
-const BOOLEAN_ELEMENTS = new Set([
-  'abstract', 'active', 'caseSensitive', 'compositional', 'experimental',
-  'immutable', 'isModifier', 'isSummary', 'mustSupport', 'preferred',
-  'readOnly', 'required', 'userSelected', 'versionNeeded',
-]);
-const NUMERIC_ELEMENTS = new Set([
-  'count', 'denominator', 'factor', 'min', 'numerator', 'offset', 'rank',
-  'score', 'sequence', 'total',
-]);
-const NUMERIC_VALUE_PARENTS = new Set([
-  'Age', 'Count', 'Distance', 'Duration', 'Money', 'Quantity', 'SimpleQuantity',
-]);
-const DECIMAL_ELEMENTS = new Set(['factor', 'offset', 'score']);
-const UNSAFE_PROPERTY_NAMES = new Set(['__proto__', 'constructor', 'prototype']);
 
 export interface XmlNode {
   local: string;
@@ -49,8 +46,6 @@ interface ConvertedNode {
   value: unknown;
   primitiveSidecar?: Record<string, unknown>;
 }
-
-const PRIMITIVE_CHOICE_ELEMENT = /^value(?:Base64Binary|Boolean|Canonical|Code|Date|DateTime|Decimal|Id|Instant|Integer|Integer64|Markdown|Oid|PositiveInt|String|Time|UnsignedInt|Uri|Url|Uuid)$/;
 
 export function createXmlNode(tag: SaxesTagNS, location: FhirInputLocation): XmlNode {
   return {
@@ -69,11 +64,17 @@ export function createXmlNode(tag: SaxesTagNS, location: FhirInputLocation): Xml
   };
 }
 
+/** Attributes FHIR XML defines on an ordinary element. */
+const ALLOWED_ATTRIBUTES = new Set(['value', 'id', 'url']);
+
 export function convertFhirXmlRoot(
   root: XmlNode,
   sourceMap: ParsedFhirInput['sourceMap'],
+  fhirVersion?: string,
+  diagnostics?: FhirInputDiagnostic[],
 ): Record<string, unknown> {
-  const converted = convertNode(root, root.local, sourceMap, true);
+  const cursor = createSchemaCursor(root.local, fhirVersion);
+  const converted = convertNode(root, root.local, sourceMap, true, undefined, cursor, undefined, diagnostics);
   if (!converted.value || typeof converted.value !== 'object' || Array.isArray(converted.value)) {
     throw new Error('FHIR XML root did not normalize to a resource object');
   }
@@ -86,8 +87,24 @@ function convertNode(
   sourceMap: ParsedFhirInput['sourceMap'],
   rootResource = false,
   parentLocal?: string,
+  cursor?: SchemaCursor,
+  declaredType?: string,
+  diagnostics?: FhirInputDiagnostic[],
 ): ConvertedNode {
   sourceMap[path] = node.location;
+  // A narrative whose namespace is wrong is walked as if it were FHIR, so its
+  // markup would otherwise be reported element by element as stray text. The
+  // namespace itself is the defect and is reported on its own terms.
+  const narrative = declaredType === 'xhtml';
+  const collectInto = narrative ? undefined : diagnostics;
+  if (collectInto && node.uri === FHIR_XML_NAMESPACE) {
+    // An element the definitions do not describe is reported as undefined on
+    // its own terms; also flagging whatever text it carries says the same
+    // thing twice. `rootResource` covers the resource element itself, which
+    // has no parent to have been resolved from.
+    const known = rootResource || declaredType !== undefined;
+    collectSerialisationDiagnostics(node, path, declaredType, collectInto, known);
+  }
   if (node.uri === XHTML_XML_NAMESPACE && node.local === 'div') {
     return { value: serializeXml(node) };
   }
@@ -96,35 +113,59 @@ function convertNode(
     && node.children.length === 1
     && node.children[0].uri === FHIR_XML_NAMESPACE
   ) {
-    return convertNode(node.children[0], path, sourceMap, true, node.local);
+    const inner = node.children[0];
+    return convertNode(
+      inner, path, sourceMap, true, node.local,
+      createSchemaCursor(inner.local, cursorVersion(cursor)), undefined, collectInto,
+    );
   }
 
   const rawValue = attribute(node, 'value');
   const id = attribute(node, 'id');
   const url = attribute(node, 'url');
-  if (rawValue === undefined && PRIMITIVE_CHOICE_ELEMENT.test(node.local)) {
+  const buildSidecar = (): Record<string, unknown> => {
     const sidecar: Record<string, unknown> = {};
     if (id) sidecar.id = id;
+    const elementCursor = cursor
+      ? { table: cursor.table, type: 'Element', path: '' }
+      : undefined;
     for (const child of node.children) {
-      const childConverted = convertNode(child, `${path}._${child.local}`, sourceMap, false, node.local);
-      setProperty(sidecar, child.local, childConverted.value, isRepeatingElement(node.local, child.local));
+      const resolved = resolveChild(elementCursor, child.local);
+      const childConverted = convertNode(
+        child, `${path}._${child.local}`, sourceMap, false, node.local,
+        resolved?.next, resolved?.type, collectInto,
+      );
+      setProperty(
+        sidecar, child.local, childConverted.value,
+        resolved ? resolved.isArray : isRepeatingElement(node.local, child.local),
+      );
     }
-    return Object.keys(sidecar).length > 0
-      ? { value: undefined, primitiveSidecar: sidecar }
-      : { value: {} };
-  }
+    return sidecar;
+  };
+
   if (rawValue !== undefined) {
-    const converted: ConvertedNode = { value: primitiveValue(parentLocal, node.local, rawValue) };
-    if (id || node.children.length > 0) {
-      const sidecar: Record<string, unknown> = {};
-      if (id) sidecar.id = id;
-      for (const child of node.children) {
-        const childConverted = convertNode(child, `${path}._${child.local}`, sourceMap, false, node.local);
-        setProperty(sidecar, child.local, childConverted.value, isRepeatingElement(node.local, child.local));
-      }
-      converted.primitiveSidecar = sidecar;
-    }
+    const converted: ConvertedNode = {
+      value: primitiveValue(parentLocal, node.local, rawValue, declaredType),
+    };
+    if (id || node.children.length > 0) converted.primitiveSidecar = buildSidecar();
     return converted;
+  }
+
+  // A primitive that carries no value but does carry an id or extensions. FHIR
+  // JSON puts that content on the `_name` sibling and omits the value property
+  // altogether. Walking it as a complex object instead produced "expected
+  // boolean, found object" — on data-absent-reason, which is among the most
+  // common extensions in real data, so this was not a corpus curiosity.
+  if (
+    ((declaredType !== undefined
+      && declaredType !== 'xhtml'
+      && PRIMITIVE_TYPE_NAMES.has(declaredType))
+      // Untabled subtrees have no declared type; the choice-element spelling
+      // still identifies a primitive there.
+      || (declaredType === undefined && PRIMITIVE_CHOICE_ELEMENT.test(node.local)))
+    && (id !== undefined || node.children.length > 0)
+  ) {
+    return { value: undefined, primitiveSidecar: buildSidecar() };
   }
 
   const output: Record<string, unknown> = {};
@@ -132,14 +173,21 @@ function convertNode(
   if (id) output.id = id;
   if (url) output.url = url;
   for (const child of node.children) {
-    const forceArray = isRepeatingElement(node.local, child.local);
+    const resolved = resolveChild(cursor, child.local);
+    const forceArray = resolved ? resolved.isArray : isRepeatingElement(node.local, child.local);
     const existing = output[child.local];
     const index = Array.isArray(existing) ? existing.length : existing === undefined ? 0 : 1;
     const array = forceArray || existing !== undefined;
-    const converted = convertNode(child, childPath(path, child.local, index, array), sourceMap, false, node.local);
-    const valueIndex = converted.value === undefined && converted.primitiveSidecar
+    const converted = convertNode(
+      child, childPath(path, child.local, index, array), sourceMap, false, node.local,
+      resolved?.next, resolved?.type, collectInto,
+    );
+    // An absent primitive value keeps its slot in a repeating element, because
+    // the `_name` array is positional; as a singleton it has no slot at all.
+    const valueAbsent = converted.value === undefined;
+    const valueIndex = valueAbsent && !array
       ? 0
-      : setProperty(output, child.local, converted.value, forceArray);
+      : setProperty(output, child.local, valueAbsent ? null : converted.value, forceArray);
     const existingSidecar = output[`_${child.local}`];
     if (array && existingSidecar !== undefined && !Array.isArray(existingSidecar)) {
       output[`_${child.local}`] = [existingSidecar];
@@ -152,24 +200,6 @@ function convertNode(
   return { value: output };
 }
 
-function primitiveValue(parent: string | undefined, name: string, value: string): string | number | boolean {
-  const booleanElement = BOOLEAN_ELEMENTS.has(name) || name.endsWith('Boolean');
-  if (booleanElement && value === 'true') return true;
-  if (booleanElement && value === 'false') return false;
-  if (name.endsWith('Integer64')) return value;
-  const numericElement = NUMERIC_ELEMENTS.has(name)
-    || /(?:Decimal|Integer|PositiveInt|UnsignedInt)$/.test(name)
-    || (name === 'value' && parent !== undefined && NUMERIC_VALUE_PARENTS.has(parent));
-  const exponentAllowed = name.endsWith('Decimal')
-    || DECIMAL_ELEMENTS.has(name)
-    || (name === 'value' && parent !== undefined && NUMERIC_VALUE_PARENTS.has(parent));
-  const validNumericLexeme = /^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(value);
-  if (numericElement && validNumericLexeme && (exponentAllowed || !/[eE]/.test(value))) {
-    const numeric = Number(value);
-    if (Number.isFinite(numeric)) return numeric;
-  }
-  return value;
-}
 
 function setProperty(output: Record<string, unknown>, name: string, value: unknown, forceArray: boolean): number {
   if (UNSAFE_PROPERTY_NAMES.has(name)) throw new Error(`FHIR XML contains unsafe element name: ${name}`);
@@ -203,6 +233,55 @@ function setPrimitiveSidecar(
   while (values.length < index) values.push(null);
   values[index] = sidecar;
   output[sidecarName] = values;
+}
+
+function collectSerialisationDiagnostics(
+  node: XmlNode,
+  path: string,
+  declaredType: string | undefined,
+  diagnostics: FhirInputDiagnostic[],
+  known: boolean,
+): void {
+  // Only a leaf element. Text interleaved with child elements means the
+  // element is being used as markup — a narrative whose namespace is wrong,
+  // say — and that defect is reported on its own terms rather than as stray
+  // text.
+  if (known && node.children.length === 0) {
+    for (const item of node.content) {
+      if (typeof item !== 'string' || item.trim().length === 0) continue;
+      diagnostics.push({
+        code: 'xml-text-not-allowed',
+        path,
+        message: `Text should not be present ('${item.trim()}')`,
+        location: node.location,
+      });
+      break;
+    }
+  }
+  for (const attribute of node.attributes) {
+    if (attribute.uri !== '') continue;
+    if (ALLOWED_ATTRIBUTES.has(attribute.local)) {
+      // An attribute written as `url=""` carries no value. The conversion
+      // drops it, so afterwards it is indistinguishable from an attribute
+      // that was never written at all.
+      if (attribute.value.length === 0) {
+        diagnostics.push({
+          code: 'xml-attribute-empty',
+          path,
+          message: 'value cannot be empty',
+          location: node.location,
+        });
+      }
+      continue;
+    }
+    diagnostics.push({
+      code: 'xml-attribute-undefined',
+      path,
+      message: `Undefined attribute '@${attribute.local}' on ${node.local}`
+        + (declaredType ? ` for type ${declaredType}` : ''),
+      location: node.location,
+    });
+  }
 }
 
 function attribute(node: XmlNode, local: string): string | undefined {

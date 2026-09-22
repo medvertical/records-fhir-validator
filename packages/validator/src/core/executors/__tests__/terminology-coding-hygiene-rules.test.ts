@@ -1,7 +1,48 @@
 import { describe, expect, it } from 'vitest';
 import { validateCodingHygiene } from '../terminology-coding-hygiene-rules';
+import { UcumCodeValidator } from '../../../validators/ucum-validator';
 
 describe('validateCodingHygiene', () => {
+  it('retains both reference-range errors across resources sharing the UCUM cache', () => {
+    const validator = new UcumCodeValidator();
+    for (const id of ['observation-a', 'observation-b', 'observation-c']) {
+      const quantity = { system: 'http://unitsofmeasure.org', code: 'iU/L' };
+      const issues = validateCodingHygiene({
+        resourceType: 'Observation',
+        id,
+        valueQuantity: { system: quantity.system, code: '[iU]/L', value: 1 },
+        referenceRange: [{ low: { ...quantity, value: 0 }, high: { ...quantity, value: 2 } }],
+      }, [], validator);
+      expect(issues.map(issue => issue.path)).toEqual([
+        'Observation.referenceRange[0].low.code',
+        'Observation.referenceRange[0].high.code',
+      ]);
+      for (const issue of issues) {
+        expect(issue).toMatchObject({
+          code: 'terminology-code-invalid',
+          severity: 'error',
+          details: { suggestedCode: '[iU]/L' },
+        });
+      }
+    }
+  });
+
+  it.each([
+    ['/HPF', '/[HPF]'],
+    ['iU/L', '[iU]/L'],
+    ['mIU/L', 'm[IU]/L'],
+  ])('preserves the full UCUM expression in the correction for %s', (code, suggestedCode) => {
+    const issues = validateCodingHygiene({
+      resourceType: 'Observation',
+      valueQuantity: { system: 'http://unitsofmeasure.org', code, value: 1 },
+    }, []);
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'terminology-code-invalid',
+      path: 'Observation.valueQuantity.code',
+      details: expect.objectContaining({ suggestedCode }),
+    }));
+  });
+
   it('reports Coding.code values that violate FHIR code whitespace rules', () => {
     const issues = validateCodingHygiene({
       resourceType: 'Condition',

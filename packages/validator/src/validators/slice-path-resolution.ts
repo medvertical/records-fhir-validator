@@ -1,7 +1,7 @@
 import {
   getPrimitiveSidecar,
   resolveFhirSegmentValue,
-} from '../core/fhir-primitive-sidecar';
+} from '../core/fhir-primitive-sidecar.js';
 
 export function getValueAtPath(obj: unknown, path: string): unknown {
   if (!path || path === '$this') return obj;

@@ -1,13 +1,13 @@
-import { expressionStartsAtResourceRoot } from './constraint-choice-context';
-import { ElementContextResolver } from './element-context-resolver';
-import { preprocessTypeLiterals } from './fhirpath-type-preprocessor';
-import { InvariantRegistry } from './invariant-registry';
-import type { CollectedConstraint } from './sd-constraint-collector';
-import { getCollectedConstraintTargets } from './sd-fhirpath-constraint-contexts';
-import type { SDFHIRPathEvaluationPlan } from './sd-fhirpath-evaluation-plan';
-import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope';
-import { createConstraintViolation } from './sd-fhirpath-issue-factory';
-import { evaluateSpecialisedRootConstraint } from './sd-fhirpath-specialised-root-constraints';
+import { expressionStartsAtResourceRoot } from './constraint-choice-context.js';
+import { ElementContextResolver } from './element-context-resolver.js';
+import { preprocessTypeLiterals } from './fhirpath-type-preprocessor.js';
+import { InvariantRegistry } from './invariant-registry.js';
+import type { CollectedConstraint } from './sd-constraint-collector.js';
+import { getCollectedConstraintTargets } from './sd-fhirpath-constraint-contexts.js';
+import type { SDFHIRPathEvaluationPlan } from './sd-fhirpath-evaluation-plan.js';
+import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope.js';
+import { createConstraintViolation } from './sd-fhirpath-issue-factory.js';
+import { evaluateSpecialisedRootConstraint } from './sd-fhirpath-specialised-root-constraints.js';
 
 const EMPTY_PLAN: SDFHIRPathEvaluationPlan = {
   immediateIssues: [],

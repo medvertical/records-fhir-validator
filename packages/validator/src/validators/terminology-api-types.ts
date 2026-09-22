@@ -1,3 +1,5 @@
+import type { RemoteValueSetUnverifiedReason } from '../issues/unverified-binding-diagnostic.js';
+
 export type SubsumptionOutcome = 'subsumes' | 'subsumed-by' | 'equivalent' | 'not-subsumed' | 'unknown';
 
 export type RemoteValueSetValidationOutcome = 'valid' | 'invalid' | 'unverified';
@@ -7,6 +9,10 @@ export interface RemoteValueSetValidationResult {
     outcome: RemoteValueSetValidationOutcome;
     /** Backwards-compatible fail-open result exposed by TerminologyApiClient.validateCode(). */
     accepted: boolean;
+    /** Why the check stayed undecided; absent for an authoritative outcome. */
+    reason?: RemoteValueSetUnverifiedReason;
+    /** The server that produced the result, so diagnostics can name it. */
+    serverUrl?: string;
 }
 
 export interface CodeSystemValidationIssue {

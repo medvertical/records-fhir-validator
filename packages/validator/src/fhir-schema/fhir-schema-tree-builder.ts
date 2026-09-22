@@ -3,8 +3,8 @@ import type {
   FHIRSchemaElement,
   FHIRSchemaSlice,
   SDElement,
-} from './fhir-schema-types';
-import { capitalize, convertElement, type TargetProfileTypeResolver } from './fhir-schema-element-converter';
+} from './fhir-schema-types.js';
+import { capitalize, convertElement, type TargetProfileTypeResolver } from './fhir-schema-element-converter.js';
 
 interface SlicingDefinition {
   discriminator: Array<{ type: string; path: string }>;

@@ -1,5 +1,5 @@
-import { extractBundleEntries } from './bundle-reference-finder';
-import type { BundleEntry, FhirResourceRecord } from './bundle-reference-types';
+import { extractBundleEntries } from './bundle-reference-finder.js';
+import type { BundleEntry, FhirResourceRecord } from './bundle-reference-types.js';
 
 export function getAllBundleResources(bundle: unknown): FhirResourceRecord[] {
   return extractBundleEntries(bundle)

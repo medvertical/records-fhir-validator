@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../../types';
-import { validateResourceLanguage } from '../../validators/language-code-validator';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateResourceLanguage } from '../../validators/language-code-validator.js';
 import {
   validateContainedResourceIdsPresent,
   validateContainedResourcesReferenced,
@@ -11,7 +11,7 @@ import {
   validateUniqueContainedResourceIds,
   validateUniqueElementIds,
   validateWhitespaceOnlyPrimitives,
-} from './structural-sanity-rules';
+} from './structural-sanity-rules.js';
 
 interface ResourceSanityValidators {
   attachment: {

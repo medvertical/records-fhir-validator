@@ -1,6 +1,6 @@
-import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types';
-import { logger } from '../logger';
-import type { ExtensionDefinition } from './extension-types';
+import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types.js';
+import { logger } from '../logger.js';
+import type { ExtensionDefinition } from './extension-types.js';
 
 export interface ExtensionDefinitionContext {
   byUrl: Map<string, ExtensionDefinition>;

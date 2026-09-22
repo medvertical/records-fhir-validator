@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../types';
-import { normalizeIssuePathForDedupe } from './validation-issue-dedupe-constraints';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { normalizeIssuePathForDedupe } from './validation-issue-dedupe-constraints.js';
 import {
   getBundleReferenceIssueKey,
   getIssueReferenceValue,
@@ -9,7 +9,7 @@ import {
   normalizeBundleRequestPath,
   normalizeQuestionnairePathWithIndices,
   normalizeRequiredElementPath,
-} from './validation-issue-dedupe-utils';
+} from './validation-issue-dedupe-utils.js';
 
 export function isRedundantReferenceFormatIssue(
   issue: ValidationIssue,

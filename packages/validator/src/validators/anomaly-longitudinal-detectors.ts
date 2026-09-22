@@ -1,4 +1,4 @@
-import type { AnomalyFinding } from './anomaly-types';
+import type { AnomalyFinding } from './anomaly-types.js';
 import {
   getCodings,
   getPrimaryCode,
@@ -7,7 +7,7 @@ import {
   getString,
   getSubjectReference,
   toRecord,
-} from './anomaly-resource-utils';
+} from './anomaly-resource-utils.js';
 
 interface TimelineEvent {
   date: Date;

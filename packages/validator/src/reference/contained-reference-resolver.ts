@@ -7,8 +7,8 @@
  * Task 6.3: Add support for contained resource reference validation
  */
 
-import { extractResourceType as _extractResourceType, parseReference } from './reference-type-extractor';
-import { findReferencesInResource } from './bundle-reference-finder';
+import { extractResourceType as _extractResourceType, parseReference } from './reference-type-extractor.js';
+import { findReferencesInResource } from './bundle-reference-finder.js';
 
 // ============================================================================
 // Types

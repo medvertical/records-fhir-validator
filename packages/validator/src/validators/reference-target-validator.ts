@@ -6,11 +6,11 @@ import type {
   ElementDefinition,
   ElementType,
   StructureDefinition,
-} from '../core/structure-definition-types';
-import { getValidationTargets } from '../business-rules/element-validation-targets';
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import { targetMatchesSliceDefinition } from './constraint-slice-targets';
+} from '../core/structure-definition-types.js';
+import { getValidationTargets } from '../business-rules/element-validation-targets.js';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { targetMatchesSliceDefinition } from './constraint-slice-targets.js';
 import {
   canonicalBase,
   extractResourceTypeFromCanonical,
@@ -22,9 +22,9 @@ import {
   resolveTargetTypeViaResolver,
   type ProfileTypeResolver,
   type ReferenceResolver,
-} from './reference-target-type-resolution';
+} from './reference-target-type-resolution.js';
 
-export type { ProfileTypeResolver, ReferenceResolver } from './reference-target-type-resolution';
+export type { ProfileTypeResolver, ReferenceResolver } from './reference-target-type-resolution.js';
 
 export interface ProfiledTargetHit {
   path: string;

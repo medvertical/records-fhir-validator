@@ -68,7 +68,7 @@ describe('BundleValidator fullUrl enforcement', () => {
       entry: [
         {
           resource: { resourceType: 'Patient', id: 'p1' },
-          request: { method: 'POST', url: 'Patient' },
+          request: { method: 'PUT', url: 'Patient/p1' },
         },
       ],
     };
@@ -77,6 +77,25 @@ describe('BundleValidator fullUrl enforcement', () => {
     const fullUrlIssues = issues.filter(i => i.code === 'bundle-entry-missing-fullurl');
     expect(fullUrlIssues.length).toBe(1);
     expect(fullUrlIssues[0].severity).toBe('error');
+  });
+
+  // Bundle.entry.fullUrl: "The fullUrl element SHALL have a value except that:
+  // fullUrl can be empty on a POST (although it does not need to when
+  // specifying a temporary id for reference in the bundle)."
+  it('leaves a POST entry without a fullUrl alone', async () => {
+    const bundle = {
+      resourceType: 'Bundle',
+      type: 'transaction',
+      entry: [
+        {
+          resource: { resourceType: 'Patient', id: 'p1' },
+          request: { method: 'POST', url: 'Patient' },
+        },
+      ],
+    };
+
+    const issues = await validator.validateBundle(bundle);
+    expect(issues.filter(i => i.code === 'bundle-entry-missing-fullurl')).toEqual([]);
   });
 
   it('reports each missing transaction request.url at the concrete entry path', async () => {

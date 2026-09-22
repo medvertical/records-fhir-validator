@@ -10,13 +10,13 @@
  * Delegates to specialized validators in the package metadata module.
  */
 
-import type { ValidationIssue } from '../../types';
-import { logger } from '../../logger';
-import { validateRequiredMetadata } from '../../metadata/completeness-checker';
-import { validateMetaField } from '../../metadata/meta-field-validator';
-import { isObjectRecord } from '../../metadata/metadata-boundary-utils';
-import { MetadataFieldRuleSet } from '../../metadata/metadata-field-rule-set';
-import { validationFailureMetadata } from '../../utils/validation-execution-failure';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { logger } from '../../logger.js';
+import { validateRequiredMetadata } from '../../metadata/completeness-checker.js';
+import { validateMetaField } from '../../metadata/meta-field-validator.js';
+import { isObjectRecord } from '../../metadata/metadata-boundary-utils.js';
+import { MetadataFieldRuleSet } from '../../metadata/metadata-field-rule-set.js';
+import { validationFailureMetadata } from '../../utils/validation-execution-failure.js';
 
 // ============================================================================
 // Types

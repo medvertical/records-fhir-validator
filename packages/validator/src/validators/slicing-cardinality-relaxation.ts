@@ -1,6 +1,6 @@
-import type { SlicingDiscriminator } from '../core/structure-definition-types';
-import type { SliceDefinition } from './slice-types';
-import { getValueAtPath, matchesPattern } from './slice-utils';
+import type { SlicingDiscriminator } from '../core/structure-definition-types.js';
+import type { SliceDefinition } from './slice-types.js';
+import { getValueAtPath, matchesPattern } from './slice-utils.js';
 
 type DiscriminatorMatcher = (
   element: unknown,

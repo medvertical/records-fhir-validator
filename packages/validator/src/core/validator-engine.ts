@@ -1,37 +1,38 @@
-import type { ValidationIssue, ValidationSettings } from '../types';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
 
-import type { TerminologyResolutionConfig } from '../validators/valueset-validator';
-import type { FhirClientLike } from './profile-loader-utils';
-import type { BatchValidationOptions } from './batch-validator';
-import type { AnomalyFinding, AnomalyDetectorConfig } from '../validators/anomaly-detector';
-import { resolveRecordsValidatorConfig, type RecordsValidatorConfig } from './validator-engine-config';
+import type { TerminologyResolutionConfig } from '../validators/valueset-validator.js';
+import type { FhirClientLike } from './profile-loader-utils.js';
+import type { BatchValidationOptions } from './batch-validator.js';
+import type { AnomalyFinding, AnomalyDetectorConfig } from '../validators/anomaly-detector.js';
+import { resolveRecordsValidatorConfig, type RecordsValidatorConfig } from './validator-engine-config.js';
 import {
   createRecordsValidatorComponents,
   type RecordsValidatorComponents,
-} from './validator-engine-components';
-import { validateResourceStructure } from './validator-structure-validation';
+} from './validator-engine-components.js';
+import { validateResourceStructure } from './validator-structure-validation.js';
 import {
   validateRecordsAspects,
   validateRecordsBatch,
   createRecordsBatchValidationContext,
   type RecordsBatchValidationContext,
-} from './validator-batch-validation';
-import { validateRecordsResource } from './validator-single-resource-validation';
-import { checkRecordsValidatorAvailability } from './validator-initialization';
-import type { ReferenceResolver } from '../validators/slicing-validator';
+} from './validator-batch-validation.js';
+import { validateRecordsResource } from './validator-single-resource-validation.js';
+import type { RecordsSingleResourceValidationInput } from './validator-single-resource-pipeline.js';
+import { checkRecordsValidatorAvailability } from './validator-initialization.js';
+import type { ReferenceResolver } from '../validators/slicing-validator.js';
 import {
   validateContainedResourceTree,
-} from './validator-contained-issues';
-import { validateParametersResourceTree } from './parameters-resource-validation';
-import type { FhirResourceRecord } from '../reference/bundle-reference-types';
-import { isFhirResource, type FhirResource } from './fhir-resource';
-import type { MultiAspectValidateResult } from './multi-aspect-types';
-import { ProfileWarmupCoordinator } from './profile-warmup-coordinator';
-import { validateRecordsBundleEntries } from './validator-bundle-entry-runtime';
-import { ValidatorRuntimeControls } from './validator-runtime-controls';
+} from './validator-contained-issues.js';
+import { validateParametersResourceTree } from './parameters-resource-validation.js';
+import type { FhirResourceRecord } from '../reference/bundle-reference-types.js';
+import { isFhirResource, type FhirResource } from './fhir-resource.js';
+import type { MultiAspectValidateResult } from './multi-aspect-types.js';
+import { ProfileWarmupCoordinator } from './profile-warmup-coordinator.js';
+import { validateRecordsBundleEntries } from './validator-bundle-entry-runtime.js';
+import { ValidatorRuntimeControls } from './validator-runtime-controls.js';
 
-export type { RecordsValidatorConfig } from './validator-engine-config';
+export type { RecordsValidatorConfig } from './validator-engine-config.js';
 
 export interface ValidationContext {
   resource: unknown;
@@ -120,58 +121,54 @@ export class RecordsValidator {
     serverId?: number,
     recursionDepth: number = 0,
   ): Promise<ValidationIssue[]> {
-    await this.waitForInitialization();
-    this.runtimeControls.applySettings(settings as ValidationSettings | undefined);
-
-    const validateEmbeddedResource = (
-      embedded: FhirResourceRecord,
-      embeddedProfile: string,
-      nextDepth: number,
-    ) => this.validate(
-      embedded,
-      embeddedProfile,
-      fhirVersion,
-      settings,
-      fhirClient,
-      referenceResolver,
-      organizationId,
-      serverId,
-      nextDepth,
-    );
-
-    return validateRecordsResource(
+    return this.validateWithInput(
       { resource, profileUrl, fhirVersion, settings, fhirClient, referenceResolver, organizationId, serverId },
-      {
-        sdLoader: this.components.sdLoader,
-        profileCache: this.components.profileCache,
-        snapshotGenerator: this.components.snapshotGenerator,
-        structuralExecutor: this.components.structuralExecutor,
-        profileExecutor: this.components.profileExecutor,
-        terminologyExecutor: this.components.terminologyExecutor,
-        invariantExecutor: this.components.invariantExecutor,
-        customRuleExecutor: this.components.customRuleExecutor,
-        metadataExecutor: this.components.metadataExecutor,
-        referenceExecutor: this.components.referenceExecutor,
-        bestPracticeValidator: this.components.bestPracticeValidator,
-        terminologyResourceValidator: this.components.terminologyResourceValidator,
-        questionnaireRegistry: this.components.questionnaireRegistry,
-        strictMode: this.config.strictMode || false,
-        validateBundleEntriesIfNeeded: (target, version) =>
-          this.validateBundleEntriesIfNeeded(target, version),
-        validateContainedResourcesIfNeeded: (target) =>
-          validateContainedResourceTree(target, {
-            recursionDepth,
-            maxDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
-            validate: validateEmbeddedResource,
-          }),
-        validateParametersResourcesIfNeeded: (target) =>
-          validateParametersResourceTree(target, {
-            recursionDepth,
-            maxDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
-            validate: validateEmbeddedResource,
-          }),
-      },
+      recursionDepth,
     );
+  }
+
+  private async validateWithInput(
+    input: RecordsSingleResourceValidationInput,
+    recursionDepth: number,
+  ): Promise<ValidationIssue[]> {
+    await this.waitForInitialization();
+    this.runtimeControls.applySettings(input.settings);
+
+    const validateEmbeddedResource = (embedded: FhirResourceRecord, embeddedProfile: string, nextDepth: number) =>
+      this.validateWithInput({ ...input, resource: embedded, profileUrl: embeddedProfile }, nextDepth);
+
+    return validateRecordsResource(input, {
+      sdLoader: this.components.sdLoader,
+      profileCache: this.components.profileCache,
+      snapshotGenerator: this.components.snapshotGenerator,
+      structuralExecutor: this.components.structuralExecutor,
+      profileExecutor: this.components.profileExecutor,
+      terminologyExecutor: this.components.terminologyExecutor,
+      invariantExecutor: this.components.invariantExecutor,
+      customRuleExecutor: this.components.customRuleExecutor,
+      metadataExecutor: this.components.metadataExecutor,
+      referenceExecutor: this.components.referenceExecutor,
+      bestPracticeValidator: this.components.bestPracticeValidator,
+      terminologyResourceValidator: this.components.terminologyResourceValidator,
+      questionnaireRegistry: this.components.questionnaireRegistry,
+      strictMode: this.config.strictMode || false,
+      validateBundleEntriesIfNeeded: (target, version) =>
+        this.validateBundleEntriesIfNeeded(target, version),
+      validateContainedResourcesIfNeeded: (target) =>
+        validateContainedResourceTree(target, {
+          recursionDepth,
+          maxDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
+          validate: validateEmbeddedResource,
+        }),
+      validateParametersResourcesIfNeeded: (target) =>
+        validateParametersResourceTree(target, {
+          recursionDepth,
+          maxDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
+          validate: validateEmbeddedResource,
+        }),
+      validateAgainstProfile: (target, mandatedProfile) =>
+        validateEmbeddedResource(target, mandatedProfile, recursionDepth + 1),
+    });
   }
 
   private async validateBundleEntriesIfNeeded(
@@ -217,14 +214,11 @@ export class RecordsValidator {
       snapshotGenerator: this.components.snapshotGenerator,
       maxDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
       structuralExecutor: this.components.structuralExecutor,
-      validateResource: (resource, profileUrl, version, referenceResolver) => this.validate(
-        resource,
-        profileUrl,
-        version,
-        undefined,
-        undefined,
-        referenceResolver,
-      ),
+      validateResource: (resource, profileUrl, version, referenceResolver, bundleCanonicalResolver) =>
+        this.validateWithInput(
+          { resource, profileUrl, fhirVersion: version, referenceResolver, bundleCanonicalResolver },
+          0,
+        ),
     });
   }
 

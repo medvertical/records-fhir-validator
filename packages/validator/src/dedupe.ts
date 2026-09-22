@@ -4,4 +4,4 @@ export {
   suppressSemanticIssuesWithTrace,
   type DedupeIssuesResult,
   type DedupeSuppressionTrace,
-} from './core/validation-issue-dedupe';
+} from './core/validation-issue-dedupe.js';

@@ -47,5 +47,5 @@ for (const issue of issues) {
   console.log(`${issue.severity.toUpperCase()} ${issue.code} @ ${issue.path ?? ''}: ${issue.message}`);
 }
 
-console.log(`\n${resource.resourceType}: ${errors} error(s), ${warnings} warning(s), ${issues.length} total.`);
+console.log(`\n${resource?.resourceType ?? 'Resource'}: ${errors} error(s), ${warnings} warning(s), ${issues.length} total.`);
 process.exit(errors > 0 ? 1 : 0);

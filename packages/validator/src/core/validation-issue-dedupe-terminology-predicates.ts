@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../types';
-import { normalizeRequiredElementPath } from './validation-issue-dedupe-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { normalizeRequiredElementPath } from './validation-issue-dedupe-utils.js';
 
 export function getRequiredBindingViolationKey(issue: ValidationIssue): string | null {
   if (

@@ -1,22 +1,22 @@
-import { logger } from '../../logger';
-import type { ValidationIssue } from '../../types';
-import type { TerminologyResolutionConfig } from '../../validators/valueset-validator';
-import type { StructureDefinitionLoader } from '../structure-definition-loader';
-import type { StructureDefinition } from '../structure-definition-types';
-import { createExecutorFailureIssue } from './executor-failure-issue';
+import { logger } from '../../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { TerminologyResolutionConfig } from '../../validators/valueset-validator.js';
+import type { StructureDefinitionLoader } from '../structure-definition-loader.js';
+import type { StructureDefinition } from '../structure-definition-types.js';
+import { createExecutorFailureIssue } from './executor-failure-issue.js';
 import {
   StructuralValidationPipeline,
   type StructuralResource,
   type StructuralValidationContext,
   type StructuralValueAtPath,
-} from './structural-validation-pipeline';
+} from './structural-validation-pipeline.js';
 import {
   createStructuralValidatorComponents,
   type StructuralExecutorDependencies,
   type StructuralValidatorComponents,
-} from './structural-validator-components';
+} from './structural-validator-components.js';
 
-export type { StructuralValidationContext } from './structural-validation-pipeline';
+export type { StructuralValidationContext } from './structural-validation-pipeline.js';
 
 export class StructuralExecutor {
   private readonly validators: StructuralValidatorComponents;

@@ -1,6 +1,6 @@
-import { splitPatterns } from './cli-file-matching';
-import type { CliOptions } from './cli-types';
-import type { PublicFhirVersion } from './index';
+import { splitPatterns } from './cli-file-matching.js';
+import type { CliOptions } from './cli-types.js';
+import type { PublicFhirVersion } from './index.js';
 
 export function usage(): string {
   return `Usage:

@@ -19,7 +19,7 @@ export type {
     StructuralCode,
     ProfileCode,
     BusinessRuleCode,
-} from './codes/index';
+} from './codes/index.js';
 
 // Re-export values
 export {
@@ -38,4 +38,4 @@ export {
     resolveCode,
     getCodeMetadata,
     isKnownCode,
-} from './codes/index';
+} from './codes/index.js';

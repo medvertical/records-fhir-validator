@@ -1,4 +1,4 @@
-import { deriveBundleBaseUrl } from './bundle-reference-utils';
+import { deriveBundleBaseUrl } from './bundle-reference-utils.js';
 
 export interface BundleReferenceIndexes {
     fullUrlIndex: Set<string>;

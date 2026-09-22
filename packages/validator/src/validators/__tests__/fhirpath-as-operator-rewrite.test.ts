@@ -42,6 +42,20 @@ describe('rewriteCollectionTypeOperators — as', () => {
 });
 
 describe('rewriteCollectionTypeOperators — is', () => {
+  it.each([
+    "value.matches('value is Quantity')",
+    "value.matches('value as Quantity')",
+    "value.matches('patient\\'s value is Quantity')",
+    '`value is Quantity`.exists()',
+  ])('preserves quoted text in %s', expression => {
+    expect(rewriteCollectionTypeOperators(expression)).toBe(expression);
+  });
+
+  it('rewrites operators outside literals in the same expression', () => {
+    expect(rewriteCollectionTypeOperators("value.matches('value is Quantity') and value is Quantity"))
+      .toBe("value.matches('value is Quantity') and value.select($this is Quantity)");
+  });
+
   it('rewrites a dotted-path `is` into a collection-safe select()', () => {
     expect(rewriteCollectionTypeOperators('component.value is Quantity'))
       .toBe('component.value.select($this is Quantity)');

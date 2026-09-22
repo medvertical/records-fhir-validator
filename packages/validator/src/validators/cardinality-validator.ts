@@ -1,9 +1,9 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import type { ElementDefinition } from '../core/structure-definition-types';
-import { shouldValidateRequired, getValidationTargets } from '../business-rules';
-import { logger } from '../logger';
-import { shouldSkipMustSupportForResource } from './must-support-applicability';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import type { ElementDefinition } from '../core/structure-definition-types.js';
+import { shouldValidateRequired, getValidationTargets } from '../business-rules/index.js';
+import { logger } from '../logger.js';
+import { shouldSkipMustSupportForResource } from './must-support-applicability.js';
 
 interface CardinalityValidationOptions {
   parentExists?: boolean;

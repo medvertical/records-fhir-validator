@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ElementDefinition, StructureDefinition } from '../../structure-definition-types';
-import type { ValidationIssue } from '../../../types';
-import { applyValueSetSliceMembershipPolicy, pinBindingToProfileVersion } from '../terminology-binding-selection';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { applyValueSetSliceMembershipPolicy } from '../terminology-binding-selection';
 import { TerminologySlicePlanCache } from '../terminology-slice-plan-cache';
 
 // Mirrors us-core Condition.category: sibling slices told apart only by
@@ -99,55 +99,5 @@ describe('applyValueSetSliceMembershipPolicy', () => {
       new TerminologySlicePlanCache(),
     );
     expect(kept).toHaveLength(1);
-  });
-});
-
-describe('pinBindingToProfileVersion', () => {
-  const carinProfile = {
-    url: 'http://hl7.org/fhir/us/carin-bb/StructureDefinition/C4BB-ExplanationOfBenefit-Oral',
-    version: '2.0.0',
-  };
-
-  it('pins an unversioned same-IG value set to the profile version', () => {
-    const pinned = pinBindingToProfileVersion(
-      { strength: 'required' as const, valueSet: 'http://hl7.org/fhir/us/carin-bb/ValueSet/C4BBSurfaceCodes' },
-      carinProfile,
-    );
-    expect(pinned?.valueSet).toBe('http://hl7.org/fhir/us/carin-bb/ValueSet/C4BBSurfaceCodes|2.0.0');
-  });
-
-  it('leaves already-versioned value sets untouched', () => {
-    const binding = {
-      strength: 'required' as const,
-      valueSet: 'http://hl7.org/fhir/us/carin-bb/ValueSet/C4BBSurfaceCodes|2.1.0',
-    };
-    expect(pinBindingToProfileVersion(binding, carinProfile)).toBe(binding);
-  });
-
-  it('leaves value sets from other canonical spaces untouched', () => {
-    const binding = {
-      strength: 'required' as const,
-      valueSet: 'http://terminology.hl7.org/ValueSet/v3-ActCode',
-    };
-    expect(pinBindingToProfileVersion(binding, carinProfile)).toBe(binding);
-  });
-
-  it('does not pin core FHIR bindings', () => {
-    const binding = {
-      strength: 'required' as const,
-      valueSet: 'http://hl7.org/fhir/ValueSet/observation-status',
-    };
-    expect(pinBindingToProfileVersion(
-      binding,
-      { url: 'http://hl7.org/fhir/StructureDefinition/Observation', version: '4.0.1' },
-    )).toBe(binding);
-  });
-
-  it('requires a profile version to pin', () => {
-    const binding = {
-      strength: 'required' as const,
-      valueSet: 'http://hl7.org/fhir/us/carin-bb/ValueSet/C4BBSurfaceCodes',
-    };
-    expect(pinBindingToProfileVersion(binding, { url: carinProfile.url, version: undefined })).toBe(binding);
   });
 });

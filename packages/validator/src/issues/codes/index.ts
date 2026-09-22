@@ -6,24 +6,24 @@
  */
 
 // Re-export types
-export type { ValidationCodeMetadata } from './validation-code-types';
+export type { ValidationCodeMetadata } from './validation-code-types.js';
 
 // Re-export aspect-specific codes
-export { TerminologyCodes, type TerminologyCode } from './terminology-codes';
-export { MetadataCodes, type MetadataCode } from './metadata-codes';
-export { ReferenceCodes, type ReferenceCode } from './reference-codes';
-export { StructuralCodes, type StructuralCode } from './structural-codes';
-export { ProfileCodes, type ProfileCode } from './profile-codes';
-export { BusinessRuleCodes, type BusinessRuleCode } from './business-rule-codes';
+export { TerminologyCodes, type TerminologyCode } from './terminology-codes.js';
+export { MetadataCodes, type MetadataCode } from './metadata-codes.js';
+export { ReferenceCodes, type ReferenceCode } from './reference-codes.js';
+export { StructuralCodes, type StructuralCode } from './structural-codes.js';
+export { ProfileCodes, type ProfileCode } from './profile-codes.js';
+export { BusinessRuleCodes, type BusinessRuleCode } from './business-rule-codes.js';
 
 // Import for internal use
-import { TerminologyCodes } from './terminology-codes';
-import { MetadataCodes } from './metadata-codes';
-import { ReferenceCodes } from './reference-codes';
-import { StructuralCodes } from './structural-codes';
-import { ProfileCodes } from './profile-codes';
-import { BusinessRuleCodes } from './business-rule-codes';
-import type { ValidationCodeMetadata } from './validation-code-types';
+import { TerminologyCodes } from './terminology-codes.js';
+import { MetadataCodes } from './metadata-codes.js';
+import { ReferenceCodes } from './reference-codes.js';
+import { StructuralCodes } from './structural-codes.js';
+import { ProfileCodes } from './profile-codes.js';
+import { BusinessRuleCodes } from './business-rule-codes.js';
+import type { ValidationCodeMetadata } from './validation-code-types.js';
 
 // ============================================================================
 // Unified Validation Codes Registry

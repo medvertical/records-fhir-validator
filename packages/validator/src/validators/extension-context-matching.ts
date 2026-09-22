@@ -1,5 +1,5 @@
-import type { StructureDefinition } from '../core/structure-definition-types';
-import { isRecord } from '../core/fhir-resource';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import { isRecord } from '../core/fhir-resource.js';
 
 /**
  * Where an extension instance is attached, relative to the nearest enclosing

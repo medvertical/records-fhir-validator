@@ -1,15 +1,15 @@
-import { logger } from '../logger';
-import { BundleReferenceResolver } from '../reference';
-import type { ValidationIssue } from '../types';
-import type { EntryResourceValidator } from './bundle-entry-resource-validation';
-import { handleBundleValidationFailure } from './bundle-validation-failure';
+import { logger } from '../logger.js';
+import { BundleReferenceResolver } from '../reference/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { EntryResourceValidator } from './bundle-entry-resource-validation.js';
+import { handleBundleValidationFailure } from './bundle-validation-failure.js';
 import {
   validateBundleRules,
   type BundleValidationResolver,
-} from './bundle-validation-rules';
-import { toBundleRecord } from './bundle-validator-records';
+} from './bundle-validation-rules.js';
+import { toBundleRecord } from './bundle-validator-records.js';
 
-export type { EntryResourceValidator } from './bundle-entry-resource-validation';
+export type { EntryResourceValidator } from './bundle-entry-resource-validation.js';
 
 export class BundleValidator {
   constructor(

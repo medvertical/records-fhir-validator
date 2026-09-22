@@ -2,11 +2,11 @@
  * Array-aware validation target resolution for FHIR element paths.
  */
 
-import { getPrimitiveSidecar, resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
+import { getPrimitiveSidecar, resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar.js';
 import {
   findChoiceSidecarProperty,
   findConcreteChoiceProperty,
-} from '../core/fhir-choice-property';
+} from '../core/fhir-choice-property.js';
 
 /**
  * Validation target for a specific path in a resource.

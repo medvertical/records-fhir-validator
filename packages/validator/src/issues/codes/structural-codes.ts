@@ -4,7 +4,7 @@
  * Codes for structural validation (JSON, cardinality, types).
  */
 
-import type { ValidationCodeMetadata } from './validation-code-types';
+import type { ValidationCodeMetadata } from './validation-code-types.js';
 
 export const StructuralCodes = {
     'structural-required-element-missing': {
@@ -112,6 +112,21 @@ export const StructuralCodes = {
         severity: 'warning',
         description: 'Structural validation failed',
     },
+    'structural-xml-text-not-allowed': {
+        aspect: 'structural',
+        severity: 'error',
+        description: 'Text present where the element allows none',
+    },
+    'structural-xml-attribute-undefined': {
+        aspect: 'structural',
+        severity: 'error',
+        description: 'Undefined attribute on element',
+    },
+    'structural-xml-attribute-empty': {
+        aspect: 'structural',
+        severity: 'error',
+        description: 'Attribute written with an empty value',
+    },
     'structural-hapi-error': {
         aspect: 'structural',
         severity: 'error',
@@ -136,6 +151,11 @@ export const StructuralCodes = {
         aspect: 'structural',
         severity: 'error',
         description: 'Bundle.link relation type occurs more than once',
+    },
+    'bundle-link-relation-prohibited': {
+        aspect: 'structural',
+        severity: 'error',
+        description: 'Bundle.link uses a paging relation in a bundle type that is not paged',
     },
     'questionnaire-reference-not-resolved': {
         aspect: 'structural',

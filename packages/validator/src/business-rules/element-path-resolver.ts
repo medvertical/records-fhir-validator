@@ -27,9 +27,9 @@
 // Types
 // ============================================================================
 
-import { getValueAtPath } from '../core/validation-utils';
-import { logger } from '../logger';
-import { getValidationTargets } from './element-validation-targets';
+import { getValueAtPath } from '../core/validation-utils.js';
+import { logger } from '../logger.js';
+import { getValidationTargets } from './element-validation-targets.js';
 
 export interface PathComponents {
   /** Full path (e.g., "Patient.communication.language") */

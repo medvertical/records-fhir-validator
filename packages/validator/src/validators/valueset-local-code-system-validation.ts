@@ -1,14 +1,14 @@
-import type { CodeSystemValidationResult } from './terminology-api-client';
-import type { ValueSetCache } from './valueset-cache';
+import type { CodeSystemValidationResult } from './terminology-api-client.js';
+import type { ValueSetCache } from './valueset-cache.js';
 import {
   fhirVersionToPackageMajor,
   findCodeSystemConcept,
   isAssertableCodeSystem,
-} from './valueset-code-system-rules';
-import { displaysEquivalentForCodeInfo } from './valueset-display-utils';
-import type { FhirVersion } from './valueset-expansion-cache-key';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import type { CodeSystem } from './valueset-types';
+} from './valueset-code-system-rules.js';
+import { displaysEquivalentForCodeInfo } from './valueset-display-utils.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import type { CodeSystem } from './valueset-types.js';
 
 interface LocalCodeSystemValidationDeps {
   cache: ValueSetCache;

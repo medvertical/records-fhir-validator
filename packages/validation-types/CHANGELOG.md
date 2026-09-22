@@ -11,6 +11,24 @@ captures changes that affect type-package consumers directly.
 
 ## [Unreleased]
 
+## [0.1.12] — 2026-09-22
+
+### Changed
+
+- Build with native NodeNext resolution and explicit ESM import specifiers.
+  Public runtime and declaration exports load without a post-build rewrite;
+  all seven entrypoints remain compatible with Node and TypeScript consumers.
+
+## [0.1.10] — 2026-09-01
+
+Compatibility hotfix for consumers of `@records-fhir/validator` 0.6.2.
+
+### Fixed
+
+- Exported `./validation/structural-engines` as an explicit ESM and type
+  subpath so packaged Node.js consumers can resolve the structural-engine
+  runtime contract.
+
 ## [0.1.9] — 2026-08-25
 
 Released alongside `@records-fhir/validator` 0.6.2.

@@ -1,7 +1,7 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types';
-import { CHOICE_TYPE_BASES, VALID_CHOICE_TYPE_SUFFIXES } from './sd-wg-mappings';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types.js';
+import { CHOICE_TYPE_BASES, VALID_CHOICE_TYPE_SUFFIXES } from './sd-wg-mappings.js';
 
 export function validateStructureDefinitionElementNames(
   sd: StructureDefinition,

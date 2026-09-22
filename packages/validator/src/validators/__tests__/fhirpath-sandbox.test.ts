@@ -23,6 +23,12 @@ describe('checkFhirpathSandbox — happy path', () => {
 });
 
 describe('checkFhirpathSandbox — limits', () => {
+  it.each([' ', '\t', '\n', '\r\n', '\f'])('counts calls separated by whitespace %j', separator => {
+    const result = checkFhirpathSandbox(`name.where${separator}(true).exists${separator}()`, { functionCallCount: 1 });
+    expect(result.ok).toBe(false);
+    expect(result.metrics.functionCallCount).toBe(2);
+  });
+
   it('rejects expressions longer than the configured length', () => {
     const big = 'a'.repeat(5000);
     const r = checkFhirpathSandbox(big);

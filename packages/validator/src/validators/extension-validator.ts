@@ -1,21 +1,21 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { resourceTypeOf } from '../core/fhir-resource';
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { StructureDefinitionLoader } from '../core/structure-definition-loader';
-import { logger } from '../logger';
-import type { TypeValidator } from './type-validator';
-import type { ValueSetValidator } from './valueset-validator';
-import type { ElementRulesValidator } from './element-rules-validator';
-import type { ExtensionValidationContext } from './extension-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { resourceTypeOf } from '../core/fhir-resource.js';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { StructureDefinitionLoader } from '../core/structure-definition-loader.js';
+import { logger } from '../logger.js';
+import type { TypeValidator } from './type-validator.js';
+import type { ValueSetValidator } from './valueset-validator.js';
+import type { ElementRulesValidator } from './element-rules-validator.js';
+import type { ExtensionValidationContext } from './extension-types.js';
 import {
   createSafeValidationFailureMessage,
   validationFailureMetadata,
-} from '../utils/validation-execution-failure';
-import { SDFHIRPathExecutor } from './sd-fhirpath-executor';
-import { ExtensionValidationRuntime } from './extension-validation-runtime';
+} from '../utils/validation-execution-failure.js';
+import { SDFHIRPathExecutor } from './sd-fhirpath-executor.js';
+import { ExtensionValidationRuntime } from './extension-validation-runtime.js';
 
-export type { ExtensionDefinition, ExtensionValidationContext } from './extension-types';
+export type { ExtensionDefinition, ExtensionValidationContext } from './extension-types.js';
 
 export class ExtensionValidator {
   private readonly runtime: ExtensionValidationRuntime;

@@ -1,11 +1,11 @@
-import type { ValidationIssue } from '../../types';
-import { createTerminologyIssue } from '../../terminology/terminology-issue';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createTerminologyIssue } from '../../terminology/terminology-issue.js';
 import {
   UCUM_SYSTEM_URL,
   quantityUsesUcum,
   UcumCodeValidator,
   ucumCodeHasAnnotation,
-} from '../../validators/ucum-validator';
+} from '../../validators/ucum-validator.js';
 
 export const UCUM_BEARING_TYPES = new Set<string>([
   'Quantity', 'SimpleQuantity', 'MoneyQuantity',
@@ -121,15 +121,7 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function extractUcumSuggestion(message: string | undefined): { code: string; display?: string } | undefined {
-  if (!message) return undefined;
-  const match = message.match(/Did you mean\s+([^\s]+)(?:\s+\(([^)]+)\))?/i);
-  if (!match?.[1]) return undefined;
-  return {
-    code: match[1],
-    ...(match[2] ? { display: match[2] } : {}),
-  };
-}
+const suggestionValidator = new UcumCodeValidator();
 
 const COMMON_UCUM_CORRECTIONS: Record<string, { code: string; display?: string }> = {
   pH: { code: '[pH]', display: 'pH' },
@@ -148,21 +140,20 @@ const COMMON_UCUM_CORRECTIONS: Record<string, { code: string; display?: string }
 
 function getUcumSuggestion(
   code: string,
-  message: string | undefined,
   parserSuggestion?: { code: string; display?: string },
 ): { code: string; display?: string } | undefined {
   // Prefer ucum-lhc's own suggestion engine; the static table is a curated
   // fallback for the handful of corrections it does not propose (gap P-5).
-  return parserSuggestion ?? extractUcumSuggestion(message) ?? COMMON_UCUM_CORRECTIONS[code];
+  return parserSuggestion ?? COMMON_UCUM_CORRECTIONS[code] ?? suggestionValidator.validate(code).suggestion;
 }
 
 export function buildInvalidUcumIssueDetails(
   code: string,
   fieldPath: string,
-  message: string | undefined,
+  _message: string | undefined,
   parserSuggestion?: { code: string; display?: string },
 ): Record<string, unknown> {
-  const suggestion = getUcumSuggestion(code, message, parserSuggestion);
+  const suggestion = getUcumSuggestion(code, parserSuggestion);
   return {
     system: UCUM_SYSTEM_URL,
     code,
@@ -181,7 +172,7 @@ export function buildInvalidUcumMessage(
   message: string | undefined,
   parserSuggestion?: { code: string; display?: string },
 ): string {
-  const suggestion = getUcumSuggestion(code, message, parserSuggestion);
+  const suggestion = getUcumSuggestion(code, parserSuggestion);
   const base = `Invalid UCUM code '${code}' at ${fieldPath}`;
   if (suggestion) {
     const reason = message ? `: ${message}` : '.';

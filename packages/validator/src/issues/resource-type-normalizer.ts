@@ -1,4 +1,4 @@
-import { KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE } from '../reference/reference-resource-types';
+import { KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE } from '../reference/reference-resource-types.js';
 
 /**
  * Resource Type Normalization

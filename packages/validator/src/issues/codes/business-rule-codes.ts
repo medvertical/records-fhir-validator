@@ -4,7 +4,7 @@
  * Codes for business/clinical rule validation.
  */
 
-import type { ValidationCodeMetadata } from './validation-code-types';
+import type { ValidationCodeMetadata } from './validation-code-types.js';
 
 export const BusinessRuleCodes = {
     'business-rule-violation': {

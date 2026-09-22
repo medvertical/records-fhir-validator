@@ -9,6 +9,8 @@
 // Terminology Resolution
 // ============================================================================
 
+import type { UnverifiedBindingCause } from '../issues/unverified-binding-diagnostic.js';
+
 /** Terminology resolution strategy */
 export type TerminologyResolutionStrategy = 'local-first' | 'server-first' | 'local-only';
 
@@ -136,7 +138,7 @@ export const TERMINOLOGY_UNVERIFIED_REASONS = [
     'unresolvable-snomed-extension-filter',
     'versioned-binding-unverified',
     'validation-error',
-] as const;
+] as const satisfies readonly UnverifiedBindingCause[];
 
 export type TerminologyUnverifiedReason = typeof TERMINOLOGY_UNVERIFIED_REASONS[number];
 
@@ -213,6 +215,16 @@ export interface ValueSetExpansionContains {
     contains?: ValueSetExpansionContains[];
 }
 
+export interface CodeSystemConceptProperty {
+    code: string;
+    valueCode?: string;
+    valueString?: string;
+    valueCoding?: {
+        system?: string;
+        code?: string;
+    };
+}
+
 export interface CodeSystemConcept {
     code: string;
     display?: string;
@@ -226,6 +238,11 @@ export interface CodeSystemConcept {
         };
         value?: string;
     }>;
+    /**
+     * Named by `CodeSystem.property`. The hierarchy lives here rather than in
+     * `concept.concept` for every v3 CodeSystem HL7 Terminology ships.
+     */
+    property?: CodeSystemConceptProperty[];
     concept?: CodeSystemConcept[];
 }
 

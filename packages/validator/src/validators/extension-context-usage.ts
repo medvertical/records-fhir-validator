@@ -1,11 +1,11 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   checkExtensionContextUsage,
   type ExtensionUsageSite,
   type NormalizedExtensionContext,
-} from './extension-context-matching';
-import { isAbsoluteExtensionUrl } from './extension-structure-rules';
+} from './extension-context-matching.js';
+import { isAbsoluteExtensionUrl } from './extension-structure-rules.js';
 
 export interface ExtensionContextCheckInput {
   url: string;

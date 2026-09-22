@@ -28,7 +28,10 @@ describe('CodeSystem resource validator safety', () => {
     })).toEqual([]);
   });
 
-  it('reports every nested HL7 concept missing a definition at its own path', () => {
+  // The remark is about the code system, not the one concept it points at, so
+  // it is made once — the reference validator reports it once as well, and per
+  // concept it would be 1 300 remarks on something the size of v3-ActCode.
+  it('remarks once on missing HL7 concept definitions, at the first concept without one', () => {
     const issues = validateCodeSystemResource({
       resourceType: 'CodeSystem',
       url: 'http://hl7.org/fhir/test-system',
@@ -43,10 +46,23 @@ describe('CodeSystem resource validator safety', () => {
     });
 
     expect(issues.filter(issue => issue.code === 'tx-codesystem-concept-no-definition'))
-      .toEqual([
-        expect.objectContaining({ path: 'CodeSystem.concept[0]' }),
-        expect.objectContaining({ path: 'CodeSystem.concept[0].concept[0]' }),
-      ]);
+      .toEqual([expect.objectContaining({ path: 'CodeSystem.concept[0]' })]);
+  });
+
+  it('anchors the remark on the first concept that lacks a definition', () => {
+    const issues = validateCodeSystemResource({
+      resourceType: 'CodeSystem',
+      url: 'http://hl7.org/fhir/test-system',
+      caseSensitive: true,
+      concept: [
+        { code: 'first', definition: 'Defined' },
+        { code: 'second' },
+        { code: 'third' },
+      ],
+    });
+
+    expect(issues.filter(issue => issue.code === 'tx-codesystem-concept-no-definition'))
+      .toEqual([expect.objectContaining({ path: 'CodeSystem.concept[1]' })]);
   });
 
   it('contains cyclic concept trees during validation, count, and lookup', () => {

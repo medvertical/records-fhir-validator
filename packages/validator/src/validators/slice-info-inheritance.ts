@@ -1,22 +1,29 @@
-import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types';
-import { logger } from '../logger';
-import type { SliceDefinition } from './slice-types';
+import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types.js';
+import { logger } from '../logger.js';
+import type { SliceDefinition } from './slice-types.js';
 import {
   extractFixedEntry,
   extractFixedFromElement,
   extractPatternEntry,
   extractPatternFromElement,
-} from './slice-utils';
+} from './slice-utils.js';
 import {
   getElementTypes,
   getNonEmptyString,
   getProfileElements,
   type TypeSpec,
-} from './slice-info-input';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+} from './slice-info-input.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import {
+  asRecord,
+  collectReferencedSliceChildren,
+  differentialElements,
+  profileElementReference,
+} from './slice-profile-element-reference.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export type TypeProfileResolverFn = ((url: string) => Promise<StructureDefinition | null>) | null;
+
 
 export async function mergeTypeProfilePatterns(
   element: ElementDefinition,
@@ -26,12 +33,40 @@ export async function mergeTypeProfilePatterns(
   resolver: TypeProfileResolverFn,
 ): Promise<void> {
   if (!resolver) return;
-  for (const typeSpec of getElementTypes(element)) {
-    for (const profileUrl of typeSpec.profile ?? []) {
+  // Read the raw type entries rather than getElementTypes(), which drops the
+  // `_profile` primitive extensions this needs.
+  const rawTypes = Array.isArray(element.type) ? element.type : [];
+  for (const rawType of rawTypes) {
+    const typeRecord = asRecord(rawType);
+    // Keep getElementTypes()'s contract: an entry without a code is not a type
+    // and was never merged. Only the `_profile` sidecar is read from the raw
+    // entry, because getElementTypes() drops it.
+    if (!getNonEmptyString(typeRecord?.code)) continue;
+    const profiles = Array.isArray(typeRecord?.profile) ? typeRecord.profile : [];
+    const profileSidecars = Array.isArray(typeRecord?._profile) ? typeRecord._profile : [];
+    for (let index = 0; index < profiles.length; index += 1) {
+      const profileUrl = getNonEmptyString(profiles[index]);
+      if (!profileUrl) continue;
+      const elementReference = profileElementReference(profileSidecars[index]);
       try {
         const typeDefinition = await resolver(profileUrl);
         if (!typeDefinition) continue;
         const typeRoot = getNonEmptyString(typeDefinition.type) ?? '';
+        const referencedElements = elementReference
+          ? collectReferencedSliceChildren(
+              // A slice reference names an element as the differential authored
+              // it. A generated snapshot interleaves inherited base children
+              // between the slices, so walking it would collect the wrong ones.
+              differentialElements(typeDefinition) ?? getProfileElements(typeDefinition),
+              elementReference,
+            )
+          : undefined;
+        if (referencedElements) {
+          for (const [relativePath, typeElement] of referencedElements) {
+            mergeTypeProfileChildAt(relativePath, typeElement, childPatterns, childFixed, childMin);
+          }
+          continue;
+        }
         for (const typeElement of getProfileElements(typeDefinition)) {
           if (!typeElement.path.startsWith(`${typeRoot}.`)) continue;
           mergeTypeProfileChild(typeElement, typeRoot, childPatterns, childFixed, childMin);
@@ -83,6 +118,58 @@ export function applyRootSliceConstraints(sliceDef: SliceDefinition, element: El
   }
 }
 
+
+/**
+ * Merge constraints from datatype profiles declared on a slice's children.
+ *
+ * A discriminator may point through a child: `identifier.system` resolves to
+ * the fixed `Identifier.system` inside the profile that the child's
+ * `type.profile` names. Without this the discriminator has no evidence, the
+ * slice is written off as unverifiable, and nothing about it is checked.
+ */
+export async function mergeChildTypeProfileConstraints(
+  childTypes: Map<string, TypeSpec[]>,
+  childPatterns: Map<string, unknown>,
+  childFixed: Map<string, unknown>,
+  resolver: TypeProfileResolverFn,
+): Promise<void> {
+  if (!resolver) return;
+  // Only discriminator evidence is merged. Cardinality from a child's datatype
+  // profile does not describe the sliced element and produced spurious
+  // "too few values" errors when it was carried across.
+  const ignoredMin = new Map<string, number>();
+  for (const [childPath, typeSpecs] of childTypes) {
+    // Evidence from one of several alternative profiles would privilege that
+    // alternative over the others; only an unambiguous declaration is merged.
+    const profileUrls = typeSpecs.flatMap(typeSpec => typeSpec.profile ?? []);
+    if (profileUrls.length !== 1) continue;
+    const profileUrl = profileUrls[0];
+    try {
+      const typeDefinition = await resolver(profileUrl);
+      if (!typeDefinition) continue;
+      const typeRoot = getNonEmptyString(typeDefinition.type) ?? '';
+      if (!typeRoot) continue;
+      for (const typeElement of getProfileElements(typeDefinition)) {
+        if (!typeElement.path.startsWith(`${typeRoot}.`)) continue;
+        // The id-based relative path keeps a slice segment (`section:problems.code`),
+        // which never resolves to an instance value. Walking by path instead
+        // would lift a slice-scoped pattern onto the unsliced element and fail
+        // every sibling slice against the first slice's pattern.
+        const suffix = getTypeProfileRelativePath(typeElement, typeRoot);
+        mergeTypeProfileChildAt(
+          `${childPath}.${suffix}`, typeElement, childPatterns, childFixed, ignoredMin,
+        );
+      }
+    } catch (error) {
+      logger.debug('[SlicingValidator] Failed to resolve child type profile', {
+        ...profileCanonicalMetadata(profileUrl),
+        ...validationFailureMetadata(error),
+      });
+    }
+  }
+}
+
+
 function mergeTypeProfileChild(
   element: ElementDefinition,
   typeRoot: string,
@@ -90,7 +177,19 @@ function mergeTypeProfileChild(
   childFixed: Map<string, unknown>,
   childMin: Map<string, number>,
 ): void {
-  const relativePath = getTypeProfileRelativePath(element, typeRoot);
+  mergeTypeProfileChildAt(
+    getTypeProfileRelativePath(element, typeRoot),
+    element, childPatterns, childFixed, childMin,
+  );
+}
+
+function mergeTypeProfileChildAt(
+  relativePath: string,
+  element: ElementDefinition,
+  childPatterns: Map<string, unknown>,
+  childFixed: Map<string, unknown>,
+  childMin: Map<string, number>,
+): void {
   if (!childPatterns.has(relativePath)) {
     const pattern = extractPatternFromElement(element);
     if (pattern !== undefined) childPatterns.set(relativePath, pattern);

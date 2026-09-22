@@ -205,12 +205,13 @@ describe('ValueSetValidator unverified bindings (P-3)', () => {
     const apiClient = (validator as unknown as {
       apiClient: {
         expandValueSet: (url: string) => Promise<Set<string> | null>;
-        validateCode: () => Promise<boolean>;
+        validateCodeAttempt: () => Promise<{ outcome: 'unverified'; accepted: boolean; reason: 'value-set-not-found' }>;
         isValueSetNotResolvable: () => boolean;
       };
     }).apiClient;
     vi.spyOn(apiClient, 'expandValueSet').mockResolvedValue(null);
-    vi.spyOn(apiClient, 'validateCode').mockResolvedValue(true);
+    const validateCodeAttempt = vi.spyOn(apiClient, 'validateCodeAttempt')
+      .mockResolvedValue({ outcome: 'unverified', accepted: false, reason: 'value-set-not-found' });
     vi.spyOn(apiClient, 'isValueSetNotResolvable').mockReturnValue(true);
 
     const issues = await validator.validateBinding(
@@ -229,5 +230,6 @@ describe('ValueSetValidator unverified bindings (P-3)', () => {
         }),
       }),
     ]);
+    expect(validateCodeAttempt).toHaveBeenCalledOnce();
   });
 });

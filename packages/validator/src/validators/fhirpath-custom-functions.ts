@@ -4,14 +4,15 @@
  * instead of silently passing.
  */
 
-import { findConcreteChoiceProperty } from '../core/fhir-choice-property';
-import { unwrapFhirPathNavigable, unwrapFhirPathValue } from './fhirpath-node-unwrap';
-import { ISO_3166_1_ALPHA2, ISO_3166_1_ALPHA3 } from './iso3166-country-codes';
-import { ValueSetCache } from './valueset-cache';
-import type { TerminologyOperationCache } from './terminology-operation-cache';
-import { resolveFunction, type FHIRPathEvaluationContext } from './fhirpath-custom-resolve-function';
+import { findConcreteChoiceProperty } from '../core/fhir-choice-property.js';
+import { unwrapFhirPathNavigable, unwrapFhirPathValue } from './fhirpath-node-unwrap.js';
+import { ISO_3166_1_ALPHA2, ISO_3166_1_ALPHA3 } from './iso3166-country-codes.js';
+import { ValueSetCache } from './valueset-cache.js';
+import type { TerminologyOperationCache } from './terminology-operation-cache.js';
+import { makeSubsumesCacheSuffix } from './terminology-subsumes-cache.js';
+import { resolveFunction, type FHIRPathEvaluationContext } from './fhirpath-custom-resolve-function.js';
 
-export { resolveFunction, type FHIRPathEvaluationContext } from './fhirpath-custom-resolve-function';
+export { resolveFunction, type FHIRPathEvaluationContext } from './fhirpath-custom-resolve-function.js';
 
 type ObjectRecord = Record<string, unknown>;
 
@@ -174,7 +175,7 @@ export function createSubsumesFunction(operationCache?: TerminologyOperationCach
         }
 
         const outcome = operationCache?.findSubsumesBySuffix(
-            `|${system}|${codeA.code}|${codeB.code}`,
+            makeSubsumesCacheSuffix(system, codeA.code, codeB.code),
         );
         if (outcome === undefined || outcome === 'unknown') return [];
         return [outcome === 'subsumes' || outcome === 'equivalent'];

@@ -1,4 +1,4 @@
-import { getValidationTargets } from '../business-rules/element-validation-targets';
+import { getValidationTargets } from '../business-rules/element-validation-targets.js';
 
 export function getEvaluationContext(
   resource: unknown,

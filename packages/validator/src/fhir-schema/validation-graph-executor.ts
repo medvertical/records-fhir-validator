@@ -1,25 +1,33 @@
-import type { ValidationIssue } from '../types';
-import { matchPatternWithDiagnostic } from './validation-graph-pattern-diagnostics';
-import { getDirectValues, getParentValues, isChoiceProperty } from './validation-graph-path-values';
-import { validateReferenceTarget } from './validation-graph-reference-targets';
-import {
-  isSliceMatchableByValue,
-  matchesSliceForParent,
-  shouldReportUnmatchableRequiredSlice,
-} from './validation-graph-slice-matching';
-import type { ValidationGraph, ValidationGraphNode } from './validation-graph-types';
-import { graphValuesMatch } from './validation-graph-value-matching';
-import { createValidationGraphIssue as createIssue, isGraphRecord as isRecord } from './validation-graph-issues';
-import { patternStrictlyContains } from './validation-graph-pattern-containment';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { matchPatternWithDiagnostic } from './validation-graph-pattern-diagnostics.js';
+import { getDirectValues, getParentValues, isChoiceProperty } from './validation-graph-path-values.js';
+import { validateReferenceTarget } from './validation-graph-reference-targets.js';
+import type { GraphReferenceResolver } from './validation-graph-resolved-slices.js';
+import { validateSliceChildren } from './validation-graph-slice-execution.js';
+import type { ValidationGraph, ValidationGraphNode } from './validation-graph-types.js';
+import { graphValuesMatch } from './validation-graph-value-matching.js';
+import { createValidationGraphIssue as createIssue, isGraphRecord as isRecord } from './validation-graph-issues.js';
 
-export function validateResourceWithGraph(resource: unknown, graph: ValidationGraph): ValidationIssue[] {
+export interface ValidateResourceWithGraphOptions {
+  /**
+   * Resolves reference targets for slice discriminators that depend on them.
+   * Without it such slicing stays unverifiable instead of being declared missing.
+   */
+  resolveReference?: GraphReferenceResolver;
+}
+
+export function validateResourceWithGraph(
+  resource: unknown,
+  graph: ValidationGraph,
+  options: ValidateResourceWithGraphOptions = {},
+): ValidationIssue[] {
   if (!isRecord(resource)) {
     return [createIssue('structural-invalid-resource', graph.type, 'Resource must be a JSON object')];
   }
 
   const issues: ValidationIssue[] = [];
   for (const node of graph.nodes) {
-    validateNode(resource, node, graph, issues, new Set());
+    validateNode(resource, node, graph, issues, new Set(), options.resolveReference);
   }
   return issues;
 }
@@ -30,13 +38,14 @@ function validateNode(
   graph: ValidationGraph,
   issues: ValidationIssue[],
   ancestors: Set<ValidationGraphNode>,
+  resolveReference: GraphReferenceResolver | undefined,
 ): void {
   if (node.sliceName) {
     return;
   }
 
   const parentValues = getParentValues(resource, node);
-  validateNodeForParents(parentValues, node, graph, issues, ancestors);
+  validateNodeForParents(parentValues, node, graph, issues, ancestors, resolveReference);
 }
 
 function validateNodeForParents(
@@ -45,6 +54,7 @@ function validateNodeForParents(
   graph: ValidationGraph,
   issues: ValidationIssue[],
   ancestors: Set<ValidationGraphNode>,
+  resolveReference: GraphReferenceResolver | undefined,
 ): void {
   if (parentValues.length === 0) {
     return;
@@ -63,7 +73,7 @@ function validateNodeForParents(
   const required = node.required || (node.min ?? 0) > 0;
 
   if (node.type === 'choice' || node.choices?.length) {
-    validateChoiceNode(parentValues, node, graph, issues, ancestors);
+    validateChoiceNode(parentValues, node, graph, issues, ancestors, resolveReference);
   } else if (required) {
     const min = node.min ?? 1;
     for (const parent of parentValues) {
@@ -128,109 +138,20 @@ function validateNodeForParents(
   const children = node.children ?? [];
   const sliceChildren = children.filter(child => child.sliceName);
   if (sliceChildren.length > 0 && node.type !== 'choice' && !node.choices?.length) {
-    validateSliceChildren(values, node, sliceChildren, graph, issues, ancestors);
+    validateSliceChildren(
+      values, node, sliceChildren, graph, issues, ancestors, resolveReference, validateNodeForParents,
+    );
   }
 
   for (const child of children) {
     if (child.sliceName) {
       continue;
     }
-    validateNodeForParents(values, child, graph, issues, ancestors);
+    validateNodeForParents(values, child, graph, issues, ancestors, resolveReference);
   }
   ancestors.delete(node);
 }
 
-function validateSliceChildren(
-  values: unknown[],
-  parentNode: ValidationGraphNode,
-  sliceNodes: ValidationGraphNode[],
-  graph: ValidationGraph,
-  issues: ValidationIssue[],
-  ancestors: Set<ValidationGraphNode>,
-): void {
-  const enforceableSlices = sliceNodes.filter(slice => isSliceMatchableByValue(parentNode, slice));
-  const unmatchableRequiredSlices = sliceNodes.filter(slice =>
-    !enforceableSlices.includes(slice) &&
-    shouldReportUnmatchableRequiredSlice(parentNode, slice)
-  );
-  if (enforceableSlices.length === 0 && unmatchableRequiredSlices.length === 0) {
-    return;
-  }
-
-  const matchCounts = new Map<ValidationGraphNode, number>();
-  const allowedSlices = enforceableSlices.filter(slice => slice.max !== 0);
-  for (const slice of enforceableSlices) {
-    const matchedValues = values.filter(value =>
-      matchesSliceForParent(value, parentNode, slice) &&
-      !isShadowedForbiddenSliceMatch(value, parentNode, slice, allowedSlices)
-    );
-    matchCounts.set(slice, matchedValues.length);
-    for (const child of slice.children ?? []) {
-      if (child.sliceName) {
-        continue;
-      }
-      validateNodeForParents(matchedValues, child, graph, issues, ancestors);
-    }
-  }
-
-  for (const slice of [...enforceableSlices, ...unmatchableRequiredSlices]) {
-    const count = matchCounts.get(slice) ?? 0;
-    const min = slice.min ?? 0;
-    if (min > 0 && count < min) {
-      issues.push(createIssue(
-        'profile-slice-min-cardinality',
-        parentNode.path,
-        `Slice '${slice.path}' has ${count} matches, minimum is ${min}`,
-        graph,
-      ));
-    }
-
-    if (slice.max !== undefined && slice.max !== '*') {
-      const max = Number(slice.max);
-      if (Number.isFinite(max) && count > max) {
-        issues.push(createIssue(
-          'profile-slice-max-cardinality',
-          parentNode.path,
-          `Slice '${slice.path}' has ${count} matches, maximum is ${max}`,
-          graph,
-        ));
-      }
-    }
-  }
-
-  if (parentNode.slicing?.rules !== 'closed') {
-    return;
-  }
-
-  for (const value of values) {
-    const hasAllowedMatch = allowedSlices.some(slice => matchesSliceForParent(value, parentNode, slice));
-    if (!hasAllowedMatch) {
-      issues.push(createIssue(
-        'profile-pattern-mismatch',
-        parentNode.path,
-        `Element '${parentNode.path}' does not match any allowed slice`,
-        graph,
-      ));
-    }
-  }
-}
-
-function isShadowedForbiddenSliceMatch(
-  value: unknown,
-  parentNode: ValidationGraphNode,
-  slice: ValidationGraphNode,
-  allowedSlices: ValidationGraphNode[],
-): boolean {
-  if (slice.max !== 0 || slice.pattern === undefined) {
-    return false;
-  }
-
-  return allowedSlices.some(allowedSlice =>
-    allowedSlice.pattern !== undefined &&
-    patternStrictlyContains(allowedSlice.pattern, slice.pattern) &&
-    matchesSliceForParent(value, parentNode, allowedSlice)
-  );
-}
 
 function validateChoiceNode(
   parentValues: unknown[],
@@ -238,6 +159,7 @@ function validateChoiceNode(
   graph: ValidationGraph,
   issues: ValidationIssue[],
   ancestors: Set<ValidationGraphNode>,
+  resolveReference: GraphReferenceResolver | undefined,
 ): void {
   const required = node.required || (node.min ?? 0) > 0;
 
@@ -307,7 +229,7 @@ function validateChoiceNode(
         if (child.sliceName) {
           continue;
         }
-        validateNodeForParents([entry.value], child, graph, issues, ancestors);
+        validateNodeForParents([entry.value], child, graph, issues, ancestors, resolveReference);
       }
     }
   }

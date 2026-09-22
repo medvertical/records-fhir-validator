@@ -15,10 +15,10 @@
  * canonical resolver to chain into.
  */
 
-import { loadFromLocalCache } from '../core/sd-loader-filesystem';
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { ProfileSource } from './index';
-import { PackageProfileIndexCache } from '../core/sd-loader-package-profile-index';
+import { loadFromLocalCache } from '../core/sd-loader-filesystem.js';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { ProfileSource } from './index.js';
+import { PackageProfileIndexCache } from '../core/sd-loader-package-profile-index.js';
 
 export interface FilesystemProfileSourceOptions {
     /**
@@ -29,12 +29,14 @@ export interface FilesystemProfileSourceOptions {
      * canonical example; `~/.fhir/packages` is the other.
      */
     packageDirs: string[];
+    packageVersionPins?: Record<string, string>;
 }
 
 export function createFilesystemProfileSource(
     options: FilesystemProfileSourceOptions,
 ): ProfileSource {
     const { packageDirs } = options;
+    const packageVersionPins = { ...options.packageVersionPins };
     const packageProfileIndexCache = new PackageProfileIndexCache();
 
     return {
@@ -48,7 +50,7 @@ export function createFilesystemProfileSource(
                 url,
                 packageDirs,
                 fhirVersion ?? 'R4',
-                {},
+                packageVersionPins,
                 packageProfileIndexCache,
             );
         },

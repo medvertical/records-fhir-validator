@@ -9,7 +9,7 @@ import {
   boundedQualityResourceType,
   boundedQualityRuleId,
   qualityRuleSourceSchema,
-} from './quality-rule-schema-foundations';
+} from './quality-rule-schema-foundations.js';
 
 const qualityAdvisoryMatchSchema = z.object({
   codes: z.array(boundedQualityIssueToken).max(128).default([]),

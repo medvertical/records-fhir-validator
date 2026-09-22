@@ -118,7 +118,7 @@ describe('terminology issue policy', () => {
   it('handles malformed UCUM definitions and emits distinct stable array paths', () => {
     expect(
       validateUcumAtPath(
-        { resourceType: 'Observation', valueQuantity: { code: 'pH' } },
+        { resourceType: 'Observation', valueQuantity: { code: 'invalid-unit' } },
         { type: {} },
         'Observation.value[x]',
       ),
@@ -127,8 +127,8 @@ describe('terminology issue policy', () => {
     const resource = {
       resourceType: 'Observation',
       referenceRange: [
-        { low: { system: 'http://unitsofmeasure.org', code: 'pH' } },
-        { low: { system: 'http://unitsofmeasure.org', code: 'pH' } },
+        { low: { system: 'http://unitsofmeasure.org', code: 'invalid-unit' } },
+        { low: { system: 'http://unitsofmeasure.org', code: 'invalid-unit' } },
       ],
     };
     const definition = { type: [{ code: 'SimpleQuantity' }] };

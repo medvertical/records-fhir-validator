@@ -1,10 +1,10 @@
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
     isErrorValidationSeverity,
     isInformationValidationSeverity,
 } from '@records-fhir/validation-types';
-import { getFixSuggestion } from '../issues';
-import { buildJsonSourceMap, type JsonSourceMap } from './json-source-map';
+import { getFixSuggestion } from '../issues/index.js';
+import { buildJsonSourceMap, type JsonSourceMap } from './json-source-map.js';
 
 export interface LSPDiagnostic {
     severity: 1 | 2 | 3 | 4;

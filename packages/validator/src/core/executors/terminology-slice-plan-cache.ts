@@ -1,5 +1,5 @@
-import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
-import { getPatternOrFixedValue } from './terminology-binding-pattern-matching';
+import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
+import { getPatternOrFixedValue } from './terminology-binding-pattern-matching.js';
 
 interface SlicePlan {
   elements: ElementDefinition[] | undefined;

@@ -1,4 +1,4 @@
-import type { ValueSetValidator } from "../../validators/valueset-validator";
+import type { ValueSetValidator } from "../../validators/valueset-validator.js";
 
 export type TerminologyBindingValidationPort = Pick<
   ValueSetValidator,
@@ -18,5 +18,7 @@ export type TerminologyValidationPort = Pick<
   | "resolveCodeMembership"
   | "resolveSubsumption"
 > &
+  // Optional so a port without host packages (test doubles, embedders) needs no scope binding.
+  Partial<Pick<ValueSetValidator, "setSourceContext">> &
   TerminologyBindingValidationPort &
   TerminologyCodeSystemValidationPort;

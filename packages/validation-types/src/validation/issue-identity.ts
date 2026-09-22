@@ -1,4 +1,4 @@
-import { normalizeCanonicalPath } from './dtos';
+import { normalizeCanonicalPath } from './dtos.js';
 
 /**
  * Portable validation issue identity helpers.

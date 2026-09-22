@@ -1,20 +1,20 @@
-import { prewarmQuestionnaireAnswerValueSets } from '../questionnaire-valueset-prewarm';
-import type { FhirResourceRecord } from '../reference/bundle-reference-types';
-import type { ValidationSettings } from '../types';
+import { prewarmQuestionnaireAnswerValueSets } from '../questionnaire-valueset-prewarm.js';
+import type { FhirResourceRecord } from '../reference/bundle-reference-types.js';
+import type { ValidationSettings } from '@records-fhir/validation-types';
 import {
   AnomalyDetector,
   type AnomalyDetectorConfig,
   type AnomalyFinding,
-} from '../validators/anomaly-detector';
-import { combineFHIRPathCacheStats } from '../validators/fhirpath-cache-diagnostics';
-import type { TerminologyResolutionConfig } from '../validators/valueset-validator';
-import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { RecordsValidatorComponents } from './validator-engine-components';
+} from '../validators/anomaly-detector.js';
+import { combineFHIRPathCacheStats } from '../validators/fhirpath-cache-diagnostics.js';
+import type { TerminologyResolutionConfig } from '../validators/valueset-validator.js';
+import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { RecordsValidatorComponents } from './validator-engine-components.js';
 import {
   applyProfileLoadingSettings,
   buildTerminologyResolutionConfig,
-} from './validator-runtime-settings';
+} from './validator-runtime-settings.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 

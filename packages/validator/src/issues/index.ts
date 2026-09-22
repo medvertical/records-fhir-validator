@@ -18,26 +18,29 @@ export {
     type CreateIssueParams,
     createValidationIssue,
     createBindingViolation,
-    createBindingUnverified,
-    createValueSetUnavailable,
     createRequiredElementMissing,
     createReferenceTypeMismatch,
     createConstraintViolation,
     createValidationError,
     resetIssueCounter,
-} from './issue-factory';
+} from './issue-factory.js';
+
+export {
+    createBindingUnverified,
+    createValueSetUnavailable,
+} from './terminology-completeness-issues.js';
 
 export {
     type FixSuggestion,
     FixSuggestions,
     getFixSuggestion,
     formatFixSuggestion,
-} from './fix-suggestions';
+} from './fix-suggestions.js';
 
 export {
     applyFixPatch,
     type FixApplyResult,
-} from './fix-applier';
+} from './fix-applier.js';
 
 export {
     issueFingerprint,
@@ -48,4 +51,4 @@ export {
     summarizeIssueFingerprints,
     type ExpectedIssueAnchor,
     type StableIssueSummaryOptions,
-} from './issue-contract';
+} from './issue-contract.js';

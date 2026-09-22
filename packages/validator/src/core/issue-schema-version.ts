@@ -1,4 +1,4 @@
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 export type EngineFhirVersion = 'R4' | 'R5' | 'R6';
 

@@ -117,6 +117,31 @@ describe("validation issue dedupe regressions", () => {
     expect(deduped).toHaveLength(1);
   });
 
+  it("prefers a rebased Bundle child cardinality over the parent slice copy", () => {
+    const parentSlice = issue({
+      aspect: "structural",
+      code: "structural-cardinality-min",
+      severity: "error",
+      path: "Bundle.entry[4].resource.effective[x]",
+      resourceType: "Bundle",
+      message:
+        "Element Bundle.entry[4].resource.effective[x] has too few values: expected at least 1, found 0",
+      details: { sliceName: "medicationstatement", expectedMin: 1, actualCount: 0 },
+    });
+    const rebasedChild = issue({
+      aspect: "structural",
+      code: "structural-cardinality-min",
+      severity: "error",
+      path: "Bundle.entry[4].resource/*MedicationStatement/example*/.effective[x]",
+      resourceType: "Bundle",
+      message:
+        "Element MedicationStatement.effective[x] has too few values: expected at least 1, found 0",
+      details: { min: 1, actual: 0 },
+    });
+
+    expect(dedupeIssues([parentSlice, rebasedChild])).toEqual([rebasedChild]);
+  });
+
   it("prefers the CodeSystem property diagnostic over its generic Coding duplicate", () => {
     const deduped = dedupeIssues([
       issue({

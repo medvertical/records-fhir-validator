@@ -1,5 +1,5 @@
 import { getEffectiveIssueRuleId, getSpecificIssueRuleId } from '@records-fhir/validation-types';
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 export function isStructuralDateTimeMissingTimezoneIssue(issue: ValidationIssue): boolean {
   if (issue.code !== 'invalid' || issue.aspect !== 'structural') return false;

@@ -111,7 +111,9 @@ describe('DatatypeInvariantEvaluator through ComplexTypeValidator', () => {
     expect(violations[0]).toMatchObject({
       severity: 'error',
       path: 'Observation.valueRange',
-      message: expect.stringContaining("Constraint 'rng-2' failed"),
+      // rng-2 is answered by the dedicated bounds check rather than the
+      // generic FHIRPath path, so the message names the two values.
+      message: expect.stringContaining('is greater than Range.high'),
     });
   });
 

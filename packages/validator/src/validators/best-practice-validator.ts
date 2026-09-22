@@ -2,8 +2,8 @@
  * Informational best-practice recommendations that mirror HAPI/Java advice.
  */
 
-import type { ValidationIssue, ValidationSettings } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 
 type FhirRecord = Record<string, unknown>;
 

@@ -30,7 +30,7 @@ async function runRules(
     visited: new Set<string>(),
     depth: 0,
     maxNestedExtensionDepth: 5,
-    isExtensionUrlResolvable: async () => resolvable,
+    resolveExtensionUrl: async () => (resolvable ? 'resolvable' as const : 'unresolvable' as const),
     getDeclaredContexts: async () => null,
     site: {
       resourceType: 'Patient',

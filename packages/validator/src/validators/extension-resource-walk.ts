@@ -1,11 +1,14 @@
-import type { ValidationIssue } from '../types';
-import type { ExtensionUsageSite, NormalizedExtensionContext } from './extension-context-matching';
-import type { ExtensionValidationContext } from './extension-types';
-import { validateUniversalExtensionRules } from './extension-universal-rules';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ExtensionUsageSite, NormalizedExtensionContext } from './extension-context-matching.js';
+import type { ExtensionValidationContext } from './extension-types.js';
+import { validateUniversalExtensionRules } from './extension-universal-rules.js';
 
 interface ExtensionResourceWalkOptions {
   maxNestedExtensionDepth: number;
-  isExtensionUrlResolvable(url: string, fhirVersion: 'R4' | 'R5' | 'R6'): Promise<boolean>;
+  resolveExtensionUrl(
+    url: string,
+    fhirVersion: 'R4' | 'R5' | 'R6',
+  ): Promise<'resolvable' | 'unresolvable' | 'undetermined'>;
   getDeclaredContexts(
     url: string,
     fhirVersion: 'R4' | 'R5' | 'R6',
@@ -87,7 +90,7 @@ export async function walkResourceExtensions(
           visited,
           depth: 0,
           maxNestedExtensionDepth: options.maxNestedExtensionDepth,
-          isExtensionUrlResolvable: options.isExtensionUrlResolvable,
+          resolveExtensionUrl: options.resolveExtensionUrl,
           getDeclaredContexts: options.getDeclaredContexts,
           site: attachmentSite,
         }));

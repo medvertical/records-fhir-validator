@@ -1,14 +1,15 @@
-import type { ValidationIssue, ValidationSettings } from '../types';
-import { BestPracticeValidator, validateBestPractices } from '../validators/best-practice-validator';
+import { universalConstraintsValidator } from '../validators/universal-constraints-validator.js';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import { BestPracticeValidator, validateBestPractices } from '../validators/best-practice-validator.js';
 import {
   applyCodeInferredProfileAttribution,
   createCodeInferredProfileSignpostIssue,
-} from './code-inferred-profile-attribution';
-import type { CodeInferredProfileMatch } from './code-inferred-profiles';
+} from './code-inferred-profile-attribution.js';
+import type { CodeInferredProfileMatch } from './code-inferred-profiles.js';
 import {
   applyDeclaredProfileAttribution,
   resolveDeclaredProfileSubstitution,
-} from './declared-profile-attribution';
+} from './declared-profile-attribution.js';
 import {
   CustomRuleExecutor,
   InvariantExecutor,
@@ -17,13 +18,18 @@ import {
   ReferenceExecutor,
   StructuralExecutor,
   TerminologyExecutor,
-} from './executors';
-import type { StructureDefinition } from './structure-definition-types';
-import { runAllAspectValidations } from './validation-orchestrator';
-import { aggregateRemoteCodeSystemBudgetIssues, dedupeIssues, suppressRedundantBindingWarnings } from './validation-utils';
-import type { ReferenceResolver } from '../validators/slicing-validator';
-import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator';
-import type { FhirResource } from './fhir-resource';
+} from './executors/index.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { runAllAspectValidations } from './validation-orchestrator.js';
+import { aggregateRemoteCodeSystemBudgetIssues, dedupeIssues, suppressRedundantBindingWarnings } from './validation-utils.js';
+import type { ReferenceResolver } from '../validators/slicing-validator.js';
+import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator.js';
+import type { FhirResource } from './fhir-resource.js';
+import {
+  shouldRunCustomRules,
+  shouldValidateBestPractices,
+  shouldValidateBundleEntryResources,
+} from './validation-settings-predicates.js';
 
 export interface SingleResourceValidationInput {
   resource: FhirResource;
@@ -82,6 +88,17 @@ export async function collectSingleResourceValidationIssues(
   );
   const attributedAspectIssues = attributeSubstitutedProfileIssues(aspectIssues, input);
 
+  // ele-1 is registered in invariant-registry.ts as owned by
+  // universal-constraints-validator.ts, and the FHIRPath plan builders skip it
+  // on that basis. The owner was only wired into the multi-aspect path, so on
+  // this path — the one validate() takes — nobody evaluated ele-1 at all.
+  // Only the element half is wired in: the reference aspect above already
+  // reports ref-1 and the reference-format rules, so the ref-1 half of
+  // universalConstraintsValidator.validate() would double-report them.
+  const universalConstraintIssues = universalConstraintsValidator.validateElementConstraints(
+    input.resource,
+  );
+
   const bestPracticeIssues = validateBestPractices(deps.bestPracticeValidator, {
     resource: input.resource,
     resourceType: input.resource.resourceType,
@@ -95,6 +112,7 @@ export async function collectSingleResourceValidationIssues(
   return aggregateRemoteCodeSystemBudgetIssues(suppressRedundantBindingWarnings(dedupeIssues([
     ...(input.profileFallbackIssue ? [input.profileFallbackIssue] : []),
     ...attributedAspectIssues,
+    ...universalConstraintIssues,
     ...bestPracticeIssues,
     ...bundleEntryIssues,
   ])));
@@ -128,10 +146,8 @@ function attributeSubstitutedProfileIssues(
     : aspectIssues;
 }
 
-export function shouldValidateBundleEntryResources(settings?: ValidationSettings): boolean {
-  return settings?.recursiveReferenceValidation?.validateBundleEntries !== false;
-}
-
-export function shouldValidateBestPractices(settings?: ValidationSettings): boolean {
-  return settings?.enableBestPracticeChecks !== false;
-}
+export {
+  shouldRunCustomRules,
+  shouldValidateBestPractices,
+  shouldValidateBundleEntryResources,
+};

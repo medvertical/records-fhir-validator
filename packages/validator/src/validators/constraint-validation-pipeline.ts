@@ -1,12 +1,12 @@
-import { getValidationTargets } from '../business-rules';
-import { logger } from '../logger';
-import type { ElementDefinition } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
-import { expressionStartsAtResourceRoot } from './constraint-choice-context';
-import type { ConstraintEvaluationEngine } from './constraint-evaluation-engine';
-import { buildUserInvocationTable } from './fhirpath-custom-functions';
-import { elementExistsInResource, hasEmptyBackboneElement } from './constraint-path-utils';
-import { targetMatchesSliceDefinition } from './constraint-slice-targets';
+import { getValidationTargets } from '../business-rules/index.js';
+import { logger } from '../logger.js';
+import type { ElementDefinition } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { expressionStartsAtResourceRoot } from './constraint-choice-context.js';
+import type { ConstraintEvaluationEngine } from './constraint-evaluation-engine.js';
+import { buildUserInvocationTable } from './fhirpath-custom-functions.js';
+import { elementExistsInResource, hasEmptyBackboneElement } from './constraint-path-utils.js';
+import { createSliceDefinitionMatcher } from './constraint-slice-targets.js';
 import {
   isConstraint,
   isElementWithConstraints,
@@ -15,10 +15,10 @@ import {
   type ConstraintValidationOptions,
   type ConstraintValidationState,
   type FhirResource,
-} from './constraint-validation-input';
-import { resolveElementType } from './fhirpath-type-preprocessor';
-import type { TerminologyOperationCache } from './terminology-operation-cache';
-import type { ValueSetCache } from './valueset-cache';
+} from './constraint-validation-input.js';
+import { resolveElementType } from './fhirpath-type-preprocessor.js';
+import type { TerminologyOperationCache } from './terminology-operation-cache.js';
+import type { ValueSetCache } from './valueset-cache.js';
 
 /** Owns constraint input state, target planning, and element traversal. */
 export class ConstraintValidationPipeline {
@@ -50,6 +50,7 @@ export class ConstraintValidationPipeline {
       rootResource,
     };
     const issues: ValidationIssue[] = [];
+    const matchesSlice = createSliceDefinitionMatcher(elements);
     this.logRootCoreConstraints(resource, elements);
 
     for (const element of elements) {
@@ -96,10 +97,9 @@ export class ConstraintValidationPipeline {
           // child that is absent on one of its items. Element constraints apply
           // only when that child exists; cardinality validation owns absence.
           if (target.value === undefined || target.value === null) continue;
-          if (!targetMatchesSliceDefinition(
+          if (!matchesSlice(
             target.value,
             element,
-            elements,
             { resource, target },
           )) continue;
           issues.push(...await this.evaluationEngine.evaluate(

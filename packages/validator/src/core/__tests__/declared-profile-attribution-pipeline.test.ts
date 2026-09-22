@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import { CODE_INFERRED_SIGNPOST_CODE } from '../code-inferred-profile-attribution';
 import type { StructureDefinitionLoader } from '../structure-definition-loader';
 import type { StructureDefinition } from '../structure-definition-types';
@@ -68,6 +68,7 @@ function pipelineContext(): RecordsSingleResourceValidationContext {
     validateBundleEntriesIfNeeded: vi.fn(async () => []),
     validateContainedResourcesIfNeeded: vi.fn(async () => []),
     validateParametersResourcesIfNeeded: vi.fn(async () => []),
+    validateAgainstProfile: vi.fn(async () => []),
   };
 }
 

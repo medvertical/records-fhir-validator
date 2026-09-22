@@ -2,10 +2,10 @@ import { PackageDownloader } from '../package/package-downloader.js';
 import {
   PackageRegistryClient,
 } from '../package/package-registry-client.js';
-import type { ProfileSourcesConfig } from '../types';
+import type { ProfileSourcesConfig } from '@records-fhir/validation-types';
 import { normalizeProfileSourcesConfig } from '@records-fhir/validation-types';
-import { resolveDefaultBundledProfilesPath } from './sd-loader-bundled-path';
-import { parseAllowedPackages } from './sd-loader-package-config';
+import { resolveDefaultBundledProfilesPath } from './sd-loader-bundled-path.js';
+import { parseAllowedPackages } from './sd-loader-package-config.js';
 
 export interface StructureDefinitionLoaderOptions {
   autoDownload?: boolean;

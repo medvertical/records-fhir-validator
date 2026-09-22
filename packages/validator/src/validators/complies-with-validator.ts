@@ -20,20 +20,25 @@
  * remains pending.
  */
 
-import type { ValidationIssue } from '../types';
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { StructureDefinitionLoader } from '../core/structure-definition-loader';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { StructureDefinitionLoader } from '../core/structure-definition-loader.js';
+import { createValidationIssue } from '../issues/index.js';
+import { createProfileUnreadable } from '../issues/profile-completeness-issues.js';
+import {
+  codeableConceptComplies,
+  formatCodeableConcept,
+} from './complies-with-codeable-concepts.js';
 import {
   diffSlicing,
   describeMissingRequiredSlice,
   describeExtraSlice,
   describeRulesMismatch,
-} from './complies-with-slicing';
+} from './complies-with-slicing.js';
 import {
   formatCodeList,
   resolveLocalValueSetCodes,
-} from './complies-with-valueset';
+} from './complies-with-valueset.js';
 
 const COMPLIES_WITH_EXT_URL =
   'http://hl7.org/fhir/StructureDefinition/structuredefinition-compliesWithProfile';
@@ -70,21 +75,35 @@ export class CompliesWithValidator {
 
     const issues: ValidationIssue[] = [];
     for (const url of claimed) {
-      const baseSd = await this.loadClaimedProfile(url, fhirVersion);
-      if (!baseSd) continue;
-      issues.push(...checkCompliance(sd, baseSd, url));
+      const loaded = await this.loadClaimedProfile(url, fhirVersion);
+      if (loaded.loadFailure) issues.push(loaded.loadFailure);
+      if (!loaded.structureDef) continue;
+      issues.push(...checkCompliance(sd, loaded.structureDef, url));
     }
     return issues;
   }
 
+  /**
+   * A claim this validator cannot load is not a claim it can clear. The loader
+   * answers `null` when the profile is absent, so a throw is a different
+   * outcome and must not silently drop the compliance check.
+   */
   private async loadClaimedProfile(
     url: string,
     fhirVersion: 'R4' | 'R5' | 'R6',
-  ): Promise<StructureDefinition | null> {
+  ): Promise<{ structureDef: StructureDefinition | null; loadFailure?: ValidationIssue }> {
     try {
-      return await this.sdLoader.loadProfile(url, fhirVersion);
-    } catch {
-      return null;
+      return { structureDef: await this.sdLoader.loadProfile(url, fhirVersion) };
+    } catch (error: unknown) {
+      return {
+        structureDef: null,
+        loadFailure: createProfileUnreadable({
+          profileUrl: url,
+          resourceType: 'StructureDefinition',
+          reason: 'claimed-profile',
+          error,
+        }),
+      };
     }
   }
 }
@@ -96,7 +115,7 @@ function extractClaimedProfileUrls(sd: ObjectRecord): string[] {
     if (isObjectRecord(ext) &&
         ext.url === COMPLIES_WITH_EXT_URL &&
         typeof ext.valueCanonical === 'string') {
-      const canonical = ext.valueCanonical.split('|')[0];
+      const canonical = ext.valueCanonical;
       if (canonical) urls.add(canonical);
     }
   }
@@ -251,6 +270,7 @@ function bindingValueSetReasons(
   const baseValueSet = base.binding?.valueSet;
   const derivedValueSet = derived?.binding?.valueSet;
   if (!baseStrength || !baseValueSet || !derivedValueSet) return [];
+  if (derived?.binding?.strength !== baseStrength) return [];
   // Only enforce on bindings strong enough to constrain the instance.
   if (baseStrength !== 'required' && baseStrength !== 'extensible') return [];
   // Strip version anchors (`|<version>`) so `vs|1.0.0` and `vs|2.0.0`
@@ -285,38 +305,6 @@ function patternFixedReasons(
   if (!basePattern || !derivedPattern) return [];
   if (codeableConceptComplies(derivedPattern, basePattern)) return [];
   return [`The pattern value of '${formatCodeableConcept(derivedPattern)}' on the path ${path} does not comply with the value '${formatCodeableConcept(basePattern)}' from the claimed profile`];
-}
-
-function codeableConceptComplies(derived: unknown, base: unknown): boolean {
-  const baseCodings = isObjectRecord(base) && Array.isArray(base.coding) ? base.coding : [];
-  const derivedCodings =
-    isObjectRecord(derived) && Array.isArray(derived.coding) ? derived.coding : [];
-  for (const baseCoding of baseCodings) {
-    const ok = derivedCodings.some(derivedCoding => codingMatches(derivedCoding, baseCoding));
-    if (!ok) return false;
-  }
-  return true;
-}
-
-function codingMatches(derived: unknown, base: unknown): boolean {
-  if (!isObjectRecord(derived) || !isObjectRecord(base)) return false;
-  if (typeof base.system === 'string' && derived.system !== base.system) return false;
-  if (typeof base.code === 'string' && derived.code !== base.code) return false;
-  if (typeof base.version === 'string' && derived.version !== base.version) return false;
-  return true;
-}
-
-function formatCodeableConcept(cc: unknown): string {
-  const codings = isObjectRecord(cc) && Array.isArray(cc.coding) ? cc.coding : [];
-  return `[${codings.map(formatCoding).join(', ')}]`;
-}
-
-function formatCoding(c: unknown): string {
-  if (!isObjectRecord(c)) return '#';
-  const system = typeof c.system === 'string' ? c.system : '';
-  const version = typeof c.version === 'string' ? `|${c.version}` : '';
-  const code = typeof c.code === 'string' ? c.code : '';
-  return `${system}${version}#${code}`;
 }
 
 function buildIssue(claimedUrl: string, reason: string): ValidationIssue {

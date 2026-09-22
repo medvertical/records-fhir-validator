@@ -5,14 +5,14 @@
  * expression) for a constraint attached to a given element path.
  */
 
-import { getEvaluationContext } from './constraint-path-utils';
+import { getEvaluationContext } from './constraint-path-utils.js';
 import {
   choiceContextHasOnlyOtherTypes,
   expressionStartsAtResourceRoot,
   getThisCastType,
   hasUnresolvableChoiceTypes,
-} from './constraint-choice-context';
-import type { FhirResource } from './constraint-validation-input';
+} from './constraint-choice-context.js';
+import type { FhirResource } from './constraint-validation-input.js';
 
 /**
  * Resolve the evaluation context and (possibly rewritten) expression for a constraint.

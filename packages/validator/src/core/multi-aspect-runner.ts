@@ -1,23 +1,24 @@
-import { applyAdvisorRules, type AdvisorRule } from '../advisor';
+import { applyAdvisorRules, type AdvisorRule } from '../advisor/index.js';
 import {
   applyPublicationEscalation,
-  applyStrictnessSeverity,
-} from '../strictness';
-import type { ValidationIssue } from '../types';
-import { BatchValidationAbortedError } from './batch-validator';
-import { withIssuesSchemaVersion } from './issue-schema-version';
-import { attachAppliedProfile } from './multi-aspect-contained-validation';
-import type { AspectResult } from './multi-aspect-types';
-import { createValidationErrorIssue } from './validation-utils';
+  applyStrictnessByIssueAspect,
+} from '../strictness/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { BatchValidationAbortedError } from './batch-validator.js';
+import { withIssuesSchemaVersion } from './issue-schema-version.js';
+import { attachAppliedProfile } from './multi-aspect-contained-validation.js';
+import type { AspectResult } from './multi-aspect-types.js';
+import { createValidationErrorIssue } from './validation-utils.js';
 
 interface MultiAspectRunnerOptions {
   advisorRules: AdvisorRule[];
-  aspectSeverityFor: (aspect: string) => Parameters<typeof applyStrictnessSeverity>[2];
+  attributeIssues?: (issues: ValidationIssue[], executor: string) => ValidationIssue[];
+  aspectSeverityFor: Parameters<typeof applyStrictnessByIssueAspect>[2];
   collectedAspects: AspectResult[];
   fhirVersion: 'R4' | 'R5' | 'R6';
   forPublication: boolean;
   profileUrl: string;
-  strictness: Parameters<typeof applyStrictnessSeverity>[1];
+  strictness: Parameters<typeof applyStrictnessByIssueAspect>[1];
   throwIfStopped: () => void;
 }
 
@@ -26,6 +27,7 @@ export function createMultiAspectRunner(options: MultiAspectRunnerOptions) {
   return async (name: string, validate: () => Promise<ValidationIssue[]>): Promise<void> => {
     const {
       advisorRules,
+      attributeIssues,
       aspectSeverityFor,
       collectedAspects,
       fhirVersion,
@@ -37,16 +39,15 @@ export function createMultiAspectRunner(options: MultiAspectRunnerOptions) {
     throwIfStopped();
     const aspectStart = Date.now();
     try {
-      const rawIssues = (await validate()).map(issue => {
-        const profiled = attachAppliedProfile(issue, profileUrl);
-        return {
-          ...profiled,
-          rawSeverity: profiled.rawSeverity ?? profiled.severity,
-          rawMessage: profiled.rawMessage ?? profiled.message,
-        };
-      });
+      const validated = (await validate()).map(issue => attachAppliedProfile(issue, profileUrl));
+      const attributed = attributeIssues ? attributeIssues(validated, name) : validated;
+      const rawIssues = attributed.map(issue => ({
+        ...issue,
+        rawSeverity: issue.rawSeverity ?? issue.severity,
+        rawMessage: issue.rawMessage ?? issue.message,
+      }));
       throwIfStopped();
-      const afterStrictness = applyStrictnessSeverity(rawIssues, strictness, aspectSeverityFor(name));
+      const afterStrictness = applyStrictnessByIssueAspect(rawIssues, strictness, aspectSeverityFor, name);
       const governed = applyAdvisorRules(afterStrictness, advisorRules);
       throwIfStopped();
       const issues = withIssuesSchemaVersion(

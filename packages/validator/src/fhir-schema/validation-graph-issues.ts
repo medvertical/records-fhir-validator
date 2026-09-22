@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../types';
-import type { ValidationGraph } from './validation-graph-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ValidationGraph } from './validation-graph-types.js';
 
 export function createValidationGraphIssue(
   code: string,

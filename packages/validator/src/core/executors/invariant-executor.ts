@@ -1,18 +1,23 @@
 /**
  * Invariant Executor
- * 
+ *
  * Validates standard invariant constraints:
  * - FHIRPath constraint validation
  * - Element rules validation
+ *
+ * Every invariant-aspect validator is wired here rather than at a fan-out call
+ * site, so each fan-out path inherits the same rule set from one place.
  */
 
-import type { ValidationIssue } from '../../types';
-import type { StructureDefinition } from '../structure-definition-types';
-import { resourceSpecificConstraintsValidator } from '../../validators/resource-specific-constraints-validator';
-import { logger } from '../../logger';
-import { createExecutorFailureIssue } from './executor-failure-issue';
-import { profileCanonicalMetadata } from '../../utils/sensitive-logging-metadata';
-import { resourceTypeOf } from '../fhir-resource';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition } from '../structure-definition-types.js';
+import { containedResourceValidator } from '../../validators/contained-resource-validator.js';
+import { resourceSpecificConstraintsValidator } from '../../validators/resource-specific-constraints-validator.js';
+import { universalConstraintsValidator } from '../../validators/universal-constraints-validator.js';
+import { logger } from '../../logger.js';
+import { createExecutorFailureIssue } from './executor-failure-issue.js';
+import { profileCanonicalMetadata } from '../../utils/sensitive-logging-metadata.js';
+import { resourceTypeOf } from '../fhir-resource.js';
 
 // ============================================================================
 // Types
@@ -38,8 +43,6 @@ export class InvariantExecutor {
   /**
    * Validate invariant rules
    * Note: Standard FHIRPath invariants are now evaluated in the profile aspect.
-   * This executor is currently a semantic anchor for the invariant bucket to maintain 
-   * aspect parity if future non-resource-specific invariants are needed.
    */
   async validate(
     context: InvariantValidationContext
@@ -59,11 +62,19 @@ export class InvariantExecutor {
       const resourceIssues = resourceSpecificConstraintsValidator.validate(resource, existingIssues, profileUrl);
       issues.push(...resourceIssues);
 
+      // DomainResource contained rules (dom-2/dom-3, local reference resolution)
+      // and the version-independent universal constraints.
+      issues.push(...containedResourceValidator.validate(resource));
+      // Reference syntax and ref-1 require the reference executor's enclosing context.
+      issues.push(...universalConstraintsValidator.validateElementConstraints(resource));
+
       return issues;
 
     } catch {
       logger.error('[InvariantExecutor] Validation failed');
-      return [createExecutorFailureIssue('invariant', 'Invariant')];
+      // Labelled like everything else this executor emits, so a failure lands
+      // in the bucket a reader is already filtering.
+      return [createExecutorFailureIssue('structural', 'Invariant')];
     }
   }
 }

@@ -1,4 +1,4 @@
-import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
+import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
 
 const CHOICE_TYPE_SUFFIXES = [
   'String', 'Boolean', 'Integer', 'Decimal', 'DateTime', 'Date', 'Time',

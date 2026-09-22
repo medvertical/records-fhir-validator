@@ -2,7 +2,7 @@ import { afterEach, describe, it, expect, vi } from 'vitest';
 import { buildMultiAspectValidateCallback } from '../multi-aspect-validate-callback';
 import { appendBundleEntryValidationResults } from '../multi-aspect-bundle-entry-validation';
 import { loadProfileOrBase } from '../profile-loader-utils';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 vi.mock('../profile-loader-utils', () => ({
   loadProfileOrBase: vi.fn().mockImplementation(async (_sdLoader, _snapshotGenerator, profileUrl, resourceType) => ({
@@ -39,25 +39,6 @@ vi.mock('../profile-loader-utils', () => ({
   })),
   createProfileFallbackIssue: vi.fn(),
   createProfileResourceTypeMismatchIssue: vi.fn(),
-}));
-
-vi.mock('../validators/deep-profile-validator', () => ({
-  deepProfileValidator: { validate: () => [] },
-}));
-vi.mock('../validators/deep-binding-validator', () => ({
-  deepBindingValidator: { validate: () => [] },
-}));
-vi.mock('../validators/sd-fhirpath-executor', () => ({
-  sdFHIRPathExecutor: { execute: async () => [] },
-}));
-vi.mock('../validators/contained-resource-validator', () => ({
-  containedResourceValidator: { validate: () => [] },
-}));
-vi.mock('../validators/universal-constraints-validator', () => ({
-  universalConstraintsValidator: { validate: () => [] },
-}));
-vi.mock('../validators/terminology-resource-validator', () => ({
-  terminologyResourceValidator: { validate: () => [] },
 }));
 
 const observationIssue: ValidationIssue = {
@@ -130,6 +111,7 @@ function makeDeps(options: {
     customRuleExecutor: { validate: async () => [] } as any,
     metadataExecutor: { validate: async () => [] } as any,
     bestPracticeValidator: { validate: () => [] } as any,
+    terminologyResourceValidator: { validate: () => [] } as any,
     strictMode: false,
   };
 }
@@ -190,7 +172,7 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
     );
   });
 
-  it('routes embedded issues by their own aspect after profile entry validation', async () => {
+  it('keeps structural dependency findings internal when only profile was requested', async () => {
     const callback = buildMultiAspectValidateCallback(
       makeDeps({
         structuralIssueForObservation: false,
@@ -226,14 +208,8 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
     const structural = result.aspects.find(aspect => aspect.aspect === 'structural');
 
     expect(profile?.issues).toEqual([]);
-    expect(structural?.issues).toEqual([
-      expect.objectContaining({
-        aspect: 'structural',
-        code: 'structural-cardinality-min',
-        path: 'Bundle.entry[0].resource/*Observation/obs-1*/.status',
-      }),
-    ]);
-    expect(result.isValid).toBe(false);
+    expect(structural).toBeUndefined();
+    expect(result.isValid).toBe(true);
   });
 
   it('suppresses server-managed metadata completeness hints for embedded Bundle entries', async () => {
@@ -293,7 +269,7 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
       }),
       parentAspects,
       undefined,
-      issues => issues,
+      issues => ({ resultIssues: issues, evidenceIssues: issues }),
     );
 
     const metadata = parentAspects.find(aspect => aspect.aspect === 'metadata');
@@ -335,7 +311,7 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
       },
       [],
       undefined,
-      issues => issues,
+      issues => ({ resultIssues: issues, evidenceIssues: issues }),
     );
 
     expect(peakConcurrency).toBe(2);
@@ -362,7 +338,7 @@ describe('multi-aspect-validate-callback — Bundle entry resources', () => {
       validateOne,
       [],
       undefined,
-      issues => issues,
+      issues => ({ resultIssues: issues, evidenceIssues: issues }),
       () => true,
     )).rejects.toMatchObject({ name: 'BatchValidationAbortedError' });
 

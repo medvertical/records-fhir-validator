@@ -1,9 +1,9 @@
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   getConstraintDedupeKeys,
   isBundleDuplicateFullUrlIssue,
   normalizeIssuePathForDedupe,
-} from './validation-issue-dedupe-constraints';
+} from './validation-issue-dedupe-constraints.js';
 import {
   getExtensionMaxCardinalityKey,
   getRequiredBindingViolationKey,
@@ -11,7 +11,7 @@ import {
   isContainedUnreferencedInvalidIssue,
   isSpecificRequiredElementMissingIssue,
   isTerminologySystemInvalidIssue,
-} from './validation-issue-dedupe-rule-predicates';
+} from './validation-issue-dedupe-rule-predicates.js';
 import {
   compareDisplayMismatchSpecificity,
   compareInvalidUriSpecificity,
@@ -30,7 +30,7 @@ import {
   normalizeNarrativeMissingDivPath,
   normalizeNarrativeTextPath,
   normalizeRequiredElementPath,
-} from './validation-issue-dedupe-utils';
+} from './validation-issue-dedupe-utils.js';
 import {
   getEffectiveRuleId,
   getSpecificConstraintKey,
@@ -38,7 +38,7 @@ import {
   isInvariantSpecificConstraintIssue,
   isSpecificNameInvariantIssue,
   isStructuralDateTimeMissingTimezoneIssue,
-} from './validation-issue-dedupe-profile-signals';
+} from './validation-issue-dedupe-profile-signals.js';
 
 export interface DedupeContext {
   specificBundleInvariantKeys: Set<string>;
@@ -46,6 +46,7 @@ export interface DedupeContext {
   specificConstraintKeys: Set<string>;
   invariantSpecificConstraintKeys: Set<string>;
   cardinalityMinPaths: Set<string>;
+  patternMismatchPaths: Set<string>;
   profileExtensionMinPaths: Set<string>;
   profileSliceMinPaths: Set<string>;
   profileExtensionMaxKeys: Set<string>;
@@ -98,6 +99,7 @@ function createDedupeContext(issues: ValidationIssue[]): DedupeContext {
     specificConstraintKeys: new Set(),
     invariantSpecificConstraintKeys: new Set(),
     cardinalityMinPaths: new Set(),
+    patternMismatchPaths: new Set(),
     profileExtensionMinPaths: new Set(),
     profileSliceMinPaths: new Set(),
     profileExtensionMaxKeys: new Set(),
@@ -188,6 +190,9 @@ function indexConstraintsAndCardinality(context: DedupeContext, issue: Validatio
 
   const requiredPath = normalizeRequiredElementPath(issue);
   if (issue.code === 'structural-cardinality-min') context.cardinalityMinPaths.add(requiredPath);
+  if (issue.code === 'profile-pattern-mismatch') {
+    context.patternMismatchPaths.add(normalizeIssuePathForDedupe(issue));
+  }
   if (issue.code === 'profile-extension-min-cardinality') context.profileExtensionMinPaths.add(requiredPath);
   if (issue.code === 'profile-slice-min-cardinality') context.profileSliceMinPaths.add(requiredPath);
   if (issue.code === 'profile-mustsupport-missing') context.mustSupportPaths.add(requiredPath);

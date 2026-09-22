@@ -7,7 +7,7 @@ import {
   getPresentProperty,
   getResourceType,
   parseFhirDateTime,
-} from './validator-utils';
+} from './validator-utils.js';
 
 const PERIOD_RULE = 'encounter-period-validation';
 const STATUS_PERIOD_RULE = 'encounter-status-period-consistency';

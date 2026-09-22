@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { InvariantExecutor } from './executors';
 import { TerminologyResourceValidator } from '../validators/terminology-resource-validator';
 import { runAllAspectValidations } from './validation-orchestrator';
 
@@ -37,7 +38,7 @@ describe('custom-rule tenant scope', () => {
       fhirVersion: 'R4',
       structureDef: {} as never,
       strictMode: false,
-      settings: { aspects: disabledAspects },
+      settings: { autoApplyCustomRules: true, aspects: disabledAspects },
       organizationId: 42,
     }, deps.structural as never, deps.profile as never, deps.terminology as never,
     deps.invariant as never, deps.custom as never, deps.metadata as never, deps.reference as never,
@@ -133,7 +134,11 @@ describe('validation issue profile attribution', () => {
 });
 
 describe('single-resource universal constraints', () => {
-  it('runs ele-1 alongside the invariant executor', async () => {
+  // ele-1 and its siblings report as `structural`, and the batch path runs them
+  // whenever structural is requested. The single-resource path used to gate them
+  // on the retired `invariant` switch instead, so the same resource validated
+  // differently depending on which path saw it.
+  it('inherits ele-1 from the shared invariant executor under the structural switch', async () => {
     const noop = { validate: vi.fn().mockResolvedValue([]) };
     const result = await runAllAspectValidations({
       resource: {
@@ -147,11 +152,11 @@ describe('single-resource universal constraints', () => {
       structureDef: {} as never,
       strictMode: false,
       settings: { aspects: {
-        structural: { enabled: false }, profile: { enabled: false },
+        structural: { enabled: true }, profile: { enabled: false },
         terminology: { enabled: false }, reference: { enabled: false },
-        invariant: { enabled: true }, metadata: { enabled: false },
+        invariant: { enabled: false }, metadata: { enabled: false },
       } },
-    }, noop as never, noop as never, noop as never, noop as never,
+    }, noop as never, noop as never, noop as never, new InvariantExecutor(),
     noop as never, noop as never, noop as never, new TerminologyResourceValidator());
 
     expect(result).toContainEqual(expect.objectContaining({

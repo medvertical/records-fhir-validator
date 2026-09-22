@@ -1,6 +1,6 @@
-import { logger } from '../logger';
-import type { StructureDefinition } from './structure-definition-types';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+import { logger } from '../logger.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export function sanitizeProfile(sd: StructureDefinition): StructureDefinition {
   if (!sd || !sd.snapshot || !sd.snapshot.element) return sd;

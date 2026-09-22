@@ -5,9 +5,9 @@
  * Extracted from validator-engine.ts to comply with global.mdc guidelines.
  */
 
-import type { ValidationIssue } from '../types';
-import { normalizeChoiceTypePath } from './choice-type-path';
-import { getPrimitiveSidecar, resolveFhirSegmentValue } from './fhir-primitive-sidecar';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { normalizeChoiceTypePath } from './choice-type-path.js';
+import { getPrimitiveSidecar, resolveFhirSegmentValue } from './fhir-primitive-sidecar.js';
 
 /**
  * Helper: Get value at FHIRPath-like path
@@ -99,7 +99,7 @@ export {
   createValidationErrorIssue,
   createValidationInfoIssue,
   createValidationWarningIssue,
-} from './core-validation-issue';
+} from './core-validation-issue.js';
 
 export {
   dedupeExactIssues,
@@ -108,7 +108,7 @@ export {
   dedupeResourceTreeIssues,
   type DedupeIssuesResult,
   type DedupeSuppressionTrace,
-} from './validation-issue-dedupe';
+} from './validation-issue-dedupe.js';
 
 /**
  * Suppress terminology binding warnings on paths where a structural
@@ -117,7 +117,8 @@ export {
  * `valueQuantity`), the code-in-valueset check on that same path is
  * noise — the value isn't even parseable as the expected type. The
  * reference Java validator likewise emits just the type error, not the
- * binding warning on a broken value.
+ * binding warning on a broken value. A system-inference error on that
+ * same value is also a consequence of interpreting the wrong type as a code.
  *
  * Conservative: only suppresses extensible / preferred / example bindings
  * (i.e. non-required). A required binding that fires alongside a type
@@ -132,7 +133,7 @@ export function suppressRedundantBindingWarnings(
   const invalidCodeBindingParentPaths = new Set<string>();
   for (const issue of issues) {
     if (issue.code === 'structural-type-mismatch' && issue.path) {
-      typeMismatchPaths.add(normalizeChoiceTypePath(issue.path));
+      typeMismatchPaths.add(normalizeChoiceTypePath(issue.path, { stripIndices: false }));
     }
     if (isRequiredElementPresenceIssue(issue) && issue.path) {
       missingRequiredElementPaths.add(normalizeChoiceTypePath(issue.path));
@@ -155,11 +156,14 @@ export function suppressRedundantBindingWarnings(
     ) {
       return !missingRequiredElementPaths.has(normalizeChoiceTypePath(issue.path));
     }
+    if (issue.code === 'terminology-system-undetermined' && issue.path) {
+      return !typeMismatchPaths.has(normalizeChoiceTypePath(issue.path, { stripIndices: false }));
+    }
     if (!isNonRequiredBindingIssue(issue)) return true;
     if (!issue.path) return true;
     const normalizedPath = normalizeChoiceTypePath(issue.path);
     if (invalidCodeBindingParentPaths.has(normalizedPath)) return false;
-    return !typeMismatchPaths.has(normalizeChoiceTypePath(issue.path));
+    return !typeMismatchPaths.has(normalizeChoiceTypePath(issue.path, { stripIndices: false }));
   });
 }
 

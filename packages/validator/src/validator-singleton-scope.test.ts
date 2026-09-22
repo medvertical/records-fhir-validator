@@ -83,6 +83,23 @@ import {
 } from './validator-singleton';
 
 describe('Records validator runtime scope registry', () => {
+  it('rotates only the requested tenant runtimes through terminology invalidation', async () => {
+    const validate = (organizationId: number) => recordsValidator.validateRequest({
+      resource: { resourceType: 'Patient' }, fhirVersion: 'R4', organizationId,
+      runtimeScopeKey: `${organizationId}:10:invalidation-test`,
+    });
+    await validate(991);
+    await validate(992);
+    expect(mocks.constructor).toHaveBeenCalledTimes(2);
+    await recordsValidator.clearTerminologyCache({ runtimeScopePrefix: '991:' });
+    await validate(992);
+    expect(mocks.constructor).toHaveBeenCalledTimes(2);
+    await validate(991);
+    expect(mocks.constructor).toHaveBeenCalledTimes(3);
+    await recordsValidator.clearTerminologyCache({ runtimeScopePrefix: '991:' });
+    await recordsValidator.clearTerminologyCache({ runtimeScopePrefix: '992:' });
+  });
+
   beforeEach(() => {
     mocks.constructor.mockClear();
     mocks.configs.length = 0;

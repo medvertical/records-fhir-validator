@@ -1,26 +1,31 @@
-import type { SlicingDiscriminator } from '../core/structure-definition-types';
-import { logger } from '../logger';
-import type { SliceDefinition } from './slice-types';
+import type { SlicingDiscriminator } from '../core/structure-definition-types.js';
+import { logger } from '../logger.js';
+import type { SliceDefinition } from './slice-types.js';
 import {
   matchExistsDiscriminator,
   resolvedResourceMatchesSliceTargetProfile,
   resolveDiscriminatorPath,
-} from './slice-discriminator-complex-matchers';
+} from './slice-discriminator-complex-matchers.js';
 import {
   hasDirectDiscriminatorEvidence,
   normalizeDiscriminatorPath,
-} from './slice-discriminator-constraints';
+} from './slice-discriminator-constraints.js';
+import {
+  splitResolveDiscriminatorPath,
+  type ResolveDiscriminatorStep,
+} from './slice-discriminator-path.js';
 import {
   matchProfileDiscriminator,
   profileListContains,
   toProfileArray,
   type ReferenceResolverFn,
-} from './slice-profile-discriminator-matcher';
-import { matchResolvedTypeDiscriminator, matchTypeDiscriminator } from './slice-type-discriminator';
-import { matchPatternDiscriminator, matchValueDiscriminator } from './slice-discriminator-value-matchers';
+} from './slice-profile-discriminator-matcher.js';
+import { matchResolvedTypeDiscriminator, matchTypeDiscriminator } from './slice-type-discriminator.js';
+import { matchPatternDiscriminator, matchValueDiscriminator } from './slice-discriminator-value-matchers.js';
+import { getValueAtPath } from './slice-utils.js';
 
-export type { ReferenceResolverFn } from './slice-profile-discriminator-matcher';
-export { sliceHasDiscriminatorEvidence } from './slice-discriminator-constraints';
+export type { ReferenceResolverFn } from './slice-profile-discriminator-matcher.js';
+export { sliceHasDiscriminatorEvidence } from './slice-discriminator-constraints.js';
 
 export function matchDiscriminator(
   element: unknown,
@@ -32,12 +37,13 @@ export function matchDiscriminator(
   allSlices?: SliceDefinition[],
 ): boolean {
   const path = normalizeDiscriminatorPath(discriminator.path);
-  if (path.startsWith('resolve()')) {
+  const resolveStep = splitResolveDiscriminatorPath(path);
+  if (resolveStep) {
     return matchResolvedDiscriminator(
       element,
       slice,
       discriminator,
-      path,
+      resolveStep,
       referenceResolver,
       matchesPattern,
       matchesBinding,
@@ -60,18 +66,52 @@ function matchResolvedDiscriminator(
   element: unknown,
   slice: SliceDefinition,
   discriminator: SlicingDiscriminator,
-  path: string,
+  step: ResolveDiscriminatorStep,
   referenceResolver: ReferenceResolverFn,
   matchesPattern: (value: unknown, pattern: unknown) => boolean,
   matchesBinding: (value: unknown, codes: Set<string>) => boolean,
   allSlices?: SliceDefinition[],
 ): boolean {
-  const resolved = resolveDiscriminatorPath(element, path, referenceResolver);
-  if (resolved === null) return false;
-  const remainder = path.slice('resolve()'.length).replace(/^\./, '');
-  if (discriminator.type === 'type') return matchResolvedTypeDiscriminator(resolved, slice, remainder, allSlices);
+  // `item.resolve()` follows the Reference held by the child `item`; only a
+  // path that starts with resolve() treats the sliced element as the Reference.
+  const referenceValue = step.referencePath === '$this'
+    ? element
+    : getValueAtPath(element, step.referencePath);
+  const references = Array.isArray(referenceValue) ? referenceValue : [referenceValue];
+  return references.some(reference => {
+    const resolved = resolveDiscriminatorPath(reference, step.referencePath, referenceResolver);
+    return resolved !== null && matchResolvedTarget(
+      resolved,
+      slice,
+      discriminator,
+      step,
+      referenceResolver,
+      matchesPattern,
+      matchesBinding,
+      allSlices,
+    );
+  });
+}
+
+function matchResolvedTarget(
+  resolved: unknown,
+  slice: SliceDefinition,
+  discriminator: SlicingDiscriminator,
+  { referencePath, remainder }: ResolveDiscriminatorStep,
+  referenceResolver: ReferenceResolverFn,
+  matchesPattern: (value: unknown, pattern: unknown) => boolean,
+  matchesBinding: (value: unknown, codes: Set<string>) => boolean,
+  allSlices?: SliceDefinition[],
+): boolean {
+  // The type constraint that identifies the slice sits on the element holding
+  // the Reference, so type specs are read at `referencePath`, not at `$this`.
+  if (discriminator.type === 'type') {
+    return matchResolvedTypeDiscriminator(resolved, slice, remainder, allSlices, referencePath);
+  }
   if (discriminator.type === 'profile') {
-    return matchProfileDiscriminator(resolved, slice, remainder || '$this', referenceResolver, allSlices, matchesPattern);
+    return matchProfileDiscriminator(
+      resolved, slice, remainder || '$this', referenceResolver, allSlices, matchesPattern, referencePath,
+    );
   }
   if (discriminator.type === 'exists') return matchExistsDiscriminator(resolved, remainder || '$this');
   const ofType = remainder.match(/^ofType\(([^)]+)\)$/);
@@ -86,7 +126,7 @@ function matchResolvedDiscriminator(
     : matchValueDiscriminator(resolved, slice, remainder || '$this', matchesPattern, matchesBinding);
   return directMatch
     || (!hasDirectDiscriminatorEvidence(slice, remainder)
-      && resolvedResourceMatchesSliceTargetProfile(resolved, slice));
+      && resolvedResourceMatchesSliceTargetProfile(resolved, slice, referencePath));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

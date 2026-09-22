@@ -1,31 +1,31 @@
-import type { ValidationIssue } from '../../types';
-import type { StructureDefinition, ElementDefinition } from '../structure-definition-types';
-import type { CardinalityValidator } from '../../validators/cardinality-validator';
-import type { TypeValidator } from '../../validators/type-validator';
-import type { ElementRulesValidator } from '../../validators/element-rules-validator';
-import type { ComplexTypeValidator } from '../../validators/complex-type-validator';
-import type { MustSupportValidator } from '../../validators/must-support-validator';
-import type { ReferenceFormatValidator } from '../../validators/reference-format-validator';
-import type { ReferenceTargetValidator } from '../../validators/reference-target-validator';
-import type { BundleValidator } from '../../validators/bundle-validator';
-import type { QuestionnaireValidator } from '../../validators/questionnaire-validator';
-import { getValidationTargets, shouldValidateRequired } from '../../business-rules';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition, ElementDefinition } from '../structure-definition-types.js';
+import type { CardinalityValidator } from '../../validators/cardinality-validator.js';
+import type { TypeValidator } from '../../validators/type-validator.js';
+import type { ElementRulesValidator } from '../../validators/element-rules-validator.js';
+import type { ComplexTypeValidator } from '../../validators/complex-type-validator.js';
+import type { MustSupportValidator } from '../../validators/must-support-validator.js';
+import type { ReferenceFormatValidator } from '../../validators/reference-format-validator.js';
+import type { ReferenceTargetValidator } from '../../validators/reference-target-validator.js';
+import type { BundleValidator } from '../../validators/bundle-validator.js';
+import type { QuestionnaireValidator } from '../../validators/questionnaire-validator.js';
+import { getValidationTargets, shouldValidateRequired } from '../../business-rules/index.js';
 import {
   ContentReferenceElementsCache,
   expandContentReferenceElements,
-} from '../content-reference-elements';
+} from '../content-reference-elements.js';
 import {
   hasElementDefinitionRules,
   shouldSkipRulesForSiblingSliceTarget,
   shouldSkipSnapshotElement,
-} from './structural-element-rules';
-import { shouldSuppressServerManagedMetadataIssue } from '../server-managed-metadata-issue-filter';
+} from './structural-element-rules.js';
+import { shouldSuppressServerManagedMetadataIssue } from '../server-managed-metadata-issue-filter.js';
 import {
   elementActuallyExists,
   groupTargetsByContext,
   retargetIssuePath,
-} from './structural-snapshot-targets';
-import { validatePrimitiveValuePresence } from './primitive-value-presence-rules';
+} from './structural-snapshot-targets.js';
+import { validatePrimitiveValuePresence } from './primitive-value-presence-rules.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 type ValidationTarget = ReturnType<typeof getValidationTargets>[number];

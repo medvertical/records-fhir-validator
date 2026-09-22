@@ -1,5 +1,5 @@
-import type { ProfileCache } from '../cache/profile-cache';
-import type { BestPracticeValidator } from '../validators/best-practice-validator';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import type { BestPracticeValidator } from '../validators/best-practice-validator.js';
 import type {
   CustomRuleExecutor,
   InvariantExecutor,
@@ -8,13 +8,13 @@ import type {
   ReferenceExecutor,
   StructuralExecutor,
   TerminologyExecutor,
-} from './executors';
-import type { FhirClientLike } from './profile-loader-utils';
-import type { QuestionnaireContextRegistry } from './questionnaire-context-registry';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor';
-import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator';
+} from './executors/index.js';
+import type { FhirClientLike } from './profile-loader-utils.js';
+import type { QuestionnaireContextRegistry } from './questionnaire-context-registry.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor.js';
+import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator.js';
 
 export interface MultiAspectDeps {
   sdLoader: StructureDefinitionLoader;

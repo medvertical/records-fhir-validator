@@ -1,8 +1,8 @@
-import { isValueEmpty } from '../core/executors/structural-executor-helpers';
+import { isValueEmpty } from '../core/executors/structural-executor-helpers.js';
 import {
   isConcreteChoiceProperty,
   splitConcreteChoiceProperty,
-} from '../core/fhir-choice-property';
+} from '../core/fhir-choice-property.js';
 
 const CONFORMANCE_RESOURCE_TYPES = new Set([
   'ActivityDefinition', 'CapabilityStatement', 'ChargeItemDefinition',

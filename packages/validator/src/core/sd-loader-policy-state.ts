@@ -1,9 +1,9 @@
 import { normalizeProfileSourcesConfig } from '@records-fhir/validation-types';
-import { logger } from '../logger';
-import type { ProfileSourcesConfig } from '../types';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
-import { fingerprintPinnedCanonicals, resolvePinnedCanonical, type PinnedCanonicalFingerprint } from './sd-loader-pinned-canonical';
-import { recordsEqual } from './sd-loader-policy-cache';
+import { logger } from '../logger.js';
+import type { ProfileSourcesConfig } from '@records-fhir/validation-types';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
+import { fingerprintPinnedCanonicals, resolvePinnedCanonical, type PinnedCanonicalFingerprint } from './sd-loader-pinned-canonical.js';
+import { recordsEqual } from './sd-loader-policy-cache.js';
 
 interface LoaderPolicyInitialState {
   autoDownload: boolean;

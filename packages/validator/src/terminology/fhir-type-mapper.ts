@@ -27,7 +27,7 @@ import {
   getTypeCategory,
   isFhirPathTypeUrl,
   isFhirPrimitive,
-} from './fhir-type-mapping-core';
+} from './fhir-type-mapping-core.js';
 
 export {
   fhirPathToAllFhirPrimitives,
@@ -36,7 +36,7 @@ export {
   getTypeCategory,
   isFhirPathTypeUrl,
   isFhirPrimitive,
-} from './fhir-type-mapping-core';
+} from './fhir-type-mapping-core.js';
 
 // ============================================================================
 // Type Normalization Functions

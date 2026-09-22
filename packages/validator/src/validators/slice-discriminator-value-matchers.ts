@@ -1,9 +1,9 @@
-import type { SliceDefinition } from './slice-types';
-import { getValueAtPath, valueCanIdentifyFixedSlice, valuesMatch } from './slice-utils';
+import type { SliceDefinition } from './slice-types.js';
+import { getValueAtPath, valueCanIdentifyFixedSlice, valuesMatch } from './slice-utils.js';
 import {
   canPatternCoreIdentifyCodingSlice,
   matchWholeElementChildConstraints,
-} from './slice-discriminator-complex-matchers';
+} from './slice-discriminator-complex-matchers.js';
 import {
   extensionProfileUrlMatches,
   getChildConstraint,
@@ -11,7 +11,7 @@ import {
   isProhibitedEmptyWholeElementSlice,
   matchChildBindingDiscriminator,
   normalizeChildConstraintPath,
-} from './slice-discriminator-constraints';
+} from './slice-discriminator-constraints.js';
 
 type PatternMatcher = (value: unknown, pattern: unknown) => boolean;
 type BindingMatcher = (value: unknown, codes: Set<string>) => boolean;

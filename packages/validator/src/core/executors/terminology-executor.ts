@@ -1,17 +1,25 @@
-/** Public facade for terminology resolution configuration and validation execution. */
+/**
+ * Public facade for terminology resolution configuration and validation execution.
+ *
+ * Supplemental terminology-aspect validators are wired here rather than at a
+ * fan-out call site, so every fan-out path inherits the same rule set.
+ */
 
-import type { ValidationIssue } from '../../types';
-import type { FHIRPathTerminologyResolver } from '../../validators/fhirpath-async-terminology';
-import { ValueSetCache } from '../../validators/valueset-cache';
-import { ValueSetValidator, type TerminologyResolutionConfig } from '../../validators/valueset-validator';
-import { logger } from '../../logger';
-import type { TerminologyValidationPort } from './terminology-validation-port';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ProfileSourceContext } from '../../persistence/index.js';
+import { deepBindingValidator } from '../../validators/deep-binding-validator.js';
+import { resourceTypeOf } from '../fhir-resource.js';
+import type { FHIRPathTerminologyResolver } from '../../validators/fhirpath-async-terminology.js';
+import { ValueSetCache } from '../../validators/valueset-cache.js';
+import { ValueSetValidator, type TerminologyResolutionConfig } from '../../validators/valueset-validator.js';
+import { logger } from '../../logger.js';
+import type { TerminologyValidationPort } from './terminology-validation-port.js';
 import {
   TerminologyValidationPipeline,
   type TerminologyValidationContext,
-} from './terminology-validation-pipeline';
+} from './terminology-validation-pipeline.js';
 
-export type { TerminologyValidationContext } from './terminology-validation-pipeline';
+export type { TerminologyValidationContext } from './terminology-validation-pipeline.js';
 
 export class TerminologyExecutor {
   private readonly valuesetValidator: TerminologyValidationPort;
@@ -37,6 +45,14 @@ export class TerminologyExecutor {
     return this.valuesetValidator.getResolutionConfig();
   }
 
+  /**
+   * The ValueSet validator is shared with the structural and profile
+   * executors, so the tenant scope is bound once before any aspect runs.
+   */
+  setSourceContext(context: ProfileSourceContext | undefined): void {
+    this.valuesetValidator.setSourceContext?.(context);
+  }
+
   getFHIRPathTerminologyResolver(): FHIRPathTerminologyResolver {
     return this.valuesetValidator;
   }
@@ -47,7 +63,15 @@ export class TerminologyExecutor {
     logger.info('[TerminologyExecutor] Cache cleared');
   }
 
-  validate(context: TerminologyValidationContext): Promise<ValidationIssue[]> {
-    return this.validationPipeline.validate(context);
+  async validate(context: TerminologyValidationContext): Promise<ValidationIssue[]> {
+    const pipelineIssues = await this.validationPipeline.validate(context);
+    return [
+      ...pipelineIssues,
+      ...deepBindingValidator.validate({
+        resource: context.resource,
+        resourceType: resourceTypeOf(context.resource, context.resourceType),
+        structureDef: context.structureDef,
+      }),
+    ];
   }
 }

@@ -15,6 +15,7 @@ describe('terminology server routing matrix', () => {
         id: 'csiro-ontoserver-r4',
         enabled: true,
         fhirVersions: ['R4'],
+        snomedEditions: ['900000000000207008'],
       }),
       expect.objectContaining({
         id: 'snowstorm-snomedtools',
@@ -22,6 +23,24 @@ describe('terminology server routing matrix', () => {
         preferredSystems: ['http://snomed.info/sct'],
       }),
     ]));
+  });
+
+  it('routes the International SNOMED edition to the enabled CSIRO preset', () => {
+    expect(resolveTerminologyServerForSystem(
+      { strategy: 'server-first', servers: DEFAULT_TERMINOLOGY_SERVERS },
+      'http://snomed.info/sct',
+      'http://snomed.info/sct/900000000000207008/version/20230731',
+      'R4',
+    )).toMatchObject({
+      url: 'https://r4.ontoserver.csiro.au/fhir', authoritativeSnomedEdition: true,
+    });
+  });
+
+  it('keeps general-purpose presets eligible for other systems after declaring SNOMED editions', () => {
+    expect(resolveTerminologyServerForSystem(
+      { strategy: 'server-first', serverUrl: 'https://tx.fhir.org/r5', servers: DEFAULT_TERMINOLOGY_SERVERS },
+      'http://loinc.org', undefined, 'R4',
+    )).toMatchObject({ url: 'https://r4.ontoserver.csiro.au/fhir' });
   });
 
   it('skips an open SNOMED specialist circuit and falls back to the generic server', () => {

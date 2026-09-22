@@ -1,15 +1,15 @@
-import { getPrimitiveSidecar, resolveFhirSegmentValue } from '../fhir-primitive-sidecar';
-import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
-import { typeCodeMatchesValue } from '../../validators/slice-type-discriminator';
-import { inferType } from '../../validators/slice-value-type';
-import { excludeAmbiguousResliceItems } from './profile-nested-slice-ambiguity';
+import { getPrimitiveSidecar, resolveFhirSegmentValue } from '../fhir-primitive-sidecar.js';
+import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
+import { typeCodeMatchesValue } from '../../validators/slice-type-discriminator.js';
+import { inferType } from '../../validators/slice-value-type.js';
+import { excludeAmbiguousResliceItems } from './profile-nested-slice-ambiguity.js';
 import {
   buildFunctionPathPredicate,
   extractFixed,
   extractPattern,
   hasFunctionPathSegments,
   valueContainsPattern,
-} from './profile-nested-slice-function-paths';
+} from './profile-nested-slice-function-paths.js';
 
 type ElementDef = { id?: string; path?: string };
 

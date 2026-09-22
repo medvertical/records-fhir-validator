@@ -1,20 +1,20 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import { validateBundleCrossEntryReferences } from './bundle-cross-entry-references';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateBundleCrossEntryReferences } from './bundle-cross-entry-references.js';
 import {
   bundleHasDuplicateEntryIds,
   detectDuplicateBundleEntries,
   validateBundleEntryIdConsistency,
   validateBundleFullUrls,
   validateBundleLinkRelations,
-} from './bundle-entry-rules';
+} from './bundle-entry-rules.js';
 import {
   validateBundleEntryResources,
   type EntryResourceValidator,
-} from './bundle-entry-resource-validation';
-import { validateBundleNarrativeLinks } from './bundle-narrative-links';
-import { validateBundleReachability } from './bundle-reachability';
-import { validateBundleFullUrlPresence, validateBundleTypeRules } from './bundle-type-rules';
+} from './bundle-entry-resource-validation.js';
+import { validateBundleNarrativeLinks } from './bundle-narrative-links.js';
+import { validateBundleReachability } from './bundle-reachability.js';
+import { validateBundleFullUrlPresence, validateBundleTypeRules } from './bundle-type-rules.js';
 
 interface BundleStructureIssue {
   code: string;

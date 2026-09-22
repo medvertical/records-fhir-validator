@@ -1,5 +1,5 @@
-import type { ElementDefinition } from '../structure-definition-types';
-import { matchesPattern } from '../../validators/slice-utils';
+import type { ElementDefinition } from '../structure-definition-types.js';
+import { matchesPattern } from '../../validators/slice-utils.js';
 
 export function codingMatchesPattern(coding: unknown, pattern: Record<string, unknown>): boolean {
   if (!coding || typeof coding !== 'object' || Array.isArray(coding)) return false;

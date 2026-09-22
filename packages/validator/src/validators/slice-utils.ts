@@ -5,11 +5,11 @@
  * remains independently maintainable and testable.
  */
 
-export * from './slice-binding-code-matching';
-export * from './slice-canonical-matching';
-export * from './slice-constraint-values';
-export * from './slice-fixed-value-matching';
-export * from './slice-path-resolution';
-export * from './slice-pattern-matching';
-export * from './slice-value-equality';
-export * from './slice-value-type';
+export * from './slice-binding-code-matching.js';
+export * from './slice-canonical-matching.js';
+export * from './slice-constraint-values.js';
+export * from './slice-fixed-value-matching.js';
+export * from './slice-path-resolution.js';
+export * from './slice-pattern-matching.js';
+export * from './slice-value-equality.js';
+export * from './slice-value-type.js';

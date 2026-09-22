@@ -10,9 +10,9 @@
  * Returns immediately on critical errors without running full validation.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
 
 // ============================================================================
 // Types

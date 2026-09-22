@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../types';
-import type { DedupeContext } from './validation-issue-dedupe-context';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { DedupeContext } from './validation-issue-dedupe-context.js';
 import {
   isRedundantBestPracticePresenceIssue,
   isRedundantBundleReferenceIssue,
@@ -30,12 +30,12 @@ import {
   isRedundantTerminologyDisplayMismatchIssue,
   isRedundantTerminologyNotFoundIssue,
   isRedundantUnresolvedInvalidReferenceIssue,
-} from './validation-issue-dedupe-rule-predicates';
+} from './validation-issue-dedupe-rule-predicates.js';
 import {
   isRedundantMetadataProfileInvalidUrlIssue,
   isRedundantProfileNotResolvedWarning,
   normalizeRequiredElementPath,
-} from './validation-issue-dedupe-utils';
+} from './validation-issue-dedupe-utils.js';
 import {
   isMiiGenderConstraintIssue,
   isRedundantBundleInvariantIssue,
@@ -43,10 +43,11 @@ import {
   isRedundantGenericConstraintIssue,
   isRedundantMetadataMissingTimezoneIssue,
   isRedundantNameInvariantIssue,
+  isRedundantParentPatternMismatchIssue,
   isRedundantProfileSpecificConstraintIssue,
   isRedundantQuestionnaireQue1bIssue,
   isRedundantRequiredElementIssue,
-} from './validation-issue-dedupe-profile-suppressions';
+} from './validation-issue-dedupe-profile-suppressions.js';
 
 export interface DedupeSuppressionRule {
   readonly id: string;
@@ -103,6 +104,8 @@ function createConstraintRules(context: DedupeContext): DedupeSuppressionRule[] 
       isRedundantExtensionSliceMaxIssue(issue, context.profileExtensionMaxKeys)),
     rule('mustsupport-over-best-practice-presence', issue =>
       isRedundantMustSupportBestPracticeIssue(issue, context.mustSupportPaths)),
+    rule('specific-pattern-mismatch-over-parent', issue =>
+      isRedundantParentPatternMismatchIssue(issue, context.patternMismatchPaths)),
   ];
 }
 

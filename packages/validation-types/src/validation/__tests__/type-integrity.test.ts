@@ -221,6 +221,30 @@ describe('Type Integrity - DTO Serialization', () => {
   });
 
   describe('ValidationSettingsUpdate', () => {
+    it('migrates the legacy nested FHIR version to the canonical top-level field', () => {
+      const result = safeParseSettingsUpdate({
+        resourceTypes: { fhirVersion: 'R5' },
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.fhirVersion).toBe('R5');
+        expect(result.data.resourceTypes?.fhirVersion).toBe('R5');
+      }
+    });
+
+    it('lets the canonical top-level FHIR version repair a conflicting legacy value', () => {
+      const normalized = normalizeValidationSettings({
+        fhirVersion: 'R6',
+        resourceTypes: { fhirVersion: 'R4' },
+      }) as { fhirVersion: string; resourceTypes: { fhirVersion: string } };
+
+      expect(normalized).toMatchObject({
+        fhirVersion: 'R6',
+        resourceTypes: { fhirVersion: 'R6' },
+      });
+    });
+
     it('should serialize and deserialize ValidationSettingsUpdate correctly', () => {
       const update: ValidationSettingsUpdate = {
         aspects: {

@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { RecordsValidator } from '../validator-engine';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 type MultiAspectResult = {
   isValid: boolean;
@@ -204,9 +204,8 @@ describe('single validate vs multi-aspect validateBatch parity', () => {
 
     const multiIssues = flattenMultiAspectIssues(multiResult);
 
-    if (hasUnresolvedProfile(singleIssues) || hasUnresolvedProfile(multiIssues)) {
-      return;
-    }
+    expect(hasUnresolvedProfile(singleIssues), 'single path requires its declared profile').toBe(false);
+    expect(hasUnresolvedProfile(multiIssues), 'batch path requires its declared profile').toBe(false);
 
     expect(
       singleIssues.filter(issue => issue.ruleId === 'profile-targetprofile-match-failed'),
@@ -237,9 +236,8 @@ describe('single validate vs multi-aspect validateBatch parity', () => {
 
     const multiIssues = flattenMultiAspectIssues(multiResult);
 
-    if (hasUnresolvedProfile(singleIssues) || hasUnresolvedProfile(multiIssues)) {
-      return;
-    }
+    expect(hasUnresolvedProfile(singleIssues), 'single path requires its declared profile').toBe(false);
+    expect(hasUnresolvedProfile(multiIssues), 'batch path requires its declared profile').toBe(false);
 
     const expectedParentPath = 'Bundle.entry[0].resource/*Composition/comp-1*/';
 

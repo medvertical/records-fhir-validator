@@ -14,15 +14,16 @@
 
 export {
     applyStrictnessSeverity,
+    applyStrictnessByIssueAspect,
     resolveStrictnessConfig,
     countSeveritiesWithStrictness,
     getEffectiveSeverity,
     getStrictnessDescription,
-} from './strictness-filter';
+} from './strictness-filter.js';
 
 export {
     applyPublicationEscalation,
     isForPublication,
-} from './publication-escalation';
+} from './publication-escalation.js';
 
-export type { ValidationStrictness } from './strictness-filter';
+export type { ValidationStrictness } from './strictness-filter.js';

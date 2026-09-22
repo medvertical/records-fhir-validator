@@ -50,18 +50,19 @@ function createDeps(customRuleValidate = vi.fn().mockResolvedValue([])) {
 }
 
 describe('multi-aspect custom rule execution', () => {
-  it('does not call the custom rule source when auto-apply is disabled', async () => {
+  it.each([{ autoApplyCustomRules: false, aspects: {} }, { aspects: {} }, undefined])('does not call the custom rule source without explicit auto-apply: %s', async settings => {
     const customRuleValidate = vi.fn().mockResolvedValue([]);
     const deps = createDeps(customRuleValidate);
     const validate = buildMultiAspectValidateCallback(
       deps as never,
       ['custom_rule', 'metadata'],
-      { autoApplyCustomRules: false, aspects: {} },
+      settings,
       1,
     );
 
-    await validate({ resourceType: 'Patient', id: 'p1' }, PATIENT_PROFILE, 'R4');
+    const result = await validate({ resourceType: 'Patient', id: 'p1' }, PATIENT_PROFILE, 'R4');
 
+    expect(result.aspects.find(aspect => aspect.aspect === 'custom_rule')).toMatchObject({ issues: [], evidenceIssues: [], isValid: true });
     expect(customRuleValidate).not.toHaveBeenCalled();
   });
 

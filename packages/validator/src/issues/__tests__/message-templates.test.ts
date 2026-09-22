@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMessage } from '../message-templates.js';
+import { formatMessage } from '../message-formatting.js';
 import { interpolateMessageTemplate } from '../message-template-interpolation.js';
 
 describe('profile message templates', () => {

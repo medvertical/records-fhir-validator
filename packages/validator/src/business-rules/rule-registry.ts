@@ -5,22 +5,22 @@
  * Extracted from business-rule-validator.ts to reduce file size.
  */
 
-import type { BusinessRule, BusinessRuleMap } from './business-rule-types';
-import { logger } from '../logger';
-import { validatePatientAge } from './validators/patient-validators';
+import type { BusinessRule, BusinessRuleMap } from './business-rule-types.js';
+import { logger } from '../logger.js';
+import { validatePatientAge } from './validators/patient-validators.js';
 import {
   validateObservationEffectiveDate,
   validateObservationStatusValueConsistency,
   validateObservationValueRange,
-} from './validators/observation-validators';
+} from './validators/observation-validators.js';
 import {
   validateConditionOnsetDate,
   validateConditionStatusDateConsistency,
-} from './validators/condition-validators';
+} from './validators/condition-validators.js';
 import {
   validateEncounterPeriod,
   validateEncounterStatusPeriodConsistency,
-} from './validators/encounter-validators';
+} from './validators/encounter-validators.js';
 
 export class RuleRegistry {
   private businessRules: BusinessRuleMap = new Map();

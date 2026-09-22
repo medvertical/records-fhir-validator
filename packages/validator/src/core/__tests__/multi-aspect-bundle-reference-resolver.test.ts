@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createBundleReferenceResolver } from '../multi-aspect-bundle-reference-resolver';
+import {
+  createBundleCanonicalResolver,
+  createBundleReferenceResolver,
+} from '../multi-aspect-bundle-reference-resolver';
 
 describe('multi-aspect bundle reference resolver', () => {
   it('resolves a bare hash to the containing resource', () => {
@@ -150,5 +153,51 @@ describe('multi-aspect bundle reference resolver', () => {
     bundle.entry = [{ fullUrl: 'urn:uuid:later', resource: patient }];
 
     expect(createBundleReferenceResolver(bundle, bundle)?.('urn:uuid:later')).toBe(patient);
+  });
+});
+
+describe('multi-aspect bundle canonical resolver', () => {
+  const questionnaireUrn = 'urn:uuid:bc52dbf4-fd67-52e3-ba75-731a76805872';
+  const urnQuestionnaire = { resourceType: 'Questionnaire', status: 'active' };
+  const urlQuestionnaire = {
+    resourceType: 'Questionnaire',
+    id: 'phq-9',
+    url: 'https://example.org/Questionnaire/phq-9',
+    version: '2.0.0',
+    status: 'active',
+  };
+  const bundle = {
+    resourceType: 'Bundle',
+    type: 'transaction',
+    entry: [
+      { fullUrl: questionnaireUrn, resource: urnQuestionnaire },
+      { fullUrl: 'urn:uuid:phq-9', resource: urlQuestionnaire },
+      { fullUrl: 'urn:uuid:patient', resource: { resourceType: 'Patient', id: 'p1' } },
+    ],
+  };
+
+  it('resolves a urn:uuid canonical against the entry fullUrl without a Questionnaire.url', () => {
+    expect(createBundleCanonicalResolver(bundle)?.(questionnaireUrn, 'Questionnaire')).toBe(urnQuestionnaire);
+  });
+
+  it('resolves a literal canonical against the entry resource url and honours a pinned version', () => {
+    const resolve = createBundleCanonicalResolver(bundle);
+
+    expect(resolve?.(urlQuestionnaire.url, 'Questionnaire')).toBe(urlQuestionnaire);
+    expect(resolve?.(`${urlQuestionnaire.url}|2.0.0`, 'Questionnaire')).toBe(urlQuestionnaire);
+    expect(resolve?.(`${urlQuestionnaire.url}|1.0.0`, 'Questionnaire')).toBeNull();
+  });
+
+  it('resolves a relative Questionnaire/id canonical to the bundled resource', () => {
+    expect(createBundleCanonicalResolver(bundle)?.('Questionnaire/phq-9', 'Questionnaire')).toBe(urlQuestionnaire);
+  });
+
+  it('refuses an entry of another resource type', () => {
+    expect(createBundleCanonicalResolver(bundle)?.('urn:uuid:patient', 'Questionnaire')).toBeNull();
+  });
+
+  it('yields no resolver without a bundle or without entries', () => {
+    expect(createBundleCanonicalResolver(undefined)).toBeNull();
+    expect(createBundleCanonicalResolver({ resourceType: 'Bundle', entry: [] })).toBeNull();
   });
 });

@@ -1,10 +1,10 @@
-import type { Constraint } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
-import { validateDom3Constraint } from './constraint-dom-rules';
-import { resolveKnownConstraintOutcome } from './constraint-evaluation-outcome';
-import type { ConstraintValidationState, FhirResource } from './constraint-validation-input';
-import { preprocessTypeLiterals, resolveTypeLiteralContext } from './fhirpath-type-preprocessor';
-import { evaluateSpecialisedRootConstraint } from './sd-fhirpath-executor';
+import type { Constraint } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateDom3Constraint } from './constraint-dom-rules.js';
+import { resolveKnownConstraintOutcome } from './constraint-evaluation-outcome.js';
+import type { ConstraintValidationState, FhirResource } from './constraint-validation-input.js';
+import { preprocessTypeLiterals, resolveTypeLiteralContext } from './fhirpath-type-preprocessor.js';
+import { evaluateSpecialisedRootConstraint } from './sd-fhirpath-executor.js';
 
 export type PreparedConstraintEvaluation =
   | { handled: true; issues: ValidationIssue[] }

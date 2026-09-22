@@ -1,8 +1,8 @@
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
-import { createSafeValidationFailureMessage } from '../utils/validation-execution-failure';
-import { getBundleEntries, toBundleRecord } from './bundle-validator-records';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createSafeValidationFailureMessage } from '../utils/validation-execution-failure.js';
+import { getBundleEntries, toBundleRecord } from './bundle-validator-records.js';
 
 export type EntryResourceValidator = (
   resource: Record<string, unknown>,

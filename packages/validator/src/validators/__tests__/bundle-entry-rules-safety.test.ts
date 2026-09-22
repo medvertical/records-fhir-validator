@@ -117,6 +117,39 @@ describe('bundle entry rules safety', () => {
     ]);
   });
 
+  it('rejects a paging link relation outside a paged bundle type', () => {
+    const issues = validateBundleLinkRelations({
+      type: 'document',
+      link: [{ relation: 'self' }, { relation: 'first' }],
+    });
+
+    expect(issues).toEqual([
+      expect.objectContaining({
+        code: 'bundle-link-relation-prohibited',
+        path: 'Bundle.link[1].relation',
+        message: expect.stringContaining("'first'"),
+      }),
+    ]);
+  });
+
+  it('allows paging link relations in searchset and history bundles', () => {
+    for (const type of ['searchset', 'history']) {
+      const issues = validateBundleLinkRelations({
+        type,
+        link: [{ relation: 'self' }, { relation: 'next' }, { relation: 'last' }],
+      });
+      expect(issues).toEqual([]);
+    }
+  });
+
+  it('stays quiet about paging relations when the bundle declares no type', () => {
+    const issues = validateBundleLinkRelations({
+      link: [{ relation: 'next' }],
+    });
+
+    expect(issues).toEqual([]);
+  });
+
   it('uses collision-free logical resource/version keys', () => {
     const issues = detectDuplicateBundleEntries({
       entry: [

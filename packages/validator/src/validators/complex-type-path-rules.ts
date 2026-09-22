@@ -1,5 +1,5 @@
-import type { ElementDefinition } from '../core/structure-definition-types';
-import { getNestedValue } from '../core/executors/structural-executor-helpers';
+import type { ElementDefinition } from '../core/structure-definition-types.js';
+import { getNestedValue } from '../core/executors/structural-executor-helpers.js';
 
 export function shouldSkipComplexDeepValidation(basePath: string): boolean {
   if (basePath.match(/^StructureDefinition\.(snapshot|differential)\.element/)) {

@@ -1,22 +1,23 @@
-import { logger } from '../logger';
-import type { TerminologyApiClient } from './terminology-api-client';
-import { TerminologyOperationCache } from './terminology-operation-cache';
-import { ValueSetCache } from './valueset-cache';
+import { logger } from '../logger.js';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import type { TerminologyApiClient } from './terminology-api-client.js';
+import { TerminologyOperationCache } from './terminology-operation-cache.js';
+import { ValueSetCache } from './valueset-cache.js';
 import {
   clearValueSetValidatorCaches,
   getValueSetValidatorCacheStats,
-} from './valueset-cache-operations';
-import type { ValueSetCodeSystemOperations } from './valueset-code-system-operations';
-import { registerExternalTerminologyResourceInCache } from './valueset-external-resource-registration';
-import type { FhirVersion } from './valueset-expansion-cache-key';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import { ValueSetRuntimeState } from './valueset-runtime-state';
-import type { TwoPhaseShadowEvaluator } from './valueset-two-phase-shadow';
+} from './valueset-cache-operations.js';
+import type { ValueSetCodeSystemOperations } from './valueset-code-system-operations.js';
+import { registerExternalTerminologyResourceInCache } from './valueset-external-resource-registration.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import { ValueSetRuntimeState } from './valueset-runtime-state.js';
+import type { TwoPhaseShadowEvaluator } from './valueset-two-phase-shadow.js';
 import {
   type TerminologyDiagnostics,
   type TerminologyResolutionConfig,
-} from './valueset-types';
-import { createValueSetValidatorComponents } from './valueset-validator-components';
+} from './valueset-types.js';
+import { createValueSetValidatorComponents } from './valueset-validator-components.js';
 
 /** Owns the mutable terminology state and its coordinated invalidation rules. */
 export class ValueSetValidatorRuntime {
@@ -58,6 +59,10 @@ export class ValueSetValidatorRuntime {
     return this.state.bindingResolutions;
   }
 
+  get unverifiedBindingDiagnostics(): ValueSetRuntimeState['unverifiedBindingDiagnostics'] {
+    return this.state.unverifiedBindingDiagnostics;
+  }
+
   setResolutionConfig(config: Partial<TerminologyResolutionConfig>): void {
     const resolutionConfig = this.state.updateResolutionConfig(config);
     this.apiClient.setConfig(resolutionConfig);
@@ -73,6 +78,19 @@ export class ValueSetValidatorRuntime {
 
   getResolutionConfig(): TerminologyResolutionConfig {
     return this.state.getResolutionConfigSnapshot();
+  }
+
+  /**
+   * Bind package lookups to the host tenant scope. A tenant change discards
+   * every miss and in-flight binding decision taken without that scope;
+   * positive entries and externally registered resources survive.
+   */
+  setSourceContext(context: ProfileSourceContext | undefined): void {
+    if (!this.packageLoader.setSourceContext(context)) return;
+    this.cache.clearNegativeEntries();
+    this.twoPhaseShadow.clearExpansion();
+    this.state.advanceBindingResolutionEpoch();
+    logger.debug('[ValueSetValidator] Package lookups bound to the host tenant scope');
   }
 
   registerExternalTerminologyResource(

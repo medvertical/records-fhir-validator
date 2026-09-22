@@ -1,28 +1,23 @@
-import type { ValidationIssue, ValidationSettings } from '../types';
-import { ReferenceTargetValidator } from '../validators/reference-target-validator';
-import type { ReferenceResolver } from '../validators/slicing-validator';
-import { BatchValidationAbortedError } from './batch-validator';
-import {
-  applyCodeInferredAttributionToAspectResults,
-  resolveCodeInferredProfileMatch,
-} from './code-inferred-profile-attribution';
-import {
-  applyDeclaredProfileAttributionToAspectResults,
-  resolveDeclaredProfileSubstitution,
-} from './declared-profile-attribution';
-import { appendBundleEntryValidationResults } from './multi-aspect-bundle-entry-validation';
-import { appendContainedResourceValidationResults } from './multi-aspect-contained-validation';
-import { appendParametersResourceValidationResults } from './multi-aspect-parameters-validation';
-import type { MultiAspectDeps } from './multi-aspect-dependencies';
-import { executeSelectedAspects } from './multi-aspect-aspect-execution';
+import type { ProfileApplicationSource, ValidationSettings } from '@records-fhir/validation-types';
+import { ReferenceTargetValidator } from '../validators/reference-target-validator.js';
+import type { ReferenceResolver } from '../validators/slicing-validator.js';
+import { BatchValidationAbortedError } from './batch-validator.js';
+import { appendBundleEntryValidationResults } from './multi-aspect-bundle-entry-validation.js';
+import { appendContainedResourceValidationResults } from './multi-aspect-contained-validation.js';
+import { appendMandatedProfileValidationResults } from './multi-aspect-mandated-profile.js';
+import { appendParametersResourceValidationResults } from './multi-aspect-parameters-validation.js';
+import type { MultiAspectDeps } from './multi-aspect-dependencies.js';
+import { executeSelectedAspects } from './multi-aspect-aspect-execution.js';
 import {
   MultiAspectResourcePreparation,
-  type MultiAspectResourceContext,
-} from './multi-aspect-resource-preparation';
-import type { AspectResult, MultiAspectValidateResult, ValidateOneFn } from './multi-aspect-types';
-import type { StructureDefinition } from './structure-definition-types';
-import { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor';
-import { MultiAspectSessionPolicy } from './multi-aspect-session-policy';
+} from './multi-aspect-resource-preparation.js';
+import type { AspectResult, MultiAspectValidateResult, ValidateOneFn } from './multi-aspect-types.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor.js';
+import { MultiAspectSessionPolicy } from './multi-aspect-session-policy.js';
+import { createAspectIssueAttribution } from './multi-aspect-profile-attribution.js';
+import { projectSemanticAspectResult, resolveSemanticAspectPlan, type SemanticAspectPlan } from './semantic-aspect-plan.js';
+import { createReferenceResourceFetcher } from '../reference/reference-resource-fetcher.js';
 
 const EMBEDDED_RESOURCE_MAX_DEPTH = 3;
 
@@ -38,36 +33,42 @@ interface MultiAspectValidationSessionOptions {
   ) => void | Promise<void>;
   externalReferenceResolver?: ReferenceResolver;
   serverId?: number;
+  profileSources?: ReadonlyMap<unknown, ProfileApplicationSource>;
 }
 
 export class MultiAspectValidationSession {
   private readonly typedSettings: ValidationSettings | undefined;
-  private readonly selectedAspects: ReadonlySet<string>;
+  private readonly aspectPlan: SemanticAspectPlan;
   private readonly policy: MultiAspectSessionPolicy;
   private readonly targetProfileValidator = new ReferenceTargetValidator();
   private readonly sdFHIRPathExecutor: SDFHIRPathExecutor;
   private readonly resourcePreparation: MultiAspectResourcePreparation;
+  private readonly referenceResourceFetcher;
 
   constructor(private readonly options: MultiAspectValidationSessionOptions) {
     this.typedSettings = options.settings as ValidationSettings | undefined;
-    this.selectedAspects = new Set(options.aspects);
+    this.aspectPlan = resolveSemanticAspectPlan(options.aspects);
     this.policy = new MultiAspectSessionPolicy(this.typedSettings);
     this.sdFHIRPathExecutor = options.deps.sdFHIRPathExecutor ?? new SDFHIRPathExecutor();
+    this.referenceResourceFetcher = createReferenceResourceFetcher(options.deps.fhirClient);
     this.resourcePreparation = new MultiAspectResourcePreparation({
       deps: options.deps,
       settings: options.settings,
       organizationId: options.organizationId,
       serverId: options.serverId,
       externalReferenceResolver: options.externalReferenceResolver,
+      referenceResourceFetcher: this.referenceResourceFetcher,
       throwIfStopped: () => this.throwIfStopped(),
     });
   }
 
-  validate = (
+  validate = async (
     resource: unknown,
     profileUrl: string,
     fhirVersion: 'R4' | 'R5' | 'R6',
-  ): Promise<MultiAspectValidateResult> => this.validateOne(resource, profileUrl, fhirVersion, 0);
+  ): Promise<MultiAspectValidateResult> => projectSemanticAspectResult(
+    await this.validateOne(resource, profileUrl, fhirVersion, 0), this.aspectPlan,
+  );
 
   private validateOne: ValidateOneFn = async (
     resource,
@@ -94,12 +95,15 @@ export class MultiAspectValidationSession {
       collectedAspects,
       fhirVersion,
       profileUrl,
+      attributeIssues: createAspectIssueAttribution(
+        context, profileFallbackIssue, this.options.profileSources?.get(resource),
+      ),
       throwIfStopped: () => this.throwIfStopped(),
     });
 
     await executeSelectedAspects({
       deps: this.options.deps,
-      selectedAspects: this.selectedAspects,
+      selectedAspects: this.aspectPlan.executors,
       settings: this.typedSettings,
       organizationId: this.options.organizationId,
       profileSourceContext,
@@ -115,8 +119,8 @@ export class MultiAspectValidationSession {
       containingResource,
       throwIfStopped: () => this.throwIfStopped(),
       sdFHIRPathExecutor: this.sdFHIRPathExecutor,
+      referenceResourceFetcher: this.referenceResourceFetcher,
     });
-    this.attributeSubstitutedProfileFindings(collectedAspects, context, profileFallbackIssue);
     await this.appendEmbeddedValidation(
       context.resource,
       fhirVersion,
@@ -125,35 +129,21 @@ export class MultiAspectValidationSession {
       context.structureDef,
       collectedAspects,
     );
-    return this.policy.buildResult(collectedAspects, context.structureDef, profileFallbackIssue);
-  };
-
-  /**
-   * Findings produced by a silently substituted profile SD (code-inferred or
-   * declared via meta.profile) must not read as base-spec claims. A fallback
-   * means validation ran against the base SD after all, so the substitution
-   * must not claim the findings. Runs before embedded results are appended so
-   * only this resource's aspect buckets are relabeled.
-   */
-  private attributeSubstitutedProfileFindings(
-    collectedAspects: AspectResult[],
-    context: MultiAspectResourceContext,
-    profileFallbackIssue: ValidationIssue | null,
-  ): void {
-    if (profileFallbackIssue || !this.selectedAspects.has('profile')) return;
-    const codeInferredProfile = resolveCodeInferredProfileMatch(context.resource, context.profileUrl);
-    if (codeInferredProfile) {
-      applyCodeInferredAttributionToAspectResults(collectedAspects, codeInferredProfile, context.fhirVersion);
-      return;
-    }
-    if (resolveDeclaredProfileSubstitution(context.resource, context.profileUrl)) {
-      applyDeclaredProfileAttributionToAspectResults(
-        collectedAspects,
+    if (recursionDepth < EMBEDDED_RESOURCE_MAX_DEPTH) {
+      await appendMandatedProfileValidationResults(
+        context.resource,
         context.profileUrl,
-        context.structureDef,
+        fhirVersion,
+        recursionDepth,
+        this.validateOne,
+        collectedAspects,
+        enclosingBundle,
+        this.options.shouldStop,
+        containingResource,
       );
     }
-  }
+    return this.policy.buildResult(collectedAspects, context.structureDef, profileFallbackIssue);
+  };
 
   private async appendEmbeddedValidation(
     resource: Record<string, unknown>,
@@ -202,7 +192,8 @@ export class MultiAspectValidationSession {
       structureDef,
       issues => this.policy.applyProfileIssuePolicies(issues),
       this.options.shouldStop,
-      this.options.onEmbeddedResourceValidated,
+      this.options.onEmbeddedResourceValidated && ((child, result) =>
+        this.options.onEmbeddedResourceValidated!(child, projectSemanticAspectResult(result, this.aspectPlan))),
     );
     this.throwIfStopped();
   }

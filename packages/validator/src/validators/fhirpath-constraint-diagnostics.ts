@@ -1,9 +1,14 @@
-import type { Constraint } from '../core/structure-definition-types';
+import type { Constraint } from '../core/structure-definition-types.js';
 
 export type FHIRPathConstraintSkipReason =
   | 'async-function'
   | 'disallowed-function'
-  | 'unsupported-engine-capability';
+  | 'unsupported-engine-capability'
+  // An expression that threw for a reason the engine cannot name — a compile
+  // crash on a FHIRPath 3.0 function, for instance. It is counted because the
+  // number is meant to answer "how many constraints produced no verdict", and
+  // an uncategorised failure produces one just as surely as a known one.
+  | 'evaluation-error';
 
 export interface FHIRPathConstraintSkipSample {
   reason: FHIRPathConstraintSkipReason;
@@ -86,6 +91,7 @@ function createEmptyDiagnostics(): FHIRPathConstraintDiagnostics {
         'async-function': 0,
         'disallowed-function': 0,
         'unsupported-engine-capability': 0,
+        'evaluation-error': 0,
       },
       byConstraintKey: {},
       byProfile: {},

@@ -1,3 +1,4 @@
+import { captureValidationDependency } from '../validation-dependency-snapshot.js';
 /**
  * ValueSet Package Loader
  * 
@@ -7,23 +8,24 @@
 import type {
     ValueSet,
     CodeSystem,
-} from './valueset-types';
-import { ValueSetCache } from './valueset-cache';
-import { logger } from '../logger';
-import { extractCodesFromCodeSystem } from './valueset-concept-utils';
+} from './valueset-types.js';
+import { ValueSetCache } from './valueset-cache.js';
+import { logger } from '../logger.js';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import { extractCodesFromCodeSystem } from './valueset-concept-utils.js';
 import {
     type FhirVersion,
     preferredMajorFor,
     versionedCacheKey,
-} from './valueset-package-utils';
-import { ValueSetPackageResourceAccess } from './valueset-package-resource-access';
+} from './valueset-package-utils.js';
+import { ValueSetPackageResourceAccess } from './valueset-package-resource-access.js';
 import {
     collectCodesFromValueSet,
     collectIncludeConceptFilters,
     collectUnenumerableSystemIncludes,
     type ValueSetConceptFilter,
-} from './valueset-package-expansion';
-import { normalizeKnownCodeSystemCanonical } from './code-system-canonical-aliases';
+} from './valueset-package-expansion.js';
+import { normalizeKnownCodeSystemCanonical } from './code-system-canonical-aliases.js';
 
 export type { ValueSetConceptFilter };
 
@@ -55,33 +57,51 @@ export class ValueSetPackageLoader {
     }
 
     /**
+     * Bind package lookups to the host tenant scope. Misses recorded before
+     * the scope was known may be answerable by the tenant's own packages, so
+     * loader-local negative state is discarded when the tenant changes.
+     */
+    setSourceContext(context: ProfileSourceContext | undefined): boolean {
+        const changed = this.packageResources.setSourceContext(context);
+        if (changed) this.clearLookupState();
+        return changed;
+    }
+
+    /** Whether lookups currently include the host tenant's installed packages. */
+    hasHostPackageScope(): boolean {
+        return this.packageResources.getSourceContext() !== undefined;
+    }
+
+    /**
      * Attempt to load a ValueSet definition from local packages and return its codes
      */
     async loadValueSet(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<string[] | null> {
-        const parts = valueSetUrl.split('|');
-        const canonical = parts[0];
-        const requestedVersion = parts[1];
-        const cacheKey = versionedCacheKey(canonical, requestedVersion, fhirVersion);
-        if (this.cache.hasValueSetFile(cacheKey)) {
-            const cached = this.cache.getValueSetFile(cacheKey);
-            return cached ? await this.extractCodesFromValueSet(cached) : null;
-        }
-        const lastSegment = canonical.split('/').pop();
-        if (!lastSegment) { this.cache.setValueSetFile(cacheKey, null); return null; }
-        const preferredMajor = requestedVersion ? requestedVersion.split('.')[0] : preferredMajorFor(fhirVersion);
-        const bestMatch = await this.packageResources.findResource<ValueSet>(
-            canonical,
-            [`ValueSet-${lastSegment}.json`, `${lastSegment}.json`],
-            'ValueSet',
-            preferredMajor,
-            requestedVersion,
-        );
-        if (bestMatch) {
-            this.cache.setValueSetFile(cacheKey, bestMatch);
-            return await this.extractCodesFromValueSet(bestMatch);
-        }
-        this.cache.setValueSetFile(cacheKey, null);
-        return null;
+        return captureValidationDependency('terminology', 'loadValueSet', [valueSetUrl, fhirVersion], async () => {
+            const parts = valueSetUrl.split('|');
+            const canonical = parts[0];
+            const requestedVersion = parts[1];
+            const cacheKey = versionedCacheKey(canonical, requestedVersion, fhirVersion);
+            if (this.cache.hasValueSetFile(cacheKey)) {
+                const cached = this.cache.getValueSetFile(cacheKey);
+                return cached ? await this.extractCodesFromValueSet(cached) : null;
+            }
+            const lastSegment = canonical.split('/').pop();
+            if (!lastSegment) { this.cache.setValueSetFile(cacheKey, null); return null; }
+            const preferredMajor = requestedVersion ? requestedVersion.split('.')[0] : preferredMajorFor(fhirVersion);
+            const bestMatch = await this.packageResources.findResource<ValueSet>(
+                canonical,
+                [`ValueSet-${lastSegment}.json`, `${lastSegment}.json`],
+                'ValueSet',
+                preferredMajor,
+                requestedVersion,
+            );
+            if (bestMatch) {
+                this.cache.setValueSetFile(cacheKey, bestMatch);
+                return await this.extractCodesFromValueSet(bestMatch);
+            }
+            this.cache.setValueSetFile(cacheKey, null);
+            return null;
+        });
     }
 
     /**
@@ -117,34 +137,36 @@ export class ValueSetPackageLoader {
         preferredFhirMajor?: string,
         requestedVersion?: string,
     ): Promise<CodeSystem | null> {
-        const cacheKey = requestedVersion
-            ? `${systemUrl}|${requestedVersion}`
-            : preferredFhirMajor
-                ? `${systemUrl}|fhir${preferredFhirMajor}`
-                : systemUrl;
-        if (this.cache.hasCodeSystemFile(cacheKey)) {
-            const cached = this.cache.getCodeSystemFile(cacheKey);
-            if (cached) return cached;
-            // A null in the shared cache may predate this loader and a package
-            // install. Only trust misses observed by this loader; cache resets
-            // explicitly clear this local set.
-            if (this.missingCodeSystemKeys.has(cacheKey)) return null;
-        }
-        const pending = this.pendingCodeSystemLoads.get(cacheKey);
-        if (pending) return pending;
+        return captureValidationDependency('terminology', 'loadCodeSystem', [systemUrl, preferredFhirMajor, requestedVersion], async () => {
+            const cacheKey = requestedVersion
+                ? `${systemUrl}|${requestedVersion}`
+                : preferredFhirMajor
+                    ? `${systemUrl}|fhir${preferredFhirMajor}`
+                    : systemUrl;
+            if (this.cache.hasCodeSystemFile(cacheKey)) {
+                const cached = this.cache.getCodeSystemFile(cacheKey);
+                if (cached) return cached;
+                // A null in the shared cache may predate this loader and a package
+                // install. Only trust misses observed by this loader; cache resets
+                // explicitly clear this local set.
+                if (this.missingCodeSystemKeys.has(cacheKey)) return null;
+            }
+            const pending = this.pendingCodeSystemLoads.get(cacheKey);
+            if (pending) return pending;
 
-        const load = this.loadCodeSystemUncached(
-            systemUrl,
-            cacheKey,
-            preferredFhirMajor,
-            requestedVersion,
-        );
-        this.pendingCodeSystemLoads.set(cacheKey, load);
-        try {
-            return await load;
-        } finally {
-            this.pendingCodeSystemLoads.delete(cacheKey);
-        }
+            const load = this.loadCodeSystemUncached(
+                systemUrl,
+                cacheKey,
+                preferredFhirMajor,
+                requestedVersion,
+            );
+            this.pendingCodeSystemLoads.set(cacheKey, load);
+            try {
+                return await load;
+            } finally {
+                this.pendingCodeSystemLoads.delete(cacheKey);
+            }
+        });
     }
 
     private async loadCodeSystemUncached(
@@ -225,26 +247,28 @@ export class ValueSetPackageLoader {
      * composition. Uses the same package search path as `loadValueSet`.
      */
     async loadValueSetResource(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<ValueSet | null> {
-        const [canonical, requestedVersion] = valueSetUrl.split('|');
-        const cacheKey = versionedCacheKey(canonical, requestedVersion, fhirVersion);
-        if (this.cache.hasValueSetFile(cacheKey)) {
-            return this.cache.getValueSetFile(cacheKey) ?? null;
-        }
-        const lastSegment = canonical.split('/').pop();
-        if (!lastSegment) {
-            this.cache.setValueSetFile(cacheKey, null);
-            return null;
-        }
-        const preferredMajor = requestedVersion ? requestedVersion.split('.')[0] : preferredMajorFor(fhirVersion);
-        const result = await this.packageResources.findResource<ValueSet>(
-            canonical,
-            [`ValueSet-${lastSegment}.json`, `${lastSegment}.json`],
-            'ValueSet',
-            preferredMajor,
-            requestedVersion,
-        );
-        this.cache.setValueSetFile(cacheKey, result ?? null);
-        return result;
+        return captureValidationDependency('terminology', 'loadValueSetResource', [valueSetUrl, fhirVersion], async () => {
+            const [canonical, requestedVersion] = valueSetUrl.split('|');
+            const cacheKey = versionedCacheKey(canonical, requestedVersion, fhirVersion);
+            if (this.cache.hasValueSetFile(cacheKey)) {
+                return this.cache.getValueSetFile(cacheKey) ?? null;
+            }
+            const lastSegment = canonical.split('/').pop();
+            if (!lastSegment) {
+                this.cache.setValueSetFile(cacheKey, null);
+                return null;
+            }
+            const preferredMajor = requestedVersion ? requestedVersion.split('.')[0] : preferredMajorFor(fhirVersion);
+            const result = await this.packageResources.findResource<ValueSet>(
+                canonical,
+                [`ValueSet-${lastSegment}.json`, `${lastSegment}.json`],
+                'ValueSet',
+                preferredMajor,
+                requestedVersion,
+            );
+            this.cache.setValueSetFile(cacheKey, result ?? null);
+            return result;
+        });
     }
 
     /**

@@ -1,17 +1,17 @@
-import type { ValidationSettings } from '@records-fhir/validation-types';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
-import type { ExtractedReference } from './reference-extracted-validation';
+import type { ValidationSettings, ValidationIssue } from '@records-fhir/validation-types';
+import { logger } from '../logger.js';
+import type { ExtractedReference } from './reference-extracted-validation.js';
 import {
   buildRecursiveReferenceIssues,
   buildReferencePathsByValue,
-} from './reference-recursive-issues';
-import { parseReference } from './reference-type-extractor';
-import { getRecursiveValidationConfig } from './reference-validation-args';
-import type { ReferenceValidatorDependencies } from './reference-validator-dependencies';
-import { createReferenceValidationIssue } from './reference-utils';
+} from './reference-recursive-issues.js';
+import { createReferenceResourceFetcher } from './reference-resource-fetcher.js';
+import type { ReferenceResourceFetcher } from './reference-fetch-deadline.js';
+import { getRecursiveValidationConfig } from './reference-validation-args.js';
+import type { ReferenceValidatorDependencies } from './reference-validator-dependencies.js';
+import { createReferenceValidationIssue } from './reference-utils.js';
 
-export type ReferenceResourceFetcher = (reference: string) => Promise<unknown>;
+export type { ReferenceResourceFetcher } from './reference-fetch-deadline.js';
 
 /** Owns optional recursive resolution and its operational failure mapping. */
 export class ReferenceValidationRuntime {
@@ -25,6 +25,7 @@ export class ReferenceValidationRuntime {
     settings: ValidationSettings | undefined,
     extractedReferences: ExtractedReference[],
     fhirClientOrVersion?: unknown,
+    resourceFetcher?: ReferenceResourceFetcher,
   ): Promise<ValidationIssue[]> {
     const config = getRecursiveValidationConfig(settings);
     if (!config.enabled) return [];
@@ -34,7 +35,7 @@ export class ReferenceValidationRuntime {
       const result = await this.recursiveValidator.validateRecursively(
         resource,
         config,
-        createResourceFetcher(fhirClientOrVersion),
+        resourceFetcher ?? createReferenceResourceFetcher(fhirClientOrVersion),
       );
       const issueResult = config.validateExternal
         ? result
@@ -88,16 +89,5 @@ export function referenceFailureMetadata(error: unknown): {
   return {
     errorType: error instanceof Error ? 'error' : 'non-error',
     ...(errorCode ? { errorCode } : {}),
-  };
-}
-
-function createResourceFetcher(value: unknown): ReferenceResourceFetcher | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const getResource = (value as { getResource?: unknown }).getResource;
-  if (typeof getResource !== 'function') return undefined;
-  return async reference => {
-    const parsed = parseReference(reference);
-    if (!parsed.isValid || !parsed.resourceType || !parsed.resourceId) return null;
-    return getResource.call(value, parsed.resourceType, parsed.resourceId);
   };
 }

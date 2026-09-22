@@ -1,12 +1,12 @@
-import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
-import { resourceTypeOf } from '../core/fhir-resource';
-import type { ElementDefinition } from '../core/structure-definition-types';
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import type { ElementRulesValidator } from './element-rules-validator';
-import type { ExtensionValidationContext } from './extension-types';
-import type { TypeValidator } from './type-validator';
-import type { ValueSetValidator } from './valueset-validator';
+import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar.js';
+import { resourceTypeOf } from '../core/fhir-resource.js';
+import type { ElementDefinition } from '../core/structure-definition-types.js';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ElementRulesValidator } from './element-rules-validator.js';
+import type { ExtensionValidationContext } from './extension-types.js';
+import type { TypeValidator } from './type-validator.js';
+import type { ValueSetValidator } from './valueset-validator.js';
 
 /** Validate the concrete value[x] selected by an extension instance. */
 export async function validateExtensionValueElements({

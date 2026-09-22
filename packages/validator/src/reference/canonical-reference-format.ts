@@ -2,7 +2,7 @@ import {
   CANONICAL_RESOURCE_TYPES,
   CANONICAL_URN_PATTERN,
   type CanonicalResourceType,
-} from './canonical-reference-definitions';
+} from './canonical-reference-definitions.js';
 
 export interface CanonicalReferenceInfo {
   canonical: string;

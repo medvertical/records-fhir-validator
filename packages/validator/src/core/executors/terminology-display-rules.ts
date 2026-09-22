@@ -1,14 +1,15 @@
-import type { ValidationIssue } from '../../types';
-import { createTerminologyIssue } from '../../terminology/terminology-issue';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createTerminologyIssue } from '../../terminology/terminology-issue.js';
+import { normalizeDisplay } from '../../validators/valueset-display-utils.js';
 
-// Each code maps to the full set of accepted designations, not just the current
+// Each LOINC code maps to accepted designations, not just the current
 // Long Common Name: per HL7 validator convention a resource without a language
 // matches ANY designation (any language, shortnames and former names included).
 // Former names cover prior LOINC releases too — e.g. the document-section
 // '<X> Narrative' LCNs that LOINC 2.78 renamed to '<X> note', which official
 // IG examples (hl7.fhir.eu.hdr ballot) still carry. Sets below were verified
 // against tx.fhir.org LOINC $lookup/$validate-code on versions 2.82 and 2.77;
-// comparison is case- and punctuation-insensitive via normalizeDisplay.
+// Comparison ignores case and formatting punctuation, preserving result grades.
 const KNOWN_LOINC_DISPLAYS: Record<string, string[]> = {
   '59408-5': [
     'Oxygen saturation in Arterial blood by Pulse oximetry',
@@ -43,6 +44,7 @@ const KNOWN_LOINC_DISPLAYS: Record<string, string[]> = {
   ],
   '60591-5': ['Patient summary Document', 'Patient Summary', 'Patient summary Doc'],
   '10160-0': ['History of Medication use Narrative', 'Hx of Medication use'],
+  '10185-7': ['Hospital discharge procedure note', 'Hospital discharge procedures Narrative', 'Hospital dc px note'],
   '48765-2': ['Allergies and adverse reactions Document', 'Allergies &or adverse reactions Doc'],
   '11450-4': ['Problem list - Reported'],
   '47519-4': ['History of Procedures Document', 'Procedures Hx Doc'],
@@ -55,7 +57,10 @@ const KNOWN_LOINC_DISPLAYS: Record<string, string[]> = {
 };
 
 const KNOWN_LOINC_GERMAN_DISPLAYS: Record<string, string[]> = {
-  '60591-5': ['Patient summary Document', 'Patient Summary', 'Patientenkurzakte - Dokument'],
+  // 'Patient summary Document' is the en designation and is NOT accepted under a
+  // de-* display language: $validate-code with displayLanguage=de-CH rejects it
+  // and names 'Patient Summary'. Listing it here suppressed a real finding.
+  '60591-5': ['Patient Summary', 'Patientenkurzakte - Dokument'],
   '10160-0': ['Medikationsanamnese - Freitext'],
   '48765-2': ['Allergien und unerwünschte Wirkungen - Dokument'],
   '11450-4': ['Problemliste - Berichtet'],
@@ -81,12 +86,38 @@ const KNOWN_EXTERNAL_DISPLAYS: Record<string, Record<string, string[]>> = {
     C43360: ['manufacture'],
     C106643: ['Manufactures human prescription drug products'],
   },
+  // SNOMED CT carries hundreds of thousands of designations per concept across
+  // editions and languages. Nothing enumerable in this repository can stand for
+  // that set, so the entries below confirm displays they recognise and never
+  // refute the ones they do not (see REFUTING_DISPLAY_SYSTEMS).
   'http://snomed.info/sct': {
-    '6736007': ['Moderate', 'Midgrade', 'Moderate (severity modifier)', 'Moderate severity'],
-    '322236009': ['Paracetamol 500mg tablet', 'Acetaminophen 500mg tablet'],
+    // Positive compatibility hints only: SNOMED editions have additional
+    // designations that this table cannot exhaustively enumerate.
+    // 'Moderate' is the plain synonym $validate-code accepts for this concept
+    // (server preferred display: 'Moderate severity'). Omitting it made this
+    // table reject a display the terminology server allows.
+    '6736007': ['Midgrade', 'Moderate', 'Moderate (severity modifier)', 'Moderate severity'],
+    '322236009': [
+      'Paracetamol 500mg tablet',
+      'Acetaminophen 500mg tablet',
+      'Acetaminophen 500 mg oral tablet',
+    ],
     '329652003': ['Ibuprofen 200mg tablet'],
   },
 };
+
+/**
+ * Systems whose entries above are curated as the complete designation set for
+ * the codes they list, verified against tx.fhir.org. Only those may turn an
+ * unrecognised display into an error; for every other system an unrecognised
+ * display means this validator could not confirm it, which is a warning and
+ * not a statement that the display is wrong.
+ */
+const REFUTING_DISPLAY_SYSTEMS = new Set(['http://loinc.org']);
+
+export function displayTableCanRefute(system: unknown): boolean {
+  return typeof system === 'string' && REFUTING_DISPLAY_SYSTEMS.has(system);
+}
 
 export function knownDisplaysForCode(
   system: unknown,
@@ -182,21 +213,28 @@ export function validateKnownLoincDisplays(resource: unknown): ValidationIssue[]
 
     const record = value as Record<string, unknown>;
 
-    if (typeof record.code === 'string' && typeof record.display === 'string') {
+    // Edition-specific validation belongs to the terminology resolver. In
+    // particular, a short SNOMED synonym list cannot prove a display invalid.
+    if (typeof record.code === 'string' && typeof record.display === 'string'
+      && !record.version && record.system !== 'http://snomed.info/sct') {
       const allowedDisplays = knownDisplaysForCode(record.system, record.code, language);
       if (allowedDisplays && !anyDisplayEquivalent(allowedDisplays, record.display)) {
         const system = String(record.system);
-        // Error severity matches the HL7 reference validator's default: a
-        // display that matches NO accepted designation is an error (see the
-        // fhir-test-cases bundle-duplicate-ids-not / bundle-with-contained
-        // Java baselines). Valid designations never reach this branch — the
-        // allowlist carries every verified designation, not just the LCN.
+        // Error severity matches the HL7 reference validator's default where
+        // the designation set is complete (see the fhir-test-cases
+        // bundle-duplicate-ids-not / bundle-with-contained Java baselines).
+        // Where it is not, the table can only fail to recognise a display, and
+        // saying which display is the valid one would be an invention.
+        const canRefute = displayTableCanRefute(system);
         issues.push(createTerminologyIssue({
-          severity: 'error',
+          severity: canRefute ? 'error' : 'warning',
           code: 'terminology-display-mismatch',
-          message:
-            `Wrong Display Name '${record.display}' for ${system}#${record.code}. ` +
-            `Valid display is '${allowedDisplays[0]}'`,
+          message: canRefute
+            ? `Wrong Display Name '${record.display}' for ${system}#${record.code}. `
+              + `Valid display is '${allowedDisplays[0]}'`
+            : `Display '${record.display}' for ${system}#${record.code} is not among the `
+              + `designations this validator carries offline, and ${system} designations `
+              + 'cannot be enumerated here. Configure a terminology server to decide it.',
           path: `${path}.display`,
           details: {
             code: record.code,
@@ -226,22 +264,4 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
-}
-
-function normalizeDisplay(display: string): string {
-  return stripTrailingSemanticTag(display)
-    .trim()
-    .normalize('NFKC')
-    .replace(/['’]s\b/gi, '')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLocaleLowerCase();
-}
-
-function stripTrailingSemanticTag(display: string): string {
-  const semanticTag = String.raw`(?:finding|disorder|procedure|regime/therapy|observable entity|situation|body structure)`;
-  return display
-    .replace(new RegExp(String.raw`\s+\(${semanticTag}\)\s*$`, 'i'), '')
-    .replace(new RegExp(String.raw`\s+\(${semanticTag}\s*$`, 'i'), '');
 }

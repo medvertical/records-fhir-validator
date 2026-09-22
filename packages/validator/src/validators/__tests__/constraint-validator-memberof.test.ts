@@ -8,6 +8,22 @@ import { ConstraintValidator } from '../constraint-validator';
 // it evaluates the prefix synchronously and applies the shared sync memberOf
 // logic (ISO-3166 hardcoded sets + expanded-ValueSet cache).
 describe('ConstraintValidator - memberOf (ISO specific)', () => {
+    it.each(['Patient', 'Organization'])('checks nested country membership in the %s address context', async resourceType => {
+        const validator = new ConstraintValidator();
+        const elements: Parameters<ConstraintValidator['validate']>[1] = [{
+            path: `${resourceType}.address`,
+            constraint: [{
+                key: 'country-membership', severity: 'error', human: 'Country must be ISO',
+                expression: "country.memberOf('http://hl7.org/fhir/ValueSet/iso3166-1-2')",
+            }],
+        }];
+        const invalid = await validator.validate({
+            resourceType, country: 'DE', address: [{ country: 'DE' }, { country: 'XX' }],
+        }, elements, 'http://example.org/Profile');
+        expect(invalid).toEqual([expect.objectContaining({ code: 'profile-constraint-violation' })]);
+        await expect(validator.validate({ resourceType, address: [{ country: 'DE' }] }, elements, 'http://example.org/Profile'))
+            .resolves.toEqual([]);
+    });
 
     it('should validate ISO-3166-1-2 country codes correctly', async () => {
         const validator = new ConstraintValidator();

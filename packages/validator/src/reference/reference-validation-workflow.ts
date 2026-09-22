@@ -1,21 +1,21 @@
-import type { ValidationSettings } from '@records-fhir/validation-types';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
-import { addR6WarningIfNeeded } from '../utils/r6-support-warnings';
-import { extractReferences } from './reference-format-validator';
-import { validateContainedReferenceIssues } from './reference-contained-validation';
-import { validateExtractedReferences } from './reference-extracted-validation';
+import type { ValidationSettings, ValidationIssue } from '@records-fhir/validation-types';
+import { logger } from '../logger.js';
+import { addR6WarningIfNeeded } from '../utils/r6-support-warnings.js';
+import { extractReferences } from './reference-format-validator.js';
+import { validateContainedReferenceIssues } from './reference-contained-validation.js';
+import { validateExtractedReferences } from './reference-extracted-validation.js';
 import {
   normalizeReferenceValidationArgs,
-} from './reference-validation-args';
-import type { ReferenceValidatorDependencies } from './reference-validator-dependencies';
+} from './reference-validation-args.js';
+import type { ReferenceValidatorDependencies } from './reference-validator-dependencies.js';
+import type { ReferenceResourceFetcher } from './reference-fetch-deadline.js';
 import {
   createReferenceFailureIssue,
   referenceFailureMetadata,
   ReferenceValidationRuntime,
-} from './reference-validation-runtime';
+} from './reference-validation-runtime.js';
 
-export type { ReferenceResourceFetcher } from './reference-validation-runtime';
+export type { ReferenceResourceFetcher } from './reference-validation-runtime.js';
 
 export class ReferenceValidationWorkflow {
   private readonly runtime: ReferenceValidationRuntime;
@@ -33,6 +33,7 @@ export class ReferenceValidationWorkflow {
     fhirClientOrVersion?: unknown,
     fhirVersionOrSettings?: 'R4' | 'R5' | 'R6' | ValidationSettings,
     settings?: ValidationSettings,
+    resourceFetcher?: ReferenceResourceFetcher,
   ): Promise<ValidationIssue[]> {
     let issues: ValidationIssue[] = [];
     const startedAt = Date.now();
@@ -76,6 +77,7 @@ export class ReferenceValidationWorkflow {
         actualSettings,
         extractedReferences,
         fhirClientOrVersion,
+        resourceFetcher,
       ));
 
       logValidationResult(effectiveResourceType, issues.length, Date.now() - startedAt);

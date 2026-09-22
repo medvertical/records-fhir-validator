@@ -1,6 +1,6 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import { asSecurityRecord } from './security-validator-utils';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { asSecurityRecord } from './security-validator-utils.js';
 
 export function validateSecurityLabels(
     resource: Record<string, unknown>,

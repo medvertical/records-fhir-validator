@@ -1,18 +1,20 @@
-import type { ProfileSourceContext } from '../../persistence';
-import type { ValidationIssue } from '../../types';
-import type { ValueSetCache } from '../../validators/valueset-cache';
-import { UcumCodeValidator } from '../../validators/ucum-validator';
-import type { StructureDefinition } from '../structure-definition-types';
-import { CodeSystemReferenceLookupCache } from './terminology-code-system-reference-rules';
-import { TerminologyElementPlanCache } from './terminology-element-plan-cache';
-import { validateTerminologyElement } from './terminology-element-validator';
-import { appendTerminologyFailure } from './terminology-executor-helpers';
-import { createTerminologyGlobalRules } from './terminology-global-rule-plan';
-import { TerminologySlicePlanCache } from './terminology-slice-plan-cache';
-import type { TerminologyValidationPort } from './terminology-validation-port';
+import type { ProfileSourceContext } from '../../persistence/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ValueSetCache } from '../../validators/valueset-cache.js';
+import { UcumCodeValidator } from '../../validators/ucum-validator.js';
+import type { StructureDefinition } from '../structure-definition-types.js';
+import { CodeSystemReferenceLookupCache } from './terminology-code-system-reference-rules.js';
+import { TerminologyElementPlanCache } from './terminology-element-plan-cache.js';
+import { validateTerminologyElement } from './terminology-element-validator.js';
+import { appendTerminologyFailure } from './terminology-executor-helpers.js';
+import { createTerminologyGlobalRules } from './terminology-global-rule-plan.js';
+import { TerminologySlicePlanCache } from './terminology-slice-plan-cache.js';
+import type { TerminologyValidationPort } from './terminology-validation-port.js';
 
 export interface TerminologyValidationContext {
   resource: unknown;
+  /** Falls back to `resource.resourceType`; only needed for embedded non-resource values. */
+  resourceType?: string;
   structureDef: StructureDefinition;
   getValueAtPath: (resource: unknown, path: string) => unknown;
   fhirVersion?: 'R4' | 'R5' | 'R6';
@@ -40,6 +42,7 @@ export class TerminologyValidationPipeline {
     const issues: ValidationIssue[] = [];
     const failureMessages = new Set<string>();
     const { resource, structureDef, getValueAtPath, sourceContext } = context;
+    this.valueSetValidator.setSourceContext?.(sourceContext);
     const profileUrl = typeof structureDef.url === 'string' ? structureDef.url : undefined;
     const fhirVersion = context.fhirVersion ?? 'R4';
 

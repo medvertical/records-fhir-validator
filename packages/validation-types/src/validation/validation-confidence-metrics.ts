@@ -1,4 +1,4 @@
-import type { ValidationResult } from './results';
+import type { ValidationResult } from './results.js';
 
 export interface ValidationConfidenceFactors {
   profileCoverage: number;

@@ -5,14 +5,14 @@
  * that present values at required binding paths contain a usable code.
  */
 
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import type {
     ElementDefinition,
     StructureDefinition,
-} from '../core/structure-definition-types';
-import { getValidationTargets } from '../business-rules';
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
+} from '../core/structure-definition-types.js';
+import { getValidationTargets } from '../business-rules/index.js';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
 
 type FhirRecord = Record<string, unknown>;
 

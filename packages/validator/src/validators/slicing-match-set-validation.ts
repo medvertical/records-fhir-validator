@@ -1,13 +1,13 @@
-import { createValidationIssue } from '../issues';
-import type { SlicingDefinition } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
+import { createValidationIssue } from '../issues/index.js';
+import type { SlicingDefinition } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   matchElementToSlice,
   shouldSuppressUnresolvedBindingClosedUnmatched,
-} from './slicing-match-policy';
-import { validateSliceOrdering } from './slicing-ordering';
-import { resourceTypeFromPath } from './slicing-content-rules';
-import type { ReferenceResolver, SliceDefinition } from './slice-types';
+} from './slicing-match-policy.js';
+import { validateSliceOrdering } from './slicing-ordering.js';
+import { resourceTypeFromPath } from './slicing-content-rules.js';
+import type { ReferenceResolver, SliceDefinition } from './slice-types.js';
 
 interface SlicingMatchSetValidationOptions {
   elements: unknown[];

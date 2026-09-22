@@ -7,13 +7,13 @@
  * Task 6.5: Add circular reference detection to prevent infinite loops
  */
 
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 import {
   buildReferenceGraph,
   findNodeByReference,
   type ReferenceNode,
   type ReferenceGraph,
-} from './reference-graph-builder';
+} from './reference-graph-builder.js';
 
 // ============================================================================
 // Types

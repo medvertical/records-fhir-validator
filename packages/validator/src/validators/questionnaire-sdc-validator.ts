@@ -1,7 +1,7 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import type { QuestionnaireItem, QuestionnaireResponseAnswer, QuestionnaireResponseItem } from './questionnaire-types';
-import { visitQuestionnaireResponseItems } from './questionnaire-response-traversal';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import type { QuestionnaireItem, QuestionnaireResponseAnswer, QuestionnaireResponseItem } from './questionnaire-types.js';
+import { visitQuestionnaireResponseItems } from './questionnaire-response-traversal.js';
 
 export function validateQuestionnaireSdcConstraints(
     items: unknown[],
@@ -146,7 +146,15 @@ function validateRegexAnswer(
             severityOverride: 'error',
         })];
     } catch {
-        return [];
+        // A regex the questionnaire author wrote wrong must not silently turn
+        // into "the answer is fine" — the constraint simply was not applied.
+        return [createValidationIssue({
+            code: 'questionnaire-sdc-regex-unevaluable',
+            path: answerPath,
+            resourceType: 'QuestionnaireResponse',
+            customMessage: `The answer could not be checked because the questionnaire's regex constraint '${regex}' is not a valid regular expression`,
+            severityOverride: 'warning',
+        })];
     }
 }
 

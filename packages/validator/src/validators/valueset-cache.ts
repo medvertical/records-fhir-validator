@@ -5,9 +5,10 @@
  * Extracted from valueset-validator.ts for modularity.
  */
 
-import type { ValueSet, CodeSystem } from './valueset-types';
-import { logger } from '../logger';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
+import type { ValueSet, CodeSystem } from './valueset-types.js';
+import { logger } from '../logger.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { captureValidationDependencyCacheHit } from '../validation-dependency-snapshot.js';
 
 // ============================================================================
 // Cache Types
@@ -46,7 +47,7 @@ export class ValueSetCache {
     }
 
     getExpandedCodes(valueSetUrl: string): Set<string> | undefined {
-        return this.valueSetCache.get(valueSetUrl);
+        return captureValidationDependencyCacheHit('expanded-codes', valueSetUrl, () => this.valueSetCache.get(valueSetUrl));
     }
 
     setExpandedCodes(valueSetUrl: string, codes: Set<string>): void {
@@ -62,7 +63,7 @@ export class ValueSetCache {
     }
 
     getValueSetFile(url: string): ValueSet | null | undefined {
-        return this.valueSetFileCache.get(url);
+        return captureValidationDependencyCacheHit('valueset-file', url, () => this.valueSetFileCache.get(url));
     }
 
     setValueSetFile(url: string, valueSet: ValueSet | null): void {
@@ -78,7 +79,7 @@ export class ValueSetCache {
     }
 
     getCodeSystem(systemUrl: string): CodeSystem | undefined {
-        return this.codeSystemCache.get(systemUrl);
+        return captureValidationDependencyCacheHit('codesystem', systemUrl, () => this.codeSystemCache.get(systemUrl));
     }
 
     setCodeSystem(systemUrl: string, codeSystem: CodeSystem): void {
@@ -90,7 +91,7 @@ export class ValueSetCache {
     }
 
     getCodeSystemFile(url: string): CodeSystem | null | undefined {
-        return this.codeSystemFileCache.get(url);
+        return captureValidationDependencyCacheHit('codesystem-file', url, () => this.codeSystemFileCache.get(url));
     }
 
     setCodeSystemFile(url: string, codeSystem: CodeSystem | null): void {
@@ -120,6 +121,23 @@ export class ValueSetCache {
     // -------------------------------------------------------------------------
     // Cache Management
     // -------------------------------------------------------------------------
+
+    /**
+     * Drop recorded misses and empty expansions. Positive entries stay valid
+     * when a further store becomes reachable; misses do not, because that
+     * store may answer them.
+     */
+    clearNegativeEntries(): void {
+        for (const key of [...this.valueSetFileCache.keys()]) {
+            if (this.valueSetFileCache.get(key) === null) this.valueSetFileCache.delete(key);
+        }
+        for (const key of [...this.codeSystemFileCache.keys()]) {
+            if (this.codeSystemFileCache.get(key) === null) this.codeSystemFileCache.delete(key);
+        }
+        for (const key of [...this.valueSetCache.keys()]) {
+            if (this.valueSetCache.get(key)?.size === 0) this.valueSetCache.delete(key);
+        }
+    }
 
     clear(): void {
         this.valueSetCache.clear();

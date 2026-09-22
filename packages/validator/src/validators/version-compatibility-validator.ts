@@ -9,23 +9,23 @@
  * Helps developers migrate resources between FHIR versions.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
 import {
     DEPRECATED_ELEMENTS,
     RENAMED_ELEMENTS,
     type DeprecatedElement,
     type FHIRVersion,
     type VersionCompatibilityConfig,
-} from './version-compatibility-rules';
+} from './version-compatibility-rules.js';
 
 export type {
     DeprecatedElement,
     FHIRVersion,
     RenamedElement,
     VersionCompatibilityConfig,
-} from './version-compatibility-rules';
+} from './version-compatibility-rules.js';
 
 export class VersionCompatibilityValidator {
     private config: VersionCompatibilityConfig;

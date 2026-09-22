@@ -1,6 +1,7 @@
-import type { ValidationIssue } from '../types';
-import type { FhirResourceRecord } from '../reference/bundle-reference-types';
-import { getPrimaryDeclaredProfile } from './declared-profile-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { FhirResourceRecord } from '../reference/bundle-reference-types.js';
+import { getPrimaryDeclaredProfile } from './declared-profile-utils.js';
+import { awaitAllDrained } from '../utils/await-all-drained.js';
 
 export interface ParametersEmbeddedResource {
   resource: FhirResourceRecord;
@@ -98,7 +99,7 @@ export async function validateParametersResourceTree(
   const embeddedResources = collectParametersEmbeddedResources(resource);
   if (embeddedResources.length === 0) return [];
 
-  const nested = await Promise.all(embeddedResources.map(async embedded => {
+  const nested = await awaitAllDrained(embeddedResources.map(async embedded => {
     const issues = await options.validate(
       embedded.resource,
       embedded.profileUrl,

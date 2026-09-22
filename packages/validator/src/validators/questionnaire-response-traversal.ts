@@ -2,7 +2,7 @@ import type {
   QuestionnaireQuantity,
   QuestionnaireResponseAnswer,
   QuestionnaireResponseItem,
-} from './questionnaire-types';
+} from './questionnaire-types.js';
 
 export type QuestionnaireResponseItemVisitor = (
   item: QuestionnaireResponseItem,

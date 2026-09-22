@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../types';
-import { validateNarrativeDiv, validateXhtmlFragment } from './narrative-xhtml-rules';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateNarrativeDiv, validateXhtmlFragment } from './narrative-xhtml-rules.js';
 
 export function isHtmlChecksExpression(expression: string | undefined): boolean {
   return /^\s*htmlChecks\(\)\s*$/.test(expression ?? '');

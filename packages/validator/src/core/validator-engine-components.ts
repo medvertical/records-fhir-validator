@@ -1,16 +1,16 @@
 import {
   createValidatorAdministrationComponents,
   type ValidatorAdministrationComponents,
-} from './validator-administration-components';
+} from './validator-administration-components.js';
 import {
   createValidatorCoreRuntime,
   type ValidatorCoreComponents,
-} from './validator-core-components';
+} from './validator-core-components.js';
 import {
   createValidatorExecutionComponents,
   type ValidatorExecutionComponents,
-} from './validator-execution-components';
-import type { RecordsValidatorConfig } from './validator-engine-config';
+} from './validator-execution-components.js';
+import type { RecordsValidatorConfig } from './validator-engine-config.js';
 
 export interface RecordsValidatorComponents extends
   ValidatorCoreComponents,

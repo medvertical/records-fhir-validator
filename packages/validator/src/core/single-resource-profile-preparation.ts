@@ -1,25 +1,26 @@
-import type { ProfileCache } from '../cache/profile-cache';
-import { logger } from '../logger';
-import { applyResourcePinToCanonical } from '../package/canonical-pin-context';
-import type { ProfileSourceContext } from '../persistence';
-import type { ValidationIssue, ValidationSettings } from '../types';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
-import { matchCodeInferredProfile, type CodeInferredProfileMatch } from './code-inferred-profiles';
-import { resolveContextQuestionnaire } from './context-questionnaire-resolution';
-import { getPrimaryDeclaredProfile } from './declared-profile-utils';
-import type { FhirResource } from './fhir-resource';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import { logger } from '../logger.js';
+import { applyResourcePinToCanonical } from '../package/canonical-pin-context.js';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
+import { matchCodeInferredProfile, type CodeInferredProfileMatch } from './code-inferred-profiles.js';
+import { resolveContextQuestionnaire } from './context-questionnaire-resolution.js';
+import { getPrimaryDeclaredProfile } from './declared-profile-utils.js';
+import type { FhirResource } from './fhir-resource.js';
+import type { BundleCanonicalResolver } from './multi-aspect-bundle-reference-resolver.js';
 import {
   createProfileFallbackIssue,
   createProfileResourceTypeMismatchIssue,
   loadProfileOrBase,
   type FhirClientLike,
-} from './profile-loader-utils';
-import type { QuestionnaireContextRegistry } from './questionnaire-context-registry';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { StructureDefinition } from './structure-definition-types';
+} from './profile-loader-utils.js';
+import type { QuestionnaireContextRegistry } from './questionnaire-context-registry.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 
-export type { FhirClientLike } from './profile-loader-utils';
+export type { FhirClientLike } from './profile-loader-utils.js';
 
 export interface SingleResourceProfilePreparationInput {
   resource: FhirResource;
@@ -28,6 +29,7 @@ export interface SingleResourceProfilePreparationInput {
   settings?: ValidationSettings;
   fhirClient?: FhirClientLike;
   profileSourceContext: ProfileSourceContext;
+  bundleCanonicalResolver?: BundleCanonicalResolver | null;
 }
 
 export interface SingleResourceProfilePreparationDependencies {
@@ -57,6 +59,7 @@ export async function prepareSingleResourceProfile(
     settings,
     fhirClient,
     profileSourceContext,
+    bundleCanonicalResolver,
   } = input;
   const {
     sdLoader,
@@ -124,6 +127,7 @@ export async function prepareSingleResourceProfile(
       resource,
       questionnaireRegistry,
       profileSourceContext,
+      bundleCanonicalResolver,
     )
     : undefined;
 

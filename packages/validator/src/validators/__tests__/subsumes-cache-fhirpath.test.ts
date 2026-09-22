@@ -2,10 +2,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSubsumesFunction } from '../fhirpath-custom-functions';
 import { TerminologyOperationCache } from '../terminology-operation-cache';
 import { ValueSetCache } from '../valueset-cache';
+import { makeSubsumesCacheKey, makeSubsumesCacheSuffix } from '../terminology-subsumes-cache';
 
 const SNOMED = 'http://snomed.info/sct';
 
 describe('FHIRPath subsumes cache integration', () => {
+  it('keeps code pairs containing delimiters distinct in both direct and FHIRPath lookups', () => {
+    const cache = new TerminologyOperationCache();
+    const first = makeSubsumesCacheKey('https://tx.example', SNOMED, 'a|b', 'c');
+    const second = makeSubsumesCacheKey('https://tx.example', SNOMED, 'a', 'b|c');
+    cache.storeSubsumes(first, 'subsumes');
+    cache.storeSubsumes(second, 'not-subsumed');
+    expect(cache.getSubsumes(first)).toBe('subsumes');
+    expect(cache.getSubsumes(second)).toBe('not-subsumed');
+    const fn = createSubsumesFunction(cache).fn;
+    expect(fn([{ system: SNOMED, code: 'a|b' }], [{ system: SNOMED, code: 'c' }])).toEqual([true]);
+    expect(fn([{ system: SNOMED, code: 'a' }], [{ system: SNOMED, code: 'b|c' }])).toEqual([false]);
+  });
+
   beforeEach(() => {
     vi.resetModules();
     vi.doUnmock('axios');
@@ -88,7 +102,7 @@ describe('FHIRPath subsumes cache integration', () => {
     await client.subsumes(SNOMED, '404684003', '22298006');
 
     expect(operationCache.findSubsumesBySuffix(
-      `|${SNOMED}|404684003|22298006`,
+      makeSubsumesCacheSuffix(SNOMED, '404684003', '22298006'),
     )).toBe('not-subsumed');
     expect(warmedSubsumesFunction.fn(
       [{ system: SNOMED, code: '404684003' }],

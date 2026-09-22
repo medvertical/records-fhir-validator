@@ -1,5 +1,5 @@
-import type { TerminologyResolutionConfig } from './valueset-types';
-import { snapshotTerminologyConfig } from './terminology-config-snapshot';
+import type { TerminologyResolutionConfig } from './valueset-types.js';
+import { snapshotTerminologyConfig } from './terminology-config-snapshot.js';
 
 export function cloneTerminologyResolutionConfig(
   config: TerminologyResolutionConfig,

@@ -8,7 +8,8 @@
  */
 import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { reportUnreadablePackageStore } from './package-store-diagnostics.js';
 
 export interface PackageRef {
   name: string;
@@ -87,7 +88,8 @@ export class CanonicalPinStore {
       const stats = await fs.stat(storeDir, { bigint: true });
       if (!stats.isDirectory()) return [];
       signature = `${stats.dev}:${stats.ino}:${stats.mtimeNs}:${storeRank}`;
-    } catch {
+    } catch (error: unknown) {
+      reportUnreadablePackageStore('CanonicalPinStore', storeDir, error);
       return [];
     }
 
@@ -126,7 +128,8 @@ async function readStoreManifests(
   let entries: string[];
   try {
     entries = (await fs.readdir(storeDir)).sort();
-  } catch {
+  } catch (error: unknown) {
+    reportUnreadablePackageStore('CanonicalPinStore', storeDir, error);
     return [];
   }
 

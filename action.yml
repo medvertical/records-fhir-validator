@@ -73,6 +73,7 @@ runs:
       shell: bash
       env:
         VALIDATOR_VERSION: ${{ inputs.validator-version }}
+        ACTION_PATH: ${{ github.action_path }}
       run: |
         set -euo pipefail
         node -e '
@@ -82,8 +83,11 @@ runs:
             process.exit(1);
           }
         '
-        npm install --no-save --no-audit --no-fund \
+        mkdir -p "${ACTION_PATH}/.runtime"
+        printf '%s\n' '{"private":true,"type":"module"}' > "${ACTION_PATH}/.runtime/package.json"
+        npm install --prefix "${ACTION_PATH}/.runtime" --no-save --no-audit --no-fund \
           -- "@records-fhir/validator@${VALIDATOR_VERSION}"
+        cp "${ACTION_PATH}/action-run.mjs" "${ACTION_PATH}/.runtime/action-run.mjs"
 
     - name: Run validator
       id: validate
@@ -96,4 +100,4 @@ runs:
         INPUT_OUTPUT_FILE: ${{ inputs.output-file }}
         INPUT_LOG_LEVEL: ${{ inputs.log-level }}
         ACTION_PATH: ${{ github.action_path }}
-      run: node "${ACTION_PATH}/action-run.mjs"
+      run: node "${ACTION_PATH}/.runtime/action-run.mjs"

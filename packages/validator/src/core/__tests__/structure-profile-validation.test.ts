@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import { validateStructureProfile } from '../structure-profile-validation';
 
 const PROFILE_URL = 'http://example.org/StructureDefinition/test-patient';

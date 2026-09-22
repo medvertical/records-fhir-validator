@@ -80,6 +80,29 @@ function makeTempPackageRoot(): string {
 }
 
 describe('collectCanonicalCandidates', () => {
+  it('pins dependencies through empty packages and cycles, recording missing dependencies', () => {
+    const dependencyRoot = makeTempPackageRoot();
+    const manifest = (pkg: string, dependencies: Record<string, string>) =>
+      fs.writeFileSync(path.join(dependencyRoot, pkg, 'package/package.json'), JSON.stringify({ dependencies }));
+    try {
+      manifest('org.example.a#1.0.0', { 'org.example.empty': '1.0.0' });
+      manifest('org.example.empty#1.0.0', { 'org.example.b': '2.1.0' });
+      manifest('org.example.b#2.1.0', { 'org.example.a': '1.0.0', 'org.example.missing': '3.0.0' });
+      const collected = collectCanonicalCandidates(['org.example.a#1.0.0'], {
+        searchPaths: [dependencyRoot], includeDependencies: true,
+      });
+      expect(collected.totalCandidates).toBe(4);
+      expect(collected.emptyPackages).toEqual(['org.example.empty#1.0.0']);
+      expect(collected.missingPackages).toEqual(['org.example.missing#3.0.0']);
+      expect(pinCanonicals(collected.candidatesByUrl).get('http://example.org/CodeSystem/codes|2.1.0'))
+        .toMatchObject({ sourcePackage: 'org.example.b#2.1.0', version: '2.1.0' });
+      expect(collectCanonicalCandidates(['org.example.a#1.0.0'], { searchPaths: [dependencyRoot] }).totalCandidates)
+        .toBe(2);
+    } finally {
+      fs.rmSync(dependencyRoot, { recursive: true, force: true });
+    }
+  });
+
   let root: string;
 
   beforeAll(() => {

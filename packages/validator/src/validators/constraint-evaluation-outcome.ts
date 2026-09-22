@@ -1,10 +1,10 @@
-import type { Constraint } from '../core/structure-definition-types';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
-import { interpretConstraintResult } from './constraint-result-policy';
-import type { ConstraintValidationState, FhirResource } from './constraint-validation-input';
-import { constraintOutcomeIssues } from './constraint-violation-issue';
+import type { Constraint } from '../core/structure-definition-types.js';
+import { logger } from '../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
+import { interpretConstraintResult } from './constraint-result-policy.js';
+import type { ConstraintValidationState, FhirResource } from './constraint-validation-input.js';
+import { constraintOutcomeIssues } from './constraint-violation-issue.js';
 
 interface ConstraintEvaluationOutcomeContext {
   constraint: Constraint;

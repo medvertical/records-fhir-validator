@@ -1,9 +1,20 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import type { ElementDefinition } from '../core/structure-definition-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import type { ElementDefinition } from '../core/structure-definition-types.js';
 import { isDeepStrictEqual } from 'util';
-import { validateElementValueBounds } from './element-rule-value-bounds';
-import { constraintTypeMatchesElement } from './element-constraint-type';
+import { validateElementValueBounds } from './element-rule-value-bounds.js';
+import { constraintTypeMatchesElement } from './element-constraint-type.js';
+
+interface PatternMismatch {
+  message: string;
+  path: string;
+}
+
+interface PatternMatchResult {
+  matches: boolean;
+  message?: string;
+  mismatchedPath?: string;
+}
 
 export class ElementRulesValidator {
   validate(
@@ -58,20 +69,30 @@ export class ElementRulesValidator {
     );
     for (const patternKey of patternKeys) {
       const pattern = elementDef[patternKey];
+      // A pattern can be violated in several places at once — a missing
+      // element and a wrong value beside it. Reporting only the first hid the
+      // rest until the author fixed one and revalidated.
+      const patternMismatches: PatternMismatch[] = [];
       const patternMatch = this.checkPatternMatch(
         value,
         pattern,
         path,
         new WeakMap<object, WeakSet<object>>(),
+        patternMismatches,
       );
       if (!patternMatch.matches) {
-        issues.push(createValidationIssue({
-          code: 'profile-pattern-mismatch',
-          path: patternMatch.mismatchedPath || path,
-          resourceType: 'Unknown',
-          profile: profileUrl,
-          customMessage: patternMatch.message || 'Pattern mismatch',
-        }));
+        const reported = patternMismatches.length > 0
+          ? patternMismatches
+          : [{ message: patternMatch.message || 'Pattern mismatch', path: patternMatch.mismatchedPath || path }];
+        for (const mismatch of reported) {
+          issues.push(createValidationIssue({
+            code: 'profile-pattern-mismatch',
+            path: mismatch.path || path,
+            resourceType: 'Unknown',
+            profile: profileUrl,
+            customMessage: mismatch.message,
+          }));
+        }
       }
     }
 
@@ -115,6 +136,7 @@ export class ElementRulesValidator {
     pattern: unknown,
     basePath: string,
     visitedPairs: WeakMap<object, WeakSet<object>>,
+    mismatches?: PatternMismatch[],
   ): { matches: boolean; message?: string; mismatchedPath?: string } {
     if (pattern === undefined || pattern === null) {
       return { matches: true };
@@ -123,13 +145,15 @@ export class ElementRulesValidator {
     if (!isObjectLike(pattern)) {
       const matches = isDeepStrictEqual(value, pattern);
       if (!matches) {
-        return {
+        const result = {
           matches: false,
           message:
             `Element '${basePath}' does not match pattern: ` +
             `expected '${String(pattern)}', found '${String(value)}'`,
-          mismatchedPath: basePath
+          mismatchedPath: basePath,
         };
+        mismatches?.push({ message: result.message, path: result.mismatchedPath });
+        return result;
       }
       return { matches: true };
     }
@@ -189,26 +213,29 @@ export class ElementRulesValidator {
 
       const patternRecord = pattern as Record<string, unknown>;
       const valueRecord = value as Record<string, unknown>;
+      let first: PatternMatchResult | undefined;
       for (const key of Object.keys(patternRecord)) {
         if (!(key in valueRecord)) {
-          return {
+          const missing: PatternMatchResult = {
             matches: false,
             message: `Element '${basePath}.${key}' is missing but required by pattern`,
-            mismatchedPath: `${basePath}.${key}`
+            mismatchedPath: `${basePath}.${key}`,
           };
+          mismatches?.push({ message: missing.message!, path: missing.mismatchedPath! });
+          first ??= missing;
+          continue;
         }
         const propMatch = this.checkPatternMatch(
           valueRecord[key],
           patternRecord[key],
           `${basePath}.${key}`,
           visitedPairs,
+          mismatches,
         );
-        if (!propMatch.matches) {
-          return propMatch;
-        }
+        if (!propMatch.matches) first ??= propMatch;
       }
 
-      return { matches: true };
+      return first ?? { matches: true };
     } finally {
       unmarkVisitedPair(visitedPairs, pattern, value);
     }

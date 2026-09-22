@@ -143,7 +143,10 @@ async function makeLoader(
   options: { maxCacheEntries?: number; prewarmProfileSource?: boolean } = {},
 ): Promise<{ loader: StructureDefinitionLoader; dir: string }> {
   const dir = await mkdtemp(join(tmpdir(), 'records-sd-loader-'));
-  const loader = new StructureDefinitionLoader(dir, null, { autoDownload: false, ...options });
+  await writePackageProfile(dir, 'hl7.fhir.r4.core#4.0.1',
+    'StructureDefinition-MedicationRequest.json', makeSd('medicationrequest-r4', '4.0.1'));
+  // These cache contracts need one R4 fallback, not the installed IG catalog.
+  const loader = new StructureDefinitionLoader(dir, '', { autoDownload: false, ...options });
   await loader.waitForInitialization();
   return { loader, dir };
 }
@@ -311,7 +314,7 @@ describe('StructureDefinitionLoader versioned cache', () => {
         ),
       );
 
-      const loader = new StructureDefinitionLoader(dir, null, { autoDownload: false });
+      const loader = new StructureDefinitionLoader(dir, '', { autoDownload: false });
       await loader.waitForInitialization();
 
       await expect(

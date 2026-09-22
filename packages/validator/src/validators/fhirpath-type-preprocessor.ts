@@ -1,6 +1,6 @@
-import { isFhirResource, type FhirResource } from '../core/fhir-resource';
-import { getFhirPathModel } from '../core/fhirpath-context';
-import { getEvaluationContext } from './constraint-path-utils';
+import { isFhirResource, type FhirResource } from '../core/fhir-resource.js';
+import { getFhirPathModel } from '../core/fhirpath-context.js';
+import { getEvaluationContext } from './constraint-path-utils.js';
 
 /**
  * FHIRPath Type-Literal Preprocessor

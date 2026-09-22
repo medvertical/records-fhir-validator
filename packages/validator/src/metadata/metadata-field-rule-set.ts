@@ -1,13 +1,13 @@
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   LastUpdatedValidator,
   SourceValidator,
   VersionIdValidator,
-} from './field-validators';
-import type { FhirObject } from './metadata-boundary-utils';
-import { ProfileValidator } from './profile-validators';
-import { SecurityValidator } from './security-validators';
-import { TagValidator } from './tag-validators';
+} from './field-validators.js';
+import type { FhirObject } from './metadata-boundary-utils.js';
+import { ProfileValidator } from './profile-validators.js';
+import { SecurityValidator } from './security-validators.js';
+import { TagValidator } from './tag-validators.js';
 
 /** Applies format and consistency rules for fields within a resource's meta object. */
 export class MetadataFieldRuleSet {

@@ -1,9 +1,9 @@
 import type {
   ElementDefinition,
   StructureDefinition,
-} from '../core/structure-definition-types';
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
+} from '../core/structure-definition-types.js';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 export function validateStructureDefinitionPatterns(
   sd: StructureDefinition,

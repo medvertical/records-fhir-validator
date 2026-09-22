@@ -1,5 +1,5 @@
-import type { FixSuggestion } from './types';
-import { CATALOG_VERSION_PROFILE_AND_BEST_PRACTICE } from './catalog-version-profile-and-best-practice';
+import type { FixSuggestion } from './types.js';
+import { CATALOG_VERSION_PROFILE_AND_BEST_PRACTICE } from './catalog-version-profile-and-best-practice.js';
 
 export const CATALOG_MISC: Record<string, FixSuggestion> = {
     // -------------------------------------------------------------------------

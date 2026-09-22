@@ -1,7 +1,7 @@
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types.js';
 
 /**
  * Paths where the FHIR spec explicitly allows relative URIs.

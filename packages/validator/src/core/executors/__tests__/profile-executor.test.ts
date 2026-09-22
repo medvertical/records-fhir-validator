@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ProfileExecutor, type ProfileValidationContext } from '../profile-executor';
 import type { StructureDefinition, ElementDefinition } from '../../structure-definition-types';
-import type { ValidationIssue } from '../../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import { getValueAtPath as resolveValidationPath } from '../../validation-utils';
 
 // Mock dependencies

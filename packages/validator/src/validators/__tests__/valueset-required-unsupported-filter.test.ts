@@ -148,4 +148,30 @@ describe('required bindings against locally unexpandable filter ValueSets', () =
     ).resolves.toBe('invalid');
     expect(get).toHaveBeenCalled();
   });
+
+  it('leaves a partial expansion unverified when the configured server cannot resolve the binding', async () => {
+    const get = vi.fn().mockResolvedValue({ data: {
+      resourceType: 'Parameters',
+      parameter: [
+        { name: 'result', valueBoolean: false },
+        { name: 'issues', resource: {
+          resourceType: 'OperationOutcome', issue: [{ code: 'not-found' }],
+        } },
+      ],
+    } });
+    vi.doMock('axios', async () => {
+      const actual = await vi.importActual<typeof import('axios')>('axios');
+      return { ...actual, default: { ...actual.default, get } };
+    });
+    const { ValueSetValidator } = await import('../valueset-validator');
+    const validator = new ValueSetValidator();
+    validator.setResolutionConfig({
+      strategy: 'local-first', serverUrl: 'https://unavailable-vs.example/fhir',
+      serverDelegation: { expandValueSets: false, validateCodes: true, cacheResults: false, cacheTTLSeconds: 0 },
+    });
+    await expect(validator.resolveCodeBindingForBinding(
+      '34133-9', LOINC, DOC_TYPE_VALUE_SET_URL, 'required',
+    )).resolves.toBe('unverified');
+    expect(get).toHaveBeenCalled();
+  });
 });

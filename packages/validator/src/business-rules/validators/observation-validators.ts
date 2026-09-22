@@ -8,7 +8,7 @@ import {
   getResourceType,
   parseFhirDateTime,
   type UnknownRecord,
-} from './validator-utils';
+} from './validator-utils.js';
 
 const VALUE_RANGE_RULE = 'observation-value-range-validation';
 const EFFECTIVE_DATE_RULE = 'observation-effective-date-validation';

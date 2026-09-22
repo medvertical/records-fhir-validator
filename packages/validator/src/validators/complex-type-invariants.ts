@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar.js';
 
 export function checkExtensionExt1(extValue: unknown, basePath: string): ValidationIssue | null {
     const extension = asRecord(extValue);

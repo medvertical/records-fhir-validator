@@ -5,9 +5,9 @@
  * Reduces repeated file I/O and parsing
  */
 
-import type { StructureDefinition } from '../core/structure-definition-loader';
-import { logger } from '../logger';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+import type { StructureDefinition } from '../core/structure-definition-loader.js';
+import { logger } from '../logger.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 
 // ============================================================================
 // Types

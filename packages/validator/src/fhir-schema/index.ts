@@ -12,13 +12,13 @@ export {
     extractAllBindings,
     extractExtensionDefs,
     summarizeConversion,
-} from './sd-to-fhir-schema';
-export { compileFHIRSchemaToValidationGraph, summarizeGraph } from './validation-graph-compiler';
-export { validateResourceWithGraph } from './validation-graph-executor';
+} from './sd-to-fhir-schema.js';
+export { compileFHIRSchemaToValidationGraph, summarizeGraph } from './validation-graph-compiler.js';
+export { validateResourceWithGraph } from './validation-graph-executor.js';
 export {
     FHIR_SCHEMA_RUNTIME_POLICY,
     isFhirSchemaDefaultRuntimeEnabled,
-} from './runtime-policy';
+} from './runtime-policy.js';
 
 export type {
     FHIRSchema,
@@ -30,14 +30,14 @@ export type {
     BaseResolver,
     SDElement,
     StructureDefinition,
-} from './sd-to-fhir-schema';
+} from './sd-to-fhir-schema.js';
 export type {
     ValidationGraph,
     ValidationGraphNode,
     ValidationGraphStats,
-} from './validation-graph-types';
+} from './validation-graph-types.js';
 export type {
     FhirSchemaPromotionRequirement,
     FhirSchemaRuntimeMode,
     FhirSchemaRuntimePolicy,
-} from './runtime-policy';
+} from './runtime-policy.js';

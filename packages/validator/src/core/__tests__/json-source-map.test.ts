@@ -14,7 +14,7 @@ import {
     DiagnosticFormatter,
     fhirPathToJsonPath,
 } from '../diagnostic-formatter';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 describe('buildJsonSourceMap', () => {
     const PATIENT = [

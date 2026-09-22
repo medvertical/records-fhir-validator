@@ -1,9 +1,9 @@
-import type { ReferenceParseResult } from './reference-type-extractor-types';
+import type { ReferenceParseResult } from './reference-type-extractor-types.js';
 import {
   KNOWN_FHIR_RESOURCE_TYPES,
   KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE,
   isFhirVersionPathSegment,
-} from './reference-resource-types';
+} from './reference-resource-types.js';
 
 export function parseAbsoluteReference(
   reference: string,

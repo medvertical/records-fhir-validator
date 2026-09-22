@@ -1,12 +1,12 @@
-import type { Constraint } from '../core/structure-definition-types';
-import type { CollectedConstraint } from './sd-constraint-collector';
-import type { MatchedElement } from './sd-element-matcher';
-import { SDFHIRPathCollectedEvaluationPlanBuilder } from './sd-fhirpath-collected-evaluation-plan-builder';
-import type { SDFHIRPathEvaluationPlan } from './sd-fhirpath-evaluation-plan';
-import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope';
-import { SDFHIRPathMatchedEvaluationPlanBuilder } from './sd-fhirpath-matched-evaluation-plan-builder';
+import type { Constraint } from '../core/structure-definition-types.js';
+import type { CollectedConstraint } from './sd-constraint-collector.js';
+import type { MatchedElement } from './sd-element-matcher.js';
+import { SDFHIRPathCollectedEvaluationPlanBuilder } from './sd-fhirpath-collected-evaluation-plan-builder.js';
+import type { SDFHIRPathEvaluationPlan } from './sd-fhirpath-evaluation-plan.js';
+import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope.js';
+import { SDFHIRPathMatchedEvaluationPlanBuilder } from './sd-fhirpath-matched-evaluation-plan-builder.js';
 
-export type { SDFHIRPathEvaluationPlan } from './sd-fhirpath-evaluation-plan';
+export type { SDFHIRPathEvaluationPlan } from './sd-fhirpath-evaluation-plan.js';
 
 /** Builds executable targets without owning expression execution or failure policy. */
 export class SDFHIRPathEvaluationPlanFactory {

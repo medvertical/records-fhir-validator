@@ -5,7 +5,7 @@
  * Extracted from shared/validation-settings.ts
  */
 
-import type { FHIRVersion } from './enums';
+import type { FHIRVersion } from './enums.js';
 
 export type {
   TerminologyAuthConfig,
@@ -15,7 +15,7 @@ export type {
   MiiValidationSettings,
   CircuitBreakerConfig,
   AdvancedTerminologyConfig,
-} from './settings-terminology';
+} from './settings-terminology.js';
 
 export type {
   AdvisorRule,
@@ -25,9 +25,9 @@ export type {
   ImposedProfilePolicy,
   ImposedProfilesConfig,
   ProfileApplicationSource,
-} from './settings-policies';
+} from './settings-policies.js';
 
-export { PERFORMANCE_LIMITS } from './settings-performance';
+export { PERFORMANCE_LIMITS } from './settings-performance.js';
 
 // ============================================================================
 // Validation Aspect Configuration
@@ -36,7 +36,7 @@ export { PERFORMANCE_LIMITS } from './settings-performance';
 /**
  * Configuration for a single validation aspect
  */
-export type ValidationAspectConfig = import('./settings-schema').ValidationAspectConfigZod;
+export type ValidationAspectConfig = import('./settings-schema.js').ValidationAspectConfigZod;
 
 // ============================================================================
 // Profile Sources Configuration
@@ -46,7 +46,7 @@ export type ValidationAspectConfig = import('./settings-schema').ValidationAspec
  * Configuration for remote profile sources
  * Local sources (bundled, DB cache) are always enabled
  */
-export type ProfileSourcesConfig = import('./settings-schema').ProfileSourcesConfigZod;
+export type ProfileSourcesConfig = import('./settings-schema.js').ProfileSourcesConfigZod;
 
 // ============================================================================
 // Validation Settings
@@ -55,7 +55,7 @@ export type ProfileSourcesConfig = import('./settings-schema').ProfileSourcesCon
 /**
  * Canonical validation settings type, derived from the runtime Zod schema.
  */
-export type ValidationSettings = import('./settings-schema').ValidationSettingsZod;
+export type ValidationSettings = import('./settings-schema.js').ValidationSettingsZod;
 
 // ============================================================================
 // Settings Update and Validation
@@ -64,7 +64,7 @@ export type ValidationSettings = import('./settings-schema').ValidationSettingsZ
 /**
  * Deep-partial update type, derived from the canonical runtime schema.
  */
-export type ValidationSettingsUpdate = import('./settings-schema').ValidationSettingsUpdateZod;
+export type ValidationSettingsUpdate = import('./settings-schema.js').ValidationSettingsUpdateZod;
 
 /**
  * Validation result for settings validation

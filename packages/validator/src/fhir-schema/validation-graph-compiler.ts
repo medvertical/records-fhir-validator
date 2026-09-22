@@ -2,12 +2,12 @@ import type {
   FHIRSchema,
   FHIRSchemaElement,
   FHIRSchemaSlice,
-} from './fhir-schema-types';
+} from './fhir-schema-types.js';
 import type {
   ValidationGraph,
   ValidationGraphNode,
   ValidationGraphStats,
-} from './validation-graph-types';
+} from './validation-graph-types.js';
 
 export function compileFHIRSchemaToValidationGraph(schema: FHIRSchema): ValidationGraph {
   const nodes = compileElements(schema, schema.elements ?? {}, schema.type, schema.type, 1);

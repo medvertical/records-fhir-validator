@@ -7,17 +7,17 @@
  */
 
 import fhirpath from 'fhirpath';
-import { getFhirPathModel } from '../../validators/fhirpath-model-resolver';
-import { rewriteCollectionTypeOperators } from '../../validators/fhirpath-as-operator-rewrite';
-import { checkFhirpathSandbox } from '../../validators/fhirpath-sandbox';
-import { getCustomRulesSource } from '../../persistence';
-import type { EngineCustomRule } from '../../persistence';
-import { createValidationIssue } from '../../issues';
-import type { ValidationIssue } from '../../types';
-import type { StructureDefinition } from '../structure-definition-types';
-import { logger } from '../../logger';
-import { validationFailureMetadata } from '../../utils/validation-execution-failure';
-import { resourceTypeOf } from '../fhir-resource';
+import { getFhirPathModel } from '../../validators/fhirpath-model-resolver.js';
+import { rewriteCollectionTypeOperators } from '../../validators/fhirpath-as-operator-rewrite.js';
+import { checkFhirpathSandbox } from '../../validators/fhirpath-sandbox.js';
+import { getCustomRulesSource } from '../../persistence/index.js';
+import type { EngineCustomRule } from '../../persistence/index.js';
+import { createValidationIssue } from '../../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition } from '../structure-definition-types.js';
+import { logger } from '../../logger.js';
+import { validationFailureMetadata } from '../../utils/validation-execution-failure.js';
+import { resourceTypeOf } from '../fhir-resource.js';
 
 export interface CustomRuleValidationContext {
     resource: unknown;

@@ -1,5 +1,5 @@
-import type { StructureDefinition } from './structure-definition-types';
-import { normalizeKnownStructureDefinitionCanonicalUrl } from './sd-loader-version-utils';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { normalizeKnownStructureDefinitionCanonicalUrl } from './sd-loader-version-utils.js';
 
 export function profileMatchesCanonical(
   profile: StructureDefinition,

@@ -1,12 +1,12 @@
-import type { ValidationIssue } from '../types';
-import type { ElementDefinition } from '../core/structure-definition-types';
-import { getValidationTargets, type ValidationTarget } from '../business-rules/element-validation-targets';
-import { isRecord, resourceTypeOf } from '../core/fhir-resource';
-import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
-import { targetMatchesSliceDefinition } from './constraint-slice-targets';
-import { checkExtensionPathCardinality } from './extension-cardinality-rules';
-import { normalizeExtensionUrlForMatching } from './extension-definition-extractor';
-import type { ExtensionDefinition } from './extension-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ElementDefinition } from '../core/structure-definition-types.js';
+import { getValidationTargets, type ValidationTarget } from '../business-rules/element-validation-targets.js';
+import { isRecord, resourceTypeOf } from '../core/fhir-resource.js';
+import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar.js';
+import { targetMatchesSliceDefinition } from './constraint-slice-targets.js';
+import { checkExtensionPathCardinality } from './extension-cardinality-rules.js';
+import { normalizeExtensionUrlForMatching } from './extension-definition-extractor.js';
+import type { ExtensionDefinition } from './extension-types.js';
 
 /**
  * Slice ancestors ABOVE the extension element itself. A definition whose id

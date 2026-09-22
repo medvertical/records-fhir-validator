@@ -1,8 +1,8 @@
 import type {
   RemoteValueSetValidationResult,
   SubsumptionOutcome,
-} from './terminology-api-types';
-import { TerminologyTimedLruCache } from './terminology-timed-lru-cache';
+} from './terminology-api-types.js';
+import { TerminologyTimedLruCache } from './terminology-timed-lru-cache.js';
 
 type CachedSubsumption = Exclude<SubsumptionOutcome, 'unknown'>;
 

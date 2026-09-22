@@ -1,4 +1,4 @@
-import type { TerminologyResolutionConfig } from './valueset-types';
+import type { TerminologyResolutionConfig } from './valueset-types.js';
 
 export function canDelegateValueSetExpansion(config: TerminologyResolutionConfig): boolean {
   return config.serverDelegation?.expandValueSets !== false;

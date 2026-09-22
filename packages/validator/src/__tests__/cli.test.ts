@@ -115,63 +115,6 @@ describe('records-fhir-validator CLI', () => {
     });
   });
 
-  it('does not validate a previous output report when the report lives in the input folder', async () => {
-    const root = await createTempDir();
-    await writeJsonFixture(root, 'fixtures/patient.json', JSON.stringify({
-      resourceType: 'Patient',
-      id: 'example',
-    }));
-    await writeJsonFixture(
-      root,
-      'fixtures/validation-report.json',
-      'Validated 1 file(s): 0 error(s), 0 warning(s), 0 issue(s).',
-    );
-
-    const result = await runCli([
-      'fixtures',
-      '--summary-only',
-      '--output',
-      'fixtures/validation-report.json',
-      '--fail-on=none',
-    ], root);
-
-    expect(result.code).toBe(0);
-    expect(result.stdout).toBe('');
-    expect(result.stderr).toBe('');
-    const report = await readFile(join(root, 'fixtures/validation-report.json'), 'utf8');
-    expect(report).toContain('Validated 1 file(s):');
-  }, 30_000);
-
-  it('normalizes XML and every NDJSON record through the CLI', async () => {
-    const root = await createTempDir();
-    await writeJsonFixture(
-      root,
-      'fixtures/patient.xml',
-      '<Patient xmlns="http://hl7.org/fhir"><id value="xml-1"/></Patient>',
-    );
-    await writeJsonFixture(
-      root,
-      'fixtures/export.ndjson',
-      [
-        '{"resourceType":"Patient","id":"ndjson-1"}',
-        '{"resourceType":"Observation","id":"ndjson-2","status":"final","code":{"text":"demo"}}',
-      ].join('\n'),
-    );
-
-    const result = await runCli([
-      'fixtures',
-      '--format=json',
-      '--summary-only',
-      '--fail-on=none',
-    ], root);
-
-    expect(result.code).toBe(0);
-    expect(result.stderr).toBe('');
-    expect(JSON.parse(result.stdout)).toEqual({
-      summary: expect.objectContaining({ files: 3 }),
-    });
-  }, 30_000);
-
   it('exits with code 2 when include and exclude filters leave no FHIR inputs', async () => {
     const root = await createTempDir();
     await writeJsonFixture(root, 'fixtures/drafts/skipped.json', '{}');

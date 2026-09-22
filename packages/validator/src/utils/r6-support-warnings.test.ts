@@ -20,7 +20,6 @@ import {
   shouldAddR6Warning,
   addR6WarningIfNeeded,
   getR6SupportSummary,
-  type _R6WarningType,
 } from './r6-support-warnings';
 import type { ValidationIssue } from '../types/validation-types';
 
@@ -112,6 +111,13 @@ describe('R6 Support Warnings (Task 2.10)', () => {
       const warning2 = createR6Warning('structural', 'general');
 
       expect(warning1.id).toBe(warning2.id);
+    });
+
+    it('should distinguish semantically different warning IDs', () => {
+      const terminologyWarning = createR6Warning('terminology', 'terminology');
+      const profileWarning = createR6Warning('profile', 'profile');
+
+      expect(terminologyWarning.id).not.toBe(profileWarning.id);
     });
 
     it('should include timestamp in warning', () => {

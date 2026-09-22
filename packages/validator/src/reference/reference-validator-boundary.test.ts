@@ -9,18 +9,8 @@ describe('reference validation argument boundaries', () => {
   });
 
   it('validates non-object input without reading identity fields', async () => {
-    const result = await new ReferenceValidator().validate(42, {
-      resource: 42,
-      resourceType: 'Unknown',
-      resourceId: undefined,
-      fhirVersion: 'R4',
-    });
+    const issues = await new ReferenceValidator().validateInternal(42, 'Unknown', 'R4');
 
-    expect(result).toMatchObject({
-      resourceId: 'unknown',
-      resourceType: 'Unknown',
-      isValid: true,
-      issues: [],
-    });
+    expect(issues).toEqual([]);
   });
 });

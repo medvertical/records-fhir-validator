@@ -2,29 +2,19 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-function readSource(file: string): string {
-  return readFileSync(
-    resolve(process.cwd(), 'packages/validator/src/core', file),
-    'utf8',
-  );
-}
-
+/**
+ * The scanner's side of this boundary is a rule in
+ * config/module-boundaries.json. The walker's side is not expressible there:
+ * it asserts that a module *does* reach the file system, which is a property
+ * access on the `fs` namespace rather than an import or a declaration.
+ */
 describe('SD loader package source architecture', () => {
-  it('separates persistent-index policy from package source walking', () => {
-    const scanner = readSource('sd-loader-package-scanner.ts');
-    const walker = readSource('sd-loader-package-source-walker.ts');
-
-    expect(scanner).toMatch(/loadFromPersistentIndex|saveToPersistentIndex|walkPackageSource/);
-    expect(scanner).not.toMatch(/fs\.readdir|selectPackageVersions|packageDetails\.push/);
+  it('keeps package source walking in the walker', () => {
+    const walker = readFileSync(
+      resolve(process.cwd(), 'packages/validator/src/core/sd-loader-package-source-walker.ts'),
+      'utf8',
+    );
 
     expect(walker).toMatch(/fs\.readdir|selectPackageVersions|packageDetails\.push/);
-    expect(walker).not.toMatch(/loadFromPersistentIndex|saveToPersistentIndex/);
-  });
-
-  it('keeps package parsing and directory scanning available from the compatibility facade', () => {
-    const scanner = readSource('sd-loader-package-scanner.ts');
-
-    expect(scanner).toContain("from './sd-loader-package-source-walker'");
-    expect(scanner).toMatch(/parsePackageName|scanPackageDirectory/);
   });
 });

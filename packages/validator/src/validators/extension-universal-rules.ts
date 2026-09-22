@@ -1,16 +1,16 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { isRecord, resourceTypeOf } from '../core/fhir-resource';
-import type { ExtensionUsageSite, NormalizedExtensionContext } from './extension-context-matching';
-import { validateExtensionContextUsage } from './extension-context-usage';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { isRecord, resourceTypeOf } from '../core/fhir-resource.js';
+import type { ExtensionUsageSite, NormalizedExtensionContext } from './extension-context-matching.js';
+import { validateExtensionContextUsage } from './extension-context-usage.js';
 import {
   isAbsoluteExtensionUrl,
   shouldReportUnresolvableExtensionUrl,
   validateExtensionStructure,
   validateKnownHl7ExtensionValueType,
-} from './extension-structure-rules';
-import type { ExtensionValidationContext } from './extension-types';
-import { isKnownCrossVersionExtensionUrl } from './extension-xver-urls';
+} from './extension-structure-rules.js';
+import type { ExtensionValidationContext } from './extension-types.js';
+import { isKnownCrossVersionExtensionUrl } from './extension-xver-urls.js';
 
 interface ValidateUniversalExtensionRulesParams {
   extension: unknown;
@@ -22,10 +22,10 @@ interface ValidateUniversalExtensionRulesParams {
   depth: number;
   maxNestedExtensionDepth: number;
   isNested?: boolean;
-  isExtensionUrlResolvable: (
+  resolveExtensionUrl: (
     url: string,
     fhirVersion: 'R4' | 'R5' | 'R6',
-  ) => Promise<boolean>;
+  ) => Promise<'resolvable' | 'unresolvable' | 'undetermined'>;
   getDeclaredContexts: (
     url: string,
     fhirVersion: 'R4' | 'R5' | 'R6',
@@ -43,7 +43,7 @@ export async function validateUniversalExtensionRules({
   depth,
   maxNestedExtensionDepth,
   isNested = false,
-  isExtensionUrlResolvable,
+  resolveExtensionUrl,
   getDeclaredContexts,
   site,
 }: ValidateUniversalExtensionRulesParams): Promise<ValidationIssue[]> {
@@ -59,7 +59,7 @@ export async function validateUniversalExtensionRules({
     knownUrls,
     context,
     isNested,
-    isExtensionUrlResolvable,
+    resolveExtensionUrl,
   }));
 
   if (url) {
@@ -106,7 +106,7 @@ export async function validateUniversalExtensionRules({
         depth: depth + 1,
         maxNestedExtensionDepth,
         isNested: true,
-        isExtensionUrlResolvable,
+        resolveExtensionUrl,
         getDeclaredContexts,
         site: nestedSite,
       });
@@ -124,9 +124,9 @@ async function validateExtensionUrlRules({
   knownUrls,
   context,
   isNested,
-  isExtensionUrlResolvable,
+  resolveExtensionUrl,
 }: Pick<ValidateUniversalExtensionRulesParams,
-  'extensionType' | 'path' | 'knownUrls' | 'context' | 'isExtensionUrlResolvable'
+  'extensionType' | 'path' | 'knownUrls' | 'context' | 'resolveExtensionUrl'
 > & {
   url: string | undefined;
   isNested: boolean;
@@ -151,9 +151,13 @@ async function validateExtensionUrlRules({
   } else if (!isNested && url.includes('|')) {
     issues.push(...createVersionedUrlIssues(url, path, resourceType));
   } else if (!isNested && !knownUrls.has(url) && shouldReportUnresolvableExtensionUrl(url)) {
-    const resolvable = await isExtensionUrlResolvable(url, context.fhirVersion)
+    // `undetermined` means the loader failed, which says nothing about whether
+    // the extension exists. Reporting it here would accuse a valid extension —
+    // an error for a modifierExtension — on the strength of an outage.
+    const resolution = await resolveExtensionUrl(url, context.fhirVersion);
+    const resolvable = resolution === 'resolvable'
       || isKnownCrossVersionExtensionUrl(url, extensionType);
-    if (!resolvable) {
+    if (!resolvable && resolution !== 'undetermined') {
       issues.push(createUnresolvedExtensionIssue(url, extensionType, path, resourceType));
     }
   }

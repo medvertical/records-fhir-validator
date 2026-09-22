@@ -68,7 +68,9 @@ describe('ValueSetValidator required primitive bindings', () => {
       'Patient.gender',
     );
 
-    expect(issues).toHaveLength(1);
+    // A bare code fails twice over: its system cannot be determined, and the
+    // value is not in the value set. The violation comes first.
+    expect(issues).toHaveLength(2);
     expect(issues[0].code).toBe('terminology-binding-required-code');
     expect(issues[0].path).toBe('Patient.gender');
     expect(issues[0].details?.resourceType).toBe('Patient');
@@ -130,7 +132,9 @@ describe('ValueSetValidator required primitive bindings', () => {
       'Observation.status',
     );
 
-    expect(issues).toHaveLength(1);
+    // A bare code fails twice over: its system cannot be determined, and the
+    // value is not in the value set. The violation comes first.
+    expect(issues).toHaveLength(2);
     expect(issues[0].code).toBe('terminology-binding-required-code');
     expect(issues[0].path).toBe('Observation.status');
     expect(issues[0].details?.resourceType).toBe('Observation');
@@ -159,7 +163,9 @@ describe('ValueSetValidator required primitive bindings', () => {
       'Observation.status',
       { fhirVersion: 'R4' },
     );
-    expect(r4Issues).toHaveLength(1);
+    // A bare code fails twice over: its system cannot be determined, and the
+    // value is not in the value set. The violation comes first.
+    expect(r4Issues).toHaveLength(2);
     expect(r4Issues[0]).toEqual(expect.objectContaining({
       code: 'terminology-binding-required-code',
       path: 'Observation.status',
@@ -261,7 +267,9 @@ describe('ValueSetValidator required primitive bindings', () => {
       { fhirVersion: 'R5' },
     );
 
-    expect(issues).toHaveLength(1);
+    // A bare code fails twice over: its system cannot be determined, and the
+    // value is not in the value set. The violation comes first.
+    expect(issues).toHaveLength(2);
     expect(issues[0]).toEqual(expect.objectContaining({
       code: 'terminology-binding-required-code',
       path: 'Device.name[0].type',
@@ -512,6 +520,8 @@ describe('ValueSetValidator required primitive bindings', () => {
       'Observation.code',
     );
 
+    // A systemless Coding cannot establish required membership; the separate
+    // Coding hygiene pass owns the missing-system diagnostic.
     expect(invalidOnlyIssues).toHaveLength(1);
     expect(invalidOnlyIssues[0].code).toBe('terminology-binding-required-code');
   });

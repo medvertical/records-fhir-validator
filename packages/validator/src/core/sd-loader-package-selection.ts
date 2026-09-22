@@ -1,8 +1,9 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { logger } from '../logger';
-import { packageTargetMetadata } from '../package/package-artifact-policy';
-import { compareVersions } from '../package-resolver/version-comparator';
+import { logger } from '../logger.js';
+import { packageTargetMetadata } from '../package/package-artifact-policy.js';
+import { reportUnreadablePackageStore } from '../package/package-store-diagnostics.js';
+import { compareVersions } from '../package-resolver/version-comparator.js';
 
 export interface InstalledPackageVersion {
   name: string;
@@ -25,7 +26,11 @@ async function hasPackageContent(packageDir: string): Promise<boolean> {
   try {
     const files = await fs.readdir(packageDir, { withFileTypes: true });
     return files.some(file => file.isFile() && file.name.endsWith('.json'));
-  } catch {
+  } catch (error) {
+    // Answering "no content" for a directory that could not be read drops the
+    // package from the scan entirely, so an installed IG stops resolving and
+    // nothing says why.
+    reportUnreadablePackageStore('SDLoader', packageDir, error);
     return false;
   }
 }

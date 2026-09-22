@@ -1,4 +1,4 @@
-import type { LockFile, PinnedCanonical, PinOverride } from './types';
+import type { LockFile, PinnedCanonical, PinOverride } from './types.js';
 
 export function generateLockFile(
   pinned: Map<string, PinnedCanonical>,

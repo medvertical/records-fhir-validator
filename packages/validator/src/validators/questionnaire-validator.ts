@@ -1,19 +1,19 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import { buildQuestionnaireAnswerMap } from './questionnaire-enable-when';
-import { validateQuestionnaireItems } from './questionnaire-item-validator';
-import { validateQuestionnaireSdcConstraints } from './questionnaire-sdc-validator';
-import { ValueSetCache } from './valueset-cache';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import { buildQuestionnaireAnswerMap } from './questionnaire-enable-when.js';
+import { validateQuestionnaireItems } from './questionnaire-item-validator.js';
+import { validateQuestionnaireSdcConstraints } from './questionnaire-sdc-validator.js';
+import { ValueSetCache } from './valueset-cache.js';
 import type {
     QuestionnaireResponseAnswer,
-} from './questionnaire-types';
+} from './questionnaire-types.js';
 import {
     buildQuestionnaireItemMap,
     validateQuestionnaireResponseItems,
     validateQuestionnaireResponseItemsBasic,
     validateRequiredQuestionnaireItems,
-} from './questionnaire-response-structure-validator';
+} from './questionnaire-response-structure-validator.js';
 
 export type {
     AnswerOption,
@@ -21,7 +21,7 @@ export type {
     QuestionnaireItem,
     QuestionnaireResponseAnswer,
     QuestionnaireResponseItem,
-} from './questionnaire-types';
+} from './questionnaire-types.js';
 
 export interface QuestionnaireValidationOptions {
     warnOnUnresolvedQuestionnaireReference?: boolean;

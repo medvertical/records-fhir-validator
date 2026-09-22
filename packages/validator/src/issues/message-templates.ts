@@ -1,5 +1,4 @@
-import { ValidationCode } from './message-catalog';
-import { interpolateMessageTemplate } from './message-template-interpolation';
+import { ValidationCode } from './message-catalog.js';
 
 export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
     'terminology-binding-required':
@@ -10,6 +9,10 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
         "Code '{code}' from system '{system}' is not in value set '{valueSet}' (binding strength: preferred)",
     'terminology-binding-example':
         "Code '{code}' from system '{system}' is not in value set '{valueSet}' (binding strength: example)",
+    'terminology-valueset-version-unresolved':
+        "ValueSet '{valueSet}' not found",
+    'terminology-system-undetermined':
+        "The System URI could not be determined for the code '{code}' in the ValueSet '{valueSet}'",
     'terminology-binding-required-code':
         "Code '{code}' is not in value set '{valueSet}' (binding strength: required)",
     'terminology-binding-extensible-code':
@@ -24,6 +27,8 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
         "ValueSet validation failed: {error}",
     'terminology-binding-unverified':
         "Code '{code}' could not be verified against value set '{valueSet}' (binding strength: {strength}); no local expansion and no terminology server confirmation available",
+    'terminology-server-failure':
+        "Code '{code}' could not be checked against value set '{valueSet}' (binding strength: {strength}); no local expansion and the terminology servers did not answer",
     'terminology-valueset-unavailable':
         "Value set '{valueSet}' could not be resolved; validation of the {strength} binding is incomplete",
 
@@ -237,6 +242,8 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
         "Slice '{slice}' minimum cardinality not met: expected at least {min}, found {actual}",
     'profile-slice-max-cardinality':
         "Slice '{slice}' maximum cardinality exceeded: expected at most {max}, found {actual}",
+    'profile-slice-open-unmatched':
+        "This element does not match any known slice defined in the profile {profile}",
     'profile-slice-closed-unmatched':
         "Element does not match any slice in closed slicing: {path}",
     'profile-slice-ordering-violation':
@@ -322,23 +329,3 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
     'validation-error':
         "Validation error: {message}",
 };
-
-export function formatMessage(
-  code: string,
-  params: Record<string, unknown> = {},
-): string {
-  const template = MessageTemplates[code as ValidationCode];
-  if (!template) return params.message ? String(params.message) : `Validation issue: ${code}`;
-  return interpolateMessageTemplate(template, params);
-}
-
-export const HumanReadableTemplates: Partial<Record<ValidationCode, string>> = {};
-
-export function getHumanReadableMessage(
-  code: string,
-  params: Record<string, unknown> = {},
-): string {
-  const template = HumanReadableTemplates[code as ValidationCode]
-    ?? MessageTemplates[code as ValidationCode];
-  return template ? interpolateMessageTemplate(template, params) : formatMessage(code, params);
-}

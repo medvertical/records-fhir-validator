@@ -1,5 +1,5 @@
-import { normalizeFhirReferenceKey } from '../core/fhir-reference-key';
-import { makeTypedResourceNode, unwrapFhirPathValue } from './fhirpath-node-unwrap';
+import { normalizeFhirReferenceKey } from '../core/fhir-reference-key.js';
+import { makeTypedResourceNode, unwrapFhirPathValue } from './fhirpath-node-unwrap.js';
 
 export interface FHIRPathEvaluationContext {
   rootResource: unknown;

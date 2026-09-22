@@ -1,12 +1,13 @@
-import type { SlicingDefinition, SlicingDiscriminator } from '../core/structure-definition-types';
-import { urlMatchesRequestedFhirVersion, type FhirVersionFamily } from '../core/sd-loader-version-utils';
+import type { SlicingDefinition, SlicingDiscriminator } from '../core/structure-definition-types.js';
+import { urlMatchesRequestedFhirVersion, type FhirVersionFamily } from '../core/sd-loader-version-utils.js';
 import {
   matchDiscriminator,
   sliceHasDiscriminatorEvidence,
-} from './slice-discriminator-matcher';
-import { isRelaxedCodingIdentityCardinalityMatch } from './slicing-cardinality-relaxation';
-import type { ReferenceResolver, SliceDefinition } from './slice-types';
-import { codingMatchesBindingCodes, getValueAtPath, matchesPattern } from './slice-utils';
+} from './slice-discriminator-matcher.js';
+import { isRelaxedCodingIdentityCardinalityMatch } from './slicing-cardinality-relaxation.js';
+import { splitResolveDiscriminatorPath } from './slice-discriminator-path.js';
+import type { ReferenceResolver, SliceDefinition } from './slice-types.js';
+import { codingMatchesBindingCodes, getValueAtPath, matchesPattern } from './slice-utils.js';
 
 export function matchElementToSlice(
   element: unknown,
@@ -41,11 +42,22 @@ export function referenceDiscriminatorCouldNotBeResolved(
   resolver: ReferenceResolver | null,
 ): boolean {
   const rawPath = discriminator.path || '$this';
-  const traversesResolve = rawPath.includes('resolve()');
-  if (!traversesResolve && discriminator.type !== 'profile') return false;
-  const referenceValue = traversesResolve || rawPath === '$this'
+  const resolveStep = splitResolveDiscriminatorPath(rawPath);
+  if (!resolveStep && discriminator.type !== 'profile') return false;
+  // `item.resolve()` resolves the Reference held by `item`; reading the sliced
+  // element instead never finds a reference and every failure looks resolved.
+  const referencePath = resolveStep?.referencePath ?? rawPath;
+  const referenceValue = referencePath === '$this'
     ? element
-    : getValueAtPath(element, rawPath);
+    : getValueAtPath(element, referencePath);
+  const candidates = Array.isArray(referenceValue) ? referenceValue : [referenceValue];
+  return candidates.some(candidate => referenceCannotBeResolved(candidate, resolver));
+}
+
+function referenceCannotBeResolved(
+  referenceValue: unknown,
+  resolver: ReferenceResolver | null,
+): boolean {
   if (!isRecord(referenceValue)) return false;
   const meta = isRecord(referenceValue.meta) ? referenceValue.meta : null;
   if (meta?.profile) return false;

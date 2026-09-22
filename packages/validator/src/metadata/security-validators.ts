@@ -9,12 +9,12 @@
  * Refactored to use createValidationIssue factory.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { validateUriFormat } from './uri-validators';
-import { logger } from '../logger';
-import { isObjectRecord } from './metadata-boundary-utils';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { validateUriFormat } from './uri-validators.js';
+import { logger } from '../logger.js';
+import { isObjectRecord } from './metadata-boundary-utils.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 // Common FHIR security label systems
 const KNOWN_SYSTEMS: Record<string, { name: string; commonCodes: string[] }> = {
@@ -186,11 +186,28 @@ export class SecurityValidator {
         }));
       }
     } else {
+      // KNOWN_SYSTEMS is a hardcoded shortlist, so an unlisted system said only
+      // that Records had not heard of it. Two separate things are actually
+      // wrong, and the reference validator names both: the code system cannot
+      // be resolved, so the code cannot be checked at all, and the label is
+      // therefore not known to be in the bound value set.
       issues.push(createValidationIssue({
-        code: 'metadata-security-unknown-system',
+        code: 'terminology-codesystem-unresolvable',
         path: `${path}.system`,
         resourceType,
-        messageParams: { system },
+        customMessage:
+          `A definition for CodeSystem '${system}' could not be found, so the code cannot be validated`,
+        severityOverride: 'warning',
+        details: { system, ...(code ? { code } : {}) },
+      }));
+      issues.push(createValidationIssue({
+        code: 'metadata-security-unknown-system',
+        path: `${path}.code`,
+        resourceType,
+        customMessage:
+          `The code provided (${system}#${code}) is not in the value set 'All Security Labels'`,
+        severityOverride: 'warning',
+        details: { system, code },
       }));
     }
 

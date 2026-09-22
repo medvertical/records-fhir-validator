@@ -3,7 +3,7 @@ import type {
   ValidationSeverity,
 } from '@records-fhir/validation-types';
 import { isValid, parseISO } from 'date-fns';
-import { createValidationIssue } from '../../issues';
+import { createValidationIssue } from '../../issues/index.js';
 
 export type UnknownRecord = Record<string, unknown>;
 

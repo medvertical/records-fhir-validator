@@ -263,11 +263,10 @@ describe('unknown-property-walker', () => {
     } as any;
     const deps = makeWalkerDeps(sdLoader, 'R4');
     const issues = await detectUnknownProperties(
-      { resourceType: 'TestRes', name: { family: 'Doe', faimly: 'typo' } },
+      { resourceType: 'TestRes', name: { family: 'Doe', faimly: 'typo' }, contact: [{ name: { faimly: 'nested typo' } }] },
       index, 'TestRes', sd.url, deps,
     );
-    expect(issues).toHaveLength(1);
-    expect(issues[0].path).toBe('HumanName.faimly');
+    expect(issues.map(issue => issue.path)).toEqual(['TestRes.name.faimly', 'TestRes.contact.name.faimly']);
     expect(issues[0].severity).toBe('warning');
   });
 
@@ -319,7 +318,7 @@ describe('unknown-property-walker', () => {
       .toHaveLength(0);
     available = true;
     expect(await detectUnknownProperties(resource, index, 'TestRes', sd.url, deps))
-      .toContainEqual(expect.objectContaining({ path: 'HumanName.faimly' }));
+      .toContainEqual(expect.objectContaining({ path: 'TestRes.name.faimly' }));
     expect(sdLoader.loadProfile).toHaveBeenCalledTimes(2);
   });
 

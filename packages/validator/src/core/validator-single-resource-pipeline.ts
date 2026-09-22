@@ -1,9 +1,9 @@
-import type { ProfileCache } from '../cache/profile-cache';
-import { logger } from '../logger';
-import type { ValidationIssue, ValidationSettings } from '../types';
-import type { BestPracticeValidator } from '../validators/best-practice-validator';
-import type { ReferenceResolver } from '../validators/slicing-validator';
-import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import { logger } from '../logger.js';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import type { BestPracticeValidator } from '../validators/best-practice-validator.js';
+import type { ReferenceResolver } from '../validators/slicing-validator.js';
+import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator.js';
 import type {
   CustomRuleExecutor,
   InvariantExecutor,
@@ -12,17 +12,20 @@ import type {
   ReferenceExecutor,
   StructuralExecutor,
   TerminologyExecutor,
-} from './executors';
-import { isFhirResource, type FhirResource } from './fhir-resource';
-import type { QuestionnaireContextRegistry } from './questionnaire-context-registry';
+} from './executors/index.js';
+import { isFhirResource, type FhirResource } from './fhir-resource.js';
+import { mandatedProfileAdditions, mandatedProfileBeside } from './mandated-profile-pass.js';
+import { combineReferenceResolvers, createBundleReferenceResolver,
+  type BundleCanonicalResolver } from './multi-aspect-bundle-reference-resolver.js';
+import type { QuestionnaireContextRegistry } from './questionnaire-context-registry.js';
 import {
   prepareSingleResourceProfile,
   type FhirClientLike,
-} from './single-resource-profile-preparation';
-import { collectSingleResourceValidationIssues } from './single-resource-validation';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import { createValidationErrorIssue, dedupeResourceTreeIssues } from './validation-utils';
+} from './single-resource-profile-preparation.js';
+import { collectSingleResourceValidationIssues } from './single-resource-validation.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import { createValidationErrorIssue, dedupeResourceTreeIssues } from './validation-utils.js';
 
 export interface RecordsSingleResourceValidationInput {
   resource: unknown;
@@ -31,6 +34,7 @@ export interface RecordsSingleResourceValidationInput {
   settings?: ValidationSettings;
   fhirClient?: FhirClientLike;
   referenceResolver?: ReferenceResolver | null;
+  bundleCanonicalResolver?: BundleCanonicalResolver | null;
   organizationId?: number;
   serverId?: number;
 }
@@ -56,6 +60,11 @@ export interface RecordsSingleResourceValidationContext {
   ): Promise<ValidationIssue[]>;
   validateContainedResourcesIfNeeded(resource: FhirResource): Promise<ValidationIssue[]>;
   validateParametersResourcesIfNeeded(resource: FhirResource): Promise<ValidationIssue[]>;
+  validateAgainstProfile(
+    resource: FhirResource,
+    profileUrl: string,
+    fhirVersion: 'R4' | 'R5' | 'R6',
+  ): Promise<ValidationIssue[]>;
 }
 
 export async function executeRecordsResourceValidation(
@@ -70,6 +79,7 @@ export async function executeRecordsResourceValidation(
     settings,
     fhirClient,
     referenceResolver,
+    bundleCanonicalResolver,
     organizationId,
     serverId,
   } = input;
@@ -81,6 +91,17 @@ export async function executeRecordsResourceValidation(
     )];
   }
   const profileSourceContext = { organizationId, serverId, fhirVersion };
+  // Batch validation and bundle-entry recursion already resolve `#id` and
+  // bundle-local references. A top-level single resource must not be the one
+  // path where a resolve() discriminator counts its own contained targets as
+  // unresolvable and the slicing goes unverified.
+  const effectiveReferenceResolver = combineReferenceResolvers(
+    createBundleReferenceResolver(
+      resource.resourceType === 'Bundle' ? resource : undefined,
+      resource,
+    ),
+    referenceResolver,
+  );
   const {
     declaredProfileUrl,
     structureDef,
@@ -95,6 +116,7 @@ export async function executeRecordsResourceValidation(
       settings,
       fhirClient,
       profileSourceContext,
+      bundleCanonicalResolver,
     },
     {
       sdLoader: context.sdLoader,
@@ -125,7 +147,7 @@ export async function executeRecordsResourceValidation(
       profileFallbackIssue,
       codeInferredProfile,
       contextQuestionnaire,
-      referenceResolver,
+      referenceResolver: effectiveReferenceResolver,
       organizationId,
       serverId,
     },
@@ -144,6 +166,7 @@ export async function executeRecordsResourceValidation(
   );
   issues.push(...await context.validateContainedResourcesIfNeeded(resource));
   issues.push(...await context.validateParametersResourcesIfNeeded(resource));
+  issues.push(...await collectMandatedProfileIssues(resource, declaredProfileUrl, fhirVersion, issues, context));
   // Contained resources are validated recursively after the parent issue
   // collection has already been deduplicated. Run the same canonical
   // deduplication once more at the complete-resource boundary so an issue
@@ -157,4 +180,21 @@ export async function executeRecordsResourceValidation(
   );
 
   return issues;
+}
+
+async function collectMandatedProfileIssues(
+  resource: FhirResource,
+  declaredProfileUrl: string,
+  fhirVersion: 'R4' | 'R5' | 'R6',
+  alreadyReported: ValidationIssue[],
+  context: RecordsSingleResourceValidationContext,
+): Promise<ValidationIssue[]> {
+  const mandatedProfileUrl = mandatedProfileBeside(resource, declaredProfileUrl);
+  if (!mandatedProfileUrl) return [];
+  const mandatedIssues = await context.validateAgainstProfile(
+    resource,
+    mandatedProfileUrl,
+    fhirVersion,
+  );
+  return mandatedProfileAdditions(alreadyReported, mandatedIssues, mandatedProfileUrl);
 }

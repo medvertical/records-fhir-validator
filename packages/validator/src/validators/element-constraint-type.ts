@@ -1,4 +1,4 @@
-import type { ElementDefinition } from '../core/structure-definition-types';
+import type { ElementDefinition } from '../core/structure-definition-types.js';
 
 /**
  * FHIR serializes fixed[x]/pattern[x] constraints with the datatype in the

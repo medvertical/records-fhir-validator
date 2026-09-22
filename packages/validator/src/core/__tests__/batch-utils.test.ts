@@ -23,6 +23,13 @@ import { setProfileSource } from '../../persistence';
 // ============================================================================
 
 describe('deduplicateResources', () => {
+  it('keeps identical payloads separate when profile selection changes their findings', () => {
+    const resource = { resourceType: 'Observation', meta: { profile: ['http://hl7.org/fhir/StructureDefinition/bp'] } };
+    const resources = [resource, structuredClone(resource), structuredClone(resource)];
+    const { unique } = deduplicateResources(resources, ['code-inferred', 'resource-meta', 'code-inferred']);
+    expect(unique).toEqual(resources.slice(0, 2));
+    expect(unique[1]).toBe(resources[1]);
+  });
   it('returns a single unique for a list with no duplicates', () => {
     const resources = [
       { resourceType: 'Patient', id: '1' },

@@ -6,5 +6,5 @@
  * and custom-rule-executor instead of hardcoding fhirpath_r4.
  */
 
-export { getFhirPathModel } from '../core/fhirpath-context';
-export type { FhirPathModel } from '../core/fhirpath-context';
+export { getFhirPathModel } from '../core/fhirpath-context.js';
+export type { FhirPathModel } from '../core/fhirpath-context.js';

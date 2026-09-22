@@ -4,7 +4,7 @@ import type {
   TerminologyDiagnostics,
   TerminologyReasonCounters,
   TerminologyUnverifiedReason,
-} from './valueset-types';
+} from './valueset-types.js';
 
 function createEmptyTerminologyReasonCounters(): TerminologyReasonCounters {
   return {

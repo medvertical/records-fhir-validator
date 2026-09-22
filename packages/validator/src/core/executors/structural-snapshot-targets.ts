@@ -1,6 +1,6 @@
-import { getValidationTargets } from '../../business-rules';
-import type { ValidationIssue } from '../../types';
-import { getDirectValue, isValueEmpty } from './structural-executor-helpers';
+import { getValidationTargets } from '../../business-rules/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { getDirectValue, isValueEmpty } from './structural-executor-helpers.js';
 
 type FhirResource = Record<string, unknown>;
 type ValidationTarget = ReturnType<typeof getValidationTargets>[number];

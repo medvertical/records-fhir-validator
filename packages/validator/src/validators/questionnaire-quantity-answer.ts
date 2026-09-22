@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import type { QuestionnaireQuantity } from './questionnaire-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import type { QuestionnaireQuantity } from './questionnaire-types.js';
 
 export function validateQuestionnaireQuantityAnswer(
     quantity: QuestionnaireQuantity,

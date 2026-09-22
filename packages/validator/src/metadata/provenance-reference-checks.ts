@@ -1,7 +1,7 @@
-import type { ValidationIssue } from '../types';
-import { validateReferenceFormat } from '../reference/reference-format-validator';
-import { createProvenanceIssue } from './provenance-chain-issue';
-import { asRecord, type ProvenanceResource } from './provenance-chain-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateReferenceFormat } from '../reference/reference-format-validator.js';
+import { createProvenanceIssue } from './provenance-chain-issue.js';
+import { asRecord, type ProvenanceResource } from './provenance-chain-types.js';
 
 export function validateProvenanceTargets(
   resource: ProvenanceResource,

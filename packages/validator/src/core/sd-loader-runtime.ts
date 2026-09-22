@@ -1,31 +1,31 @@
-import { clearCanonicalPinCaches } from '../package/canonical-pin-context';
-import { clearProfilePackageProvenance } from '../package/canonical-pin-provenance';
+import { clearCanonicalPinCaches } from '../package/canonical-pin-context.js';
+import { clearProfilePackageProvenance } from '../package/canonical-pin-provenance.js';
 import type { PackageDownloader } from '../package/package-downloader.js';
 import type { PackageRegistryClient } from '../package/package-registry-client.js';
-import { logger } from '../logger';
-import type { ProfileSourceContext } from '../persistence';
-import type { ValidationSettings } from '../types';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
-import { AutoDownloadState } from './sd-loader-auto-download';
+import { logger } from '../logger.js';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import type { ValidationSettings } from '@records-fhir/validation-types';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
+import { AutoDownloadState } from './sd-loader-auto-download.js';
 import {
   hasRequiredBaseProfiles,
   initializeStructureDefinitionCache,
   pruneReloadableProfileCache,
-} from './sd-loader-cache-runtime';
+} from './sd-loader-cache-runtime.js';
 import {
   loadProfile as loadStructureDefinitionProfile,
   type LoadProfileContext,
-} from './sd-loader-load';
+} from './sd-loader-load.js';
 import {
   resolveStructureDefinitionLoaderOptions,
   type StructureDefinitionLoaderOptions,
-} from './sd-loader-options';
-import { PackageProfileIndexCache } from './sd-loader-package-profile-index';
-import { invalidateProfilePolicyCaches } from './sd-loader-policy-cache';
-import { StructureDefinitionLoaderPolicyState } from './sd-loader-policy-state';
-import type { StructureDefinition } from './structure-definition-types';
+} from './sd-loader-options.js';
+import { PackageProfileIndexCache } from './sd-loader-package-profile-index.js';
+import { invalidateProfilePolicyCaches } from './sd-loader-policy-cache.js';
+import { StructureDefinitionLoaderPolicyState } from './sd-loader-policy-state.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 
-export type { StructureDefinitionLoaderOptions } from './sd-loader-options';
+export type { StructureDefinitionLoaderOptions } from './sd-loader-options.js';
 
 /** Mutable state and lifecycle shared by the StructureDefinitionLoader facade. */
 export class StructureDefinitionLoaderRuntime {

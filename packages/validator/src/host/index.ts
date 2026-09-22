@@ -10,65 +10,77 @@
  * should prefer this file over importing internal `core/*` modules directly.
  */
 
-export { setEngineLogger } from '../logger';
-export type { EngineLogger } from '../logger';
+export { setEngineLogger } from '../logger.js';
+export { createValidationDependencySnapshot } from '../validation-dependency-snapshot.js';
+export type { EngineLogger } from '../logger.js';
 
 export {
   getCustomRulesSource,
   getProfileSource,
   setCustomRulesSource,
   setProfileSource,
-} from '../persistence';
+} from '../persistence/index.js';
 export type {
   CustomRulesSource,
   EngineCustomRule,
   ProfileResolutionEntry,
   ProfileSourceContext,
   ProfileSource,
-} from '../persistence';
-export { createFilesystemProfileSource } from '../persistence/filesystem-profile-source';
-export type { FilesystemProfileSourceOptions } from '../persistence/filesystem-profile-source';
+} from '../persistence/index.js';
+export { createFilesystemProfileSource } from '../persistence/filesystem-profile-source.js';
+export type { FilesystemProfileSourceOptions } from '../persistence/filesystem-profile-source.js';
 
-export { resetWarmupState } from '../core/profile-cache-warmup';
-export { ProfileWarmupCoordinator } from '../core/profile-warmup-coordinator';
-export type { ProfileWarmupResult } from '../core/profile-warmup-coordinator';
+export { resetWarmupState } from '../core/profile-cache-warmup.js';
+export { ProfileWarmupCoordinator } from '../core/profile-warmup-coordinator.js';
+export type { ProfileWarmupResult } from '../core/profile-warmup-coordinator.js';
 export {
   dedupeIssues,
   dedupeIssuesWithTrace,
   suppressRedundantBindingWarnings,
-} from '../core/validation-utils';
+} from '../core/validation-utils.js';
 export type {
   DedupeIssuesResult,
   DedupeSuppressionTrace,
-} from '../core/validation-utils';
-export { detailedResultToOperationOutcome } from '../core/operation-outcome-converter';
-export { isPrimitiveType } from '../core/executors/structural-executor-helpers';
-export { CustomRuleExecutor } from '../core/executors/custom-rule-executor';
-export { RuleRegistry } from '../business-rules/rule-registry';
-export { getCombinedFHIRPathCacheStats } from '../validator-singleton';
+} from '../core/validation-utils.js';
+export {
+  addR6WarningIfNeeded,
+  createR6Warning,
+  getR6SupportSummary,
+  isR6,
+  shouldAddR6Warning,
+} from '../utils/r6-support-warnings.js';
+export type {
+  R6ValidationAspect,
+  R6WarningType,
+} from '../utils/r6-support-warnings.js';
+export { detailedResultToOperationOutcome } from '../core/operation-outcome-converter.js';
+export { isPrimitiveType } from '../core/executors/structural-executor-helpers.js';
+export { CustomRuleExecutor } from '../core/executors/custom-rule-executor.js';
+export { RuleRegistry } from '../business-rules/rule-registry.js';
+export { getCombinedFHIRPathCacheStats } from '../validator-singleton.js';
 export {
   normalizeKnownStructureDefinitionCanonicalUrl,
   StructureDefinitionLoader,
-} from '../core/structure-definition-loader';
-export { isKnownSecurityLabelCode } from '../metadata/security-validators';
-export { scanCacheDirectory } from '../core/sd-loader-package-scanner';
-export type { ScanCacheDirectoryOptions } from '../core/sd-loader-package-scanner';
-export { loadFromPersistentIndex } from '../core/sd-loader-persistent-index';
-export type { PersistentIndexOptions } from '../core/sd-loader-persistent-index';
+} from '../core/structure-definition-loader.js';
+export { isKnownSecurityLabelCode } from '../metadata/security-validators.js';
+export { scanCacheDirectory } from '../core/sd-loader-package-scanner.js';
+export type { ScanCacheDirectoryOptions } from '../core/sd-loader-package-scanner.js';
+export { loadFromPersistentIndex } from '../core/sd-loader-persistent-index.js';
+export type { PersistentIndexOptions } from '../core/sd-loader-persistent-index.js';
 export {
   isPackageAllowed,
   parseAllowedPackages,
-} from '../core/sd-loader-package-config';
+} from '../core/sd-loader-package-config.js';
 export type {
   Binding,
   Constraint,
   ElementDefinition,
   ElementType,
   StructureDefinition,
-} from '../core/structure-definition-loader';
+} from '../core/structure-definition-loader.js';
 export {
   PackageDownloader,
-} from '../package/package-downloader';
+} from '../package/package-downloader.js';
 export {
   MAX_ARCHIVE_ENTRIES,
   MAX_ARCHIVE_TOTAL_BYTES,
@@ -79,12 +91,12 @@ export {
   packageErrorMetadata,
   packageReferenceMetadata,
   packageTargetMetadata,
-} from '../package/package-artifact-policy';
+} from '../package/package-artifact-policy.js';
 export type {
   DownloadResult,
   PackageDownloadOptions,
-} from '../package/package-downloader';
-export { compareVersions } from '../package-resolver/version-comparator';
+} from '../package/package-downloader.js';
+export { compareVersions } from '../package-resolver/version-comparator.js';
 
 export {
   createBindingUnverified,
@@ -97,7 +109,7 @@ export {
   createValidationIssue,
   resetIssueCounter,
   type CreateIssueParams,
-} from '../issues';
+} from '../issues/index.js';
 export {
   BusinessRuleCodes,
   getCodeMetadata,
@@ -110,7 +122,7 @@ export {
   StructuralCodes,
   TerminologyCodes,
   ValidationCodes,
-} from '../issues/codes';
+} from '../issues/codes/index.js';
 export type {
   BusinessRuleCode,
   MetadataCode,
@@ -120,11 +132,12 @@ export type {
   TerminologyCode,
   ValidationCode,
   ValidationCodeMetadata,
-} from '../issues/codes';
-export { CodeAliases } from '../issues/codes/code-aliases';
+} from '../issues/codes/index.js';
+export { CodeAliases } from '../issues/codes/code-aliases.js';
 export {
   formatMessage,
   getHumanReadableMessage,
   HumanReadableTemplates,
-  MessageTemplates,
-} from '../issues/message-templates';
+} from '../issues/message-formatting.js';
+export { MessageTemplates } from '../issues/message-templates.js';
+export { mapToHl7IssueType } from '../core/operation-outcome-converter.js';

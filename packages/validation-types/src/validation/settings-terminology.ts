@@ -4,7 +4,7 @@
  * Extracted from settings.ts to keep that file focused on ValidationSettings itself.
  */
 
-import type { ServerStatus } from './enums';
+import type { ServerStatus } from './enums.js';
 
 // ============================================================================
 // Terminology Server Configuration

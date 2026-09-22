@@ -6,8 +6,8 @@
  * - Other conditional extension requirements for German profiles
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 
 // ============================================================================
 // Constants

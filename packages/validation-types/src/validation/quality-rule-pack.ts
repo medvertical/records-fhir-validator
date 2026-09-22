@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { qualityAdvisoryRuleDefinitionSchema } from './quality-advisory-rule';
+import { qualityAdvisoryRuleDefinitionSchema } from './quality-advisory-rule.js';
 import {
   QUALITY_ADVISORY_ACTIONS,
   QUALITY_FINDING_DISPOSITIONS,
@@ -11,13 +11,13 @@ import {
   boundedQualityResourceType,
   boundedQualityRuleId,
   qualityRuleSourceSchema,
-} from './quality-rule-schema-foundations';
-import { qualityThresholdSchema } from './quality-threshold';
+} from './quality-rule-schema-foundations.js';
+import { qualityThresholdSchema } from './quality-threshold.js';
 
-export { qualityAdvisoryRuleDefinitionSchema } from './quality-advisory-rule';
-export type { QualityAdvisoryRuleDefinition } from './quality-advisory-rule';
-export { qualityPolicyLayerSchema, qualityRuleOverrideSchema } from './quality-policy-layer';
-export type { QualityPolicyLayer, QualityRuleOverride } from './quality-policy-layer';
+export { qualityAdvisoryRuleDefinitionSchema } from './quality-advisory-rule.js';
+export type { QualityAdvisoryRuleDefinition } from './quality-advisory-rule.js';
+export { qualityPolicyLayerSchema, qualityRuleOverrideSchema } from './quality-policy-layer.js';
+export type { QualityPolicyLayer, QualityRuleOverride } from './quality-policy-layer.js';
 export {
   QUALITY_ADVISORY_ACTIONS,
   QUALITY_FINDING_DISPOSITIONS,
@@ -27,7 +27,7 @@ export {
   QUALITY_RULE_SEVERITIES,
   boundedQualityRuleId,
   qualityRuleSourceSchema,
-} from './quality-rule-schema-foundations';
+} from './quality-rule-schema-foundations.js';
 
 export type QualityRuleScope = typeof QUALITY_RULE_SCOPES[number];
 export type QualityRuleOutcome = typeof QUALITY_RULE_OUTCOMES[number];

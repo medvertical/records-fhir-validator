@@ -1,8 +1,8 @@
-import type { ValidationIssue } from "../types";
-import { logger } from "../logger";
-import { shouldSuppressBundleEntryIssue } from "./bundle-entry-issue-filter";
-import { createValidationErrorIssue } from "./validation-utils";
-import { createSafeValidationFailureMessage } from "../utils/validation-execution-failure";
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { logger } from "../logger.js";
+import { shouldSuppressBundleEntryIssue } from "./bundle-entry-issue-filter.js";
+import { createValidationErrorIssue } from "./validation-utils.js";
+import { createSafeValidationFailureMessage } from "../utils/validation-execution-failure.js";
 
 export interface BundleEntryIssueContext {
   entryIndex: number;

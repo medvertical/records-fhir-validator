@@ -9,10 +9,10 @@
  * regardless of whether the target element exists.
  */
 
-import type { StructureDefinition, Constraint, ElementDefinition } from '../core/structure-definition-types';
-import { logger } from '../logger';
-import { ElementContextResolver } from './element-context-resolver';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+import type { StructureDefinition, Constraint, ElementDefinition } from '../core/structure-definition-types.js';
+import { logger } from '../logger.js';
+import { ElementContextResolver } from './element-context-resolver.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 
 // ============================================================================
 // Types

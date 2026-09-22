@@ -3,11 +3,22 @@ import { ReferenceValidator } from '../reference-validator-refactored';
 
 async function validateAndCollect(bundle: any) {
   const validator = new ReferenceValidator();
-  const result = await validator.validate(bundle, { resourceType: 'Bundle', fhirVersion: 'R4' });
-  return result.issues;
+  return validator.validateInternal(bundle, 'Bundle', 'R4');
 }
 
 describe('ReferenceValidator — Bundle entry contained-ref scoping', () => {
+  it('reports missing contained references in each entry using that entry own scope', async () => {
+    const bundle = { resourceType: 'Bundle', type: 'collection', entry: [
+      { resource: { resourceType: 'Observation', subject: { reference: '#missing' } } },
+      { resource: { resourceType: 'Observation', subject: { reference: '#missing' },
+        contained: [{ resourceType: 'Patient', id: 'missing' }] } },
+    ] };
+    const issues = await validateAndCollect(bundle);
+    expect(issues.filter(issue => issue.code === 'reference-ref1-invariant')).toEqual([
+      expect.objectContaining({ path: 'Bundle.entry[0].resource.subject' }),
+    ]);
+  });
+
   it('does not flag a #-ref inside Bundle.entry[].resource against the empty Bundle.contained', async () => {
     const bundle = {
       resourceType: 'Bundle',
@@ -75,8 +86,8 @@ describe('ReferenceValidator — Parameters embedded resource contained-ref scop
       ],
     };
 
-    const result = await validator.validate(parameters, { resourceType: 'Parameters', fhirVersion: 'R4' });
-    const containedErrors = result.issues.filter(
+    const issues = await validator.validateInternal(parameters, 'Parameters', 'R4');
+    const containedErrors = issues.filter(
       (i: any) =>
         (i.code === 'reference-contained-unresolved' || i.code === 'reference-ref1-invariant')
         && /payer/.test(i.message || ''),

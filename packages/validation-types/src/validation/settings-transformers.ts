@@ -4,9 +4,9 @@
  * Transformation utilities for validation settings (migration, version management, etc.).
  */
 
-import type { ValidationSettings } from './settings';
-import type { FHIRVersion } from './enums';
-import { R4_ALL_RESOURCE_TYPES, R5_ALL_RESOURCE_TYPES, R4_DEFAULT_INCLUDED_RESOURCE_TYPES, R5_DEFAULT_INCLUDED_RESOURCE_TYPES } from './settings-types';
+import type { ValidationSettings } from './settings.js';
+import type { FHIRVersion } from './enums.js';
+import { R4_ALL_RESOURCE_TYPES, R5_ALL_RESOURCE_TYPES, R4_DEFAULT_INCLUDED_RESOURCE_TYPES, R5_DEFAULT_INCLUDED_RESOURCE_TYPES } from './settings-types.js';
 
 // ============================================================================
 // FHIR Version Management Utilities

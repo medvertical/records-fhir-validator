@@ -1,4 +1,4 @@
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 export function getDetailsRecord(issue: ValidationIssue): Record<string, unknown> | undefined {
   const details = issue.details;

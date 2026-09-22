@@ -128,9 +128,10 @@ const NAMED_ENTITY_DECODINGS: Record<string, string> = {
 
 export function hasNonWhitespaceNarrativeContent(div: string): boolean {
   const scannable = withoutCommentsAndCdata(div);
-  // HL7 htmlChecks2 semantics (txt-2): an <img> element counts as content
-  // even when the narrative has no text at all.
-  if (/<(?:[a-zA-Z][a-zA-Z0-9]*:)?img\b/i.test(scannable)) return true;
+  // txt-2 counts images only when they carry a src attribute.
+  for (const image of scannable.matchAll(/<(?:[a-zA-Z][a-zA-Z0-9]*:)?img\b((?:[^>"']|"[^"]*"|'[^']*')*)>/gi)) {
+    if (parseTagAttributeNames(image[1]).includes('src')) return true;
+  }
   const text = decodeXhtmlEntities(scannable.replace(/<[^>]*>/g, ''));
   return hasCharAboveSpace(text);
 }

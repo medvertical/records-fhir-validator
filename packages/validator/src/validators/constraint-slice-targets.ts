@@ -1,6 +1,6 @@
-import type { ElementDefinition } from '../core/structure-definition-types';
-import type { ValidationTarget } from '../business-rules/element-validation-targets';
-import { getEvaluationContext } from './constraint-path-utils';
+import type { ElementDefinition } from '../core/structure-definition-types.js';
+import type { ValidationTarget } from '../business-rules/element-validation-targets.js';
+import { getEvaluationContext } from './constraint-path-utils.js';
 import {
   extractFixedEntry,
   extractPatternEntry,
@@ -8,11 +8,77 @@ import {
   inferType,
   matchesPattern,
   valueCanIdentifyFixedSlice,
-} from './slice-utils';
+} from './slice-utils.js';
 
 interface SliceMatchContext {
   resource: unknown;
   target: Pick<ValidationTarget, 'fullPath'>;
+}
+
+interface SliceChildPattern {
+  relativePath: string;
+  kind: 'fixed' | 'pattern';
+  key: string;
+  expected: unknown;
+}
+
+/** Compile profile-only lookups for one validation; never retain resource values or another run's definitions. */
+export function createSliceDefinitionMatcher(elements: ElementDefinition[]) {
+  const slicesById = new Map<string, ElementDefinition[]>();
+  for (const element of elements) {
+    if (!isElementDefinition(element) || !element.sliceName || typeof element.id !== 'string') continue;
+    const siblings = slicesById.get(element.id) ?? [];
+    siblings.push(element);
+    slicesById.set(element.id, siblings);
+  }
+  const childrenById = indexSliceChildPatterns(elements, slicesById);
+  const ancestorsByElement = new Map<ElementDefinition, ElementDefinition[]>();
+  const childPatterns = (slice: ElementDefinition) => slice.id ? childrenById.get(slice.id) ?? [] : [];
+  return (value: unknown, element: ElementDefinition, context?: SliceMatchContext): boolean => {
+    let ancestors = ancestorsByElement.get(element);
+    if (!ancestors) {
+      ancestors = [];
+      if (!element.id) {
+        if (element.sliceName) ancestors.push(element);
+      } else {
+        for (let end = element.id.indexOf('.'); end >= 0; end = element.id.indexOf('.', end + 1)) {
+          ancestors.push(...slicesById.get(element.id.slice(0, end)) ?? []);
+        }
+        ancestors.push(...slicesById.get(element.id) ?? []);
+      }
+      ancestorsByElement.set(element, ancestors);
+    }
+    return matchesSliceAncestors(value, element, ancestors, childPatterns, context);
+  };
+}
+
+function indexSliceChildPatterns(
+  elements: ElementDefinition[],
+  slicesById: Map<string, ElementDefinition[]>,
+): Map<string, SliceChildPattern[]> {
+  const children = new Map<string, SliceChildPattern[]>();
+  for (const candidate of elements) {
+    if (!isElementDefinition(candidate) || typeof candidate.id !== 'string') continue;
+    const parents: Array<{ id: string; relativePath: string }> = [];
+    for (let end = candidate.id.lastIndexOf('.'); end >= 0; end = candidate.id.lastIndexOf('.', end - 1)) {
+      const relativePath = candidate.id.slice(end + 1);
+      if (relativePath.includes(':')) break;
+      const id = candidate.id.slice(0, end);
+      if (slicesById.has(id)) parents.push({ id, relativePath });
+      if (end === 0) break;
+    }
+    if (!parents.length) continue;
+    const pattern = extractPatternEntry(candidate);
+    const fixed = pattern ? undefined : extractFixedEntry(candidate);
+    const entry = pattern ?? fixed;
+    if (!entry) continue;
+    for (const { id, relativePath } of parents) {
+      const patterns = children.get(id) ?? [];
+      patterns.push({ relativePath, kind: pattern ? 'pattern' : 'fixed', key: entry.key, expected: entry.value });
+      children.set(id, patterns);
+    }
+  }
+  return children;
 }
 
 export function targetMatchesSliceDefinition(
@@ -21,7 +87,17 @@ export function targetMatchesSliceDefinition(
   elements: ElementDefinition[],
   context?: SliceMatchContext,
 ): boolean {
-  const sliceAncestors = getSliceAncestors(element, elements);
+  return matchesSliceAncestors(value, element, getSliceAncestors(element, elements),
+    slice => getSliceChildPatternEntries(slice, elements), context);
+}
+
+function matchesSliceAncestors(
+  value: unknown,
+  element: ElementDefinition,
+  sliceAncestors: ElementDefinition[],
+  childPatterns: (slice: ElementDefinition) => SliceChildPattern[],
+  context?: SliceMatchContext,
+): boolean {
   if (sliceAncestors.length === 0) {
     return true;
   }
@@ -31,7 +107,7 @@ export function targetMatchesSliceDefinition(
       ? value
       : getSliceAncestorValue(slice, element, context);
 
-    if (sliceValue === undefined || !matchesSliceElement(sliceValue, slice, elements)) {
+    if (sliceValue === undefined || !matchesSliceElement(sliceValue, slice, childPatterns)) {
       return false;
     }
   }
@@ -42,7 +118,7 @@ export function targetMatchesSliceDefinition(
 function matchesSliceElement(
   value: unknown,
   element: ElementDefinition,
-  elements: ElementDefinition[],
+  childPatterns: (slice: ElementDefinition) => SliceChildPattern[],
 ): boolean {
   const inlinePattern = extractPatternEntry(element);
   if (inlinePattern && !matchesPattern(value, inlinePattern.value)) return false;
@@ -53,7 +129,7 @@ function matchesSliceElement(
   ) return false;
   if (inlinePattern || inlineFixed) return true;
 
-  const childPatternEntries = getSliceChildPatternEntries(element, elements);
+  const childPatternEntries = childPatterns(element);
   if (childPatternEntries.length === 0) {
     return matchesChoiceTypeSlice(value, element);
   }
@@ -122,12 +198,7 @@ function pathStartsWith(path: string, prefix: string): boolean {
 function getSliceChildPatternEntries(
   element: ElementDefinition,
   elements: ElementDefinition[],
-): Array<{
-  relativePath: string;
-  kind: 'fixed' | 'pattern';
-  key: string;
-  expected: unknown;
-}> {
+): SliceChildPattern[] {
   if (!element.id) return [];
   const prefix = `${element.id}.`;
 

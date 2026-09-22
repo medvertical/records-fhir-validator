@@ -38,9 +38,9 @@ describe("ExtensionValidator", () => {
       .mockResolvedValueOnce({ resourceType: "StructureDefinition" });
     const resolver = new ExtensionUrlResolver({ loadProfile } as any);
 
-    await expect(resolver.isResolvable(extensionUrl, "R4")).resolves.toBe(true);
-    await expect(resolver.isResolvable(extensionUrl, "R5")).resolves.toBe(false);
-    await expect(resolver.isResolvable(extensionUrl, "R5")).resolves.toBe(true);
+    await expect(resolver.resolveKnown(extensionUrl, "R4")).resolves.toBe("resolvable");
+    await expect(resolver.resolveKnown(extensionUrl, "R5")).resolves.toBe("unresolvable");
+    await expect(resolver.resolveKnown(extensionUrl, "R5")).resolves.toBe("resolvable");
     expect(loadProfile).toHaveBeenCalledTimes(3);
   });
 

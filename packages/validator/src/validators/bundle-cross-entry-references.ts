@@ -1,13 +1,13 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { deriveBundleBaseUrl, extractReferencesWithPaths } from './bundle-reference-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { deriveBundleBaseUrl, extractReferencesWithPaths } from './bundle-reference-utils.js';
 import {
     buildReferenceIndexes,
     extractLogicalReference,
     resolveReferenceInBundle,
     type BundleReferenceIndexes,
     type ResolvedReference,
-} from './bundle-cross-entry-reference-resolution';
+} from './bundle-cross-entry-reference-resolution.js';
 
 interface ReferenceContext {
     entries: unknown[];

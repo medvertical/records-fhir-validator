@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { validateReferenceTargetProfileConformance } from '../multi-aspect-target-profile-conformance';
 import { ReferenceTargetValidator } from '../../validators/reference-target-validator';
 import type { StructureDefinition } from '../structure-definition-types';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 const SPECIAL_PATIENT = 'http://example.org/StructureDefinition/special-patient';
 

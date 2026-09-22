@@ -1,21 +1,21 @@
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
-import { resourceTypeOf } from '../core/fhir-resource';
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { resourceTypeOf } from '../core/fhir-resource.js';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   extractExtensionDefinitions,
-} from './extension-definition-extractor';
+} from './extension-definition-extractor.js';
 import {
   type ExtensionInstanceValidationDependencies,
   validateExtensionInstance,
-} from './extension-instance-validation';
-import { validateProfileScopedExtensionInstances } from './extension-profile-scope-validation';
-import { walkResourceExtensions } from './extension-resource-walk';
-import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types';
-import { ExtensionUrlResolver } from './extension-url-resolver';
+} from './extension-instance-validation.js';
+import { validateProfileScopedExtensionInstances } from './extension-profile-scope-validation.js';
+import { walkResourceExtensions } from './extension-resource-walk.js';
+import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types.js';
+import { ExtensionUrlResolver } from './extension-url-resolver.js';
 import {
   filterDefinitionContextForFhirVersion,
-} from './extension-version-filter';
+} from './extension-version-filter.js';
 
 const MAX_NESTED_EXTENSION_DEPTH = 5;
 const EXTENSION_PROFILE_CACHE_SIZE = 512;
@@ -78,7 +78,7 @@ export class ExtensionValidationRuntime {
         issues,
         {
           maxNestedExtensionDepth: MAX_NESTED_EXTENSION_DEPTH,
-          isExtensionUrlResolvable: this.urlResolver.isResolvable.bind(this.urlResolver),
+          resolveExtensionUrl: this.urlResolver.resolveKnown.bind(this.urlResolver),
           getDeclaredContexts: this.urlResolver.getDeclaredContexts.bind(this.urlResolver),
         },
       );

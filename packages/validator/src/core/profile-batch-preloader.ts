@@ -1,16 +1,16 @@
-import type { ProfileCache } from '../cache/profile-cache';
-import { logger } from '../logger';
-import { getProfileSource, type ProfileSourceContext } from '../persistence';
-import type { ValidationSettings } from '../types';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { chunkArray } from './batch-resource-planning';
-import { warmupProfileCacheFromDatabase } from './profile-cache-warmup';
-import type { FhirClientLike } from './profile-loader-utils';
-import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { StructureDefinition } from './structure-definition-types';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import { logger } from '../logger.js';
+import { getProfileSource, type ProfileSourceContext } from '../persistence/index.js';
+import type { ValidationSettings } from '@records-fhir/validation-types';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { chunkArray } from './batch-resource-planning.js';
+import { warmupProfileCacheFromDatabase } from './profile-cache-warmup.js';
+import type { FhirClientLike } from './profile-loader-utils.js';
+import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 
 function splitVersionedCanonical(url: string): { canonicalUrl: string; version?: string } {
   const [canonicalUrl, version] = url.split('|');
@@ -124,7 +124,7 @@ export async function preloadProfiles(
       } else {
         snapshotPromises.push((async () => {
           try {
-            const elements = await snapshotGenerator.generateSnapshot(structureDef);
+            const elements = await snapshotGenerator.generateSnapshot(structureDef, { fhirVersion });
             if (elements && elements.length > 0) {
               const withSnapshot: StructureDefinition = {
                 ...structureDef,

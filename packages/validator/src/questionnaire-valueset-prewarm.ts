@@ -1,6 +1,6 @@
-import { logger } from './logger';
-import { validationFailureMetadata } from './utils/validation-execution-failure';
-import { terminologyTargetMetadata } from './utils/sensitive-logging-metadata';
+import { logger } from './logger.js';
+import { validationFailureMetadata } from './utils/validation-execution-failure.js';
+import { terminologyTargetMetadata } from './utils/sensitive-logging-metadata.js';
 
 type ValueSetLoader = (url: string) => Promise<unknown>;
 

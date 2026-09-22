@@ -169,7 +169,7 @@ function scanIdentifier(expression: string, start: number): { isFunctionCall: bo
   while (i < expression.length && /[A-Za-z0-9_]/.test(expression[i])) i++;
 
   let nextToken = i;
-  while (nextToken < expression.length && expression[nextToken] === ' ') nextToken++;
+  while (nextToken < expression.length && /\s/u.test(expression[nextToken])) nextToken++;
 
   return {
     isFunctionCall: expression[nextToken] === '(',

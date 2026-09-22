@@ -1,11 +1,11 @@
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 import type {
   CircuitBreakerConfig,
   CircuitBreakerState,
   CircuitBreakerStats,
   CircuitState,
-} from './circuit-breaker-types';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
+} from './circuit-breaker-types.js';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export class CircuitBreaker {
   private readonly serverId: string;

@@ -1,5 +1,5 @@
-import { ValueSetCache } from './valueset-cache';
-import type { CodeSystem, CodeSystemConcept } from './valueset-types';
+import { ValueSetCache } from './valueset-cache.js';
+import type { CodeSystem, CodeSystemConcept } from './valueset-types.js';
 
 const HL7_URL_PATTERNS = [
   /^http:\/\/hl7\.org\/fhir\//,
@@ -23,6 +23,9 @@ export const HL7_KNOWN_CONCEPT_PROPERTIES = new Set<string>([
   'comment',
   'comments',
   'itemWeight',
+  'abstract-type',
+  'kind',
+  'interface',
 ]);
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

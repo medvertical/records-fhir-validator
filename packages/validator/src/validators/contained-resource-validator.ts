@@ -2,10 +2,10 @@
  * Validates contained resources, local references, and dom-2/dom-3 rules.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import { assertFhirObjectTraversalCapacity } from '../utils/object-traversal-limit';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import { assertFhirObjectTraversalCapacity } from '../utils/object-traversal-limit.js';
 
 type FhirRecord = Record<string, unknown>;
 
@@ -244,11 +244,17 @@ function collectInternalReferences(
         for (const [key, value] of Object.entries(record)) {
             if (current.isRoot && skipRootContained && key === 'contained') continue;
             const path = `${current.path}.${key}`;
+            if (typeof value === 'string' && value.startsWith('#') && value.length > 1) {
+                // dom-3 counts fragment values carried by Reference, canonical,
+                // uri, and url primitives. Raw FHIR JSON does not retain the
+                // primitive type here, so mirror the structural check and only
+                // use the fragment as positive usage evidence.
+                referencedIds.add(value.slice(1));
+            }
             if (key === 'reference' && typeof value === 'string' && value.startsWith('#')) {
                 const id = value.slice(1);
                 if (id.length > 0) {
                     hits.push({ id, path });
-                    referencedIds.add(id);
                 } else if (ownerId) {
                     referencedIds.add(ownerId);
                 }

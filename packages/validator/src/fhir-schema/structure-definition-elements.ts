@@ -1,4 +1,4 @@
-import type { SDElement, StructureDefinition } from './fhir-schema-types';
+import type { SDElement, StructureDefinition } from './fhir-schema-types.js';
 
 export type BaseResolver = (url: string) => StructureDefinition | undefined;
 

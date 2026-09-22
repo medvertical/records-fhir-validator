@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ValidationIssue, ValidationSettings } from '../../types';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import { BestPracticeValidator, validateBestPractices } from '../../validators/best-practice-validator';
 import { executeSelectedAspects } from '../multi-aspect-aspect-execution';
 import type { MultiAspectDeps } from '../multi-aspect-dependencies';

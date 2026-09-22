@@ -11,6 +11,27 @@ const UK_VERSION =
   'http://snomed.info/sct/999000041000000102/version/20250701';
 
 describe('ValueSetCodeSystemOperations', () => {
+  it.each([
+    { enabled: true, fhirVersions: ['R4'], scoped: true, delegated: true },
+    { enabled: false, fhirVersions: ['R4'], scoped: true, delegated: false },
+    { enabled: true, fhirVersions: ['R5'], scoped: true, delegated: false },
+    { enabled: true, fhirVersions: ['R4'], scoped: false, delegated: false },
+  ])('validates additional CodeSystems only through an eligible explicit scope: %j', async entry => {
+    const system = 'http://hl7.org/fhir/sid/icd-10';
+    const validateCodeInCodeSystem = vi.fn().mockResolvedValue({ valid: false, reason: 'code-unknown' });
+    const config: TerminologyResolutionConfig = { strategy: 'local-first', servers: [{
+      id: 'icd', url: 'https://icd.example/fhir', enabled: entry.enabled,
+      fhirVersions: entry.fhirVersions as ('R4' | 'R5')[], preferredSystems: entry.scoped ? [system] : [],
+    }] };
+    const operations = new ValueSetCodeSystemOperations({
+      apiClient: { validateCodeInCodeSystem } as never, cache: new ValueSetCache(),
+      getResolutionConfig: () => config, packageLoader: { loadCodeSystem: vi.fn().mockResolvedValue(null) } as never,
+    });
+    const result = await operations.validate('S02.40FA', system, undefined, 'R4');
+    expect(validateCodeInCodeSystem).toHaveBeenCalledTimes(entry.delegated ? 1 : 0);
+    expect(result.valid).toBe(!entry.delegated);
+  });
+
   it('does not use an unversioned local SNOMED cache for another requested edition', async () => {
     const cache = new ValueSetCache();
     cache.setCodeSystem(SNOMED_SYSTEM, {

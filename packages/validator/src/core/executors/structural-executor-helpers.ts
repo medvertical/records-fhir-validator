@@ -5,8 +5,8 @@
  * and to keep the main executor file under 500 lines.
  */
 
-import type { ElementDefinition } from '../structure-definition-types';
-import { resolveFhirSegmentValue } from '../fhir-primitive-sidecar';
+import type { ElementDefinition } from '../structure-definition-types.js';
+import { resolveFhirSegmentValue } from '../fhir-primitive-sidecar.js';
 
 // ============================================================================
 // Primitive Type Checking

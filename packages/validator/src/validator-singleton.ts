@@ -1,33 +1,34 @@
-import { RecordsValidator } from './core/validator-engine';
-import type { FhirClientLike } from './core/profile-loader-utils';
-import { fingerprintPinnedCanonicals } from './core/sd-loader-pinned-canonical';
-import type { ValidationIssue, ValidationSettings } from './types';
-import { resolveFhirReleaseContext, validateAllResources, type PublicFhirVersion } from './public-validation-api';
-import { logger } from './logger';
-import type { TerminologyResolutionConfig } from './validators/valueset-validator';
-import { ValidatorRuntimeRegistry } from './validator-runtime-registry';
+import { RecordsValidator } from './core/validator-engine.js';
+import type { FhirClientLike } from './core/profile-loader-utils.js';
+import { fingerprintPinnedCanonicals } from './core/sd-loader-pinned-canonical.js';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import { resolveFhirReleaseContext, validateAllResources, type PublicFhirVersion } from './public-validation-api.js';
+import { logger } from './logger.js';
+import type { TerminologyResolutionConfig } from './validators/valueset-validator.js';
+import { ValidatorRuntimeRegistry } from './validator-runtime-registry.js';
 import {
   configurePublicReleaseRuntime,
   preparePublicReleaseRuntime,
   settingsWithPublicRelease,
-} from './public-release-runtime';
+} from './public-release-runtime.js';
 import type {
   RecordsValidationRequest,
   RecordsValidatorRuntimeLease,
   RecordsValidatorSingleton,
-} from './validator-singleton-types';
-import * as singletonDefaults from './validator-singleton-defaults';
-import { mergeConstraintDiagnostics } from './validator-constraint-diagnostics';
-import { mergeFHIRPathCacheStats } from './validator-fhirpath-cache-stats';
-import { snapshotTerminologyConfig } from './validators/terminology-config-snapshot';
-import { resolveConfiguredRecordsBatchRuntime } from './validator-batch-runtime';
+} from './validator-singleton-types.js';
+import * as singletonDefaults from './validator-singleton-defaults.js';
+export { resolveScopedProfileCacheMaxEntries } from './validator-singleton-defaults.js';
+import { mergeConstraintDiagnostics } from './validator-constraint-diagnostics.js';
+import { mergeFHIRPathCacheStats } from './validator-fhirpath-cache-stats.js';
+import { snapshotTerminologyConfig } from './validators/terminology-config-snapshot.js';
+import { resolveConfiguredRecordsBatchRuntime } from './validator-batch-runtime.js';
 export type {
   RecordsValidationRequest,
   RecordsValidatorAdministration,
   RecordsValidatorInspection,
   RecordsValidatorRuntimeLease, RecordsValidatorSingleton,
   RecordsValidatorValidation,
-} from './validator-singleton-types';
+} from './validator-singleton-types.js';
 
 let globalTerminologyResolutionConfig: TerminologyResolutionConfig | undefined;
 let globalPinnedCanonicals: Map<string, string> | undefined;
@@ -38,7 +39,7 @@ async function createRecordsValidator(scoped = false): Promise<RecordsValidator>
     strictMode: false,
     timeout: 30000,
     allowedPackages: [...singletonDefaults.defaultAllowedPackages],
-    profileCacheMaxEntries: scoped ? resolveScopedProfileCacheMaxEntries() : undefined,
+    profileCacheMaxEntries: scoped ? singletonDefaults.resolveScopedProfileCacheMaxEntries() : undefined,
     prewarmProfileSource: !scoped,
   });
   if (globalTerminologyResolutionConfig) {
@@ -254,7 +255,11 @@ export const recordsValidator: RecordsValidatorSingleton = {
       (await entry).configureTerminologyResolution(snapshotTerminologyConfig(snapshot));
     }));
   },
-  async clearTerminologyCache() {
+  async clearTerminologyCache(options) {
+    if (options?.runtimeScopePrefix) {
+      runtimeRegistry.retireScopes(options.runtimeScopePrefix);
+      return;
+    }
     await Promise.all(currentOrDefaultValidatorPromises().map(async entry => {
       (await entry).clearTerminologyCache();
     }));
@@ -336,14 +341,4 @@ export async function ensureRecordsValidatorReady(): Promise<void> {
 
 export async function getRecordsValidatorClass() {
   return RecordsValidator;
-}
-
-export function resolveScopedProfileCacheMaxEntries(): number {
-  const parsed = Number.parseInt(
-    process.env.VALIDATION_SCOPED_PROFILE_CACHE_MAX_ENTRIES ?? '',
-    10,
-  );
-  return Number.isInteger(parsed) && parsed > 0
-    ? Math.min(parsed, singletonDefaults.MAX_SCOPED_PROFILE_CACHE_MAX_ENTRIES)
-    : singletonDefaults.DEFAULT_SCOPED_PROFILE_CACHE_MAX_ENTRIES;
 }

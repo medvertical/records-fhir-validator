@@ -2,7 +2,7 @@ import type {
   TerminologyApiAuthConfig,
   TerminologyResolutionConfig,
   TerminologyServerDescriptor,
-} from './valueset-types';
+} from './valueset-types.js';
 
 function cloneAuth(auth: TerminologyApiAuthConfig | undefined): TerminologyApiAuthConfig | undefined {
   return auth ? { ...auth } : undefined;

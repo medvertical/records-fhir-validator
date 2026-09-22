@@ -1,4 +1,4 @@
-import type { Binding, ElementDefinition } from '../structure-definition-types';
+import type { Binding, ElementDefinition } from '../structure-definition-types.js';
 
 const ADDITIONAL_BINDING_URL =
   'http://hl7.org/fhir/tools/StructureDefinition/additional-binding';

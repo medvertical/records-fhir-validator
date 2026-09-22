@@ -1,6 +1,7 @@
-import type { CodeSystem, CodeSystemConcept } from './valueset-types';
-import { logger } from '../logger';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+import type { CodeSystem, CodeSystemConcept } from './valueset-types.js';
+import { collectSubsumedCodes } from './valueset-concept-hierarchy.js';
+import { logger } from '../logger.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export function applyConceptFilter(
     codeSystem: CodeSystem,
@@ -14,15 +15,11 @@ export function applyConceptFilter(
     }
 
     if (filter.op === 'is-a') {
-        const root = findConcept(codeSystem.concept, filter.value);
-        if (!root) return [];
-        return collectDescendants(root);
+        return collectSubsumedCodes(codeSystem, filter.value);
     }
 
     if (filter.op === 'descendent-of') {
-        const root = findConcept(codeSystem.concept, filter.value);
-        if (!root) return [];
-        return collectDescendants(root).filter(c => c !== root.code);
+        return collectSubsumedCodes(codeSystem, filter.value).filter(code => code !== filter.value);
     }
 
     return [];
@@ -52,18 +49,6 @@ function findConcept(
         if (nested) return nested;
     }
     return null;
-}
-
-function collectDescendants(root: CodeSystemConcept): string[] {
-    const out: string[] = [];
-    const walk = (concept: CodeSystemConcept): void => {
-        if (concept.code) out.push(concept.code);
-        if (concept.concept) {
-            for (const child of concept.concept) walk(child);
-        }
-    };
-    walk(root);
-    return out;
 }
 
 function extractNestedCodes(concepts: CodeSystemConcept[] | undefined, codes: string[]): void {

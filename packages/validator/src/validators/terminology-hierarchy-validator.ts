@@ -1,12 +1,12 @@
 import axios from 'axios';
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 import {
     parseHierarchyResponse,
     parseSubsumptionResponse,
-} from './terminology-hierarchy-response';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+} from './terminology-hierarchy-response.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export interface SubsumptionResult {
     /**

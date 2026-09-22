@@ -140,6 +140,14 @@ describe('requested-version fallback', () => {
     )).resolves.toBeNull();
   });
 
+  it.each([false, true])('resolves wildcard versions with package index %s', async withIndex => {
+    const root = await makeRoot([{ packageName: 'hl7.fhir.r5.core#5.0.0', version: '5.0.0' }], withIndex);
+    await expect(findResourceInPackages([root], canonical, ['ValueSet-encounter-status.json'], '5', '*'))
+      .resolves.toMatchObject({ version: '5.0.0' });
+    await expect(findResourceByCanonicalScan([root], canonical, 'ValueSet', '5', '*'))
+      .resolves.toMatchObject({ version: '5.0.0' });
+  });
+
   it('findResourceByCanonicalScan returns null when only a cross-major copy exists', async () => {
     const root = await makeRoot([{ packageName: 'hl7.fhir.r4.core#4.0.1', version: '4.0.1' }]);
 

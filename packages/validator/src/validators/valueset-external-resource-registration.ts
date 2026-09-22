@@ -1,6 +1,6 @@
-import type { FhirVersion } from './valueset-expansion-cache-key';
-import type { ValueSetCache } from './valueset-cache';
-import type { CodeSystem, ValueSet } from './valueset-types';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import type { CodeSystem, ValueSet } from './valueset-types.js';
 
 function terminologyResourceIdentity(resource: unknown): {
   resourceType: 'ValueSet' | 'CodeSystem';

@@ -1,21 +1,21 @@
-import type { Constraint } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
-import { evaluateConstraintFHIRPath } from './constraint-fhirpath-evaluator';
-import { prepareConstraintEvaluation } from './constraint-evaluation-preparation';
-import { ConstraintEvaluationPrecheckPipeline } from './constraint-evaluation-precheck-pipeline';
-import { resolveEvaluatedConstraintOutcome } from './constraint-evaluation-outcome';
+import type { Constraint } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { evaluateConstraintFHIRPath } from './constraint-fhirpath-evaluator.js';
+import { prepareConstraintEvaluation } from './constraint-evaluation-preparation.js';
+import { ConstraintEvaluationPrecheckPipeline } from './constraint-evaluation-precheck-pipeline.js';
+import { resolveEvaluatedConstraintOutcome } from './constraint-evaluation-outcome.js';
 import {
   FHIRPathConstraintDiagnosticTracker,
   type FHIRPathConstraintDiagnostics,
-} from './fhirpath-constraint-diagnostics';
+} from './fhirpath-constraint-diagnostics.js';
 import {
   AsyncFHIRPathTerminologyCache,
   type FHIRPathTerminologyResolver,
-} from './fhirpath-async-terminology';
-import type { ConstraintValidationState, FhirResource } from './constraint-validation-input';
-import { ValueSetCache } from './valueset-cache';
-import { ConstraintExpressionCache } from './constraint-expression-cache';
-import { handleConstraintEvaluationFailure } from './constraint-evaluation-failure';
+} from './fhirpath-async-terminology.js';
+import type { ConstraintValidationState, FhirResource } from './constraint-validation-input.js';
+import { ValueSetCache } from './valueset-cache.js';
+import { ConstraintExpressionCache } from './constraint-expression-cache.js';
+import { handleConstraintEvaluationFailure } from './constraint-evaluation-failure.js';
 
 type ConstraintFHIRPathEvaluator = typeof evaluateConstraintFHIRPath;
 

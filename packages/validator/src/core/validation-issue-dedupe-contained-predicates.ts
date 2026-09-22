@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../types';
-import { getIssuePath, normalizeRequiredElementPath } from './validation-issue-dedupe-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { getIssuePath, normalizeRequiredElementPath } from './validation-issue-dedupe-utils.js';
 
 export function isRedundantPresenceInvariantIssue(issue: ValidationIssue, requiredBindingViolationPaths: Set<string>): boolean {
   if (requiredBindingViolationPaths.size === 0) return false;

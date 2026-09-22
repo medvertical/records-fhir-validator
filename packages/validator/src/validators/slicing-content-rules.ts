@@ -1,20 +1,20 @@
-import type { ValidationIssue } from "../types";
-import { createValidationIssue } from "../issues";
-import type { ElementDefinition, StructureDefinition } from "../core/structure-definition-types";
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from "../issues/index.js";
+import type { ElementDefinition, StructureDefinition } from "../core/structure-definition-types.js";
 import {
   extractFixedValue,
   extractPatternValue,
   getValueAtPath,
   matchesPattern,
   valuesMatch,
-} from "./slice-utils";
-import type { SliceDefinition } from "./slice-types";
-import { isConcreteChoiceProperty, splitConcreteChoiceProperty } from "../core/fhir-choice-property";
-import { getChildCardinalities, resolveValueOccurrences } from "./slicing-content-paths";
-import { formatConstraintValue, resourceTypeFromPath } from "./slicing-content-format";
+} from "./slice-utils.js";
+import type { SliceDefinition } from "./slice-types.js";
+import { isConcreteChoiceProperty, splitConcreteChoiceProperty } from "../core/fhir-choice-property.js";
+import { getChildCardinalities, resolveValueOccurrences } from "./slicing-content-paths.js";
+import { formatConstraintValue, resourceTypeFromPath } from "./slicing-content-format.js";
 
-export { resourceTypeFromPath } from "./slicing-content-format";
-export { validateSliceRootConstraints } from "./slicing-root-constraint-validator";
+export { resourceTypeFromPath } from "./slicing-content-format.js";
+export { validateSliceRootConstraints } from "./slicing-root-constraint-validator.js";
 
 export function validateSliceContentConstraints(
   element: unknown,

@@ -19,9 +19,9 @@
  */
 
 import { createRequire } from 'module';
-import { logger } from '../logger';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+import { logger } from '../logger.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 // `ucum-lhc` ships only a CJS entry point (`source-cjs/ucumPkg.js`) and
 // exports a singleton factory. Under ESM the plain `require` keyword is
@@ -81,7 +81,7 @@ export class UcumCodeValidator {
         const msg = Array.isArray(parsed?.msg) && typeof parsed.msg[0] === 'string'
           ? parsed.msg[0]
           : `'${code}' is not a valid UCUM expression`;
-        result = { valid: false, message: msg, suggestion: extractUcumLhcSuggestion(parsed) };
+        result = { valid: false, message: msg, suggestion: extractUcumLhcSuggestion(parsed, code, utils) };
       }
     } catch (err) {
       logger.debug('[UcumValidator] validateUnitString threw', {
@@ -127,19 +127,74 @@ export class UcumCodeValidator {
 
 /**
  * Pull the top correction out of ucum-lhc's `suggestions` payload. Shape:
- * `[{ invalidUnit, units: [[code, display, ...], ...] }]`. Returns the first
- * suggested unit, or undefined when the engine offers none.
+ * `[{ invalidUnit, units: [[code, display, ...], ...] }]`. Suggestions can
+ * describe a single atom, so reconstruct and validate the complete expression.
  */
-function extractUcumLhcSuggestion(parsed: unknown): { code: string; display?: string } | undefined {
+function extractUcumLhcSuggestion(
+  parsed: unknown,
+  originalCode: string,
+  utils: UcumLhcUtils,
+): { code: string; display?: string } | undefined {
+  const normalizedCode = asRecord(parsed)?.ucumCode;
+  // Parser diagnostics can name only the bad atom (HPF), while ucumCode
+  // preserves the whole expression (/[HPF]), including denominators.
+  if (typeof normalizedCode === 'string' && normalizedCode !== originalCode
+    && isValidCorrection(normalizedCode, utils)) {
+    const annotations = originalCode.match(/\{[^{}]*\}/g) ?? [];
+    let annotationIndex = 0;
+    return { code: normalizedCode.replace(/\{[^{}]*\}/g, match => annotations[annotationIndex++] ?? match) };
+  }
   const suggestions = asRecord(parsed)?.suggestions;
-  const firstSuggestion = Array.isArray(suggestions) ? asRecord(suggestions[0]) : undefined;
-  const units = firstSuggestion?.units;
-  if (!Array.isArray(units) || units.length === 0) return undefined;
-  const firstUnit = units[0];
-  if (!Array.isArray(firstUnit)) return undefined;
-  const [code, display] = firstUnit;
-  if (typeof code !== 'string' || code.length === 0) return undefined;
-  return typeof display === 'string' && display.length > 0 ? { code, display } : { code };
+  let candidate = originalCode;
+  let display: string | undefined;
+  for (const entry of Array.isArray(suggestions) ? suggestions : []) {
+    const suggestion = asRecord(entry);
+    const firstUnit = Array.isArray(suggestion?.units) ? suggestion.units[0] : undefined;
+    if (typeof suggestion?.invalidUnit !== 'string' || !Array.isArray(firstUnit)) continue;
+    // ucum-lhc suggests m[IU]/L for the atom mIU, even in mIU/dL. The
+    // denominator comes from the original expression, never the suggestion.
+    const replacement = suggestion.invalidUnit === 'mIU' ? 'm[IU]' : firstUnit[0];
+    if (typeof replacement !== 'string' || !isUnitAtom(replacement)) continue;
+    candidate = replaceUcumAtom(candidate, suggestion.invalidUnit, replacement);
+    if (candidate === replacement && replacement === firstUnit[0] && typeof firstUnit[1] === 'string') {
+      display = firstUnit[1];
+    }
+  }
+  const messages = asRecord(parsed)?.msg;
+  for (const message of Array.isArray(messages) ? messages : []) {
+    if (typeof message !== 'string') continue;
+    const correction = message.match(/^(\S+) is not a valid unit expression[^\n]*\nDid you mean\s+(\S+)/);
+    if (correction && isUnitAtom(correction[2])) {
+      candidate = replaceUcumAtom(candidate, correction[1], correction[2]);
+    }
+  }
+  return candidate !== originalCode && isValidCorrection(candidate, utils)
+    ? { code: candidate, ...(display ? { display } : {}) }
+    : undefined;
+}
+
+function isUnitAtom(code: string): boolean {
+  return code.length > 0 && !/[./(){}\s]/.test(code.replace(/\[[^\]]*\]/g, 'unit'));
+}
+
+function replaceUcumAtom(expression: string, invalidAtom: string, replacement: string): string {
+  return expression.replace(/\{[^{}]*\}|(?:\[[^\]]*\]|[^./(){}[\]])+/g, token => {
+    if (token.startsWith('{')) return token;
+    if (token === invalidAtom) return replacement;
+    const exponent = token.slice(invalidAtom.length);
+    return token.startsWith(invalidAtom) && /^[+-]?\d+$/.test(exponent)
+      ? replacement + exponent : token;
+  });
+}
+
+function isValidCorrection(code: string, utils: UcumLhcUtils): boolean {
+  try {
+    return asRecord(utils.validateUnitString(normalizeAnnotationSpaces(code), false))?.status === 'valid';
+  } catch {
+    // Failure while checking a suggestion must not turn the original invalid
+    // expression into the validator's fail-open result.
+    return false;
+  }
 }
 
 function isUcumLhcUtils(value: unknown): value is UcumLhcUtils {

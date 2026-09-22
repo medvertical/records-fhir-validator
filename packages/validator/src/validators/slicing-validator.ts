@@ -1,26 +1,26 @@
 /** Validates FHIR slice identity, cardinality, discriminators, and content. */
 
-import type { ValidationIssue } from '../types';
-import { extractSlicingInfo as externalExtractSlicingInfo } from './slice-info-extractor';
-import type { ReferenceResolver } from './slice-types';
-import type { StructureDefinition } from '../core/structure-definition-types';
-import { createIsolatedSlicingValueSetLoader } from './slicing-valueset-loader';
-import { type FhirVersionFamily } from '../core/sd-loader-version-utils';
-import { ConstraintValidator } from './constraint-validator';
-import { isSliceCompatibleWithFhirVersion } from './slicing-match-policy';
-import type { ValueSetLoaderLike } from './slice-info-extractor';
-import { handleSlicingValidationFailure } from './slicing-validation-failure';
-import { validateResolvedSlicing } from './slicing-resolved-validation';
-import { logSlicingValidationStart } from './slicing-validation-logging';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { extractSlicingInfo as externalExtractSlicingInfo } from './slice-info-extractor.js';
+import type { ReferenceResolver } from './slice-types.js';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import { createIsolatedSlicingValueSetLoader } from './slicing-valueset-loader.js';
+import { type FhirVersionFamily } from '../core/sd-loader-version-utils.js';
+import { ConstraintValidator } from './constraint-validator.js';
+import { isSliceCompatibleWithFhirVersion } from './slicing-match-policy.js';
+import type { ValueSetLoaderLike } from './slice-info-extractor.js';
+import { handleSlicingValidationFailure } from './slicing-validation-failure.js';
+import { validateResolvedSlicing } from './slicing-resolved-validation.js';
+import { logSlicingValidationStart } from './slicing-validation-logging.js';
 
 // ============================================================================
 // Types
 // ============================================================================
 
 // Re-export slicing types from core types
-export type { SlicingDiscriminator, SlicingDefinition } from '../core/structure-definition-types';
+export type { SlicingDiscriminator, SlicingDefinition } from '../core/structure-definition-types.js';
 
-export type { ReferenceResolver, SliceDefinition } from './slice-types';
+export type { ReferenceResolver, SliceDefinition } from './slice-types.js';
 
 /**
  * Callback used by the slicing validator to resolve a FHIR reference to the
@@ -42,7 +42,10 @@ export type { ReferenceResolver, SliceDefinition } from './slice-types';
  * extract discriminator patterns (e.g. ISiKLoincCoding → patternUri on
  * Coding.system).
  */
-export type TypeProfileResolver = (profileUrl: string) => Promise<StructureDefinition | null>;
+export type TypeProfileResolver = (
+  profileUrl: string,
+  fhirVersion?: FhirVersionFamily,
+) => Promise<StructureDefinition | null>;
 
 type SlicingInfoExtractor = typeof externalExtractSlicingInfo;
 
@@ -123,8 +126,12 @@ export class SlicingValidator {
     const issues: ValidationIssue[] = [];
 
     try {
-      // Get slicing definition for this path
-      const slicingInfo = await this.extractSlicingInfo(elementPath, profileSD, slicingElementId);
+      // Slice type profiles must resolve within the validated release: the
+      // same canonical carries different cardinalities across R4/R5/R6.
+      const typeProfileResolver = this.typeProfileResolverFor(fhirVersion);
+      const slicingInfo = await this.extractSlicingInfo(
+        elementPath, profileSD, slicingElementId, typeProfileResolver,
+      );
 
       if (!slicingInfo || slicingInfo.slices.length === 0) {
         // No slicing defined for this element
@@ -150,7 +157,7 @@ export class SlicingValidator {
           referenceResolver: effectiveReferenceResolver,
           mustSupportSeverity: this.mustSupportSeverity,
           fhirVersion,
-          typeProfileResolver: this.typeProfileResolver,
+          typeProfileResolver,
           typeProfileConstraintValidator: this.typeProfileConstraintValidator,
           rootResource,
         })),
@@ -169,13 +176,23 @@ export class SlicingValidator {
    * profile rather than on the slice element itself.
    */
   // Delegated to slice-info-extractor.ts.
-  private async extractSlicingInfo(elementPath: string, profileSD: StructureDefinition, slicingElementId?: string) {
+  private async extractSlicingInfo(
+    elementPath: string,
+    profileSD: StructureDefinition,
+    slicingElementId?: string,
+    typeProfileResolver: TypeProfileResolver | null = this.typeProfileResolver,
+  ) {
     return this.slicingInfoExtractor(
       elementPath,
       profileSD,
-      this.typeProfileResolver,
+      typeProfileResolver,
       this.getValueSetLoader(),
       slicingElementId,
     );
+  }
+
+  private typeProfileResolverFor(fhirVersion: FhirVersionFamily): TypeProfileResolver | null {
+    const resolver = this.typeProfileResolver;
+    return resolver ? (profileUrl) => resolver(profileUrl, fhirVersion) : null;
   }
 }

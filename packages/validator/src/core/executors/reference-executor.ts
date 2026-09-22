@@ -8,12 +8,13 @@
  * - Reference integrity checking
  */
 
-import type { ValidationIssue, ValidationSettings } from '../../types';
-import { ReferenceValidator } from '../../reference';
-import { logger } from '../../logger';
-import { createExecutorFailureIssue } from './executor-failure-issue';
-import type { FhirClientLike } from '../profile-loader-utils';
-import { resourceTypeOf } from '../fhir-resource';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import { ReferenceValidator } from '../../reference/index.js';
+import { logger } from '../../logger.js';
+import { createExecutorFailureIssue } from './executor-failure-issue.js';
+import type { FhirClientLike } from '../profile-loader-utils.js';
+import { resourceTypeOf } from '../fhir-resource.js';
+import type { ReferenceResourceFetcher } from '../../reference/reference-fetch-deadline.js';
 
 // ============================================================================
 // Types
@@ -24,6 +25,7 @@ export interface ReferenceValidationContext {
   fhirClient?: FhirClientLike;
   fhirVersion?: 'R4' | 'R5' | 'R6';
   settings?: ValidationSettings;
+  resourceFetcher?: ReferenceResourceFetcher;
 }
 
 // ============================================================================
@@ -44,7 +46,7 @@ export class ReferenceExecutor {
     context: ReferenceValidationContext
   ): Promise<ValidationIssue[]> {
     try {
-      const { resource, fhirClient: _fhirClient, fhirVersion, settings } = context;
+      const { resource, fhirClient, fhirVersion, settings } = context;
       const resourceType = resourceTypeOf(resource);
 
       logger.debug(`[ReferenceExecutor] Validating references for ${resourceType}...`);
@@ -53,8 +55,10 @@ export class ReferenceExecutor {
       const issues = await this.referenceValidator.validateInternal(
         resource,
         resourceType,
+        fhirClient,
         fhirVersion,
-        settings
+        settings,
+        context.resourceFetcher,
       );
 
       // Add contained-reference validation (#id refs must resolve within contained[])

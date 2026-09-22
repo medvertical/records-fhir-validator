@@ -1,16 +1,16 @@
-import { logger } from '../logger';
-import type { FhirVersion } from './valueset-expansion-cache-key';
+import { logger } from '../logger.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
 import type {
   CodeSystem,
   ValueSet,
   ValueSetExpansionContains,
   ValueSetComposeExclude,
   ValueSetComposeInclude,
-} from './valueset-types';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
-import { codeSystemCanonicalCandidates } from './code-system-canonical-aliases';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
+} from './valueset-types.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
+import { codeSystemCanonicalCandidates } from './code-system-canonical-aliases.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
 
 export type TwoPhaseExpansionCoverage = 'complete' | 'partial' | 'none';
 

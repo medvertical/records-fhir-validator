@@ -1,15 +1,15 @@
-import type { ValidationIssue } from '../../types';
-import type { Binding, ElementDefinition, StructureDefinition } from '../structure-definition-types';
-import { matchesPattern } from '../../validators/slice-utils';
-import { UCUM_BEARING_TYPES } from './terminology-ucum-rules';
-import { isResolvedPrimitiveSidecarValue } from '../fhir-primitive-sidecar';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { Binding, ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
+import { matchesPattern } from '../../validators/slice-utils.js';
+import { UCUM_BEARING_TYPES } from './terminology-ucum-rules.js';
+import { isResolvedPrimitiveSidecarValue } from '../fhir-primitive-sidecar.js';
 import {
   codingMatchesPattern,
   codeableConceptMatchesPattern,
   elementMatchesOwnPattern,
   getPatternOrFixedValue,
-} from './terminology-binding-pattern-matching';
-import type { TerminologySlicePlanCache } from './terminology-slice-plan-cache';
+} from './terminology-binding-pattern-matching.js';
+import type { TerminologySlicePlanCache } from './terminology-slice-plan-cache.js';
 export function effectiveBindingForElement(
   elementDef: Pick<ElementDefinition, 'binding' | 'type'>,
 ): Binding | undefined {
@@ -17,37 +17,6 @@ export function effectiveBindingForElement(
   if (binding?.strength !== 'required') return binding;
   const hasQuantityType = elementDef.type?.some(t => UCUM_BEARING_TYPES.has(t.code));
   return hasQuantityType ? { ...binding, strength: 'extensible' as const } : binding;
-}
-
-const CORE_CANONICAL_BASE = 'http://hl7.org/fhir/';
-
-/**
- * Pin an unversioned ValueSet binding to the profile's own version when both
- * live in the same IG canonical space. Multiple versions of an IG can sit in
- * the local package stores at once, and the newest ValueSet is not the one
- * this profile was published against — carin-bb 2.1.0 rebased
- * C4BBSurfaceCodes onto a THO CodeSystem, so resolving a 2.0.0 profile's
- * binding to it fails every 2.0.0-conformant code. Core FHIR canonicals are
- * excluded: they already resolve by FHIR version preference.
- */
-export function pinBindingToProfileVersion<T extends Binding | undefined>(
-  binding: T,
-  structureDef: Pick<StructureDefinition, 'url' | 'version'>,
-): T {
-  if (!binding?.valueSet || binding.valueSet.includes('|')) return binding;
-  if (!structureDef.version || typeof structureDef.url !== 'string') return binding;
-
-  const igBase = canonicalIgBase(structureDef.url);
-  if (!igBase || igBase === CORE_CANONICAL_BASE) return binding;
-  if (!binding.valueSet.startsWith(igBase)) return binding;
-
-  return { ...binding, valueSet: `${binding.valueSet}|${structureDef.version}` };
-}
-
-function canonicalIgBase(profileUrl: string): string | null {
-  const marker = '/StructureDefinition/';
-  const markerIndex = profileUrl.indexOf(marker);
-  return markerIndex > 0 ? profileUrl.slice(0, markerIndex + 1) : null;
 }
 
 export function shouldValidateBindingForValue(

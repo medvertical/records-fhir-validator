@@ -14,7 +14,7 @@ import {
   issueToOperationOutcomeIssue,
   type FhirOperationOutcome,
 } from '../operation-outcome-converter';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 // ============================================================================
 // mapToHl7IssueType

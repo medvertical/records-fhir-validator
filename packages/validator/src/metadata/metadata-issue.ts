@@ -1,5 +1,5 @@
 import { computeValidationIssueId } from '@records-fhir/validation-types';
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 export interface MetadataIssueInput {
   code: string;

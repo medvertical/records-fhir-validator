@@ -1,6 +1,6 @@
-import { classifyReferenceRequestFailure } from './reference-request-failure';
-import { parseVersionedReference, stripReferenceVersion } from './version-reference-syntax';
-import type { VersionAvailabilityCheckResult } from './version-specific-reference-types';
+import { classifyReferenceRequestFailure } from './reference-request-failure.js';
+import { parseVersionedReference, stripReferenceVersion } from './version-reference-syntax.js';
+import type { VersionAvailabilityCheckResult } from './version-specific-reference-types.js';
 
 export type VersionReferenceHttpClient = (
   url: string,

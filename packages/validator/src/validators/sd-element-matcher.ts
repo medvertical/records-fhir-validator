@@ -12,9 +12,9 @@
  * - Resolve element inheritance
  */
 
-import type { StructureDefinition, ElementDefinition } from '../core/structure-definition-types';
-import { isConcreteChoiceProperty } from '../core/fhir-choice-property';
-import { logger } from '../logger';
+import type { StructureDefinition, ElementDefinition } from '../core/structure-definition-types.js';
+import { isConcreteChoiceProperty } from '../core/fhir-choice-property.js';
+import { logger } from '../logger.js';
 
 // ============================================================================
 // Types

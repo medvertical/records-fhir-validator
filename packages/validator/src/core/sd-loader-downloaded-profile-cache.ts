@@ -1,7 +1,7 @@
-import type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context';
-import { sanitizeProfile } from './sd-loader-profile-sanitizer';
-import type { StructureDefinition } from './structure-definition-types';
-import { cacheKeyForProfile, fhirVersionFamily } from './sd-loader-version-utils';
+import type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context.js';
+import { sanitizeProfile } from './sd-loader-profile-sanitizer.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { cacheKeyForProfile, fhirVersionFamily } from './sd-loader-version-utils.js';
 
 /** Sanitize and commit a remotely resolved profile to all canonical cache keys. */
 export function cacheDownloadedProfile(

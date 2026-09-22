@@ -42,7 +42,7 @@ describe('TerminologyResourceValidator — HL7 concept-property URI allowlist', 
 
   it('accepts the spec-listed property URIs', () => {
     const allowed = ['status', 'inactive', 'effectiveDate', 'deprecationDate', 'parent',
-                     'child', 'partOf', 'synonym', 'comment', 'notSelectable'];
+                     'child', 'partOf', 'synonym', 'comment', 'notSelectable', 'abstract-type', 'kind', 'interface'];
     for (const suffix of allowed) {
       const issues = validator.validate(cs([
         { code: suffix, uri: `http://hl7.org/fhir/concept-properties#${suffix}`, type: 'string' },

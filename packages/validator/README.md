@@ -492,16 +492,26 @@ can be compared against the Java validator's expected `OperationOutcome`.
 | Upstream manifest entries | 969 | All entries in `FHIR/fhir-test-cases/validator/manifest.json` at commit `8923095`. |
 | Pre-filtered out | 433 | Outside this lane before execution, including one entry where the upstream manifest does not declare a `java` baseline. |
 | Candidate comparison set | 536 | R4/R5/R6 or unversioned JSON-oriented entries where the upstream manifest declares a `java` baseline. |
-| Runtime skipped | 0 | Every candidate's declared Java `OperationOutcome` artifact resolves locally. |
-| Executed and compared | 536 | Records result was normalized to `OperationOutcome` and diffed against Java. |
-| Passed | 536 | Comparisons matching the normalized Java result. |
-| Failed | 0 | No executable comparison differs from the normalized Java result. |
+| Runtime skipped | 3 | Fixtures requiring a SNOMED national edition the public terminology server does not carry. |
+| Executed and compared | 533 | Records result was normalized to `OperationOutcome` and diffed against Java. |
+| Passed | 531 | Comparisons matching the normalized Java result. |
+| Failed | 2 | `bp` and `jv-patient-bad`, described below. |
+
+The two failures are JSON resources whose profile source is an XML file. An
+earlier harness read every profile source as JSON, so those profiles silently
+failed to load and both cases validated against the base spec — they counted as
+passes because validation had not happened. Reading them correctly exposed real
+divergences, which are open. The superseded 536/536 headline included both.
 
 Reproduce the headline lane locally with:
 
 ```sh
-npm run conformance -- --tx-server none --output-file conformance-results/report-local.json
+npm run conformance -- --tx-server https://tx-dev.fhir.org/r4 --output-file conformance-results/report-local.json
 ```
+
+The terminology server is part of the lane, not an option: `ips-nz-pj` compares
+LOINC display names and cannot pass without one. Running `--tx-server none`
+scores the lane differently and does not reproduce this number.
 
 Pre-filter exclusions:
 
@@ -517,7 +527,7 @@ Pre-filter exclusions:
 The only undeclared-baseline entry is `(default)/zzz`, an upstream
 platform-specific teardown workaround rather than a validator comparison case.
 The upstream manifest now declares
-and resolves Java outcomes for the full 536-case candidate set, so the former
+and resolves Java outcomes for the full 536-entry candidate set, so the former
 baseline-resolution workarounds are no longer used. All executable comparisons
 now match the normalized Java result.
 
@@ -548,8 +558,8 @@ product scope with actual JSON resource validation correctness.
 
 For that reason, the headline number should be read as:
 
-> Records matches the Java validator on all 536 currently in-scope FHIR JSON
-> resource validation comparisons.
+> Records matches the Java validator on 531 of the 533 currently in-scope FHIR
+> JSON resource validation comparisons.
 
 It should not be read as:
 

@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 
 interface QuestionnaireItemValidationState {
     item: Record<string, unknown>;

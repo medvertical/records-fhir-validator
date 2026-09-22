@@ -151,7 +151,7 @@ describe('ValueSet filtered include server delegation', () => {
     );
   });
 
-  it('falls back to CodeSystem $subsumes for concept is-a filters', async () => {
+  it('does not override a definitive ValueSet rejection with a broader ancestor match', async () => {
     const get = vi.fn(async (url: string) => {
       if (url.endsWith('/ValueSet/$validate-code')) {
         return {
@@ -190,8 +190,8 @@ describe('ValueSet filtered include server delegation', () => {
 
     await expect(
       validator.isCodeValidForBinding('descendant-code', SNOMED, VALUE_SET_URL, 'required')
-    ).resolves.toBe(true);
-    expect(get).toHaveBeenCalledWith(
+    ).resolves.toBe(false);
+    expect(get).not.toHaveBeenCalledWith(
       'https://tx.example/fhir/CodeSystem/$subsumes',
       expect.objectContaining({
         params: expect.objectContaining({

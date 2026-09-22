@@ -1,6 +1,7 @@
-import type { ValidationIssue } from '../types';
-import type { FhirResourceRecord } from '../reference/bundle-reference-types';
-import { getPrimaryDeclaredProfile } from './declared-profile-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { FhirResourceRecord } from '../reference/bundle-reference-types.js';
+import { getPrimaryDeclaredProfile } from './declared-profile-utils.js';
+import { awaitAllDrained } from '../utils/await-all-drained.js';
 
 export function rebaseContainedIssue(
   issue: ValidationIssue,
@@ -71,7 +72,7 @@ export async function validateContainedResourceTree(
   const parentResourceType = typeof resource.resourceType === 'string'
     ? resource.resourceType
     : 'Resource';
-  const nested = await Promise.all(resource.contained.map(async (candidate, index) => {
+  const nested = await awaitAllDrained(resource.contained.map(async (candidate, index) => {
     if (!isRecord(candidate) || typeof candidate.resourceType !== 'string') return [];
 
     const profileUrl = getPrimaryDeclaredProfile(candidate)

@@ -1,19 +1,21 @@
-import type { ValidationIssue } from "../types";
-import type { StructureDefinition } from "./structure-definition-types";
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition } from "./structure-definition-types.js";
 import {
   buildBundleDocumentContextIssues,
   type BundleDocumentContextChildResult,
-} from "./bundle-document-context";
+} from "./bundle-document-context.js";
 import type {
   AspectResult,
   MultiAspectValidateResult,
   ValidateOneFn,
-} from "./multi-aspect-types";
-import { BatchValidationAbortedError } from "./batch-validator";
-import { logger } from "../logger";
-import { getBundleEntryRequiredProfile } from "./bundle-entry-slice-definitions";
-import { getDeclaredProfiles } from "./declared-profile-utils";
-import { mapBundleEntryIssues } from './bundle-entry-validation-output';
+} from "./multi-aspect-types.js";
+import { BatchValidationAbortedError } from "./batch-validator.js";
+import { logger } from "../logger.js";
+import { getBundleEntryRequiredProfile } from "./bundle-entry-slice-definitions.js";
+import { getDeclaredProfiles } from "./declared-profile-utils.js";
+import { mapBundleEntryIssues } from './bundle-entry-validation-output.js';
+import { awaitAllDrained } from '../utils/await-all-drained.js';
+import { validateBundleCompositionTargets } from './bundle-composition-target-validation.js';
 
 const DEFAULT_BUNDLE_ENTRY_VALIDATION_CONCURRENCY = 16;
 const MAX_BUNDLE_ENTRY_VALIDATION_CONCURRENCY = 64;
@@ -23,6 +25,7 @@ interface BundleChildValidationResult {
   index: number;
   entryResource: Record<string, unknown>;
   resourceType: string;
+  profileUrl: string;
   result: MultiAspectValidateResult;
 }
 
@@ -35,7 +38,7 @@ export async function appendBundleEntryValidationResults(
   parentStructureDef: StructureDefinition | undefined,
   transformDocumentContextIssues: (
     issues: ValidationIssue[],
-  ) => ValidationIssue[],
+  ) => { resultIssues: ValidationIssue[]; evidenceIssues: ValidationIssue[] },
   shouldStop?: () => boolean,
   onEntryValidated?: (
     resource: Record<string, unknown>,
@@ -95,7 +98,7 @@ export async function appendBundleEntryValidationResults(
   for (let i = 0; i < validationTargets.length; i += concurrency) {
     throwIfStopped(shouldStop);
     const chunk = validationTargets.slice(i, i + concurrency);
-    const chunkResults = await Promise.all(
+    const chunkResults = await awaitAllDrained(
       chunk.map(async (target) => {
         const result = await validateBundleEntryTarget(
           target,
@@ -111,6 +114,7 @@ export async function appendBundleEntryValidationResults(
           index: target.index,
           entryResource: target.entryResource,
           resourceType: target.resourceType,
+          profileUrl: target.profileUrl,
           result,
         };
       }),
@@ -138,16 +142,40 @@ export async function appendBundleEntryValidationResults(
   }
 
   throwIfStopped(shouldStop);
+  const contextChildren = await appendCompositionTargetResults(
+    bundle, childResults, parentAspects, validateOne, { fhirVersion, recursionDepth, shouldStop },
+  );
+  throwIfStopped(shouldStop);
   const documentContextIssues = transformDocumentContextIssues(
     buildBundleDocumentContextIssues(
       bundle,
-      childResults.map(toDocumentContextChildResult),
+      contextChildren,
       parentStructureDef,
     ),
   );
-  if (documentContextIssues.length > 0) {
-    appendIssuesToAspect(parentAspects, "profile", documentContextIssues);
+  appendIssuesToAspect(parentAspects, "profile", documentContextIssues);
+}
+
+async function appendCompositionTargetResults(
+  bundle: Record<string, unknown>,
+  children: BundleChildValidationResult[],
+  parentAspects: AspectResult[],
+  validateOne: ValidateOneFn,
+  context: { fhirVersion: "R4" | "R5" | "R6"; recursionDepth: number; shouldStop?: () => boolean },
+): Promise<BundleDocumentContextChildResult[]> {
+  const contextChildren = children.map(toDocumentContextChildResult);
+  const additional = await validateBundleCompositionTargets(bundle, contextChildren, async (resource, profileUrl) => {
+    const result = await validateBundleEntryTarget(
+      { entryResource: resource, profileUrl }, validateOne, context.fhirVersion,
+      context.recursionDepth, bundle, context.shouldStop,
+    );
+    return { issues: result.aspects.flatMap(aspect => aspect.issues),
+      resourceType: result.structureDef?.type, value: result };
+  });
+  for (const { child, assessment } of additional) {
+    if (assessment.value) mergeEntryAspects(parentAspects, assessment.value.aspects, child.index, child.entryResource, child.resourceType);
   }
+  return contextChildren;
 }
 
 async function validateBundleEntryTarget(
@@ -200,6 +228,7 @@ function toDocumentContextChildResult(
     resourceType: child.resourceType,
     issues: child.result.aspects.flatMap((aspect) => aspect.issues),
     structureDef: child.result.structureDef,
+    validatedProfile: child.profileUrl,
   };
 }
 
@@ -243,8 +272,9 @@ function mergeEntryAspects(
       parentAspects.push(parentAspect);
     }
 
+    parentAspect.evidenceIssues ??= [...parentAspect.issues];
     parentAspect.issues.push(...rewrittenIssues);
-    parentAspect.evidenceIssues?.push(...rewrittenEvidence);
+    parentAspect.evidenceIssues.push(...rewrittenEvidence);
     parentAspect.validationTime += childAspect.validationTime;
     parentAspect.isValid = parentAspect.issues.every(
       (issue) => issue.severity !== "error" && issue.severity !== "fatal",
@@ -255,9 +285,9 @@ function mergeEntryAspects(
 function appendIssuesToAspect(
   parentAspects: AspectResult[],
   aspectName: string,
-  issues: ValidationIssue[],
+  governed: { resultIssues: ValidationIssue[]; evidenceIssues: ValidationIssue[] },
 ): void {
-  if (issues.length === 0) return;
+  if (governed.resultIssues.length === 0 && governed.evidenceIssues.length === 0) return;
   let parentAspect = parentAspects.find(
     (aspect) => aspect.aspect === aspectName,
   );
@@ -265,24 +295,27 @@ function appendIssuesToAspect(
     parentAspect = {
       aspect: aspectName,
       issues: [],
+      evidenceIssues: [],
       validationTime: 0,
       isValid: true,
     };
     parentAspects.push(parentAspect);
   }
 
-  const existing = new Set(
-    parentAspect.issues.map(
-      (issue) => `${issue.code}|${issue.path}|${issue.message}`,
-    ),
+  parentAspect.evidenceIssues ??= [...parentAspect.issues];
+  appendUniqueIssues(parentAspect.issues, governed.resultIssues);
+  appendUniqueIssues(parentAspect.evidenceIssues, governed.evidenceIssues);
+  parentAspect.isValid = parentAspect.issues.every(
+    (issue) => issue.severity !== "error" && issue.severity !== "fatal",
   );
+}
+
+function appendUniqueIssues(target: ValidationIssue[], issues: ValidationIssue[]): void {
+  const existing = new Set(target.map(issue => `${issue.code}|${issue.path}|${issue.message}`));
   for (const issue of issues) {
     const key = `${issue.code}|${issue.path}|${issue.message}`;
     if (existing.has(key)) continue;
     existing.add(key);
-    parentAspect.issues.push(issue);
+    target.push(issue);
   }
-  parentAspect.isValid = parentAspect.issues.every(
-    (issue) => issue.severity !== "error" && issue.severity !== "fatal",
-  );
 }

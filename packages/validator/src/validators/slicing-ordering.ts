@@ -1,8 +1,8 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import type { SlicingDefinition } from '../core/structure-definition-types';
-import type { SliceDefinition } from './slice-types';
-import { resourceTypeFromPath } from './slicing-content-rules';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import type { SlicingDefinition } from '../core/structure-definition-types.js';
+import type { SliceDefinition } from './slice-types.js';
+import { resourceTypeFromPath } from './slicing-content-rules.js';
 
 interface SliceOrderingOptions {
   ordered?: boolean;

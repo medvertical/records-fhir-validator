@@ -1,5 +1,5 @@
-import type { SubsumptionOutcome } from './terminology-api-types';
-import type { CodeBindingOutcome } from './valueset-types';
+import type { SubsumptionOutcome } from './terminology-api-types.js';
+import type { CodeBindingOutcome } from './valueset-types.js';
 
 export type FHIRPathTerminologyVersion = 'R4' | 'R5' | 'R6';
 export type FHIRPathInvocationParameterType =

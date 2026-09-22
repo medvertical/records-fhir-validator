@@ -26,12 +26,13 @@
  *     form (`valueString`, `valueQuantity`, …).
  */
 
-import type { ValidationIssue } from '../../types';
-import type { StructureDefinitionLoader } from '../structure-definition-loader';
-import { createValidationIssue } from '../../issues';
-import { buildSnapshotIndex, type SnapshotIndex } from './unknown-property-snapshot-index';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinitionLoader } from '../structure-definition-loader.js';
+import { createValidationIssue } from '../../issues/index.js';
+import { buildSnapshotIndex, type SnapshotIndex } from './unknown-property-snapshot-index.js';
+import { createProfileUnreadable } from '../../issues/profile-completeness-issues.js';
 
-export { buildSnapshotIndex, type SnapshotIndex } from './unknown-property-snapshot-index';
+export { buildSnapshotIndex, type SnapshotIndex } from './unknown-property-snapshot-index.js';
 
 const SPECIAL_RESOURCE_KEYS = new Set([
   'resourceType', 'id', 'meta', 'implicitRules', 'language',
@@ -133,12 +134,13 @@ async function walk(
   isRoot: boolean,
   deps: WalkerDeps | undefined,
   visited: WeakSet<object>,
+  schemaPathPrefix = pathPrefix,
 ): Promise<void> {
   if (typeof value !== 'object' || value === null || visited.has(value)) return;
   visited.add(value);
   if (Array.isArray(value)) {
     for (const item of value) {
-      await walk(item, pathPrefix, index, sdUrl, issues, false, deps, visited);
+      await walk(item, pathPrefix, index, sdUrl, issues, false, deps, visited, schemaPathPrefix);
     }
     return;
   }
@@ -158,16 +160,21 @@ async function walk(
         `${pathPrefix}.${key.slice(1)}`,
         sdUrl,
         issues,
-        isRoot,
       );
       continue;
     }
 
     const childPath = `${pathPrefix}.${key}`;
+    const schemaPath = `${schemaPathPrefix}.${key}`;
 
-    if (!index.knownPaths.has(childPath)) {
-      if (isRoot && deps && await isKnownBaseResourcePath(childPath, pathPrefix, deps)) {
-        continue;
+    if (!index.knownPaths.has(schemaPath)) {
+      if (isRoot && deps) {
+        const knowledge = await classifyBaseResourcePath(childPath, pathPrefix, deps);
+        if (knowledge === 'known') continue;
+        if (knowledge === 'undetermined') {
+          reportUndeterminedBaseDefinition(pathPrefix, issues);
+          continue;
+        }
       }
 
       issues.push(createValidationIssue({
@@ -181,7 +188,7 @@ async function walk(
       continue;
     }
 
-    const info = index.byPath.get(childPath);
+    const info = index.byPath.get(schemaPath);
     const childValue = value[key];
 
     if (!info?.type) continue;
@@ -189,7 +196,7 @@ async function walk(
     if (RESOURCE_LIKE_TYPES.has(info.type)) continue;
 
     if (BACKBONE_LIKE_TYPES.has(info.type)) {
-      await walk(childValue, childPath, index, sdUrl, issues, false, deps, visited);
+      await walk(childValue, childPath, index, sdUrl, issues, false, deps, visited, schemaPath);
       continue;
     }
 
@@ -199,7 +206,7 @@ async function walk(
     if (deps) {
       const subIndex = await loadTypeIndex(info.type, deps);
       if (subIndex) {
-        await walk(childValue, info.type, subIndex, sdUrl, issues, false, deps, visited);
+        await walk(childValue, childPath, subIndex, sdUrl, issues, false, deps, visited, info.type);
       }
     }
   }
@@ -220,7 +227,6 @@ function validatePrimitiveSidecarProperties(
   primitivePath: string,
   sdUrl: string | undefined,
   issues: ValidationIssue[],
-  isRoot: boolean,
 ): void {
   const entries = Array.isArray(sidecar) ? sidecar : [sidecar];
   for (const entry of entries) {
@@ -234,7 +240,7 @@ function validatePrimitiveSidecarProperties(
         customMessage:
           `Unknown element '${sidecarKey}' in primitive extension sidecar - ` +
           `not defined in ${sdUrl || 'StructureDefinition'}`,
-        severityOverride: isRoot ? undefined : 'warning',
+        severityOverride: undefined,
       }));
     }
   }
@@ -271,15 +277,48 @@ async function loadTypeIndex(
   }
 }
 
-async function isKnownBaseResourcePath(
+/**
+ * Whether a root property belongs to the resource's base definition.
+ *
+ * `undetermined` is not a formality. This runs only for a property the profile
+ * itself does not list, and the caller reports `structural-unknown-element` at
+ * error severity when the answer is no. Answering `false` because the base
+ * definition could not be loaded therefore turns a transient loader failure
+ * into an error on a valid resource.
+ */
+/**
+ * One diagnostic per resource type, not one per property: an unloadable base
+ * definition affects every property the profile does not list, and the reader
+ * needs the fact once.
+ */
+function reportUndeterminedBaseDefinition(
+  pathPrefix: string,
+  issues: ValidationIssue[],
+): void {
+  const resourceType = pathPrefix.split('.')[0];
+  const baseUrl = `${FHIR_DATATYPE_BASE_URL}${resourceType}`;
+  const alreadyReported = issues.some(issue =>
+    issue.code === 'profile-unreadable'
+    && issue.resourceType === resourceType
+    && typeof issue.details === 'object'
+    && issue.details !== null
+    && (issue.details as Record<string, unknown>).reason === 'base-definition');
+  if (alreadyReported) return;
+  issues.push(createProfileUnreadable({
+    profileUrl: baseUrl,
+    resourceType,
+    reason: 'base-definition',
+  }));
+}
+
+async function classifyBaseResourcePath(
   childPath: string,
   resourceType: string,
   deps: WalkerDeps,
-): Promise<boolean> {
+): Promise<'known' | 'unknown' | 'undetermined'> {
   const cacheKey = `resource:${resourceType}`;
-  if (deps.typeIndexCache.has(cacheKey)) {
-    return deps.typeIndexCache.get(cacheKey)?.knownPaths.has(childPath) === true;
-  }
+  const cached = deps.typeIndexCache.get(cacheKey);
+  if (cached) return cached.knownPaths.has(childPath) ? 'known' : 'unknown';
 
   try {
     const sd = await deps.sdLoader.loadProfile(
@@ -287,12 +326,12 @@ async function isKnownBaseResourcePath(
       deps.fhirVersion,
     );
     if (!sd?.snapshot?.element?.length) {
-      return false;
+      return 'undetermined';
     }
     const idx = buildSnapshotIndex(sd);
     deps.typeIndexCache.set(cacheKey, idx);
-    return idx.knownPaths.has(childPath);
+    return idx.knownPaths.has(childPath) ? 'known' : 'unknown';
   } catch {
-    return false;
+    return 'undetermined';
   }
 }

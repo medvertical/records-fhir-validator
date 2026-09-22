@@ -1,4 +1,4 @@
-import type { FHIRPathExpressionCacheStats } from './fhirpath-expression-cache-core';
+import type { FHIRPathExpressionCacheStats } from './fhirpath-expression-cache-core.js';
 
 export interface CombinedFHIRPathCacheStats {
   constraint: FHIRPathExpressionCacheStats;

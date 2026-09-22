@@ -5,11 +5,11 @@
  * Extracted from reference-validator.ts to comply with global.mdc guidelines.
  */
 
-import type { ValidationIssue } from '../types';
-import type { ReferenceFormatValidation } from './reference-types';
-import { KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE } from './reference-resource-types';
-import { findReferencesInResource } from './bundle-reference-finder';
-import { createReferenceValidationIssue } from './reference-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ReferenceFormatValidation } from './reference-types.js';
+import { KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE } from './reference-resource-types.js';
+import { findReferencesInResource } from './bundle-reference-finder.js';
+import { createReferenceValidationIssue } from './reference-utils.js';
 
 export interface ReferenceFormatContext {
   path?: string;

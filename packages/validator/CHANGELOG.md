@@ -10,6 +10,476 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.7.0] — 2026-09-22
+
+This release consolidates the unpublished 0.6.3–0.6.37 development series.
+It removes the deprecated metadata/reference validation envelopes described below.
+It ships with `@records-fhir/validation-types` 0.1.12.
+
+### Added
+
+- Resolve the targets of references whose slice membership depends on them
+  (`profile` discriminators and any discriminator traversing `resolve()`)
+  before slicing runs, so slices such as MII
+  `MedicationRequest.reasonReference:Primaertumor` are decided from the
+  referenced resource instead of being reported unverifiable. Bounded by
+  `recursiveReferenceValidation.maxReferencesPerResource` and `timeoutMs`,
+  and absolute references stay excluded unless `validateExternal` is set.
+  Opt-in through `recursiveReferenceValidation.validateTargetProfiles`, which
+  also lets that existing flag take effect outside bundles for the first time:
+  structural validation otherwise never reaches the server.
+- An unverified binding now says why: `details.terminologyDiagnostic` carries
+  the cause (missing definition, compose rules the local stores cannot
+  evaluate, pinned CodeSystem version), whether the tenant's packages were
+  searched, and every terminology server that was asked with the way it
+  answered; `details.recommendation` names the fix. When every asked server
+  failed rather than answered, the issue is reported as
+  `terminology-server-failure` at the same severity, so the inspection UI
+  shows a check that did not run instead of an unknown value set.
+- Reported FHIR XML serialisation defects that the conversion to an object
+  erases: text on an element that allows none, attributes FHIR XML does not
+  define, and attributes written with an empty value such as `url=""`. Both vanish once the document becomes an object, so an object-based
+  validator cannot see them afterwards and the adapter reports them while
+  parsing. `parseFhirXml` returns them on `diagnostics`, and the CLI folds them
+  into its issue list. A narrative whose namespace is wrong is left alone: it is
+  walked as FHIR, and reporting its markup element by element would bury the
+  namespace defect that actually matters.
+- Reported elements that match no defined slice under open slicing, as
+  `profile-slice-open-unmatched`. Open slicing permits them, but the reference
+  validator still names them, and an unclaimed element is usually an unnoticed
+  authoring slip. Closed slicing already reported this as an error; open
+  slicing said nothing.
+
+### Changed
+
+- Move the validator version to 0.6.11 to cover the `resolve()`-slicing
+  evaluation and its pattern-mismatch dedupe rule. Those shipped without a
+  version move, and the version is part of the validation cache fingerprint,
+  so results cached under 0.6.10 could be served for the changed behaviour.
+- Write the file extension Node needs on every relative import in the package
+  source. The published modules are ES modules that Node resolves by filename,
+  and the build had been adding the extensions afterwards with a regex pass
+  over `dist`. That pass also re-pointed a specifier silently whenever a file
+  moved. The emitted output is unchanged — all 708 modules and their
+  declarations are byte-identical to the previous build. Validator 0.6.34.
+- Scoped runtime retirement drops only matching tenant entries. Active leases
+  retain their runtime while later requests acquire a fresh scoped instance.
+- Require `@records-fhir/validation-types` 0.1.11 or newer for native Node ESM
+  resolution across its public entrypoints.
+- Single-aspect and batch validation resolve the same internal executor
+  dependencies and return only requested semantic aspects. Incomplete required
+  dependencies cannot become an empty valid result.
+- Profile attribution now precedes severity and advisor policies. Active and
+  suppressed evidence retains its semantic aspect through embedded resources.
+- Cancellation drains admitted aspect and resource work before releasing the
+  validation call's capacity.
+- A profile constraint declaring `severity: warning` is now reported as a
+  warning. Every non-`dom-` warning constraint was demoted to information,
+  which diverged from the reference validator on every fixture carrying one.
+  `dom-6` keeps its demotion, since the reference validator also treats that
+  narrative best-practice rule as advisory. **Consumers gating CI on warning
+  counts should expect movement**; the findings themselves are unchanged, only
+  their severity.
+
+### Removed
+
+- Two unreachable modules: `parity-mode-filter.ts`, which nothing has
+  imported and whose informational suppression only matched one of the two
+  severity spellings in use, and `loadFromSource`, a second filesystem
+  profile scanner with no callers.
+- The `invariant` toggle is gone from the validation settings. It named an
+  aspect that never carried a finding: everything it gated reports as
+  `structural`, and generic FHIRPath constraints report as `profile`. The key
+  stays accepted so stored settings still load, and the label says it is
+  retired.
+- The undocumented `ValidationContext`-envelope `validate()` wrappers on
+  `ReferenceValidator` (`./reference`) and the `string | ValidationContext`
+  overload on `MetadataValidator` (`./metadata`). Both classes keep
+  `validateInternal(resource, resourceType, ...)`, which is what every
+  production call site and example uses; the envelope built a
+  `ValidationResult` that nothing consumed. The engine's own
+  `ValidationContext` (root export, from `core/validator-engine`) is
+  unaffected.
+- The internal `types/` boundary module. Its documented purpose — one file
+  concentrating the engine's `@shared` imports before extraction — ended when
+  extraction happened; it had become a pure passthrough of five
+  `@records-fhir/validation-types` types. Engine files now import those
+  directly.
+
+### Fixed
+
+- Check slice-scoped constraints on the selected slice instances and retain
+  terminology checks for required bindings.
+- Validate SNOMED identifiers and UCUM suggestions without accepting misleading
+  display fallbacks or inventing corrected units.
+- Resolve an unversioned canonical to a pre-release profile when the cache
+  holds no released version of it. A ballot implementation guide ships only
+  pre-release StructureDefinitions, and refusing them reached no safer profile
+  — it fell back to the base resource and reported the profile as
+  unresolvable while it sat in the package the reader had installed. The rule
+  that a pre-release must not displace a release stays, and now holds across
+  packages regardless of version ordering, so `1.0.0-ballot` no longer outranks
+  `0.9.0`; the hard-coded exception that had been added for one EU guide is
+  gone with it. Measured on the EU Hospital Discharge Report guide
+  (`hl7.fhir.eu.hdr#0.1.0-ballot`): 672 "could not be resolved" warnings across
+  336 documents became 336 profile conformance errors that were previously
+  invisible. Validator 0.6.35.
+- Stop the offline display table from refuting a display it merely does not
+  recognise. The table lists a handful of codes per system and was treated as
+  the complete designation set, so a legitimate SNOMED CT synonym of
+  `322236009` became 30 errors. It may now only confirm, except for LOINC,
+  where the entries are curated against the terminology server as the full
+  designation set for the codes they list; elsewhere an unrecognised display is
+  a warning that this validator could not confirm it, and the message no longer
+  names a "valid display" it cannot know. Validator 0.6.35.
+- Stop substituting `http://hl7.org/fhir/StructureDefinition/<type>` where the
+  caller named no profile. For the engine an explicit profile is an
+  instruction, so it stops looking: the invented base canonical outranked the
+  resource's own `meta.profile` and every profile the specification mandates
+  from its code. An Observation declaring `heartrate` and missing the category
+  that profile requires reported nothing; it now reports
+  `Observation.category has too few values`, and so does the same resource
+  with no declared profile, because R4 mandates `heartrate` from LOINC 8867-4.
+  Affects the CLI and bundle entry validation. Validator 0.6.35.
+- Resolve `QuestionnaireResponse.questionnaire` inside the Bundle that carries
+  the response before asking anything else. A transaction Bundle that posts a
+  Questionnaire under `urn:uuid:…` and answers it in a later entry warned
+  `questionnaire-reference-not-resolved` and skipped every item check, because
+  the lookup only knew the questionnaire registry and the package source, and
+  a Questionnaire without a `url` can be found in neither. The enclosing
+  Bundle's entry index, the one literal references already resolve against,
+  now answers a canonical by entry fullUrl, by `Questionnaire.url` (with
+  `|version` when pinned) or by `Questionnaire/id`, on the single-resource and
+  the multi-aspect path alike, so the response items are validated against the
+  bundled definition. Validator 0.6.33.
+- Stop requiring a `fullUrl` on a bundle entry that POSTs its resource.
+  `Bundle.entry.fullUrl` states it plainly: "The fullUrl element SHALL have a
+  value except that: fullUrl can be empty on a POST" — the entry creates the
+  resource, so there is no URL for it yet. Every POST entry of a transaction or
+  batch bundle that left it out was reported as an error. A relative reference
+  inside such an entry is still unanchored and is still reported.
+  Validator 0.6.29.
+- Open the file a package index names instead of guessing well-known filenames
+  in every candidate package. Resolving one bundle's terminology read 164 files
+  and 43.8 MB, `CodeSystem-v3-ActCode.json` eight times at 1.45 MB each, only
+  to compare the `url` each one carries. The canonical index now records where
+  each canonical lives and at which version, so the best candidate is chosen
+  from the index and one file is opened. Validator 0.6.24.
+- Record one declaration per package however many roots reach it. The bundled
+  store is reachable through a symlinked second root and the same packages are
+  installed in `~/.fhir/packages`, so every declaration was held two or three
+  times — a stored index of 23.9 MB for the 10.7 MB it describes, and the same
+  file read as many times. Validator 0.6.24.
+- Keep the stored canonical index out of its own signature. Writing it into a
+  package store changed the directory signature that had just been computed,
+  so every process built the index, wrote it, and then re-read it twice before
+  answering. Only package directories are signed now. Validator 0.6.24.
+- Keep one stored canonical index per package store instead of one per store
+  set. The file already names the set it describes and is rejected on read when
+  that set changed, so the digest in the filename bought nothing: a run of the
+  test suite left 56 files and 126 MB in the bundled store, none of them ever
+  read again. Files an earlier build wrote are removed on the next write.
+  Validator 0.6.25.
+- Do not store an index that names a temporary package store in a lasting one.
+  That directory is gone by the next start, so the index can never be read
+  back, and writing it only replaced the file the lasting stores can still use.
+  Validator 0.6.25.
+- Look a ValueSet or CodeSystem canonical up in one index instead of walking
+  every installed package. A canonical the stores do not hold cost a full pass
+  over all of them — 648 ms against the 53 bundled packages, of which 323 ms
+  was reading the five packages that ship no `.index.json` file by file —
+  while one that is found cost 26–39 ms. The negative cache kept each canonical
+  from paying twice, but a resource family touching a dozen unknown canonicals
+  paid seconds before validating anything. One index over all packages, built
+  from `.index.json` where a package ships one and by reading its files where
+  it does not, now answers both cases: a miss drops from 648 ms to about 10 ms
+  and a hit from 26–39 ms to 13–17 ms. It is rebuilt when any package's
+  directory changes. Validator 0.6.20.
+- Stop reporting `terminology-system-undetermined` for a code bound below a
+  Coding. A profile may bind `X.coding.code` rather than the CodeableConcept —
+  MII and other IGs do this routinely — and the binding walk then sees the bare
+  primitive. Its system is not unknown: it sits on the sibling `Coding.system`.
+  Claiming otherwise raised an **error** on resources whose Coding plainly
+  carries a system, whenever the code itself could not be verified locally
+  (any unversioned SNOMED code, for instance). A Coding that genuinely carries
+  no system is still reported, as `terminology-coding-missing-system`.
+  Validator 0.6.18.
+- Read a CodeSystem hierarchy from a parent-naming property, not only from
+  nested concepts. HL7 Terminology ships every v3 CodeSystem flat —
+  `v3-ActCode` is 1 300 concepts, each carrying `subsumedBy` — so a
+  `concept is-a <code>` filter selected nothing but the code itself. Every v3
+  ValueSet built that way, `v3-ActEncounterCode` among them, expanded to
+  nothing locally and went to a terminology server for an answer the installed
+  package already held, or came back `unverified` when none was reachable.
+  Validator 0.6.26.
+- Stop reporting an intact extension as `profile-extension-not-found` when its
+  definition could not be loaded. `isResolvable` answered `false` for both "no
+  such definition" and "the loader threw", and the caller turns that into a
+  finding — an error for a `modifierExtension`. Resolution is now tri-state and
+  an undetermined answer withholds the finding; a genuinely unresolvable URL
+  still reports as before. Validator 0.6.17.
+- Remark once that an HL7-defined CodeSystem leaves concepts without a
+  definition, instead of once per concept. The message is about the code
+  system — "should ensure that *every* concept has a definition" — so repeating
+  it per concept turned one remark into 1 300 on something the size of
+  `v3-ActCode`. It is now stated against the first concept that lacks one, as
+  the reference validator does; conformance similarity for the `tx` module
+  rises from 96.5% to 98.5%. Validator 0.6.28.
+- Gate the base-spec invariants on the structural aspect on both paths. The
+  batch path already ran `ele-1`, `pat-1`, `dom-2` and the `obs-*` checks
+  whenever structural was requested — `resolveSemanticAspectPlan` adds the
+  executor for it — while the single-resource path ran them only when the
+  `invariant` aspect was enabled. The same resource therefore validated
+  differently depending on which path saw it, and switching `invariant` off
+  removed findings from the `structural` bucket they are labelled with. The
+  executor's own failure issue is labelled `structural` too now, so it lands
+  where its findings do. Validator 0.6.22.
+- Apply the core Observation profile a vital-sign code mandates *beside* the
+  declared one instead of dropping it. R4 requires the profile its code
+  implies, and the reference validator evaluates it even when `meta.profile`
+  names something else — its expected outcome for `obs-vs-1` reports the `bp`
+  error although the resource declares `average-smbp`. Records evaluated only
+  what was declared, so an Observation carrying LOINC 8480-6 under
+  `vitalsigns` reported nothing at all; it now reports the two missing `bp`
+  components and the `value[x]` that profile forbids. The extra pass
+  contributes only what the declared pass did not already report, and cannot
+  recurse, because its own applied profile is then the mandated one.
+  Validator 0.6.36.
+- Read a package whose `.index.json` leaves its files unnamed. An index that
+  does not account for every file in the package says nothing about what those
+  files hold, yet an empty one was read as "this package declares nothing" and
+  hid the resources beside it — two installed packages ship `"files": []` next
+  to 25 resources, one of them the only copy of a ValueSet in its store. Such a
+  package is now read from its own files, the way the profile walker has always
+  treated a partial index. Validator 0.6.27.
+- Store the terminology canonical index so a process start does not rebuild it.
+  Building it reads every package index and every file of the packages that
+  ship none — 82.6 MB across 2 895 files, about a second against the stores
+  this repo installs. The same index serialises to about 10 MB and parses in 14 ms, so a start
+  that finds a valid file spends ~80 ms instead. Identity is the
+  package manifests, not directory mtimes, because a container image COPY
+  rewrites mtimes although the package content is immutable — the same reason
+  the profile loader's persistent index uses them. Writing is best effort and
+  tries each store in turn, so a read-only or absent one simply means the index
+  is rebuilt next start. Validator 0.6.23.
+- Read the profile a package index names instead of every file in the package.
+  Returning one StructureDefinition from `hl7.fhir.r4.core` read all 4 583 JSON
+  files and 37 MB, although the 1.2 MB `.index.json` beside them already
+  carries the URL, version and filename of all 658 profiles — it was used only
+  as a negative filter, never to find anything. The first validation of a
+  single resource dropped from 8 980 file reads (160 MB) to 1 976, and a cold
+  pass over 29 ISiK fixtures from 14.5 s to 9.3 s. A package that ships no
+  index, or an index that omits the canonical, still falls back to the full
+  read, so nothing becomes unreachable. Validator 0.6.21.
+- Say so when a package directory cannot be listed, instead of answering as if
+  it held nothing. Two read paths still swallowed the failure: the package
+  selection that decides which installed versions to scan, where "no content"
+  drops the package entirely and an installed IG stops resolving, and the
+  ValueSet scan of a package that ships no `.index.json`, where the canonical
+  then resolves from a lower-ranked store or not at all. Both now report the
+  errno once per directory, as the other store readers already do.
+  Validator 0.6.31.
+- Point an unresolvable-CodeSystem remark at `Coding.system` instead of
+  `Coding.code`. Nothing was found to check the code against, so the remark is
+  about the system — which is where the other producer of the same issue code
+  already put it, and where the reference validator puts it. The same finding
+  therefore used to land on two different elements depending on which path
+  produced it. Conformance similarity for the `tx` module rises from 98.5% to
+  99.6%. Validator 0.6.32.
+- Resolve child-path slicing references and provide contained/bundle-local
+  reference resolution consistently for single-resource validation. Validator 0.6.37.
+- Update UCUM parsing to 7.1.8, including valid prefixed units such as `pH`
+  (picohenry), which is distinct from the acidity unit `[pH]`.
+- Report an inverted `Range` / `RatioRange` (`rng-2`, `ratrng-2`). Neither
+  version reached the rule through FHIRPath: R5+ states it with
+  `lowBoundary()`, which fhirpath.js rejects for Quantity input, and R4's
+  `low <= high` answers `true` for two unit-less Quantities. The bounds are
+  now compared directly — as written on R4, over precision boundaries on
+  R5+ — and the pair is left alone when the two units are not the same
+  scale. Validator 0.6.14.
+- Count a constraint that produced no verdict. `skippedConstraints` only
+  counted the two failures the classifier could name, so a constraint whose
+  expression crashed the FHIRPath compiler — R6's `csd-6` uses
+  `defineVariable()`, which fhirpath.js does not implement — was left out of
+  the number that is supposed to answer how much went unchecked. Those
+  failures are now recorded under a fourth reason, `evaluation-error`, and
+  the `profile-constraint-evaluation-error` issue carries
+  `validationStatus: 'incomplete'` so the quality lanes read it as unverified
+  rather than advisory. Validator 0.6.15.
+- Classify `profile-not-resolved` as a setup finding in the EPS quality lane.
+  A declared profile that could not be resolved is the same installation
+  problem as `profile-not-found`, but only the latter was listed, so a
+  missing package read as ordinary advisory noise.
+- Say when the profile loader could not read a package store or a package
+  file. `loadFromLocalCache` swallowed both, so an installed profile behind a
+  permission or I/O failure resolved exactly like one that was never there,
+  and a broken profile JSON dropped out of the package index without a word.
+  Both now go through the package-store diagnostics, which stay silent for a
+  store that is simply absent and cap how much one broken store can log.
+  Validator 0.6.16.
+- Report a profile that could not be loaded instead of treating it as absent.
+  The loader already answers `null` for a profile that is not there, so a
+  thrown failure means something else — an unreadable store, a definition that
+  did not parse. Both used to collapse into "no profile", which silently
+  skipped every snapshot-based structural check and returned a result that
+  looked cleaner than it was. The new `profile-unreadable` issue carries
+  `validationStatus: 'incomplete'` at `warning`: the resource is not known to
+  be wrong, only unchecked. The same now applies to an unloadable
+  `compliesWithProfile` claim, which previously dropped its compliance check.
+- Stop reporting a valid root property as `structural-unknown-element` when the
+  resource's base definition could not be loaded. The base-path check answered
+  `false` for both "not in the base" and "could not read the base", and it runs
+  only at the root, where the issue is not downgraded — so a transient loader
+  failure produced an error-severity finding on a correct resource. The check is
+  now tri-state and an undetermined answer withholds the finding and says so
+  once per resource type.
+- Decide FHIR Schema graph slices whose discriminator depends on the reference
+  target by dereferencing it, instead of declaring every `resolve()`-
+  discriminated required slice unmatchable. `validateResourceWithGraph` takes
+  an optional `resolveReference`; without it such slicing stays unverifiable
+  rather than being reported as a missing slice, which is what the
+  StructureDefinition runtime already does. Closed slicing and slice maximums
+  are now decided from the same resolved evidence.
+- Report a questionnaire `regex` constraint that does not compile instead of
+  silently accepting the answer, as `questionnaire-sdc-regex-unevaluable`. An
+  author's broken pattern previously turned into "the answer is fine".
+- Warn once per uncompilable advisor rule `messageRegex` instead of letting the
+  rule quietly never match.
+- Resolve ValueSets and CodeSystems from the host's tenant packages before
+  the filesystem stores, so bindings to an installed IG that no public
+  terminology server knows (UK Core) are verified instead of reported as
+  unverified. The ValueSet validator binds to the tenant scope through
+  `setSourceContext`; hosts answer through the existing
+  `findCanonicalResource` capability.
+- Resolve the profile behind a slice's type in the validated FHIR release
+  instead of always as R4, so R5/R6 resources no longer inherit R4
+  cardinalities and constraints through their slices.
+- Keep the base resource's element order in generated snapshots and place
+  added elements and slices inside their parent's subtree in declared order,
+  instead of sorting the snapshot by path; `ordered` and `openAtEnd` slicing
+  were judged against the sorted order.
+- Ask the terminology server to infer the code system for bindings on
+  string and code elements, so `$validate-code` answers instead of rejecting
+  the system-less request.
+- Ask every other enabled terminology server of the release when the routed
+  server cannot resolve a value set, so bindings to licensed VSAC and USPS
+  value sets are verified instead of reported as unverified.
+- Preserve host-selected profile provenance through batch and direct aspect
+  validation, including inferred-profile signposts and governance evidence.
+- Resolve ValueSet bindings from the owning package's actual resource version
+  and retain wildcard CodeSystem lookups.
+- Require explicit custom-rule activation and an image `src` for narrative
+  content. Keep date plausibility independent of the current calendar year.
+- Evaluate nested `memberOf()` constraints in their element context and leave
+  quoted FHIRPath text untouched when rewriting type operators.
+- Preserve versioned compliance claims, datatype issue locations and contained
+  reference checks inside Bundle entries. Keep terminology coverage failures
+  distinct from rejected codes and avoid ambiguous subsumption cache keys.
+- Follow installed transitive package dependencies when collecting canonical
+  pins. Decode JSON string patch values and reject removal of absent fields.
+- Install the composite action runtime in its own checkout and match complete
+  file globs, including filename prefixes and recursive directories.
+- Stopped emitting unfilled message placeholders. A template rendered with
+  whatever the call site passed, so anything it omitted reached the reader
+  verbatim: `Structural validation failed: {error}`, `Slice validation failed:
+  {error}`, `Element {element} has too few values`. A missing detail now
+  shortens the message instead of corrupting it — the detail clause carrying
+  the placeholder is dropped whole, because half a clause reads worse than
+  none. Fully substituted messages are unchanged.
+- Resolved `resolve()` discriminators that step through a child. Only a path
+  starting with `resolve()` followed the reference; `item.resolve()` was
+  evaluated as a literal element path, matched nothing, and under closed
+  slicing every entry was reported as unmatched with all required slices
+  missing. The Reference is now read at `item`, resolved, and its target
+  matched against the type constraint declared on `item` in each slice — so
+  `List.entry` sliced by what `item` points at assigns a contained Condition
+  and a contained Observation to their slices. A reference that cannot be
+  resolved leaves the slicing unverified rather than failed.
+- Resolved contained and bundle-local references for a single resource passed
+  to `validate()`. Batch validation and bundle-entry recursion built that
+  resolver; the top-level single-resource path did not, so a `#id` reference
+  used by a discriminator counted as unresolvable there. A caller-supplied
+  resolver still answers everything the resource itself does not contain.
+- Resolved slice discriminator evidence through `type.profile` references. A
+  slice may delegate its definition to a named slice inside another profile,
+  naming it with the `elementdefinition-profile-element` extension. That
+  reference was not followed, so the discriminator counted as unresolvable and
+  required slices were never checked — `Composition.section` slices declared
+  through a section library reported nothing at all. Differentials are not
+  required to carry element ids, so the referenced slice is delimited the way a
+  differential delimits it rather than by id prefix.
+- Made FHIR XML input conversion schema-driven. The converter decided
+  primitive types and element cardinality from hardcoded element-name tables,
+  so any value whose type comes from the definitions rather than its name
+  converted wrongly: `Quantity.value` produced the string `"185.5"` where JSON
+  produces the number `185.5`, and a repeating element occurring once became a
+  scalar instead of a single-entry array. `StructureDefinition.differential.element`
+  was one such element, so XML profiles converted into unusable shapes. Both
+  now resolve against the base StructureDefinitions, which is the correct
+  source: FHIR JSON array-ness follows the base definition, not any profile
+  that narrows it.
+- The CLI now passes the selected FHIR release to the XML parser. `--fhir-version
+  R4B`, `R5` or `R6` reached validation but not parsing, so the document was
+  normalised into the R4 shape first: an R5 `Appointment.participant.required`
+  arrived as the string `"true"` rather than a boolean, and every later finding
+  was drawn from the wrong definitions.
+- Exported `FhirInputDiagnostic` from `@records-fhir/validator/input`, and
+  declared the `./input` and `./issues` subpaths. `parseFhirXml` returns
+  `diagnostics` typed by an interface consumers could not import.
+- Reported a constraint key redefined with a different expression inside a
+  StructureDefinition. A key identifies an invariant, so reusing one for a
+  different rule means two rules answer to the same name and a reader tracing a
+  failure finds the wrong definition. Restating a key with the same expression
+  is how a profile carries an inherited invariant forward and stays allowed.
+  Keys inherited from the base definition are not yet compared, which needs
+  loader access the validator does not have.
+- Reported a pinned ValueSet version that was not the one resolved. A binding
+  writing `|4.0.0` was quietly satisfied by the bundled `4.0.1` through a
+  same-major fallback. The fallback keeps validation working and stays, but
+  substituting a different version without saying so hides which definition a
+  finding was actually checked against.
+- Raised a duplicate security label from information to an error, and replaced
+  the "unknown security system" finding with what is actually wrong. Security
+  systems were checked against a hardcoded shortlist, so an unlisted system
+  reported only that Records had not heard of it. Two things are wrong: the
+  code system cannot be resolved, so the code cannot be checked at all, and the
+  label is therefore not known to be in the bound value set.
+- Raised an undefined element in a primitive extension sidecar from a warning
+  to an error. An element the definitions do not describe is a structural
+  defect, and the reference validator reports it as one.
+- Reported that a bare code's system could not be determined, alongside the
+  binding violation itself. A `code` with no system fails twice over: the
+  system cannot be established at all, and the value is not in the value set.
+  The reference validator reports both, and they are different facts — the
+  first says the code could not even be looked up.
+- Reported every way a `pattern[x]` is violated, not only the first. The
+  matcher returned on its first mismatch, so a missing element hid a wrong
+  value sitting beside it and the author only saw the second defect after
+  fixing the first and revalidating.
+- Resolved a profile's base definition against the release being validated.
+  `SnapshotGenerator` passed no version to `loadProfile`, which defaults to R4,
+  so a profile validated under R5 inherited the R4 base and its cardinality —
+  `Encounter.class` is `1..1` in R4 and `0..*` in R5, so R5 resources were
+  reported as missing a required element. Base validation was already
+  version-correct; only the profile-driven path was affected.
+- Converted FHIR XML decimals written with an exponent. The numeric pattern
+  admitted neither `1e1` nor `0.1e11`, so those values stayed strings and the
+  validator then reported a type mismatch against the element's own declared
+  decimal type — a false positive of the validator's own making. The integer
+  types keep the stricter pattern, which is what FHIR specifies.
+- Gave R4B and R6 their own XML conversion tables instead of reusing R4 and R5.
+  R4B and R4 share 6575 elements but R4B adds 944 and drops 831, and they
+  disagree outright on `EvidenceVariable.characteristic.timeFromStart`, a
+  `Duration` in R4 and a `BackboneElement` in R4B. The tables are generated as
+  deltas against their nearest release, which costs about 13 KB gzipped rather
+  than a second full copy each.
+- `parseFhirXml` accepts an optional `fhirVersion` (default `R4`). R4 and R5
+  disagree on roughly 200 element types and cardinalities — for example
+  `Appointment.participant.required` is a `code` in R4 and a `boolean` in R5 —
+  so the release has to be stated rather than guessed. Element names the
+  definitions do not describe still fall back to the previous heuristics, so
+  logical models and custom resources are unaffected.
+
 ## [0.6.2] — 2026-08-25
 
 Patch release closing Bundle, XML, and SNOMED edition gaps and adding

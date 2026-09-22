@@ -1,17 +1,18 @@
-import { createTerminologyIssue } from '../../terminology/terminology-issue';
-import type { ValidationIssue } from '../../types';
+import { createTerminologyIssue } from '../../terminology/terminology-issue.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import type {
   CodeSystemValidationIssue,
   CodeSystemValidationResult,
-} from '../../validators/terminology-api-types';
-import { displaysEquivalentForCodeInfo } from '../../validators/valueset-display-utils';
+} from '../../validators/terminology-api-types.js';
+import { displaysEquivalentForCodeInfo } from '../../validators/valueset-display-utils.js';
 import {
   anyDisplayEquivalent,
   buildDisplayMismatchFixHint,
   extractAcceptedDisplays,
   extractExpectedDisplay,
+  knownDisplaysForCode,
   uniqueAcceptedDisplays,
-} from './terminology-display-rules';
+} from './terminology-display-rules.js';
 
 export interface CodingValue {
   system: string;
@@ -89,6 +90,7 @@ function buildDisplayIssues(
   if (!coding.display) return [];
   const expectedDisplay = result.display ?? extractExpectedDisplay(displayIssue?.message ?? result.message);
   const acceptedDisplays = uniqueAcceptedDisplays([
+    ...(!coding.version ? knownDisplaysForCode(coding.system, coding.code) ?? [] : []),
     ...(result.display ? [result.display] : []),
     ...extractAcceptedDisplays(displayIssue?.message ?? result.message),
   ]);
@@ -158,7 +160,11 @@ function buildInvalidCodeIssues(
     severity: systemUnresolvable || result.incompleteCodeSystem ? 'warning' : 'error',
     code: systemUnresolvable ? 'terminology-codesystem-unresolvable' : 'terminology-code-invalid',
     message: buildInvalidCodeMessage(coding, result, loinc),
-    path: resultPath(path, index, isArrayInput, 'code'),
+    // An unresolvable system is a remark about `Coding.system`, not about the
+    // code: nothing was found to check the code against. The other producer of
+    // this issue code already anchors it there, and so does the reference
+    // validator, so the same finding used to land on two different elements.
+    path: resultPath(path, index, isArrayInput, systemUnresolvable ? 'system' : 'code'),
     details: {
       code: coding.code,
       system: coding.system,

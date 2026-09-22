@@ -1,5 +1,5 @@
-import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
-import { extractFixedValue, extractPatternValue, matchesPattern, valuesMatch } from '../../validators/slice-utils';
+import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
+import { extractFixedValue, extractPatternValue, matchesPattern, valuesMatch } from '../../validators/slice-utils.js';
 
 function elementRuleMatchesValue(elementDef: ElementDefinition, value: unknown): boolean {
   const fixed = extractFixedValue(elementDef);

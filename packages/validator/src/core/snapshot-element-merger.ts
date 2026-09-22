@@ -1,4 +1,4 @@
-import type { ElementDefinition } from './structure-definition-types';
+import type { ElementDefinition } from './structure-definition-types.js';
 
 export class SnapshotElementMerger {
   merge(
@@ -12,47 +12,75 @@ export class SnapshotElementMerger {
     return snapshot;
   }
 
+  /**
+   * Element order is part of a snapshot's meaning: slices are declared in
+   * order, `ordered`/`openAtEnd` slicing is judged against it, and the base
+   * resource lists elements depth-first. Elements the differential adds are
+   * therefore placed where the depth-first walk puts them, at the end of
+   * their parent's subtree, instead of sorting the whole snapshot by path.
+   */
   private mergeElements(
     baseElements: ElementDefinition[],
     differentialElements: ElementDefinition[],
   ): ElementDefinition[] {
     const mergedElements = JSON.parse(JSON.stringify(baseElements)) as ElementDefinition[];
-    const baseElementMap = new Map<string, number>();
-    mergedElements.forEach((element, index) => {
-      if (element.path && !element.sliceName && !this.isSliceScopedElement(element)) {
-        baseElementMap.set(element.path, index);
-      }
-    });
 
     for (const diffElement of differentialElements) {
       if (!diffElement.path) continue;
-      const path = diffElement.path;
       const isSliceInstance = Boolean(diffElement.sliceName);
       const isSliceScopedChild = this.isSliceScopedElement(diffElement);
 
-      if (baseElementMap.has(path) && !isSliceInstance && !isSliceScopedChild) {
-        const index = baseElementMap.get(path)!;
-        mergedElements[index] = this.mergeElementProperties(mergedElements[index], diffElement);
-      } else if (isSliceInstance) {
-        const existingIndex = this.findExistingSliceIndex(mergedElements, diffElement);
-        if (existingIndex >= 0) {
-          mergedElements[existingIndex] = this.mergeElementProperties(
-            mergedElements[existingIndex],
-            diffElement,
-          );
-        } else {
-          mergedElements.push({ ...diffElement });
-        }
-      } else {
-        mergedElements.push({ ...diffElement });
-        if (!baseElementMap.has(path)) baseElementMap.set(path, mergedElements.length - 1);
+      const existingIndex = isSliceInstance
+        ? this.findExistingSliceIndex(mergedElements, diffElement)
+        : isSliceScopedChild
+          ? -1
+          : this.findUnslicedIndex(mergedElements, diffElement.path);
+      if (existingIndex >= 0) {
+        mergedElements[existingIndex] = this.mergeElementProperties(
+          mergedElements[existingIndex],
+          diffElement,
+        );
+        continue;
       }
+      mergedElements.splice(this.insertionIndex(mergedElements, diffElement), 0, { ...diffElement });
     }
 
-    mergedElements.sort((left, right) =>
-      (left.path || '').localeCompare(right.path || '')
-    );
     return mergedElements;
+  }
+
+  private findUnslicedIndex(elements: ElementDefinition[], path: string): number {
+    return elements.findIndex(element =>
+      element.path === path && !element.sliceName && !this.isSliceScopedElement(element));
+  }
+
+  private insertionIndex(elements: ElementDefinition[], diffElement: ElementDefinition): number {
+    const path = diffElement.path!;
+    if (diffElement.sliceName) {
+      // A new slice follows the sliced element, its own children and the
+      // slices already present, which all share the sliced path.
+      const slicedIndex = this.findUnslicedIndex(elements, path);
+      if (slicedIndex >= 0) return this.subtreeEnd(elements, slicedIndex, pathMember(path)) + 1;
+    }
+    if (this.isSliceScopedElement(diffElement) && diffElement.id) {
+      const parentId = diffElement.id.slice(0, diffElement.id.lastIndexOf('.'));
+      const parentIndex = elements.findIndex(element => element.id === parentId);
+      if (parentIndex >= 0) return this.subtreeEnd(elements, parentIndex, idMember(parentId)) + 1;
+    }
+    const parentPath = path.slice(0, path.lastIndexOf('.'));
+    const parentIndex = parentPath ? this.findUnslicedIndex(elements, parentPath) : -1;
+    if (parentIndex >= 0) return this.subtreeEnd(elements, parentIndex, pathMember(parentPath)) + 1;
+    return elements.length;
+  }
+
+  /** Last index of the contiguous run that starts at `start` and stays within the subtree. */
+  private subtreeEnd(
+    elements: ElementDefinition[],
+    start: number,
+    isMember: (element: ElementDefinition) => boolean,
+  ): number {
+    let end = start;
+    while (end + 1 < elements.length && isMember(elements[end + 1])) end += 1;
+    return end;
   }
 
   private inferLegacySliceIds(elements: ElementDefinition[]): ElementDefinition[] {
@@ -162,6 +190,17 @@ export class SnapshotElementMerger {
       if (constraint.isModifier !== undefined) element.isModifier = constraint.isModifier;
     }
   }
+}
+
+function pathMember(rootPath: string): (element: ElementDefinition) => boolean {
+  const prefix = `${rootPath}.`;
+  return element => element.path === rootPath || Boolean(element.path?.startsWith(prefix));
+}
+
+// Children of a slice carry the slice id as prefix; a reslice uses `/`.
+function idMember(rootId: string): (element: ElementDefinition) => boolean {
+  return element => typeof element.id === 'string'
+    && (element.id.startsWith(`${rootId}.`) || element.id.startsWith(`${rootId}/`));
 }
 
 function mergeExtensions(

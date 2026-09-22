@@ -1,8 +1,8 @@
-import { logger } from '../logger';
-import type { FhirVersion } from './valueset-expansion-cache-key';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+import { logger } from '../logger.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 
 interface ValueSetAvailabilityDeps {
   getExpandedValueSet: (valueSetUrl: string, fhirVersion?: FhirVersion) => Promise<Set<string>>;

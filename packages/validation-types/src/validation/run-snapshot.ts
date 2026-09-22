@@ -58,11 +58,38 @@ export interface ValidationRunInFlightResourceTypeSnapshot {
 
 export interface ValidationRunActivityEventSnapshot {
   timestamp: string;
+  id?: string;
+  phase?: 'initialization' | 'planning' | 'progress' | 'prewarm' | 'processing' | 'finalization';
+  lifecycleStatus?: ValidationRunLifecycleStatus;
+  operation?: {
+    reason: 'timeout' | 'connection' | 'http' | 'invalid_response' | 'unknown';
+    page: number;
+    pageSize?: number;
+    retry?: number;
+    maxRetries?: number;
+    httpStatus?: number;
+  };
+  stats?: {
+    processed?: number;
+    total?: number;
+    validPercent?: number;
+    errors?: number;
+    warnings?: number;
+    inFlight?: number;
+    embeddedProcessed?: number;
+    newErrors?: number;
+    newWarnings?: number;
+    durationSeconds?: number;
+    idleSeconds?: number;
+  };
   resourceType?: string;
   resourceId?: string;
   status?: 'valid' | 'warning' | 'error';
   issueCount?: number;
-  type?: 'resource_type_started' | 'resource_type_completed' | 'first_error' | 'first_warning' | 'milestone';
+  type?: 'resource_type_started' | 'resource_type_completed' | 'resource_type_incomplete'
+    | 'first_error' | 'first_warning' | 'milestone' | 'phase_changed' | 'lifecycle_changed'
+    | 'source_retry' | 'source_error' | 'progress_updated' | 'findings_updated'
+    | 'validation_delayed' | 'validation_progress_resumed' | 'run_resumed';
   message?: string;
 }
 

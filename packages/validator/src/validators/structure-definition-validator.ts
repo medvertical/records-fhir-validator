@@ -9,24 +9,24 @@
  * the 400-line lint threshold.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 import {
   R4_ELEMENT_DEFINITION_ELEMENTS, R4_ELEMENT_DEFINITION_NESTED_CONTEXT_ELEMENTS,
-} from './sd-wg-mappings';
+} from './sd-wg-mappings.js';
 import {
   validateStructureDefinitionStatusConsistency,
   validateStructureDefinitionWgConsistency,
-} from './structure-definition-metadata-rules';
+} from './structure-definition-metadata-rules.js';
 import type {
   ElementDefinition,
   StructureDefinition,
-} from '../core/structure-definition-types';
-import { validateStructureDefinitionPatterns } from './structure-definition-pattern-rules';
+} from '../core/structure-definition-types.js';
+import { validateStructureDefinitionPatterns } from './structure-definition-pattern-rules.js';
 import {
   validateStructureDefinitionDifferentialPaths,
   validateStructureDefinitionElementNames,
-} from './structure-definition-element-path-rules';
+} from './structure-definition-element-path-rules.js';
 
 // ============================================================================
 // Validator

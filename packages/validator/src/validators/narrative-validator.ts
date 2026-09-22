@@ -11,9 +11,9 @@
  * 5. No <!DOCTYPE> or <!ENTITY> declarations (XXE attack protection)
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { validateNarrativeDiv } from './narrative-xhtml-rules';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { validateNarrativeDiv } from './narrative-xhtml-rules.js';
 
 /**
  * Extract every fragment-link target from an xhtml fragment: `id="…"`

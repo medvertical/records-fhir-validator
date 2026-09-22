@@ -5,29 +5,31 @@
  * Extracted from validator-engine.ts to comply with global.mdc guidelines.
  */
 
-import type { ValidationAspectType, ValidationIssue, ValidationSettings } from '../types';
+import type { ProfileApplicationSource, ValidationAspectType, ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import type { FhirClientLike } from './profile-loader-utils.js';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { ProfileCache } from '../cache/profile-cache';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { ReferenceResolver } from '../validators/slicing-validator';
-import { logger } from '../logger';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { ReferenceResolver } from '../validators/slicing-validator.js';
+import { logger } from '../logger.js';
 import {
   deduplicateResources,
   groupResourcesByProfile,
-} from './batch-resource-planning';
-import { preloadProfiles } from './profile-batch-preloader';
-import { createValidationErrorIssue as _createValidationErrorIssue } from './validation-utils';
-import type { ProfileSourceContext } from '../persistence';
-import { operationalResourceReference } from '../utils/sensitive-logging-metadata';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator';
-import { isRecord, resourceIdOf, resourceTypeOf } from './fhir-resource';
+} from './batch-resource-planning.js';
+import { preloadProfiles } from './profile-batch-preloader.js';
+import { createValidationErrorIssue as _createValidationErrorIssue } from './validation-utils.js';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import { operationalResourceReference } from '../utils/sensitive-logging-metadata.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator.js';
+import { isRecord, resourceIdOf, resourceTypeOf } from './fhir-resource.js';
 
 export interface BatchValidationOptions {
   fhirVersion?: 'R4' | 'R5' | 'R6';
   maxConcurrency?: number;
   profileUrl?: string;
+  /** Original selection source for each input resource, before host profile materialization. */
+  profileSources?: ProfileApplicationSource[];
   aspects?: ValidationAspectType[];
   settings?: ValidationSettings;
   fhirClient?: FhirClientLike;
@@ -83,6 +85,9 @@ export async function executeBatchValidation<T = ValidationIssue[]>(
   options: BatchValidationOptions,
   context: BatchValidatorContext<T>
 ): Promise<Map<unknown, T>> {
+  if (options.profileSources && options.profileSources.length !== resources.length) {
+    throw new Error('Profile sources must match the input resource count');
+  }
   const fhirVersion = options.fhirVersion || 'R4';
   const maxConcurrency = options.maxConcurrency || 10;
   const profileSourceContext: ProfileSourceContext = {
@@ -100,7 +105,7 @@ export async function executeBatchValidation<T = ValidationIssue[]>(
 
     // Step 1: Deduplicate resources by content hash
     const dedupStart = Date.now();
-    const { unique, duplicateMap } = deduplicateResources(resources);
+    const { unique, duplicateMap } = deduplicateResources(resources, options.profileSources);
     const dedupTime = Date.now() - dedupStart;
     logger.info(`[RecordsValidator] ✓ Deduplicated in ${dedupTime}ms: ${resources.length} → ${unique.length} unique resources`);
 
@@ -228,11 +233,16 @@ async function validateBatchWorkItems<T>(
       const resourceStart = Date.now();
 
       try {
-        const validate = () => context.validateResource(resource, profileUrl, fhirVersion);
+        const validate = () => {
+          throwIfBatchStopped(options);
+          if (workerFailed) throw new BatchValidationAbortedError();
+          return context.validateResource(resource, profileUrl, fhirVersion);
+        };
         const result = options.scheduleValidation
           ? await options.scheduleValidation(validate)
           : await validate();
         throwIfBatchStopped(options);
+        if (workerFailed) return;
         const resourceTime = Date.now() - resourceStart;
 
         if (resourceTime > 500) {
@@ -255,7 +265,9 @@ async function validateBatchWorkItems<T>(
     }
   };
 
-  await Promise.all(Array.from({ length: workerCount }, runWorker));
+  const outcomes = await Promise.allSettled(Array.from({ length: workerCount }, runWorker));
+  const failed = outcomes.find(outcome => outcome.status === 'rejected');
+  if (failed?.status === 'rejected') throw failed.reason;
   throwIfBatchStopped(options);
   return { resultsMap, validationTime: Date.now() - validationStart };
 }

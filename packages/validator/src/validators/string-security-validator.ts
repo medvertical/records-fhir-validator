@@ -16,8 +16,8 @@
  * See `pat-security-bad-string` baseline in fhir-test-cases.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 
 const HTML_TAG_NAMES = new Set([
     'a', 'abbr', 'acronym', 'address', 'area', 'article', 'aside', 'audio',

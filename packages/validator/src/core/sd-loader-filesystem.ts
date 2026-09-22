@@ -1,20 +1,22 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import type { StructureDefinition } from './structure-definition-types';
-import { logger } from '../logger';
-import { recordProfilePackageProvenance } from '../package/canonical-pin-provenance';
-import { matchesPackageVersionPin } from './sd-loader-package-version-pin';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { logger } from '../logger.js';
+import { recordProfilePackageProvenance } from '../package/canonical-pin-provenance.js';
+import { matchesPackageVersionPin } from './sd-loader-package-version-pin.js';
 import {
   loadPackageProfileIndex,
+  loadProfilesForCanonical,
   packageIndexMayContainCanonical,
   selectBetterUnversionedProfile,
   selectExactProfile,
   selectUnversionedCandidate,
   PackageProfileIndexCache,
   type IndexedProfile,
-} from './sd-loader-package-profile-index';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+} from './sd-loader-package-profile-index.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { reportUnreadablePackageStore } from '../package/package-store-diagnostics.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 
 function hl7UvPackagePrefix(url: string): string | null {
   const match = url.toLowerCase().match(/^https?:\/\/hl7\.org\/fhir\/uv\/([^/]+)\//);
@@ -146,13 +148,22 @@ export async function loadFromLocalCache(
               if (!await packageIndexMayContainCanonical(packagePath, targetUrl, indexCache)) {
                 continue;
               }
-              const index = await loadPackageProfileIndex(
+              // The package index names the files that declare this canonical,
+              // so the common case reads one profile instead of every JSON file
+              // in the package. Falling back keeps a profile the index omits
+              // reachable.
+              const index = await loadProfilesForCanonical(
+                packagePath,
+                entry.name,
+                targetUrl,
+                indexCache,
+              ) ?? await loadPackageProfileIndex(
                 packagePath,
                 entry.name,
                 resourceType,
                 indexCache,
               );
-              const exact = selectExactProfile(index, targetUrl, targetVersion, fhirVersion);
+              const exact = selectExactProfile(index, targetUrl, targetVersion, fhirVersion, packageVersionPins);
               if (exact) {
                 if (targetVersion) {
                   logger.debug('[SDLoader] Loaded exact profile from package', {
@@ -161,21 +172,20 @@ export async function loadFromLocalCache(
                   recordProfilePackageProvenance(exact.sd.url, exact.sd.version, entry.name);
                   return exact.sd;
                 }
-                sourceMatch = selectBetterUnversionedProfile(
-                  sourceMatch,
-                  exact,
-                  targetUrl,
-                  fhirVersion,
-                );
+                sourceMatch = selectBetterUnversionedProfile(sourceMatch, exact);
               }
 
               if (!targetVersion && !sourceMatch) {
-                const candidate = selectUnversionedCandidate(index, targetUrl, fhirVersion);
+                const candidate = selectUnversionedCandidate(index, targetUrl, fhirVersion, packageVersionPins);
                 if (candidate) {
                   sourceMatch = candidate;
                 }
               }
-            } catch {
+            } catch (error) {
+              // One of the two layouts is always absent, which the reporter
+              // ignores; anything else means an installed package went
+              // unsearched and its profiles resolve as missing.
+              reportUnreadablePackageStore('SDLoader', packagePath, error);
               continue;
             }
           }
@@ -193,13 +203,10 @@ export async function loadFromLocalCache(
           );
           return sourceMatch.sd;
         }
-      } catch {
+      } catch (error) {
+        reportUnreadablePackageStore('SDLoader', source, error);
         continue;
       }
-    }
-
-    if (targetVersion) {
-      return null;
     }
 
     return null;
@@ -210,61 +217,4 @@ export async function loadFromLocalCache(
     );
     return null;
   }
-}
-
-export async function loadFromSource(
-  sourcePath: string,
-  url: string,
-  resourceType: string,
-  fhirVersion: 'R4' | 'R5' | 'R6'
-): Promise<StructureDefinition | null> {
-  const entries = await fs.readdir(sourcePath, { withFileTypes: true });
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-
-    const packageName = entry.name;
-    const isRelevant = isRelevantPackage(packageName, url, fhirVersion);
-
-    if (isRelevant) {
-      const packagePath = path.join(sourcePath, packageName, 'package');
-
-      try {
-        const simpleFileName = `StructureDefinition-${resourceType}.json`;
-        const simpleFilePath = path.join(packagePath, simpleFileName);
-
-        try {
-          const content = await fs.readFile(simpleFilePath, 'utf-8');
-          const sd = JSON.parse(content) as StructureDefinition;
-          if (sd.url === url) {
-            return sd;
-          }
-        } catch {
-        }
-
-        const files = await fs.readdir(packagePath);
-        for (const file of files) {
-          if (!file.endsWith('.json')) {
-            continue;
-          }
-
-          const filePath = path.join(packagePath, file);
-          try {
-            const content = await fs.readFile(filePath, 'utf-8');
-            const sd = JSON.parse(content) as StructureDefinition;
-
-            if (sd.resourceType === 'StructureDefinition' && sd.url === url) {
-              return sd;
-            }
-          } catch {
-            continue;
-          }
-        }
-      } catch {
-        continue;
-      }
-    }
-  }
-
-  return null;
 }

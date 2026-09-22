@@ -1,5 +1,5 @@
-import type { StructureDefinition } from './structure-definition-types';
-import { getDeclaredProfiles } from './declared-profile-utils';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { getDeclaredProfiles } from './declared-profile-utils.js';
 
 interface BundleEntrySliceCandidate {
   resourceType: string;
@@ -73,8 +73,17 @@ export function getBundleEntryRequiredProfile(
   child: BundleEntrySliceCandidate,
   structureDef: StructureDefinition | undefined,
 ): string | undefined {
+  const slicing = structureDef?.snapshot?.element.find(element =>
+    element.path === 'Bundle.entry' && !element.sliceName,
+  )?.slicing;
+  const permitsUnmatchedProfiles = slicing?.rules !== 'closed' &&
+    slicing?.discriminator?.some(discriminator =>
+      discriminator.type === 'profile' && discriminator.path === 'resource',
+    );
   const profiles = new Set(
     getBundleEntrySliceDefinitions(structureDef)
+      // An open profile discriminator allows entries outside optional slices.
+      .filter(slice => !permitsUnmatchedProfiles || slice.min > 0)
       .filter(slice => childMatchesBundleEntrySliceCandidate(child, slice))
       .flatMap(slice => slice.profiles),
   );

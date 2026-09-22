@@ -13,16 +13,16 @@ export type {
   MetadataValidationEngine,
   ServerStatus,
   FHIRVersion
-} from './enums';
+} from './enums.js';
 
-export type { ValidationAspectType } from './aspect-enums';
+export type { ValidationAspectType } from './aspect-enums.js';
 export {
   FindingSource,
   type FindingAspectType,
   type FindingSourceSeverityCounts,
   type FindingSourceSummary,
   type FindingSourceType,
-} from './finding-source';
+} from './finding-source.js';
 
 export {
   DEFAULT_VALIDATION_STRICTNESS,
@@ -31,14 +31,14 @@ export {
   VALIDATION_ASPECT_DESCRIPTIONS,
   isErrorValidationSeverity,
   isInformationValidationSeverity,
-} from './enums';
+} from './enums.js';
 
 export {
   CANONICAL_CUSTOM_RULE_ASPECT,
   normalizeValidationAspect,
   normalizeValidationAspects,
   normalizeValidationSettings
-} from './aspect-aliases';
+} from './aspect-aliases.js';
 
 export type {
   ValidationIssue,
@@ -46,9 +46,9 @@ export type {
   ValidationError,
   ValidationRetryInfo,
   ValidationRetryAttempt
-} from './messages';
+} from './messages.js';
 
-export { calculateValidationIssueScore } from './scoring';
+export { calculateValidationIssueScore } from './scoring.js';
 export type {
   ValidationResult,
   ValidationAspectResult,
@@ -56,7 +56,7 @@ export type {
   ValidationProgress,
   ValidationRunSummary,
   ValidationMetrics,
-} from './results';
+} from './results.js';
 
 export type {
   ValidationRunActivityEventSnapshot,
@@ -66,10 +66,10 @@ export type {
   ValidationRunResourceTypeSnapshot,
   ValidationRunSnapshotV1,
   ValidationRunTerminationCause,
-} from './run-snapshot';
+} from './run-snapshot.js';
 
-export type { EvaluationPlanSnapshot, EvaluationScopeRequirement } from './evaluation-plan';
-export type { EvaluationAssessmentSnapshot, EvaluationLaneStatus } from './evaluation-assessment';
+export type { EvaluationPlanSnapshot, EvaluationScopeRequirement } from './evaluation-plan.js';
+export type { EvaluationAssessmentSnapshot, EvaluationLaneStatus } from './evaluation-assessment.js';
 
 export type {
   ValidationIssueResourceTypeMetricsV1,
@@ -78,7 +78,7 @@ export type {
   ValidationIssueSummaryScopeV1,
   ValidationIssueSummarySeverity,
   ValidationIssueSummaryV1,
-} from './issue-summary';
+} from './issue-summary.js';
 
 export type {
   ValidationQualityMetrics,
@@ -104,7 +104,7 @@ export type {
   ValidationCompletenessMetrics,
   ValidationResultWithCompleteness,
   ValidationCompletenessAction,
-} from './validation-advanced-metrics';
+} from './validation-advanced-metrics.js';
 
 export type {
   ProfileSourcesConfig,
@@ -126,16 +126,16 @@ export type {
   AdvisorRuleApplication,
   AdvisorRuleMatch,
   AdvisorRuleTransform
-} from './settings';
+} from './settings.js';
 
 export type {
   CredentialPresenceHints,
   PublicTerminologyAuthConfig,
   PublicTerminologyServer,
   PublicValidationSettings,
-} from './settings-public';
+} from './settings-public.js';
 
-export { PERFORMANCE_LIMITS } from './settings';
+export { PERFORMANCE_LIMITS } from './settings.js';
 
 export {
   COMMON_FHIR_RESOURCE_TYPES,
@@ -145,7 +145,7 @@ export {
   R4_DEFAULT_INCLUDED_RESOURCE_TYPES,
   R5_DEFAULT_INCLUDED_RESOURCE_TYPES,
   type CommonFhirResourceType,
-} from './settings-types';
+} from './settings-types.js';
 
 export {
   DEFAULT_VALIDATION_SETTINGS_R4,
@@ -172,7 +172,7 @@ export {
   type FhirPackagePin,
   type Mii2026ValidationSettingsOverrides,
   type MiiTerminologyMode
-} from './settings-defaults';
+} from './settings-defaults.js';
 
 export {
   BUNDLED_PROFILE_PRESETS,
@@ -181,14 +181,14 @@ export {
   parseBundledProfilePreset,
   type BundledProfilePlan,
   type BundledProfilePreset,
-} from './defaults/bundled-profile-plan';
+} from './defaults/bundled-profile-plan.js';
 
 export {
   validatePerformanceSettings,
   validateResourceTypeSettings,
   validateResourceTypeSettingsForVersion,
   validateValidationSettings,
-} from './settings-validators';
+} from './settings-validators.js';
 
 export {
   DEFAULT_PROFILE_SOURCES_CONFIG,
@@ -199,7 +199,7 @@ export {
   safeParseSettingsUpdate,
   ValidationSettingsSchema,
   ValidationSettingsUpdateSchema,
-} from './settings-schema';
+} from './settings-schema.js';
 
 export {
   getAllResourceTypesForVersion,
@@ -210,7 +210,7 @@ export {
   migrateResourceTypesForVersion,
   getEffectiveResourceTypes,
   shouldValidateResourceType,
-} from './settings-transformers';
+} from './settings-transformers.js';
 
 export {
   decideResourceValidationEligibility,
@@ -222,7 +222,7 @@ export {
   type ResourceValidationEligibilityReason,
   type ResourceValidationOperation,
   type ResourceValidationPolicyAnnotation,
-} from './resource-validation-eligibility';
+} from './resource-validation-eligibility.js';
 
 export {
   getDefaultPerformanceSettings,
@@ -235,7 +235,7 @@ export {
   getEnabledAspects,
   isAspectEnabled,
   getAspectSeverity,
-} from './settings-utils';
+} from './settings-utils.js';
 
 // ============================================================================
 // Versioned quality rule packs
@@ -270,13 +270,13 @@ export {
   type QualityReferenceSetDefinition,
   type QualityRuleScope,
   type QualityRuleSeverity,
-} from './quality-rule-pack';
+} from './quality-rule-pack.js';
 export type {
   EffectiveQualityAdvisoryRule,
   EffectiveQualityPolicyLayerReference,
   EffectiveQualityPolicySnapshot,
   EffectiveQualityRule,
-} from './effective-quality-policy';
+} from './effective-quality-policy.js';
 export type {
   QualityAdvisoryApplication,
   QualityAdvisoryConflict,
@@ -284,13 +284,13 @@ export type {
   QualityAssessmentSnapshot,
   QualityMetric,
   QualityRuleFinding,
-} from './quality-assessment';
+} from './quality-assessment.js';
 export {
   parseQualityRulePackDraftManifest,
   qualityRulePackDraftManifestSchema,
   type QualityRulePackDraftManifest,
   type QualityRulePackDraftTestSummary,
-} from './quality-rule-pack-draft';
+} from './quality-rule-pack-draft.js';
 
 // ============================================================================
 // DTOs and Utility Functions
@@ -307,29 +307,29 @@ export type {
   ValidationGroupMemberDTO,
   ResourceMessagesDTO,
   ValidationSettingsSnapshot
-} from './dtos';
+} from './dtos.js';
 
 export {
   computeValidationScore,
   aggregateAspectScores,
   normalizeCanonicalPath,
   normalizeMessageText
-} from './dtos';
+} from './dtos.js';
 
-export { removeAsciiControlCharacters } from './text-normalization';
+export { removeAsciiControlCharacters } from './text-normalization.js';
 
-export type { ValidationIssueIdentityInput } from './issue-identity';
+export type { ValidationIssueIdentityInput } from './issue-identity.js';
 
 export {
   computeValidationIssueId,
   stableStringify
-} from './issue-identity';
+} from './issue-identity.js';
 
 export {
   getEffectiveIssueRuleId,
   getSpecificIssueRuleId,
   type IssueRuleIdentityInput,
-} from './issue-rule-id';
+} from './issue-rule-id.js';
 
 export type {
   ValidationIssueConfidence,
@@ -337,9 +337,9 @@ export type {
   ValidationIssueProvenanceInput,
   ValidationIssueSourceExecutor,
   ValidationIssueVerificationState,
-} from './issue-provenance';
+} from './issue-provenance.js';
 
 export {
   buildValidationIssueProvenance,
   inferValidationIssueSourceExecutor,
-} from './issue-provenance';
+} from './issue-provenance.js';

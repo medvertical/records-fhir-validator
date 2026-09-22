@@ -14,21 +14,22 @@
  */
 
 import fhirpath from 'fhirpath';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
-import { getFhirPathModel } from '../core/fhirpath-context';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { getFhirPathModel } from '../core/fhirpath-context.js';
 import type {
   Constraint,
   StructureDefinition,
-} from '../core/structure-definition-types';
-import { isRecord } from '../core/fhir-resource';
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
-import { classifyConstraintResult } from './constraint-result-policy';
-import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite';
-import { InvariantRegistry } from './invariant-registry';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+} from '../core/structure-definition-types.js';
+import { isRecord } from '../core/fhir-resource.js';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { classifyConstraintResult } from './constraint-result-policy.js';
+import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite.js';
+import { InvariantRegistry } from './invariant-registry.js';
+import { RANGE_BOUND_CONSTRAINT_KEYS } from './range-bound-invariants.js';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 
@@ -48,6 +49,13 @@ const DATATYPE_CONSTRAINT_OWNERS: Record<string, string> = {
   // `business-invalid-period-end` code; the raw `start <= end` FHIRPath
   // would both double-report and false-positive on precision overlaps.
   'per-1': 'complex-type-invariants.ts',
+  // range-bound-invariants.checkRangeBounds compares the numeric bounds: the
+  // R5+ expressions use lowBoundary(), which fhirpath.js rejects for Quantity,
+  // and R4's `low <= high` answers true for two unit-less Quantities, so the
+  // generic path reports an inverted range on neither version.
+  ...Object.fromEntries(
+    RANGE_BOUND_CONSTRAINT_KEYS.map(key => [key, 'range-bound-invariants.ts'] as const),
+  ),
 };
 
 /**
@@ -58,8 +66,9 @@ const DATATYPE_CONSTRAINT_OWNERS: Record<string, string> = {
 const UNSUPPORTED_EXPRESSION_FEATURES: readonly string[] = [
   // txt-1 / txt-2 — fhirpath.js throws "Not implemented: htmlChecks".
   'htmlChecks(',
-  // R5 rng-2 / ratrng-2 — fhirpath.js boundary functions reject Quantity
-  // input ("Expected a Decimal, Date, DateTime, or Time").
+  // fhirpath.js boundary functions reject Quantity input ("Expected a
+  // Decimal, Date, DateTime, or Time"); rng-2 / ratrng-2 reach their
+  // substitute through DATATYPE_CONSTRAINT_OWNERS before this list.
   'lowBoundary(',
   'highBoundary(',
 ];

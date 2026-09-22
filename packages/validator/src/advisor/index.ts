@@ -13,7 +13,7 @@ export {
     applyAdvisorRules,
     convertGematikRules,
     convertFirelyQCRules,
-} from './advisor-rules';
+} from './advisor-rules.js';
 
 export type {
     AdvisorRule,
@@ -24,10 +24,10 @@ export type {
     GematikPluginYaml,
     GematikTransformation,
     FirelyQCRule,
-} from './advisor-rules';
+} from './advisor-rules.js';
 
 export {
     CANONICAL_URL_SANITY_RULES,
     CANONICAL_URL_NORMALIZATIONS,
     normalizeCanonicalUrl,
-} from './builtin-rules';
+} from './builtin-rules.js';

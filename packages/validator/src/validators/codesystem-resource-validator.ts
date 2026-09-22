@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 import {
   HL7_CONCEPT_PROPERTY_NAMESPACE,
   HL7_KNOWN_CONCEPT_PROPERTIES,
@@ -9,8 +9,8 @@ import {
   isAbsoluteUri,
   isHl7Url,
   validateUrnUuid,
-} from './terminology-resource-utils';
-import { ValueSetCache } from './valueset-cache';
+} from './terminology-resource-utils.js';
+import { ValueSetCache } from './valueset-cache.js';
 
 type FhirRecord = Record<string, unknown>;
 
@@ -180,6 +180,13 @@ function validateCompleteCodeSystem(
   return issues;
 }
 
+/**
+ * The message is about the code system, not about the one concept it points
+ * at — "should ensure that *every* concept has a definition" — so it is stated
+ * once, against the first concept that lacks one. Repeating it per concept
+ * turned a single remark into 1 300 of them on a code system the size of
+ * v3-ActCode, and the reference validator reports it once.
+ */
 function validateHl7ConceptDefinitions(
   codeSystem: FhirRecord,
   conceptPathPrefix: string,
@@ -187,18 +194,18 @@ function validateHl7ConceptDefinitions(
   hl7: boolean,
 ): ValidationIssue[] {
   if (!hl7) return [];
-  return walkConcepts(codeSystem.concept, conceptPathPrefix).flatMap(node =>
-    getString(node.concept.definition)
-      ? []
-      : [createValidationIssue({
-        code: 'tx-codesystem-concept-no-definition',
-        path: node.path,
-        resourceType,
-        customMessage:
-          `HL7 Defined CodeSystems should ensure that every concept has a definition`,
-        severityOverride: 'warning',
-      })]
-  );
+  const undefinedConcept = walkConcepts(codeSystem.concept, conceptPathPrefix)
+    .find(node => !getString(node.concept.definition));
+  if (!undefinedConcept) return [];
+
+  return [createValidationIssue({
+    code: 'tx-codesystem-concept-no-definition',
+    path: undefinedConcept.path,
+    resourceType,
+    customMessage:
+      `HL7 Defined CodeSystems should ensure that every concept has a definition`,
+    severityOverride: 'warning',
+  })];
 }
 
 function validateCodeSystemPropertyDeclarations(

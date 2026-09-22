@@ -7,6 +7,11 @@ import {
 import { parseSettings } from '../settings-schema';
 
 describe('validation settings defaults', () => {
+  it.each(['R4', 'R5', 'R6'] as const)('starts %s without domain package pins or HAPI IG assignments', version => {
+    const settings = getDefaultValidationSettingsForVersion(version);
+    expect(settings.packageDownload?.pinnedVersions).toEqual({});
+    expect(settings.hapiConfig?.igPackages).toEqual([]);
+  });
   it('includes Bundle in default R4 and R5 validation resource types', () => {
     expect(R4_DEFAULT_INCLUDED_RESOURCE_TYPES).toContain('Bundle');
     expect(R5_DEFAULT_INCLUDED_RESOURCE_TYPES).toContain('Bundle');
@@ -15,6 +20,10 @@ describe('validation settings defaults', () => {
   it('enables Bundle validation in generated default settings', () => {
     expect(getDefaultValidationSettingsForVersion('R4').resourceTypes.includedTypes).toContain('Bundle');
     expect(getDefaultValidationSettingsForVersion('R5').resourceTypes.includedTypes).toContain('Bundle');
+  });
+
+  it.each(['R4', 'R5', 'R6'] as const)('exposes %s as the canonical top-level version', version => {
+    expect(getDefaultValidationSettingsForVersion(version).fhirVersion).toBe(version);
   });
 
   it('covers clinical R4 resource types that must not be omitted from a default full run', () => {
@@ -39,6 +48,12 @@ describe('validation settings defaults', () => {
       enabled: false,
       policies: [],
     });
+  });
+
+  it('allows the curated NPHIES R4 package to resolve declared profiles', () => {
+    expect(
+      getDefaultValidationSettingsForVersion('R4').packageDownload?.approvedPackages,
+    ).toContain('nphies-fs');
   });
 
   it('restores runtime health defaults for legacy terminology servers', () => {

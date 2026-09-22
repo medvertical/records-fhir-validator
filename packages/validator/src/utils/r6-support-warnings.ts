@@ -11,10 +11,17 @@
  * This module provides consistent warning messages across all validators.
  */
 
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import { computeValidationIssueId } from '@records-fhir/validation-types';
 
-type R6ValidationAspect = 'structural' | 'profile' | 'terminology' | 'reference' | 'metadata' | 'invariant' | 'custom_rule';
+export type R6ValidationAspect =
+  | 'structural'
+  | 'profile'
+  | 'terminology'
+  | 'reference'
+  | 'metadata'
+  | 'invariant'
+  | 'custom_rule';
 
 // Inlined from server/config/fhir-package-versions.ts during S-3
 // engine-extraction. The engine only needs the support-status +

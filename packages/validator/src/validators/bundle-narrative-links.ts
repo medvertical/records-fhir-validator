@@ -1,5 +1,5 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 const NARRATIVE_LINK_URL = 'http://hl7.org/fhir/StructureDefinition/narrativeLink';
 

@@ -1,4 +1,4 @@
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 export function validationIssue(overrides: Partial<ValidationIssue>): ValidationIssue {
   return {

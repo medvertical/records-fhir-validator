@@ -1,4 +1,4 @@
-import type { ElementDefinition, StructureDefinition } from './structure-definition-types';
+import type { ElementDefinition, StructureDefinition } from './structure-definition-types.js';
 
 /** Bounded insertion-ordered cache for generated profile snapshots. */
 export class SnapshotCache {

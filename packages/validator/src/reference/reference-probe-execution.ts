@@ -1,10 +1,10 @@
 import type { AxiosInstance } from 'axios';
-import type { ReferenceCircuitBreaker } from './reference-circuit-breaker';
-import type { ReferenceCheckCache } from './reference-check-cache';
-import type { ResolvedBatchCheckConfig } from './reference-http-client';
-import type { ParsedReferenceCheck, ReferenceExistenceCheck } from './reference-batch-types';
-import { asSummaryUrl, buildReferenceProbeUrl, extractUrlHost } from './reference-probe-url';
-import { classifyReferenceRequestFailure } from './reference-request-failure';
+import type { ReferenceCircuitBreaker } from './reference-circuit-breaker.js';
+import type { ReferenceCheckCache } from './reference-check-cache.js';
+import type { ResolvedBatchCheckConfig } from './reference-http-client.js';
+import type { ParsedReferenceCheck, ReferenceExistenceCheck } from './reference-batch-types.js';
+import { asSummaryUrl, buildReferenceProbeUrl, extractUrlHost } from './reference-probe-url.js';
+import { classifyReferenceRequestFailure } from './reference-request-failure.js';
 
 interface ReferenceProbeOptions extends ParsedReferenceCheck {
   cache: ReferenceCheckCache;

@@ -132,6 +132,7 @@ export const DEFAULT_VALIDATION_STRICTNESS: ValidationStrictness = 'standard';
 /**
  * All validation aspects in order
  */
+/** `invariant` is retired but kept so stored settings carrying it still load. */
 export const VALIDATION_ASPECTS: ValidationAspect[] = [
   'structural',
   'profile',
@@ -151,7 +152,8 @@ export const VALIDATION_ASPECT_LABELS: Record<ValidationAspect, string> = {
   profile: 'Profile Validation',
   terminology: 'Terminology Validation',
   reference: 'Reference Validation',
-  invariant: 'Invariants',
+  /** Retired: its checks report as `structural` and run under that switch. */
+  invariant: 'Invariants (retired)',
   custom_rule: 'Custom Rules',
   metadata: 'Metadata Validation',
   anomaly: 'Anomaly Detection'
@@ -165,7 +167,7 @@ export const VALIDATION_ASPECT_DESCRIPTIONS: Record<ValidationAspect, string> = 
   profile: 'Validates conformance to declared FHIR profiles and their constraints',
   terminology: 'Validates codes against code systems, value sets, and terminology bindings',
   reference: 'Verifies that references to other resources are valid and resolvable',
-  invariant: 'Validates standard FHIR invariants and profile constraints (e.g. ele-1)',
+  invariant: 'Retired. The base-spec invariants it named (ele-1, pat-1, dom-2, obs-*) report as structural findings and run with the structural aspect; generic FHIRPath constraints run with the profile aspect.',
   custom_rule: 'Validates user-defined business logic and custom constraints',
   metadata: 'Checks metadata requirements like lastUpdated, versionId, and tags',
   anomaly: 'Cross-resource batch analysis: duplicates, orphan references, value-range outliers, temporal gaps'

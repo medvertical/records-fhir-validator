@@ -1,17 +1,17 @@
-import { logger } from '../logger';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
-import { makeCodeSystemValidateCodeCacheKey } from './terminology-api-cache';
-import { getMaxConcurrentRemoteTerminologyRequests } from './terminology-api-remote-policy';
-import type { RemoteCodeSystemValidationBudget } from './terminology-api-remote-budget';
-import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config';
-import type { CodeSystemValidationResult } from './terminology-api-types';
-import type { TerminologyCircuitBreakerRegistry } from './terminology-circuit-breakers';
-import type { TerminologyOperationCache } from './terminology-operation-cache';
-import { runSingleFlight } from './terminology-pending-requests';
-import type { TerminologyRequestBroker } from './terminology-request-broker';
-import { getTerminologyServerScope } from './terminology-server-scope';
-import { executeCodeSystemValidateCodeRequest } from './terminology-code-system-request';
-import type { TerminologyResolutionConfig, TerminologyServerOverride } from './valueset-types';
+import { logger } from '../logger.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
+import { makeCodeSystemValidateCodeCacheKey } from './terminology-api-cache.js';
+import { getMaxConcurrentRemoteTerminologyRequests } from './terminology-api-remote-policy.js';
+import type { RemoteCodeSystemValidationBudget } from './terminology-api-remote-budget.js';
+import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config.js';
+import type { CodeSystemValidationResult } from './terminology-api-types.js';
+import type { TerminologyCircuitBreakerRegistry } from './terminology-circuit-breakers.js';
+import type { TerminologyOperationCache } from './terminology-operation-cache.js';
+import { runSingleFlight } from './terminology-pending-requests.js';
+import type { TerminologyRequestBroker } from './terminology-request-broker.js';
+import { getTerminologyServerScope } from './terminology-server-scope.js';
+import { executeCodeSystemValidateCodeRequest } from './terminology-code-system-request.js';
+import type { TerminologyResolutionConfig, TerminologyServerOverride } from './valueset-types.js';
 
 export interface CodeSystemValidationOperationContext {
   config: TerminologyResolutionConfig;

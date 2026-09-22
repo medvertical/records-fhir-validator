@@ -1,11 +1,12 @@
-import { logger } from '../logger';
-import type { CodeSystemValidationResult } from './terminology-api-types';
-import { extractTerminologyIssues, mapOperationOutcomeIssues } from './terminology-api-outcome';
+import { logger } from '../logger.js';
+import type { CodeSystemValidationResult } from './terminology-api-types.js';
+import { extractTerminologyIssues, mapOperationOutcomeIssues } from './terminology-api-outcome.js';
 import {
     getOperationOutcomeIssueValues,
     getParametersEntries,
-} from './terminology-response-utils';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+} from './terminology-response-utils.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
+import { operationOutcomeCannotResolveBinding } from './terminology-parameters.js';
 
 const SNOMED_SYSTEM = 'http://snomed.info/sct';
 
@@ -43,6 +44,10 @@ export function parseCodeSystemValidationParameters(
     }
 
     const resultParam = entries.find(parameter => parameter.name === 'result');
+    if (typeof resultParam?.valueBoolean !== 'boolean' || operationOutcomeCannotResolveBinding(parameters)) {
+        return { valid: false, reason: 'system-unresolvable',
+            message: `Terminology server could not verify '${code}' in '${system}'` };
+    }
     const messageParam = entries.find(parameter => parameter.name === 'message');
     const inactiveParam = entries.find(parameter => parameter.name === 'inactive');
     const displayParam = entries.find(parameter => parameter.name === 'display');
@@ -97,6 +102,10 @@ export function operationOutcomeToCodeSystemResult(
     code: string,
     system: string,
 ): CodeSystemValidationResult {
+    if (operationOutcomeCannotResolveBinding(opOutcome)) {
+        return { valid: false, reason: 'system-unresolvable',
+            message: `Terminology server could not resolve CodeSystem '${system}'` };
+    }
     const issueValues = getOperationOutcomeIssueValues(opOutcome);
     if (issueValues && issueValues.length > 0) {
         const issues = mapOperationOutcomeIssues(opOutcome);

@@ -4,7 +4,7 @@
  * Codes for reference validation including bundle references.
  */
 
-import type { ValidationCodeMetadata } from './validation-code-types';
+import type { ValidationCodeMetadata } from './validation-code-types.js';
 
 export const ReferenceCodes = {
     // -------------------------------------------------------------------------

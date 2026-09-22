@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ReferenceExecutor, type ReferenceValidationContext } from '../reference-executor';
-import type { ValidationIssue } from '../../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 // Mock dependencies
 vi.mock('../../../reference/reference-validator-refactored', () => ({
@@ -74,8 +74,10 @@ describe('ReferenceExecutor', () => {
       expect(validateSpy).toHaveBeenCalledWith(
         mockContext.resource,
         mockContext.resource.resourceType,
+        mockContext.fhirClient,
         mockContext.fhirVersion,
-        mockContext.settings
+        mockContext.settings,
+        mockContext.resourceFetcher,
       );
     });
 

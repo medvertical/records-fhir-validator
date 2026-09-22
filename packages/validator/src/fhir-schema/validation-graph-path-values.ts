@@ -1,5 +1,5 @@
-import { getPrimitiveSidecar } from '../core/fhir-primitive-sidecar';
-import type { ValidationGraphNode } from './validation-graph-types';
+import { getPrimitiveSidecar } from '../core/fhir-primitive-sidecar.js';
+import type { ValidationGraphNode } from './validation-graph-types.js';
 
 export function getParentValues(resource: Record<string, unknown>, node: ValidationGraphNode): unknown[] {
   const parts = node.path.split('.');

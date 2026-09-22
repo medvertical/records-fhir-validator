@@ -5,10 +5,10 @@
  * Refactored to use createValidationIssue factory for consistent issue creation.
  */
 
-import type { ValidationIssue } from '../../types';
-import { createValidationIssue } from '../../issues';
-import { logger } from '../../logger';
-import { validationFailureMetadata } from '../../utils/validation-execution-failure';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../../issues/index.js';
+import { logger } from '../../logger.js';
+import { validationFailureMetadata } from '../../utils/validation-execution-failure.js';
 
 const PATH = 'meta.versionId';
 

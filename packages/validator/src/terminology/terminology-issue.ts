@@ -2,7 +2,7 @@ import type {
   ValidationIssue,
   ValidationSeverity,
 } from '@records-fhir/validation-types';
-import { createValidationIssue } from '../issues';
+import { createValidationIssue } from '../issues/index.js';
 
 export interface TerminologyIssueInput {
   severity: ValidationSeverity;

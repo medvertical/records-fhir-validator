@@ -12,7 +12,7 @@
  */
 
 import { readFileSync, writeFileSync, statSync, existsSync, readdirSync, appendFileSync } from 'node:fs';
-import { resolve, join } from 'node:path';
+import { resolve, join, relative, sep } from 'node:path';
 import { recordsValidator, setEngineLogger } from '@records-fhir/validator';
 
 const PATHS = (process.env.INPUT_PATHS || '').trim();
@@ -63,9 +63,8 @@ function parsePatterns(raw) {
 }
 
 /**
- * Minimal directory walker — supports `**` recursion, `*` glob, and a
- * trailing extension filter. Avoids pulling in a glob dependency for
- * such a small surface area.
+ * Match whole path segments. A single wildcard stays in one directory;
+ * a recursive directory wildcard also matches zero directories.
  */
 function expandPattern(pattern) {
   const cwd = process.cwd();
@@ -74,20 +73,19 @@ function expandPattern(pattern) {
     return [resolve(pattern)];
   }
 
-  // Crude glob: split into base + matcher. We only support patterns the
-  // FHIR-validator action actually needs (recursive `**`, single `*`).
-  const star = pattern.indexOf('*');
-  const baseDir = star >= 0 ? pattern.slice(0, star).replace(/\/$/, '') : pattern;
-  const tail = star >= 0 ? pattern.slice(star) : '';
+  const normalized = pattern.replaceAll('\\', '/');
+  const star = normalized.search(/[*?]/);
+  const directoryEnd = star >= 0 ? normalized.lastIndexOf('/', star) + 1 : normalized.length;
+  const baseDir = normalized.slice(0, directoryEnd);
+  const tail = star >= 0 ? normalized.slice(directoryEnd) : '*';
   const root = resolve(cwd, baseDir || '.');
   if (!existsSync(root)) return [];
 
-  const wantsRecursive = tail.startsWith('**');
-  const extMatch = tail.match(/\.([a-zA-Z0-9]+)$/);
-  const wantedExt = extMatch ? extMatch[0] : '';
+  const matcher = globMatcher(tail);
+  const maxDepth = tail.includes('**') ? Infinity : tail.split('/').length - 1;
 
   const results = [];
-  function walk(dir) {
+  function walk(dir, depth = 0) {
     let entries;
     try {
       entries = readdirSync(dir, { withFileTypes: true });
@@ -97,19 +95,32 @@ function expandPattern(pattern) {
     for (const e of entries) {
       const full = join(dir, e.name);
       if (e.isDirectory()) {
-        if (wantsRecursive) walk(full);
+        if (depth < maxDepth) walk(full, depth + 1);
       } else if (e.isFile()) {
-        if (!wantedExt || full.endsWith(wantedExt)) results.push(full);
+        if (matcher.test(relative(root, full).split(sep).join('/'))) results.push(full);
       }
     }
   }
 
-  if (statSync(root).isFile()) {
-    if (!wantedExt || root.endsWith(wantedExt)) results.push(root);
-  } else {
-    walk(root);
-  }
+  walk(root);
   return results;
+}
+
+function globMatcher(pattern) {
+  let regex = '^';
+  for (let index = 0; index < pattern.length; index++) {
+    const character = pattern[index];
+    if (character === '*' && pattern[index + 1] === '*') {
+      index++;
+      if (pattern[index + 1] === '/') {
+        regex += '(?:.*/)?';
+        index++;
+      } else regex += '.*';
+    } else if (character === '*') regex += '[^/]*';
+    else if (character === '?') regex += '[^/]';
+    else regex += character.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+  return new RegExp(`${regex}$`);
 }
 
 const patterns = parsePatterns(PATHS);

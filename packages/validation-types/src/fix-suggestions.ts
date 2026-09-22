@@ -13,15 +13,15 @@
  * imports of `fix-suggestions` keep working unchanged.
  */
 
-import type { FixPatch, FixSuggestion } from './fix-suggestions/types';
-import { CATALOG_CORE } from './fix-suggestions/catalog-core';
-import { CATALOG_REFERENCE_PROFILE } from './fix-suggestions/catalog-reference-profile';
-import { CATALOG_INVARIANTS } from './fix-suggestions/catalog-invariants';
-import { CATALOG_MISC } from './fix-suggestions/catalog-misc';
-import { ASPECT_FALLBACKS, FIX_SUGGESTION_ALIASES } from './fix-suggestions/fallbacks';
+import type { FixPatch, FixSuggestion } from './fix-suggestions/types.js';
+import { CATALOG_CORE } from './fix-suggestions/catalog-core.js';
+import { CATALOG_REFERENCE_PROFILE } from './fix-suggestions/catalog-reference-profile.js';
+import { CATALOG_INVARIANTS } from './fix-suggestions/catalog-invariants.js';
+import { CATALOG_MISC } from './fix-suggestions/catalog-misc.js';
+import { ASPECT_FALLBACKS, FIX_SUGGESTION_ALIASES } from './fix-suggestions/fallbacks.js';
 
-export type { FixPatch, FixSuggestion } from './fix-suggestions/types';
-export { ASPECT_FALLBACKS, FIX_SUGGESTION_ALIASES } from './fix-suggestions/fallbacks';
+export type { FixPatch, FixSuggestion } from './fix-suggestions/types.js';
+export { ASPECT_FALLBACKS, FIX_SUGGESTION_ALIASES } from './fix-suggestions/fallbacks.js';
 
 // ============================================================================
 // Full Fix Suggestions Catalog

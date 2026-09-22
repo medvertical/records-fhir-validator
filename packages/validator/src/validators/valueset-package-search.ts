@@ -4,8 +4,10 @@ import {
     isBetterPackageCandidate,
     isCanonicalAuthorityPackage,
     type PackageMatchCandidate,
-} from './valueset-package-utils';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
+} from './valueset-package-utils.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { PackageCanonicalIndex, type CanonicalDeclaration } from './valueset-package-canonical-index.js';
+import { reportUnreadablePackageStore } from '../package/package-store-diagnostics.js';
 
 interface PackageIndexFile {
     filename?: string;
@@ -24,6 +26,39 @@ interface CachedPackageIndex {
 }
 
 const MAX_PACKAGE_INDEX_BYTES = 8 * 1024 * 1024;
+
+/** One index per process: the stores it covers are process-wide. */
+const sharedCanonicalIndex = new PackageCanonicalIndex();
+
+/** Test seam and the hook for a store that changed under a running process. */
+export function clearPackageCanonicalIndex(): void {
+    sharedCanonicalIndex.clear();
+}
+
+/**
+ * The packages that may hold this canonical, or null when no index covers
+ * the stores. An empty set means no package declares it — both lookup paths
+ * can then be skipped outright instead of opening files in all of them.
+ */
+/**
+ * Where each package says the canonical lives, or null when no index covers the
+ * stores. Same contract as `packagesDeclaringCanonical`, one level finer.
+ */
+export function declarationsDeclaringCanonical(
+    packageDirectories: string[],
+    resourceType: string,
+    canonical: string,
+): Promise<readonly CanonicalDeclaration[] | null> {
+    return sharedCanonicalIndex.declarationsFor(packageDirectories, resourceType, canonical);
+}
+
+export function packagesDeclaringCanonical(
+    packageDirectories: string[],
+    resourceType: string,
+    canonical: string,
+): Promise<ReadonlySet<string> | null> {
+    return sharedCanonicalIndex.packagesFor(packageDirectories, resourceType, canonical);
+}
 
 export class ValueSetPackageIndexCache {
     private readonly entries = new BoundedLruCache<string, CachedPackageIndex>(512);
@@ -79,11 +114,13 @@ export async function findResourceInPackages<T extends { url?: string; version?:
     candidateFiles: string[],
     preferredFhirMajor?: string,
     requestedVersion?: string,
+    candidatePackages?: ReadonlySet<string> | null,
 ): Promise<T | null> {
     const best = new BestResourceMatch<T>(preferredFhirMajor, canonical);
 
     for (const [storeRank, rootDir] of packageDirectories.entries()) {
         for (const entry of await readPackageEntries(rootDir)) {
+            if (candidatePackages && !candidatePackages.has(entry.name)) continue;
             if (!(await resolvesToDirectory(rootDir, entry))) continue;
             for (const fileName of candidateFiles) {
                 const filePath = path.join(rootDir, entry.name, 'package', fileName);
@@ -111,11 +148,21 @@ export async function findResourceByCanonicalScan<T extends { url?: string; vers
     preferredFhirMajor?: string,
     requestedVersion?: string,
     indexCache: ValueSetPackageIndexCache = new ValueSetPackageIndexCache(),
+    canonicalIndex: PackageCanonicalIndex = sharedCanonicalIndex,
 ): Promise<T | null> {
     const best = new BestResourceMatch<T>(preferredFhirMajor, canonical);
+    // Names the packages that declare this canonical, so a canonical no store
+    // holds costs one index lookup instead of a pass over every package. Null
+    // means no index could be built and the search proceeds as it always did.
+    const candidatePackages = await canonicalIndex.packagesFor(
+        packageDirectories,
+        filePrefix,
+        canonical,
+    );
 
     for (const [storeRank, rootDir] of packageDirectories.entries()) {
         for (const entry of await readPackageEntries(rootDir)) {
+            if (candidatePackages && !candidatePackages.has(entry.name)) continue;
             if (!(await resolvesToDirectory(rootDir, entry))) continue;
 
             const packagePath = path.join(rootDir, entry.name, 'package');
@@ -140,7 +187,13 @@ export async function findResourceByCanonicalScan<T extends { url?: string; vers
             let packageFiles: Dirent[];
             try {
                 packageFiles = await fs.readdir(packagePath, { withFileTypes: true });
-            } catch { continue; }
+            } catch (error) {
+                // Skipping silently makes a package that cannot be read look
+                // like one that holds nothing, and the canonical then resolves
+                // from a lower-ranked store or not at all.
+                reportUnreadablePackageStore('ValueSetPackageScan', packagePath, error);
+                continue;
+            }
 
             for (const fileEntry of packageFiles) {
                 if (!(await resolvesToFile(packagePath, fileEntry))) continue;
@@ -169,7 +222,8 @@ async function readPackageEntries(rootDir: string): Promise<Dirent[]> {
         const entries = await fs.readdir(rootDir, { withFileTypes: true });
         return entries.sort((left, right) =>
             left.name < right.name ? -1 : left.name > right.name ? 1 : 0);
-    } catch {
+    } catch (error: unknown) {
+        reportUnreadablePackageStore('ValueSetPackageSearch', rootDir, error);
         return [];
     }
 }
@@ -244,7 +298,7 @@ async function resolvesToFile(parentDir: string, entry: Dirent): Promise<boolean
     } catch { return false; }
 }
 
-function isCanonicalMatch(resource: { url?: string }, canonical: string): boolean {
+export function isCanonicalMatch(resource: { url?: string }, canonical: string): boolean {
     return !!resource?.url && resource.url.split('|')[0] === canonical;
 }
 
@@ -254,8 +308,8 @@ function isCanonicalMatch(resource: { url?: string }, canonical: string): boolea
 // turn valid codes into errors, whereas no candidate degrades the binding to
 // 'unverified'. Same-major (minor/patch) mismatches remain acceptable
 // fallbacks, as do candidates that carry no version to compare.
-function isSameMajorFallback(candidateVersion: string | undefined, requestedVersion: string | undefined): boolean {
-    if (!requestedVersion || !candidateVersion) return true;
+export function isSameMajorFallback(candidateVersion: string | undefined, requestedVersion: string | undefined): boolean {
+    if (!requestedVersion || requestedVersion === '*' || !candidateVersion) return true;
     return candidateVersion.split('.')[0] === requestedVersion.split('.')[0];
 }
 

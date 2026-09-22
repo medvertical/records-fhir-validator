@@ -1,8 +1,8 @@
-import { logger } from '../logger';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { scanProfileSources } from './sd-loader-package-source-scanning';
-import { warmUpProfilesFromDatabase } from './sd-loader-profile-source-warmup';
-import type { StructureDefinition } from './structure-definition-types';
+import { logger } from '../logger.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { scanProfileSources } from './sd-loader-package-source-scanning.js';
+import { warmUpProfilesFromDatabase } from './sd-loader-profile-source-warmup.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 
 interface StructureDefinitionCacheInitialization {
   packageSources: string[];

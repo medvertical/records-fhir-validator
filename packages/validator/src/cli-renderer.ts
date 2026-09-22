@@ -1,4 +1,4 @@
-import type { CliOptions, CliSummary, CliValidationIssue, FileResult } from './cli-types';
+import type { CliOptions, CliSummary, CliValidationIssue, FileResult } from './cli-types.js';
 
 export function severityOf(issue: CliValidationIssue): string {
   return typeof issue.severity === 'string' ? issue.severity : 'information';

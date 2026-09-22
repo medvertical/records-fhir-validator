@@ -55,6 +55,60 @@ describe('resolveContextQuestionnaire', () => {
     )).resolves.toBeUndefined();
   });
 
+  it('prefers a Questionnaire carried in the same Bundle over registry and package lookups', async () => {
+    const questionnaireUrn = 'urn:uuid:bc52dbf4-fd67-52e3-ba75-731a76805872';
+    const bundledQuestionnaire = { resourceType: 'Questionnaire', status: 'active' };
+    const findCanonicalResource = vi.fn().mockResolvedValue(null);
+    setProfileSource({ findCanonicalResource });
+    const resolveBundleCanonical = vi.fn((canonical: string, resourceType: string) => (
+      canonical === questionnaireUrn && resourceType === 'Questionnaire' ? bundledQuestionnaire : null
+    ));
+
+    const resolved = await resolveContextQuestionnaire(
+      { resourceType: 'QuestionnaireResponse', questionnaire: questionnaireUrn },
+      new QuestionnaireContextRegistry(),
+      { organizationId: 7, serverId: 314, fhirVersion: 'R4' },
+      resolveBundleCanonical,
+    );
+
+    expect(resolved).toBe(bundledQuestionnaire);
+    expect(findCanonicalResource).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the registry when the Bundle carries no matching Questionnaire', async () => {
+    const registered = {
+      resourceType: 'Questionnaire',
+      url: 'https://example.org/Questionnaire/registered',
+      status: 'active',
+    };
+    const registry = new QuestionnaireContextRegistry();
+    registry.register(registered);
+
+    const resolved = await resolveContextQuestionnaire(
+      { resourceType: 'QuestionnaireResponse', questionnaire: registered.url },
+      registry,
+      { organizationId: 7, serverId: 314, fhirVersion: 'R4' },
+      () => null,
+    );
+
+    expect(resolved).toBe(registered);
+  });
+
+  it('keeps a contained questionnaire reference with the response instead of the Bundle', async () => {
+    const contained = { resourceType: 'Questionnaire', id: 'inline', status: 'active' };
+    const resolveBundleCanonical = vi.fn(() => ({ resourceType: 'Questionnaire', status: 'draft' }));
+
+    const resolved = await resolveContextQuestionnaire(
+      { resourceType: 'QuestionnaireResponse', questionnaire: '#inline', contained: [contained] },
+      new QuestionnaireContextRegistry(),
+      { organizationId: 7, serverId: 314, fhirVersion: 'R4' },
+      resolveBundleCanonical,
+    );
+
+    expect(resolved).toBe(contained);
+    expect(resolveBundleCanonical).not.toHaveBeenCalled();
+  });
+
   it('bounds registered questionnaire aliases with LRU eviction', () => {
     const registry = new QuestionnaireContextRegistry(2);
     registry.register({

@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../types';
-import { createReferenceValidationIssue } from './reference-utils';
-import type { RecursiveValidationResult } from './recursive-reference-validator';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createReferenceValidationIssue } from './reference-utils.js';
+import type { RecursiveValidationResult } from './recursive-reference-validator.js';
 
 interface ExtractedReference {
   path: string;

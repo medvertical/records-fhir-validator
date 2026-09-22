@@ -5,8 +5,8 @@
  * Extracted from reference-validator.ts to comply with global.mdc guidelines.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 
 // ============================================================================
 // Utility Functions

@@ -1,4 +1,4 @@
-import type { FixSuggestion } from './types';
+import type { FixSuggestion } from './types.js';
 
 export const CATALOG_VERSION_PROFILE_AND_BEST_PRACTICE: Record<string, FixSuggestion> = {
     'version-deprecated-element': {

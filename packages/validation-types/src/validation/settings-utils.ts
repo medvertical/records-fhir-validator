@@ -5,9 +5,9 @@
  * Delegates to specialized modules for types, defaults, validators, and transformers.
  */
 
-import type { ValidationSettings } from './settings';
-import type { FHIRVersion } from './enums';
-import { PERFORMANCE_LIMITS } from './settings';
+import type { ValidationSettings } from './settings.js';
+import type { FHIRVersion } from './enums.js';
+import { PERFORMANCE_LIMITS } from './settings.js';
 
 // Re-export types and constants
 export {
@@ -21,10 +21,10 @@ export {
   VALIDATION_ASPECT_LABELS,
   VALIDATION_ASPECT_DESCRIPTIONS,
   type CommonFhirResourceType
-} from './settings-types';
+} from './settings-types.js';
 
 // Import for internal use
-import { VALIDATION_ASPECTS as _VALIDATION_ASPECTS } from './settings-types';
+import { VALIDATION_ASPECTS as _VALIDATION_ASPECTS } from './settings-types.js';
 
 // Re-export defaults
 export {
@@ -44,20 +44,20 @@ export {
   type FhirPackagePin,
   type Mii2026ValidationSettingsOverrides,
   type MiiTerminologyMode
-} from './settings-defaults';
+} from './settings-defaults.js';
 
 // Import for internal use
 import {
   DEFAULT_VALIDATION_SETTINGS_R4,
   DEFAULT_VALIDATION_SETTINGS_R5
-} from './settings-defaults';
+} from './settings-defaults.js';
 
 export {
   CANONICAL_CUSTOM_RULE_ASPECT,
   normalizeValidationAspect,
   normalizeValidationAspects,
   normalizeValidationSettings
-} from './aspect-aliases';
+} from './aspect-aliases.js';
 
 // Re-export validators
 export {
@@ -65,7 +65,7 @@ export {
   validateResourceTypeSettings,
   validateResourceTypeSettingsForVersion,
   validateValidationSettings
-} from './settings-validators';
+} from './settings-validators.js';
 
 // Re-export transformers
 export {
@@ -77,7 +77,7 @@ export {
   migrateResourceTypesForVersion,
   getEffectiveResourceTypes,
   shouldValidateResourceType
-} from './settings-transformers';
+} from './settings-transformers.js';
 
 // ============================================================================
 // Performance Settings Utilities
@@ -102,7 +102,7 @@ export {
   getEnabledAspects,
   isAspectEnabled,
   getAspectSeverity
-} from './settings-aspect-helpers';
+} from './settings-aspect-helpers.js';
 
 // ============================================================================
 // Resource Type Filtering Utilities
@@ -127,7 +127,8 @@ export function getDefaultResourceTypeSettings(): ValidationSettings['resourceTy
  * Get default validation settings for a specific FHIR version
  */
 export function getDefaultValidationSettingsForVersion(version: FHIRVersion): ValidationSettings {
-  return version === 'R4' ? DEFAULT_VALIDATION_SETTINGS_R4 : DEFAULT_VALIDATION_SETTINGS_R5;
+  const defaults = version === 'R4' ? DEFAULT_VALIDATION_SETTINGS_R4 : DEFAULT_VALIDATION_SETTINGS_R5;
+  return defaults.fhirVersion === version ? defaults : { ...defaults, fhirVersion: version };
 }
 
 /**

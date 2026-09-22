@@ -1,12 +1,12 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   EXTLANG_SUBTAGS,
   LANGUAGE_SUBTAGS,
   REGION_SUBTAGS,
   SCRIPT_SUBTAGS,
   VARIANT_SUBTAGS,
-} from './language-subtag-registry-data';
+} from './language-subtag-registry-data.js';
 
 /**
  * Resource.language validation mirroring the HL7 Java validator

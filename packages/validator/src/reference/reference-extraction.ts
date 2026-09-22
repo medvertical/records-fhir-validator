@@ -1,7 +1,7 @@
 import {
   extractBundleEntries,
   findReferencesInResource,
-} from './bundle-reference-finder';
+} from './bundle-reference-finder.js';
 
 export function extractReferencesFromResource(resource: unknown): string[] {
   return findReferencesInResource(resource, '', { includeContained: true })

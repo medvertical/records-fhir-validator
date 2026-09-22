@@ -1,6 +1,6 @@
-import { createValidationIssue } from '../issues';
-import { normalizeResourceType } from '../issues/resource-type-normalizer';
-import type { ValidationIssue } from '../types';
+import { createValidationIssue } from '../issues/index.js';
+import { normalizeResourceType } from '../issues/resource-type-normalizer.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 /**
  * HL7 parity bound (org.hl7.fhir.utilities.Utilities.checkDecimal, core

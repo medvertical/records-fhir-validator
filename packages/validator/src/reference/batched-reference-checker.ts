@@ -1,28 +1,28 @@
 import type { AxiosInstance } from 'axios';
-import { ReferenceCircuitBreaker } from './reference-circuit-breaker';
+import { ReferenceCircuitBreaker } from './reference-circuit-breaker.js';
 import {
   createReferenceHttpClient,
   resolveBatchCheckConfig,
   type BatchCheckConfig,
   type ResolvedBatchCheckConfig,
-} from './reference-http-client';
-import { ReferenceCheckCache } from './reference-check-cache';
-import { summarizeReferenceBatch } from './reference-batch-result';
-import { logger } from '../logger';
+} from './reference-http-client.js';
+import { ReferenceCheckCache } from './reference-check-cache.js';
+import { summarizeReferenceBatch } from './reference-batch-result.js';
+import { logger } from '../logger.js';
 import {
   extractBundleReferenceBatch,
   extractResourceReferenceBatch,
   parseReferenceBatch,
-} from './reference-batch-input';
+} from './reference-batch-input.js';
 import type {
   BatchCheckResult,
   ParsedReferenceCheck,
   ReferenceExistenceCheck,
-} from './reference-batch-types';
-import { executeReferenceProbe } from './reference-probe-execution';
+} from './reference-batch-types.js';
+import { executeReferenceProbe } from './reference-probe-execution.js';
 
-export type { BatchCheckConfig } from './reference-http-client';
-export type { BatchCheckResult, ReferenceExistenceCheck } from './reference-batch-types';
+export type { BatchCheckConfig } from './reference-http-client.js';
+export type { BatchCheckResult, ReferenceExistenceCheck } from './reference-batch-types.js';
 
 export class BatchedReferenceChecker {
   private cache = new ReferenceCheckCache();

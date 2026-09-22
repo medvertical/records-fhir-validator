@@ -3,9 +3,9 @@
  * slicing-validator.ts and slice-discriminator-matcher.ts.
  */
 
-import type { SlicingDiscriminator, ElementDefinition } from '../core/structure-definition-types';
+import type { SlicingDiscriminator, ElementDefinition } from '../core/structure-definition-types.js';
 
-export type { SlicingDiscriminator, ElementDefinition } from '../core/structure-definition-types';
+export type { SlicingDiscriminator, ElementDefinition } from '../core/structure-definition-types.js';
 
 /**
  * Resolves an in-memory FHIR reference for slicing discriminators.

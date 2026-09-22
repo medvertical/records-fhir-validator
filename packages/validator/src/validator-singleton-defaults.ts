@@ -32,3 +32,13 @@ export const emptyPinnedCanonicalFingerprint = {
   count: 0,
   sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
 };
+
+export function resolveScopedProfileCacheMaxEntries(): number {
+  const parsed = Number.parseInt(
+    process.env.VALIDATION_SCOPED_PROFILE_CACHE_MAX_ENTRIES ?? '',
+    10,
+  );
+  return Number.isInteger(parsed) && parsed > 0
+    ? Math.min(parsed, MAX_SCOPED_PROFILE_CACHE_MAX_ENTRIES)
+    : DEFAULT_SCOPED_PROFILE_CACHE_MAX_ENTRIES;
+}

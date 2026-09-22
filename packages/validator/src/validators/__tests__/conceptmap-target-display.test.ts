@@ -52,6 +52,14 @@ describe('TerminologyResourceValidator — ConceptMap target-display checks', ()
     expect(mismatch[0].message).toContain(`'${targetCsUrl}#c1'`);
   });
 
+  it('checks displays when the target canonical includes a version', () => {
+    const issues = validator.validate(cm({
+      target: `${targetCsUrl}|1.2.3`,
+      element: [{ code: 'source', target: [{ code: 'c1', display: 'wrong' }] }],
+    }));
+    expect(issues).toContainEqual(expect.objectContaining({ code: 'tx-conceptmap-target-display-invalid' }));
+  });
+
   it('treats display match as case-insensitive', () => {
     const issues = validator.validate(cm({
       source: 'http://example.org/source',

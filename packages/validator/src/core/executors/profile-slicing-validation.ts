@@ -1,14 +1,14 @@
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import type {
   ReferenceResolver,
   SlicingValidator,
-} from '../../validators/slicing-validator';
-import { resolveFhirSegmentValue } from '../fhir-primitive-sidecar';
-import type { StructureDefinition } from '../structure-definition-types';
+} from '../../validators/slicing-validator.js';
+import { resolveFhirSegmentValue } from '../fhir-primitive-sidecar.js';
+import type { StructureDefinition } from '../structure-definition-types.js';
 import {
   resolveNestedSliceParentItems,
   scopeParentItemsToNestedSlice,
-} from './profile-nested-slice-scoping';
+} from './profile-nested-slice-scoping.js';
 
 interface ProfileSlicingValidationInput {
   extensionIssues: ValidationIssue[];

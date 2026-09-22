@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { deriveBundleBaseUrl, extractAttachmentUrls, extractReferencesWithPaths } from './bundle-reference-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { deriveBundleBaseUrl, extractAttachmentUrls, extractReferencesWithPaths } from './bundle-reference-utils.js';
 
 export function validateBundleReachability(
     bundle: unknown,

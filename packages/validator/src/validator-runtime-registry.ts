@@ -55,6 +55,14 @@ export class ValidatorRuntimeRegistry<T> {
     return promises;
   }
 
+  retireScopes(prefix: string): void {
+    for (const key of this.scopedEntries.keys()) {
+      if (key.startsWith(prefix)) this.scopedEntries.delete(key);
+    }
+    // Active leases keep their old instance until release; future acquisitions
+    // cannot observe a late write to that retired generation.
+  }
+
   currentInstances(): T[] {
     const instances = [...this.scopedEntries.values()]
       .flatMap(entry => entry.instance ? [entry.instance] : []);

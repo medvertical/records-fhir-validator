@@ -1,9 +1,9 @@
-import type { ValidationIssue } from '../types';
-import { logger } from '../logger';
-import { createSafeValidationFailureMessage } from '../utils/validation-execution-failure';
-import type { FhirClientLike } from './profile-loader-utils';
-import { createValidationErrorIssue } from './validation-utils';
-import type { MetadataExecutor, ReferenceExecutor } from './executors';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { logger } from '../logger.js';
+import { createSafeValidationFailureMessage } from '../utils/validation-execution-failure.js';
+import type { FhirClientLike } from './profile-loader-utils.js';
+import { createValidationErrorIssue } from './validation-utils.js';
+import type { MetadataExecutor, ReferenceExecutor } from './executors/index.js';
 
 export class ValidatorDirectAspectValidation {
   constructor(

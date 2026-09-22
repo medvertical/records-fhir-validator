@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 
-import { DEFAULT_RESOLUTION_CONFIG } from "../../../validators/valueset-types";
-import type { TerminologyValidationPort } from "../terminology-validation-port";
+import { DEFAULT_RESOLUTION_CONFIG } from "../../../validators/valueset-types.js";
+import type { TerminologyValidationPort } from "../terminology-validation-port.js";
 
 export function createTerminologyValidationPortMock() {
   const validateBinding = vi.fn<TerminologyValidationPort["validateBinding"]>();

@@ -1,4 +1,4 @@
-import type { ReferenceParseResult } from './reference-type-extractor';
+import type { ReferenceParseResult } from './reference-type-extractor.js';
 
 interface ReferenceProbeUrlConfig {
   baseUrl: string;

@@ -19,10 +19,10 @@ export {
     type CanonicalResourceSource,
     type CodeSystemAvailabilitySource,
     type ProfileSourceContext,
-} from './profile-source';
+} from './profile-source.js';
 export {
     getCustomRulesSource,
     setCustomRulesSource,
     type CustomRulesSource,
     type EngineCustomRule,
-} from './custom-rules-source';
+} from './custom-rules-source.js';

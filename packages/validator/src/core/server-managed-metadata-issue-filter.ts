@@ -1,4 +1,4 @@
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 const ROOT_SERVER_MANAGED_METADATA_PATH = /^[A-Z][A-Za-z0-9]*\.meta\.(?:lastUpdated|versionId)$/;
 

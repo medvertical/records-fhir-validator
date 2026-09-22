@@ -1,4 +1,4 @@
-import type { FindingSourceSummary } from './finding-source';
+import type { FindingSourceSummary } from './finding-source.js';
 
 export type ValidationIssueSummarySeverity = 'error' | 'warning' | 'information';
 

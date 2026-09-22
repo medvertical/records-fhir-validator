@@ -1,4 +1,4 @@
-import type { StructureDefinition } from '../../core/structure-definition-types';
+import type { StructureDefinition } from '../../core/structure-definition-types.js';
 
 export function testStructureDefinition(overrides: Partial<StructureDefinition>): StructureDefinition {
   return {

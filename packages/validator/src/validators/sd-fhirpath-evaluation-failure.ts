@@ -1,12 +1,12 @@
-import type { Constraint } from '../core/structure-definition-types';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+import type { Constraint } from '../core/structure-definition-types.js';
+import { logger } from '../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import {
   createConstraintEvaluationError,
   isUnsupportedAsyncFHIRPathError,
-} from './sd-fhirpath-issue-factory';
+} from './sd-fhirpath-issue-factory.js';
 
 interface SDFHIRPathEvaluationFailureInput {
   constraint: Constraint;

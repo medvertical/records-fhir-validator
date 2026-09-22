@@ -1,14 +1,14 @@
-import type { ValidationIssue } from '../types';
-import { matchCodeInferredProfile, type CodeInferredProfileMatch } from './code-inferred-profiles';
-import { getPrimaryDeclaredProfile } from './declared-profile-utils';
-import { withIssueSchemaVersion, type EngineFhirVersion } from './issue-schema-version';
-import type { AspectResult } from './multi-aspect-types';
+import type { ProfileApplicationSource, ValidationIssue } from '@records-fhir/validation-types';
+import { matchCodeInferredProfile, type CodeInferredProfileMatch } from './code-inferred-profiles.js';
+import { getPrimaryDeclaredProfile } from './declared-profile-utils.js';
+import { withIssueSchemaVersion, type EngineFhirVersion } from './issue-schema-version.js';
+import type { AspectResult } from './multi-aspect-types.js';
 import {
   computeIssueIdentity,
   isBestPracticeIssue,
   relabelProfileImposedIssue,
   withProfileProvenanceDetails,
-} from './profile-attribution-relabel';
+} from './profile-attribution-relabel.js';
 
 export const CODE_INFERRED_SIGNPOST_CODE = 'profile-code-inferred-signpost';
 
@@ -43,11 +43,13 @@ const INFERRED_PROFILE_DISPLAY_NAMES: Record<string, string> = {
 export function resolveCodeInferredProfileMatch(
   resource: unknown,
   appliedProfileUrl: string,
+  profileSource?: ProfileApplicationSource,
 ): CodeInferredProfileMatch | null {
+  if (profileSource !== undefined && profileSource !== 'code-inferred') return null;
   const match = matchCodeInferredProfile(resource);
-  if (!match || match.profileUrl !== appliedProfileUrl) return null;
-  if (getPrimaryDeclaredProfile(resource)) return null;
-  return match;
+  if (!match || match.profileUrl !== appliedProfileUrl.split('|')[0]) return null;
+  if (profileSource === undefined && getPrimaryDeclaredProfile(resource)) return null;
+  return { ...match, profileUrl: appliedProfileUrl };
 }
 
 export function createCodeInferredProfileSignpostIssue(

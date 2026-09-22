@@ -3,12 +3,12 @@
  * directly than through generic FHIRPath.
  */
 
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
-import { validateCompositionConstraints } from './resource-specific-composition-constraints';
-import { validateGermanMedicationDosage } from './resource-specific-medication-dosage';
-import { validateObservationConstraints } from './resource-specific-observation-constraints';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateCompositionConstraints } from './resource-specific-composition-constraints.js';
+import { validateGermanMedicationDosage } from './resource-specific-medication-dosage.js';
+import { validateObservationConstraints } from './resource-specific-observation-constraints.js';
 
 type FhirResource = Record<string, unknown> & { resourceType: string };
 

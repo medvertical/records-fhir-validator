@@ -17,6 +17,13 @@ describe('InvariantRegistry', () => {
     expect(InvariantRegistry.getHandlerFile('cmp-2')).toBe('resource-specific-constraints-validator.ts');
   });
 
+  it('routes CodeSystem and ValueSet name invariants through their presence-aware validator', () => {
+    expect(InvariantRegistry.getHandlerFile('csd-0'))
+      .toBe('canonical-resource-invariant-validator.ts');
+    expect(InvariantRegistry.getHandlerFile('vsd-0'))
+      .toBe('canonical-resource-invariant-validator.ts');
+  });
+
   it('marks Questionnaire que-0 as specialised to avoid duplicate generic FHIRPath output', () => {
     expect(InvariantRegistry.isSpecialised('que-0')).toBe(true);
     expect(InvariantRegistry.getHandlerFile('que-0')).toBe('questionnaire-validator.ts');

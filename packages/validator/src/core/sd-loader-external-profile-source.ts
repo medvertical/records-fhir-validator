@@ -1,12 +1,12 @@
-import { logger } from '../logger';
-import { getProfileSource } from '../persistence';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context';
-import { cacheDownloadedProfile } from './sd-loader-downloaded-profile-cache';
-import { profileMatchesCanonical } from './sd-loader-profile-identity';
-import { matchesRequestedFhirVersion } from './sd-loader-version-utils';
-import type { StructureDefinition } from './structure-definition-types';
+import { logger } from '../logger.js';
+import { getProfileSource } from '../persistence/index.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context.js';
+import { cacheDownloadedProfile } from './sd-loader-downloaded-profile-cache.js';
+import { profileMatchesCanonical } from './sd-loader-profile-identity.js';
+import { matchesRequestedFhirVersion } from './sd-loader-version-utils.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 
 /** Resolve a profile through the embedder-provided external source. */
 export async function tryExternalProfileSource(

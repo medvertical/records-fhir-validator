@@ -6,8 +6,8 @@
  * canonicals resolve to. Keying by canonical identity (not object identity)
  * keeps the provenance valid across the loader's sanitization and caching.
  */
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
-import { parsePackageDirName, type PackageRef } from './canonical-pin-store';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { parsePackageDirName, type PackageRef } from './canonical-pin-store.js';
 
 const provenanceByCanonical = new BoundedLruCache<string, PackageRef>(2048);
 

@@ -1,6 +1,6 @@
-import { logger } from '../logger';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+import { logger } from '../logger.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 export async function checkRecordsValidatorAvailability(
   sdLoader: StructureDefinitionLoader,

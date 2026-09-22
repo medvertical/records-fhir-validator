@@ -1,7 +1,7 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import type { PIILocale } from './security-validation-types';
-import { asSecurityRecord } from './security-validator-utils';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { PIILocale } from './security-validation-types.js';
+import { asSecurityRecord } from './security-validator-utils.js';
 
 const US_NARRATIVE_PATTERNS: DetectionRule[] = [
     rule('security-phi-ssn-detected', 'Potential SSN detected in narrative text', 'warning', [

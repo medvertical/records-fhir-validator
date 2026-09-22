@@ -1,8 +1,8 @@
-import type { ValidationIssue } from '../../types';
-import { validateLocalCodeSystemCoding } from './terminology-external-code-system-rules';
-import type { ProfileSourceContext } from '../../persistence';
-import { isKnownCodeSystemConcept } from './terminology-display-rules';
-import type { TerminologyCodeSystemValidationPort } from './terminology-validation-port';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateLocalCodeSystemCoding } from './terminology-external-code-system-rules.js';
+import type { ProfileSourceContext } from '../../persistence/index.js';
+import { isKnownCodeSystemConcept } from './terminology-display-rules.js';
+import type { TerminologyCodeSystemValidationPort } from './terminology-validation-port.js';
 
 function isCodingPath(path: string): boolean {
   return /\.coding\[\d+\]$/.test(path) || /\.(?:value|answer|pattern|fixed)Coding$/.test(path);

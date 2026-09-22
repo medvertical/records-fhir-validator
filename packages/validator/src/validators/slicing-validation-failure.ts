@@ -1,11 +1,11 @@
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   createSafeValidationFailureMessage,
   validationFailureMetadata,
-} from '../utils/validation-execution-failure';
-import { resourceTypeFromPath } from './slicing-content-rules';
+} from '../utils/validation-execution-failure.js';
+import { resourceTypeFromPath } from './slicing-content-rules.js';
 
 /** Log bounded diagnostics and create the safe public Slicing failure issue. */
 export function handleSlicingValidationFailure(

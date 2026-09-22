@@ -1,14 +1,14 @@
-import type { FhirVersion } from './valueset-expansion-cache-key';
-import type { CodeSystemValidationResult } from './terminology-api-client';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
+import type { CodeSystemValidationResult } from './terminology-api-client.js';
 import type {
   CodeSystem,
   CodeSystemConcept,
   TerminologyResolutionConfig,
-} from './valueset-types';
+} from './valueset-types.js';
 import {
   extractSnomedEditionIdentifier,
   isTerminologyServerEligible,
-} from './valueset-server-routing';
+} from './valueset-server-routing.js';
 
 export function fhirVersionToPackageMajor(fhirVersion?: FhirVersion): string | undefined {
   if (fhirVersion === 'R4') return '4';

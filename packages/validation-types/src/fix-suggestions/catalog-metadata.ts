@@ -1,4 +1,4 @@
-import type { FixSuggestion } from './types';
+import type { FixSuggestion } from './types.js';
 
 export const CATALOG_METADATA: Record<string, FixSuggestion> = {
     'metadata-profile-wrong-resource-type': {

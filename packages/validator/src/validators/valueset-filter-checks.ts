@@ -1,6 +1,6 @@
-import { isSnomedNationalExtensionCode } from './terminology-api-client';
-import type { TerminologyUnverifiedReason } from './valueset-types';
-import { codeSystemCanonicalsEquivalent } from './code-system-canonical-aliases';
+import { isSnomedNationalExtensionCode } from './terminology-api-client.js';
+import type { TerminologyUnverifiedReason } from './valueset-types.js';
+import { codeSystemCanonicalsEquivalent } from './code-system-canonical-aliases.js';
 
 /**
  * Pure include-filter predicates shared by the ValueSet membership paths.

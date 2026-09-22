@@ -1,5 +1,5 @@
 import { computeValidationIssueId } from '@records-fhir/validation-types';
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 /**
  * Shared relabeling for findings produced by a silently substituted profile SD
@@ -16,7 +16,7 @@ export function relabelProfileImposedIssue(
     ...issue,
     aspect: issue.aspect === 'structural' ? 'profile' : issue.aspect,
     profile: issue.profile ?? profileUrl,
-    details: withProfileProvenanceDetails(issue.details, provenance),
+    details: withProfileProvenanceDetails(issue.details, { ...provenance, profileAttribution: 'rule' }),
   };
   return { ...relabeled, id: computeIssueIdentity(relabeled) };
 }

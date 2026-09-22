@@ -10,26 +10,26 @@
 
 import type { PackageDownloader } from '../package/package-downloader.js';
 import type { PackageRegistryClient } from '../package/package-registry-client.js';
-import { logger } from '../logger';
-import type { StructureDefinition } from './structure-definition-types';
-import type { ProfileSourcesConfig, ValidationSettings } from '../types';
-import type { ProfileSourceContext } from '../persistence';
-import { loadFromLocalCache } from './sd-loader-filesystem';
-import { checkDatabaseCache } from './sd-loader-db-cache';
-import { attemptAutoDownload, isPublicProfile, type AutoDownloadState } from './sd-loader-auto-download';
+import { logger } from '../logger.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import type { ProfileSourcesConfig, ValidationSettings } from '@records-fhir/validation-types';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import { loadFromLocalCache } from './sd-loader-filesystem.js';
+import { checkDatabaseCache } from './sd-loader-db-cache.js';
+import { attemptAutoDownload, isPublicProfile, type AutoDownloadState } from './sd-loader-auto-download.js';
 import {
   cacheKeyForProfile,
   normalizeVersionedCoreStructureDefinitionUrl,
   urlMatchesRequestedFhirVersion,
-} from './sd-loader-version-utils';
-import { sanitizeProfile } from './sd-loader-profile-sanitizer';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import type { PackageProfileIndexCache } from './sd-loader-package-profile-index';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+} from './sd-loader-version-utils.js';
+import { sanitizeProfile } from './sd-loader-profile-sanitizer.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import type { PackageProfileIndexCache } from './sd-loader-package-profile-index.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 import {
   isTenantScopedProfileRequest,
   resolveTenantProfileFromSource,
-} from './tenant-profile-source-resolution';
+} from './tenant-profile-source-resolution.js';
 
 export interface LoadProfileContext {
   availableProfiles: Set<string>;

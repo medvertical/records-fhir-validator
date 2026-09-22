@@ -5,7 +5,7 @@
  * Extracted from reference-validator.ts to comply with global.mdc guidelines.
  */
 
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 // ============================================================================
 // Reference Field Definitions

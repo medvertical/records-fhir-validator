@@ -1,4 +1,4 @@
-import type { PublicFhirVersion } from './index';
+import type { PublicFhirVersion } from './index.js';
 
 export type FailOn = 'error' | 'warning' | 'none';
 export type OutputFormat = 'text' | 'json';

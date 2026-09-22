@@ -1,10 +1,10 @@
-import { logger as _logger } from '../logger';
-import { createMemberOfFunction, extensionFunction } from './fhirpath-custom-functions';
-import { makeTypedResourceNode, unwrapFhirPathValue } from './fhirpath-node-unwrap';
-import { normalizeFhirReferenceKey } from '../core/fhir-reference-key';
-import { ValueSetCache } from './valueset-cache';
+import { logger as _logger } from '../logger.js';
+import { createMemberOfFunction, extensionFunction } from './fhirpath-custom-functions.js';
+import { makeTypedResourceNode, unwrapFhirPathValue } from './fhirpath-node-unwrap.js';
+import { normalizeFhirReferenceKey } from '../core/fhir-reference-key.js';
+import { ValueSetCache } from './valueset-cache.js';
 
-export { extensionFunction } from './fhirpath-custom-functions';
+export { extensionFunction } from './fhirpath-custom-functions.js';
 
 // ============================================================================
 // Types

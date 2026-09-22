@@ -1,16 +1,16 @@
-import type { BoundedLruCache } from '../cache/bounded-lru-cache';
-import { isRecord, resourceTypeOf } from '../core/fhir-resource';
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import { checkExtensionPathCardinality } from './extension-cardinality-rules';
-import { normalizeExtensionUrlForMatching } from './extension-definition-extractor';
+import type { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { isRecord, resourceTypeOf } from '../core/fhir-resource.js';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { checkExtensionPathCardinality } from './extension-cardinality-rules.js';
+import { normalizeExtensionUrlForMatching } from './extension-definition-extractor.js';
 import {
   type ExtensionInstanceRuleDependencies,
   validateExtensionInstanceRules,
-} from './extension-instance-rule-validation';
-import { getSubExtensionDefinitions } from './extension-subdefinition-loader';
-import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types';
-import { filterDefinitionsForFhirVersion } from './extension-version-filter';
+} from './extension-instance-rule-validation.js';
+import { getSubExtensionDefinitions } from './extension-subdefinition-loader.js';
+import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types.js';
+import { filterDefinitionsForFhirVersion } from './extension-version-filter.js';
 
 export interface ExtensionInstanceValidationDependencies extends ExtensionInstanceRuleDependencies {
   maxNestedExtensionDepth: number;

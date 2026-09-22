@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { validateDateYearPlausibility } from '../primitive-string-format-validator';
 import { TypeValidator } from '../type-validator';
 
-const MAX_PLAUSIBLE_YEAR = new Date().getUTCFullYear() + 80;
+const MAX_PLAUSIBLE_YEAR = 2106;
 
 describe('validateDateYearPlausibility', () => {
+  afterEach(() => vi.useRealTimers());
   it('warns for a dateTime far in the future (year 2140, seen in lforms R5 data)', () => {
     const issue = validateDateYearPlausibility(
       '2140-03-26T13:57:27.779Z',
@@ -17,7 +18,7 @@ describe('validateDateYearPlausibility', () => {
       severity: 'warning',
       message:
         'The year 2140 is outside the range of reasonable years '
-        + `(1800-${new Date().getUTCFullYear() + 80}) - check for data entry error`,
+        + '(1800-2106) - check for data entry error',
     }));
     // The finding must not carry the date itself: message and details are
     // persisted, and a full date (a birthDate above all) is identifying.
@@ -38,14 +39,23 @@ describe('validateDateYearPlausibility', () => {
       .toEqual(expect.objectContaining({ code: 'date-year-implausible', severity: 'warning' }));
   });
 
-  it('accepts currentYear+80, the inclusive maximum plausible year (boundary)', () => {
+  it('accepts 2106, the inclusive maximum plausible year', () => {
     expect(validateDateYearPlausibility(String(MAX_PLAUSIBLE_YEAR), 'dateTime', 'Observation.effectiveDateTime'))
       .toBeNull();
   });
 
-  it('warns for currentYear+81, one year above the maximum (boundary)', () => {
+  it('warns for 2107, one year above the maximum', () => {
     expect(validateDateYearPlausibility(String(MAX_PLAUSIBLE_YEAR + 1), 'instant', 'Observation.issued'))
       .toEqual(expect.objectContaining({ code: 'date-year-implausible', severity: 'warning' }));
+  });
+
+  it('preserves the recorded ruleset bounds across calendar years', () => {
+    vi.useFakeTimers();
+    for (const year of [2026, 2027, 2030]) {
+      vi.setSystemTime(new Date(`${year}-01-01T00:00:00Z`));
+      expect(validateDateYearPlausibility('2107', 'date', 'Patient.birthDate'))
+        .toMatchObject({ code: 'date-year-implausible', details: { maxPlausibleYear: 2106 } });
+    }
   });
 
   it('ignores non-date primitive types', () => {

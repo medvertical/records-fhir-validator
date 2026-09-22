@@ -50,6 +50,10 @@ describe('Narrative txt-2 (non-whitespace content) validation', () => {
     expect(txt2Issues(div)).toHaveLength(0);
   });
 
+  it.each(['<img alt="placeholder"/>', '<img alt="src=placeholder"/>', '<img data-src="pic.png"/>'])('reports txt-2 for an image without a src attribute: %s', image => {
+      expect(txt2Issues(`<div xmlns="${XHTML_NS}">${image}</div>`)).toHaveLength(1);
+    });
+
   it('does NOT report txt-2 for a normal narrative', () => {
     const div = `<div xmlns="${XHTML_NS}"><p>Patient summary</p></div>`;
 

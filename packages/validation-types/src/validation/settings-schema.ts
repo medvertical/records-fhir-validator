@@ -12,7 +12,7 @@
  */
 
 import { z } from 'zod';
-import { normalizeValidationSettings } from './aspect-aliases';
+import { normalizeValidationSettings } from './aspect-aliases.js';
 import {
     AdvisorRuleSchema,
     CacheConfigSchema,
@@ -24,15 +24,15 @@ import {
     RecursiveReferenceValidationSchema,
     ValidationAspectConfigSchema,
     ValidationStrictnessSchema,
-} from './settings-core-schema';
-export * from './settings-core-schema';
+} from './settings-core-schema.js';
+export * from './settings-core-schema.js';
 import {
     AdvancedTerminologyConfigSchema,
     CircuitBreakerConfigSchema,
     MiiValidationSettingsSchema,
     TerminologyResolutionSchema,
     TerminologyServerSchema,
-} from './settings-terminology-schema';
+} from './settings-terminology-schema.js';
 export {
     AdvancedTerminologyConfigSchema,
     CircuitBreakerConfigSchema,
@@ -42,7 +42,7 @@ export {
     TerminologyAuthConfigSchema,
     TerminologyResolutionSchema,
     TerminologyServerSchema,
-} from './settings-terminology-schema';
+} from './settings-terminology-schema.js';
 
 // ============================================================================
 // Main ValidationSettings Schema

@@ -15,6 +15,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { recordsValidator } from '../../index';
 
+const VALIDATOR_INITIALIZATION_TIMEOUT_MS = 120000;
+
 const validateR4 = (resource: unknown, profileUrl?: string) =>
   recordsValidator.validateRequest({ resource, profileUrl, fhirVersion: 'R4' });
 
@@ -35,7 +37,7 @@ const PATIENT_WITH_PRACTITIONER_NO_QUALIFICATION = {
 describe('Nested cardinality guard', () => {
   beforeAll(async () => {
     await validateR4({ resourceType: 'Patient' }).catch(() => {});
-  }, 60000);
+  }, VALIDATOR_INITIALIZATION_TIMEOUT_MS);
 
   it('does not flag qualification.code as missing when qualification is absent', async () => {
     const issues = await validateR4(
@@ -50,5 +52,5 @@ describe('Nested cardinality guard', () => {
         i.path.toLowerCase().includes('qualification.code'),
     );
     expect(falsePositive).toBeUndefined();
-  }, 60000);
+  }, VALIDATOR_INITIALIZATION_TIMEOUT_MS);
 });

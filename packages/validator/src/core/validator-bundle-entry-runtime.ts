@@ -1,15 +1,17 @@
-import type { ValidationIssue } from '../types';
-import type { ProfileCache } from '../cache/profile-cache';
-import type { ReferenceResolver } from '../validators/slicing-validator';
-import type { StructuralExecutor } from './executors';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import { validateBundleEntryResources } from './validator-bundle-entry-validation';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import type { ReferenceResolver } from '../validators/slicing-validator.js';
+import type { StructuralExecutor } from './executors/index.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import { validateBundleEntryResources } from './validator-bundle-entry-validation.js';
 import {
   BundleReferenceIndexCache,
+  createBundleCanonicalResolver,
   createBundleReferenceResolver,
-} from './multi-aspect-bundle-reference-resolver';
-import type { FhirResource } from './fhir-resource';
+  type BundleCanonicalResolver,
+} from './multi-aspect-bundle-reference-resolver.js';
+import type { FhirResource } from './fhir-resource.js';
 
 interface ValidatorBundleEntryRuntime {
   sdLoader: StructureDefinitionLoader;
@@ -22,6 +24,7 @@ interface ValidatorBundleEntryRuntime {
     profileUrl: string | undefined,
     fhirVersion: 'R4' | 'R5' | 'R6',
     referenceResolver: ReferenceResolver | null,
+    bundleCanonicalResolver: BundleCanonicalResolver | null,
   ) => Promise<ValidationIssue[]>;
 }
 
@@ -32,6 +35,7 @@ export async function validateRecordsBundleEntries(
   runtime: ValidatorBundleEntryRuntime,
   referenceIndexCache = new BundleReferenceIndexCache(),
 ): Promise<ValidationIssue[]> {
+  const bundleCanonicalResolver = createBundleCanonicalResolver(bundle, referenceIndexCache);
   return validateBundleEntryResources(bundle, fhirVersion, recursionDepth, {
     sdLoader: runtime.sdLoader,
     profileCache: runtime.profileCache,
@@ -43,6 +47,7 @@ export async function validateRecordsBundleEntries(
       profileUrl,
       version,
       createBundleReferenceResolver(bundle, resource, referenceIndexCache),
+      bundleCanonicalResolver,
     ),
     validateNestedBundleEntries: (nestedBundle, version, nextDepth) =>
       validateRecordsBundleEntries(

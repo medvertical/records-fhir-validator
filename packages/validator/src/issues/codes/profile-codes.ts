@@ -4,7 +4,7 @@
  * Codes for profile/constraint validation including slicing and extensions.
  */
 
-import type { ValidationCodeMetadata } from './validation-code-types';
+import type { ValidationCodeMetadata } from './validation-code-types.js';
 
 export const ProfileCodes = {
     'profile-constraint-violation': {
@@ -66,6 +66,11 @@ export const ProfileCodes = {
         aspect: 'profile',
         severity: 'error',
         description: 'Unmatched element in closed slicing',
+    },
+    'profile-slice-open-unmatched': {
+        aspect: 'profile',
+        severity: 'information',
+        description: 'Element matches no defined slice',
     },
     'profile-slice-ordering-violation': {
         aspect: 'profile',

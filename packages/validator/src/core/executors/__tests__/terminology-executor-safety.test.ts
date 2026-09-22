@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ValidationIssue } from '../../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import type {
   ElementDefinition,
   StructureDefinition,

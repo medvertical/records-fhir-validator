@@ -1,5 +1,5 @@
-import { logger } from '../logger';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
+import { logger } from '../logger.js';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export function logSlicingValidationStart(
   elementCount: number,

@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../types';
-import type { StructureDefinition } from './structure-definition-types';
-import { createValidationErrorIssue } from './validation-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { createValidationErrorIssue } from './validation-utils.js';
 
 export function getStructureDefinitionResourceType(
   structureDef: StructureDefinition | null | undefined,

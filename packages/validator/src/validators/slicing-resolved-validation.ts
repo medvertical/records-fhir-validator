@@ -1,18 +1,20 @@
 import type {
   SlicingDefinition,
   StructureDefinition,
-} from '../core/structure-definition-types';
-import type { FhirVersionFamily } from '../core/sd-loader-version-utils';
-import type { ValidationIssue } from '../types';
-import type { ConstraintValidator } from './constraint-validator';
-import { buildAmbiguousSliceMatchIssues } from './slicing-ambiguous-matches';
-import { assignElementsToSlices } from './slicing-match-assignment';
-import { validateSlicingMatchSet } from './slicing-match-set-validation';
-import { buildMissingDiscriminatorIssues } from './slicing-missing-discriminator';
-import { validateMatchedSlices } from './slicing-slice-validation';
-import { prepareDeclaredProfileAncestry } from './slice-profile-ancestry';
-import type { ReferenceResolver, SliceDefinition } from './slice-types';
-import { assessSlicingVerifiability } from './slicing-verifiability';
+} from '../core/structure-definition-types.js';
+import type { FhirVersionFamily } from '../core/sd-loader-version-utils.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ConstraintValidator } from './constraint-validator.js';
+import { buildAmbiguousSliceMatchIssues } from './slicing-ambiguous-matches.js';
+import { assignElementsToSlices } from './slicing-match-assignment.js';
+import { validateSlicingMatchSet } from './slicing-match-set-validation.js';
+import { buildMissingDiscriminatorIssues } from './slicing-missing-discriminator.js';
+import { createValidationIssue } from '../issues/index.js';
+import { resourceTypeFromPath } from './slicing-content-rules.js';
+import { validateMatchedSlices } from './slicing-slice-validation.js';
+import { prepareDeclaredProfileAncestry } from './slice-profile-ancestry.js';
+import type { ReferenceResolver, SliceDefinition } from './slice-types.js';
+import { assessSlicingVerifiability } from './slicing-verifiability.js';
 
 interface ResolvedSlicingValidationOptions {
   elements: unknown[];
@@ -93,6 +95,22 @@ export async function validateResolvedSlicing(
       referenceResolver: options.referenceResolver,
     }),
   );
+
+  // Open slicing permits unmatched elements, but the reference validator still
+  // says so: an element nobody claimed is usually an unnoticed authoring slip,
+  // and staying silent about it was a parity gap.
+  if (assignment.unmatchedElements.length > 0 && options.slicing.rules !== 'closed') {
+    for (const { index } of assignment.unmatchedElements) {
+      issues.push(createValidationIssue({
+        code: 'profile-slice-open-unmatched',
+        path: `${options.elementPath}[${index}]`,
+        resourceType: resourceTypeFromPath(options.elementPath),
+        profile: options.profile?.url,
+        messageParams: { profile: options.profile?.url ?? '' },
+        severityOverride: 'information',
+      }));
+    }
+  }
 
   if (assignment.unmatchedElements.length > 0) {
     issues.push(

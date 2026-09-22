@@ -1,10 +1,10 @@
-import type { ValidationIssue } from '../../types';
-import { createValidationIssue } from '../../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../../issues/index.js';
 import {
   findIllegalXmlCharacters,
   formatIllegalXmlCharacterMessage,
   isWhitespaceOnlyString,
-} from '../../validators/string-character-rules';
+} from '../../validators/string-character-rules.js';
 
 type ObjectRecord = Record<string, unknown>;
 

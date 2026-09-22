@@ -43,7 +43,22 @@ const RESERVED_MEMBER_NAMES = ['div'];
 
 export function rewriteCollectionTypeOperators(expression: string): string {
     if (!expression) return expression;
-    let rewritten = rewriteReservedMemberNames(expression);
+    const source = rewriteReservedMemberNames(expression);
+    let rewritten = '';
+    let codeStart = 0;
+    for (let index = 0; index < source.length; index++) {
+        const char = source[index];
+        if (char !== "'" && char !== '`') continue;
+        const quoted = readQuotedSegment(source, index, char);
+        rewritten += rewriteUnquotedTypeOperators(source.slice(codeStart, index)) + quoted.value;
+        index = quoted.endIndex;
+        codeStart = index + 1;
+    }
+    return rewritten + rewriteUnquotedTypeOperators(source.slice(codeStart));
+}
+
+function rewriteUnquotedTypeOperators(expression: string): string {
+    let rewritten = expression;
     if (/\bas\b/.test(rewritten)) {
         rewritten = rewritten.replace(AS_OPERATOR, (_m, operand: string, type: string) =>
             `${operand}.ofType(${type})`,

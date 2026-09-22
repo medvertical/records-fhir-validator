@@ -1,20 +1,22 @@
-import type { ProfileCache } from '../cache/profile-cache';
-import { logger } from '../logger';
-import type { ProfileSourceContext } from '../persistence';
-import type { ValidationSettings } from '../types';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { matchesRequestedFhirVersion } from './sd-loader-version-utils';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { StructureDefinition } from './structure-definition-types';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+import { captureValidationDependency } from '../validation-dependency-snapshot.js';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import { logger } from '../logger.js';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import type { ValidationSettings } from '@records-fhir/validation-types';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { matchesRequestedFhirVersion } from './sd-loader-version-utils.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 import {
   isTenantScopedProfileRequest,
   resolveTenantProfileFromSource,
-} from './tenant-profile-source-resolution';
+} from './tenant-profile-source-resolution.js';
 
 export interface FhirClientLike {
-  searchResources(
+  getResource?(resourceType: string, id: string, options?: { signal?: AbortSignal }): Promise<unknown>;
+  searchResources?(
     resourceType: string,
     params: Record<string, string>,
     count?: number,
@@ -30,15 +32,17 @@ export async function loadProfileWithSnapshot(
   fhirVersion: 'R4' | 'R5' | 'R6',
   _fhirClient?: FhirClientLike,
 ): Promise<StructureDefinition | null> {
-  const cacheKey = `${profileUrl}:${fhirVersion}:snapshot`;
-  const cached = profileCache.get(cacheKey);
-  if (cached) {
-    logger.debug('[RecordsValidator] Profile snapshot cache hit', profileCanonicalMetadata(profileUrl));
-    return cached as StructureDefinition;
-  }
-  const structureDef = await sdLoader.loadProfile(profileUrl, fhirVersion);
-  if (!structureDef) return null;
-  return ensureSnapshot(structureDef, snapshotGenerator, profileCache, cacheKey, profileUrl);
+  return captureValidationDependency('profile', 'loadProfileWithSnapshot', [profileUrl, fhirVersion, sdLoader.getProfileResolutionContext?.()], async () => {
+    const cacheKey = `${profileUrl}:${fhirVersion}:snapshot`;
+    const cached = profileCache.get(cacheKey);
+    if (cached) {
+      logger.debug('[RecordsValidator] Profile snapshot cache hit', profileCanonicalMetadata(profileUrl));
+      return cached as StructureDefinition;
+    }
+    const structureDef = await sdLoader.loadProfile(profileUrl, fhirVersion);
+    if (!structureDef) return null;
+    return ensureSnapshot(structureDef, snapshotGenerator, profileCache, cacheKey, profileUrl, fhirVersion);
+  });
 }
 
 export async function loadProfileForValidation(
@@ -51,20 +55,22 @@ export async function loadProfileForValidation(
   resolutionContext?: ProfileSourceContext,
   settings?: ValidationSettings,
 ): Promise<StructureDefinition | null> {
-  const cacheKey = `${profileUrl}:${fhirVersion}:snapshot`;
-  const context = resolutionContext ?? sdLoader.getProfileResolutionContext?.();
-  const tenantScoped = isTenantScopedProfileRequest(profileUrl, context);
-  if (profileCache && !tenantScoped) {
-    const cached = profileCache.get(cacheKey);
-    if (cached) return cached as StructureDefinition;
-  }
+  return captureValidationDependency('profile', 'loadProfileForValidation', [profileUrl, fhirVersion, resolutionContext ?? sdLoader.getProfileResolutionContext?.(), settings], async () => {
+    const cacheKey = `${profileUrl}:${fhirVersion}:snapshot`;
+    const context = resolutionContext ?? sdLoader.getProfileResolutionContext?.();
+    const tenantScoped = isTenantScopedProfileRequest(profileUrl, context);
+    if (profileCache && !tenantScoped) {
+      const cached = profileCache.get(cacheKey);
+      if (cached) return cached as StructureDefinition;
+    }
 
-  let structureDef = await sdLoader.loadProfile(profileUrl, fhirVersion);
-  if (!structureDef && tenantScoped) {
-    structureDef = await resolveTenantProfile(profileUrl, fhirVersion, context, settings);
-  }
-  if (!structureDef) return null;
-  return ensureSnapshot(structureDef, snapshotGenerator, profileCache, cacheKey, profileUrl);
+    let structureDef = await sdLoader.loadProfile(profileUrl, fhirVersion);
+    if (!structureDef && tenantScoped) {
+      structureDef = await resolveTenantProfile(profileUrl, fhirVersion, context, settings);
+    }
+    if (!structureDef) return null;
+    return ensureSnapshot(structureDef, snapshotGenerator, profileCache, cacheKey, profileUrl, fhirVersion);
+  });
 }
 
 async function resolveTenantProfile(
@@ -96,13 +102,14 @@ async function ensureSnapshot(
   profileCache: ProfileCache | undefined,
   cacheKey: string,
   profileUrl: string,
+  fhirVersion: 'R4' | 'R5' | 'R6',
 ): Promise<StructureDefinition | null> {
   if (structureDef.snapshot || !structureDef.differential || !structureDef.baseDefinition) {
     profileCache?.set(cacheKey, structureDef);
     return structureDef;
   }
   logger.info('[RecordsValidator] Profile has no snapshot; generating from differential');
-  const snapshotElements = await snapshotGenerator.generateSnapshot(structureDef);
+  const snapshotElements = await snapshotGenerator.generateSnapshot(structureDef, { fhirVersion });
   if (!snapshotElements?.length) {
     logger.error('[RecordsValidator] Failed to generate profile snapshot', profileCanonicalMetadata(profileUrl));
     return null;

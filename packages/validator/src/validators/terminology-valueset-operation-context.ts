@@ -1,10 +1,10 @@
-import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config';
-import type { RemoteValueSetValidationResult } from './terminology-api-types';
-import type { TerminologyCircuitBreakerRegistry } from './terminology-circuit-breakers';
-import type { TerminologyOperationCache } from './terminology-operation-cache';
-import type { TerminologyRequestBroker } from './terminology-request-broker';
-import type { ValueSetCache } from './valueset-cache';
-import type { TerminologyResolutionConfig } from './valueset-types';
+import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config.js';
+import type { RemoteValueSetValidationResult } from './terminology-api-types.js';
+import type { TerminologyCircuitBreakerRegistry } from './terminology-circuit-breakers.js';
+import type { TerminologyOperationCache } from './terminology-operation-cache.js';
+import type { TerminologyRequestBroker } from './terminology-request-broker.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import type { TerminologyResolutionConfig } from './valueset-types.js';
 
 export interface TerminologyValueSetOperationsContext {
   cache: ValueSetCache;

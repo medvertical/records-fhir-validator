@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildBundleDocumentContextIssues } from '../bundle-document-context';
 import type { StructureDefinition } from '../structure-definition-types';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 const terminologyBindingIssue: ValidationIssue = {
   aspect: 'terminology',
@@ -13,6 +13,28 @@ const terminologyBindingIssue: ValidationIssue = {
 };
 
 describe('buildBundleDocumentContextIssues', () => {
+  it.each(['terminology-binding-required', 'terminology-binding-required-code'])(
+    'propagates %s to a constrained Composition section target', code => {
+      const condition = { resourceType: 'Condition', id: 'condition-1',
+        meta: { profile: ['http://example.org/StructureDefinition/condition'] } };
+      const composition = { resourceType: 'Composition', id: 'composition-1',
+        section: [{ entry: [{ reference: 'urn:uuid:condition-1' }] }] };
+      const bundle = { resourceType: 'Bundle', type: 'document', entry: [
+        { fullUrl: 'urn:uuid:composition-1', resource: composition },
+        { fullUrl: 'urn:uuid:condition-1', resource: condition },
+      ] };
+      const issues = buildBundleDocumentContextIssues(bundle, [
+        { index: 0, resourceType: 'Composition', entryResource: composition, issues: [] },
+        { index: 1, resourceType: 'Condition', entryResource: condition,
+          issues: [{ ...terminologyBindingIssue, code }] },
+      ]);
+      expect(issues).toContainEqual(expect.objectContaining({
+        severity: 'error', ruleId: 'profile-targetprofile-match-failed',
+        details: expect.objectContaining({ causeIssueCodes: [code] }),
+      }));
+    },
+  );
+
   it('turns an unresolved profile required by a Bundle entry slice into a parent conformance error', () => {
     const requiredProfile = 'http://example.org/StructureDefinition/required-condition';
     const bundleProfile: StructureDefinition = {

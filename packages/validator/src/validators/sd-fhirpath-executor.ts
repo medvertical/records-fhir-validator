@@ -1,22 +1,22 @@
-import type { ValidationIssue } from '../types';
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { SDConstraintCollector } from './sd-constraint-collector';
-import { SDElementMatcher } from './sd-element-matcher';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { SDConstraintCollector } from './sd-constraint-collector.js';
+import { SDElementMatcher } from './sd-element-matcher.js';
 import {
     createFHIRPathContext,
     type FHIRPathBundleInput,
-} from './fhirpath-functions';
-import { logger } from '../logger';
-import type { SDFHIRPathExpressionCache } from './sd-fhirpath-expression-cache';
+} from './fhirpath-functions.js';
+import { logger } from '../logger.js';
+import type { SDFHIRPathExpressionCache } from './sd-fhirpath-expression-cache.js';
 import {
     createSDFHIRPathInvocationTable,
-} from './sd-fhirpath-runtime';
-import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology';
-import { ValueSetCache } from './valueset-cache';
-import { SDFHIRPathConstraintRunner } from './sd-fhirpath-constraint-runner';
-import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope';
+} from './sd-fhirpath-runtime.js';
+import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology.js';
+import { ValueSetCache } from './valueset-cache.js';
+import { SDFHIRPathConstraintRunner } from './sd-fhirpath-constraint-runner.js';
+import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope.js';
 
-export { evaluateSpecialisedRootConstraint } from './sd-fhirpath-specialised-root-constraints';
+export { evaluateSpecialisedRootConstraint } from './sd-fhirpath-specialised-root-constraints.js';
 
 export interface SDFHIRPathContext {
     resource: unknown;

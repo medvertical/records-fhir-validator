@@ -15,9 +15,9 @@ import {
   CanonicalPinStore,
   type InstalledPackageManifest,
   type PackageRef,
-} from './canonical-pin-store';
+} from './canonical-pin-store.js';
 
-export type { PackageRef } from './canonical-pin-store';
+export type { PackageRef } from './canonical-pin-store.js';
 
 export interface CanonicalPinContext {
   /** Package the artifact under validation comes from. */

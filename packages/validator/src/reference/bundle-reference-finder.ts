@@ -3,8 +3,8 @@ import type {
   BundleReference,
   FhirResourceRecord,
   ResourceReference,
-} from './bundle-reference-types';
-import { assertFhirObjectTraversalCapacity } from '../utils/object-traversal-limit';
+} from './bundle-reference-types.js';
+import { assertFhirObjectTraversalCapacity } from '../utils/object-traversal-limit.js';
 
 export function extractBundleEntries(bundle: unknown): BundleEntry[] {
   const bundleRecord = toRecord(bundle);

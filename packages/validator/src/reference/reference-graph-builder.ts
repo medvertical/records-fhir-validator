@@ -6,11 +6,11 @@
  * strings to graph node IDs.
  */
 
-import { parseReference } from './reference-type-extractor';
+import { parseReference } from './reference-type-extractor.js';
 import {
   extractBundleEntries,
   findReferencesInResource,
-} from './bundle-reference-finder';
+} from './bundle-reference-finder.js';
 
 // ============================================================================
 // Types

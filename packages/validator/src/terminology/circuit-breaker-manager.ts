@@ -1,6 +1,6 @@
-import { CircuitBreaker } from './circuit-breaker-core';
-import type { CircuitBreakerConfig, CircuitBreakerStats } from './circuit-breaker-types';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
+import { CircuitBreaker } from './circuit-breaker-core.js';
+import type { CircuitBreakerConfig, CircuitBreakerStats } from './circuit-breaker-types.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
 
 export class CircuitBreakerManager {
   private readonly breakers: BoundedLruCache<string, CircuitBreaker>;

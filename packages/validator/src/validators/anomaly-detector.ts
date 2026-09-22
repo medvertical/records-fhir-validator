@@ -2,16 +2,16 @@ import {
   detectDuplicates,
   detectMissingFields,
   detectOrphanReferences,
-} from './anomaly-cohort-detectors';
+} from './anomaly-cohort-detectors.js';
 import {
   type AnomalyDetectorConfig,
   type AnomalyFinding,
-} from './anomaly-types';
-import { normalizeAnomalyDetectorConfig } from './anomaly-config';
-import { detectValueRangeOutliers } from './anomaly-value-range-detector';
-import { detectCodingInconsistencies, detectTemporalGaps } from './anomaly-longitudinal-detectors';
+} from './anomaly-types.js';
+import { normalizeAnomalyDetectorConfig } from './anomaly-config.js';
+import { detectValueRangeOutliers } from './anomaly-value-range-detector.js';
+import { detectCodingInconsistencies, detectTemporalGaps } from './anomaly-longitudinal-detectors.js';
 
-export type { AnomalyDetectorConfig, AnomalyFinding, AnomalyType } from './anomaly-types';
+export type { AnomalyDetectorConfig, AnomalyFinding, AnomalyType } from './anomaly-types.js';
 
 export class AnomalyDetector {
   private readonly config: AnomalyDetectorConfig;

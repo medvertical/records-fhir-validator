@@ -1,8 +1,8 @@
-import { ValidatorDirectAspectValidation } from './validator-direct-aspect-validation';
-import { ValidatorProfileAdministration } from './validator-profile-administration';
-import { ValidatorTerminologyAdministration } from './validator-terminology-administration';
-import type { ValidatorCoreComponents } from './validator-core-components';
-import type { ValidatorExecutionComponents } from './validator-execution-components';
+import { ValidatorDirectAspectValidation } from './validator-direct-aspect-validation.js';
+import { ValidatorProfileAdministration } from './validator-profile-administration.js';
+import { ValidatorTerminologyAdministration } from './validator-terminology-administration.js';
+import type { ValidatorCoreComponents } from './validator-core-components.js';
+import type { ValidatorExecutionComponents } from './validator-execution-components.js';
 
 export interface ValidatorAdministrationComponents {
   profileAdministration: ValidatorProfileAdministration;

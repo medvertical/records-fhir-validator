@@ -3,11 +3,11 @@ import type {
     ValueSet,
     ValueSetComposeExclude,
     ValueSetComposeInclude,
-} from './valueset-types';
-import { logger } from '../logger';
-import { applyConceptFilter, extractCodesFromCodeSystem } from './valueset-concept-utils';
-import type { FhirVersion } from './valueset-package-utils';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+} from './valueset-types.js';
+import { logger } from '../logger.js';
+import { applyConceptFilter, extractCodesFromCodeSystem } from './valueset-concept-utils.js';
+import type { FhirVersion } from './valueset-package-utils.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export interface ValueSetConceptFilter {
     system: string;
@@ -61,12 +61,12 @@ export async function collectCodesFromValueSet(
     flattenExpansion(valueSet.expansion?.contains).forEach(code => accumulator.add(code));
 
     for (const include of valueSet.compose?.include ?? []) {
-        const included = await resolveIncludeOrExclude(include, resolver, visited, depth, preferredFhirMajor);
+        const included = await resolveIncludeOrExclude(include, resolver, new Set(visited), depth, preferredFhirMajor);
         included.forEach(code => accumulator.add(code));
     }
 
     for (const exclude of valueSet.compose?.exclude ?? []) {
-        const excluded = await resolveIncludeOrExclude(exclude, resolver, visited, depth, preferredFhirMajor);
+        const excluded = await resolveIncludeOrExclude(exclude, resolver, new Set(visited), depth, preferredFhirMajor);
         excluded.forEach(code => accumulator.delete(code));
     }
 
@@ -193,30 +193,30 @@ async function resolveIncludeOrExclude(
     depth: number,
     preferredFhirMajor?: string,
 ): Promise<string[]> {
-    const codes: string[] = [];
+    const constraints: Set<string>[] = [];
     // Some IGs embed a version in the include's system ("http://...|4.0.1").
     // Codings never carry that pipe, so expansion keys must use the bare
     // canonical; the piped version only steers CodeSystem selection.
     const [system, pipedSystemVersion] = (entry.system ?? '').split('|');
     const requestedVersion = entry.version ?? pipedSystemVersion;
 
-    for (const concept of entry.concept ?? []) {
-        if (!concept.code) continue;
-        if (system) codes.push(`${system}|${concept.code}`);
-        codes.push(concept.code);
+    if (entry.concept?.length) {
+        constraints.push(new Set(entry.concept.filter(concept => concept.code)
+            .map(concept => system ? `${system}|${concept.code}` : concept.code)));
     }
 
     for (const vsUrl of entry.valueSet ?? []) {
-        const nested = await resolver.loadValueSetResource(vsUrl);
+        const nested = await resolver.loadValueSetResource(vsUrl, fhirVersionForMajor(preferredFhirMajor));
         if (nested) {
-            codes.push(...await collectCodesFromValueSet(
+            const nestedCodes = await collectCodesFromValueSet(
                 nested,
                 resolver,
-                visited,
+                new Set(visited),
                 depth + 1,
                 preferredFhirMajor,
-            ));
-        }
+            );
+            constraints.push(membershipKeys(nestedCodes));
+        } else constraints.push(new Set());
     }
 
     const hasConcepts = Boolean(entry.concept?.length);
@@ -226,9 +226,7 @@ async function resolveIncludeOrExclude(
     if (system && !hasConcepts && !hasFilters && !hasValueSets) {
         const codeSystem = await resolver.loadCodeSystem(system, preferredFhirMajor, requestedVersion);
         if (codeSystem) {
-            for (const code of extractCodesFromCodeSystem(codeSystem)) {
-                codes.push(`${system}|${code}`, code);
-            }
+            constraints.push(new Set(extractCodesFromCodeSystem(codeSystem).map(code => `${system}|${code}`)));
         } else {
             logger.warn(
                 '[ValueSetPackageLoader] CodeSystem not found',
@@ -241,14 +239,24 @@ async function resolveIncludeOrExclude(
         const codeSystem = await resolver.loadCodeSystem(system, preferredFhirMajor, requestedVersion);
         if (codeSystem) {
             for (const filter of (entry as ValueSetComposeInclude).filter ?? []) {
-                for (const code of applyConceptFilter(codeSystem, filter)) {
-                    codes.push(`${system}|${code}`, code);
-                }
+                constraints.push(new Set(applyConceptFilter(codeSystem, filter).map(code => `${system}|${code}`)));
             }
-        }
+        } else constraints.push(new Set());
     }
 
-    return codes;
+    // Criteria inside one compose clause intersect; separate include clauses unite.
+    const intersection = new Set(constraints[0] ?? []);
+    for (const candidate of intersection) {
+        if ((system && !candidate.startsWith(`${system}|`))
+            || constraints.some(constraint => !constraint.has(candidate))) intersection.delete(candidate);
+    }
+    return Array.from(new Set([...intersection].flatMap(code => code.includes('|')
+        ? [code, code.slice(code.lastIndexOf('|') + 1)] : [code])));
+}
+
+function membershipKeys(codes: string[]): Set<string> {
+    const qualified = codes.filter(code => code.includes('|'));
+    return new Set(qualified.length ? qualified : codes);
 }
 
 function fhirVersionForMajor(preferredFhirMajor?: string): FhirVersion | undefined {

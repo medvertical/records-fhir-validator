@@ -1,9 +1,9 @@
-import { parseReference } from './reference-type-extractor';
+import { parseReference } from './reference-type-extractor.js';
 import {
   extractBundleEntries,
   findAllBundleReferences,
-} from './bundle-reference-finder';
-import type { BundleIssue, BundleStatistics } from './bundle-reference-types';
+} from './bundle-reference-finder.js';
+import type { BundleIssue, BundleStatistics } from './bundle-reference-types.js';
 
 export function isTransactionOrBatchBundle(bundle: unknown): boolean {
   const type = getBundleType(bundle);

@@ -1,23 +1,30 @@
-import { applyResourcePinToCanonical } from '../package/canonical-pin-context';
-import type { ProfileSourceContext } from '../persistence';
-import type { ValidationIssue, ValidationSettings } from '../types';
-import type { ReferenceResolver } from '../validators/slicing-validator';
-import { resolveContextQuestionnaire } from './context-questionnaire-resolution';
-import { withIssuesSchemaVersion } from './issue-schema-version';
+import { applyResourcePinToCanonical } from '../package/canonical-pin-context.js';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import type { ReferenceResourceFetcher } from '../reference/reference-fetch-deadline.js';
+import {
+  prefetchSliceReferenceTargets,
+  sliceReferencePrefetchLimits,
+} from '../reference/slice-reference-prefetch.js';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import type { ReferenceResolver } from '../validators/slicing-validator.js';
+import { resolveContextQuestionnaire } from './context-questionnaire-resolution.js';
+import { withIssuesSchemaVersion } from './issue-schema-version.js';
 import {
   BundleReferenceIndexCache,
+  createBundleCanonicalResolver,
+  combineReferenceResolvers,
   createBundleReferenceResolver,
-} from './multi-aspect-bundle-reference-resolver';
-import type { MultiAspectDeps } from './multi-aspect-dependencies';
-import type { MultiAspectValidateResult } from './multi-aspect-types';
+} from './multi-aspect-bundle-reference-resolver.js';
+import type { MultiAspectDeps } from './multi-aspect-dependencies.js';
+import type { MultiAspectValidateResult } from './multi-aspect-types.js';
 import {
   createProfileFallbackIssue,
   createProfileResourceTypeMismatchIssue,
   loadProfileOrBase,
   type ProfileLoadResult,
-} from './profile-loader-utils';
-import type { StructureDefinition } from './structure-definition-types';
-import { createValidationErrorIssue } from './validation-utils';
+} from './profile-loader-utils.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { createValidationErrorIssue } from './validation-utils.js';
 
 type ResourcePreparationDeps = Pick<
   MultiAspectDeps,
@@ -35,6 +42,7 @@ interface MultiAspectResourcePreparationOptions {
   organizationId?: number;
   serverId?: number;
   externalReferenceResolver?: ReferenceResolver;
+  referenceResourceFetcher?: ReferenceResourceFetcher;
   throwIfStopped?: () => void;
 }
 
@@ -114,6 +122,7 @@ export class MultiAspectResourcePreparation {
         resourceRecord,
         this.options.deps.questionnaireRegistry,
         profileSourceContext,
+        createBundleCanonicalResolver(enclosingBundle, this.bundleReferenceIndexCache),
       )
       : undefined;
     const bundleReferenceResolver = createBundleReferenceResolver(
@@ -137,11 +146,38 @@ export class MultiAspectResourcePreparation {
         enclosingBundle,
         contextQuestionnaire,
         referenceResolver: combineReferenceResolvers(
-          bundleReferenceResolver,
+          combineReferenceResolvers(
+            bundleReferenceResolver,
+            await this.prefetchSliceReferences(resourceRecord, loadResult.structureDef, bundleReferenceResolver),
+          ),
           this.options.externalReferenceResolver,
         ),
       },
     };
+  }
+
+  /**
+   * Target-dependent slice discriminators are decided by the referenced
+   * resource, so the synchronous matcher needs those payloads before it runs.
+   */
+  private async prefetchSliceReferences(
+    resource: Record<string, unknown>,
+    structureDef: StructureDefinition,
+    bundleReferenceResolver: ReferenceResolver | null,
+  ): Promise<ReferenceResolver | undefined> {
+    const fetcher = this.options.referenceResourceFetcher;
+    if (!fetcher) return undefined;
+    const limits = sliceReferencePrefetchLimits(this.typedSettings?.recursiveReferenceValidation);
+    if (!limits) return undefined;
+    const resolver = await prefetchSliceReferenceTargets({
+      resource,
+      structureDef,
+      fetcher,
+      limits,
+      alreadyResolved: bundleReferenceResolver,
+    });
+    this.options.throwIfStopped?.();
+    return resolver ?? undefined;
   }
 
   private loadProfile(
@@ -212,13 +248,4 @@ function createMissingProfileResult(
       isValid: false,
     }],
   };
-}
-
-function combineReferenceResolvers(
-  primary: ReferenceResolver | null,
-  fallback?: ReferenceResolver,
-): ReferenceResolver | null {
-  if (!primary) return fallback ?? null;
-  if (!fallback) return primary;
-  return reference => primary(reference) ?? fallback(reference);
 }

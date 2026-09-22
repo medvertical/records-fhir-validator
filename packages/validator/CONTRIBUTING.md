@@ -66,7 +66,10 @@ AI-assisted work; otherwise a topic-style branch (`fix-slicing-edge-case`,
   the relevant validator's `__tests__/` folder. For parity fixes, run
   `npm run conformance -- --skip-download` and update the result artifact
   in `conformance-results/` with the measured delta.
-- Changelog entry under the `[Unreleased]` section in `CHANGELOG.md`.
+- Changelog entry under the `[Unreleased]` section in `CHANGELOG.md`, or a
+  fragment in [`changelog.d/`](../../changelog.d/README.md) — a new file there
+  conflicts with nothing, which the shared `[Unreleased]` block cannot avoid
+  when two pull requests are open at once.
 - Description that includes the conformance-run delta if the PR touches a
   validator path. Format: `JSON parity: 496/496 → 497/497` or
   `discovery lane executed comparisons: 546/547 → 547/547`.

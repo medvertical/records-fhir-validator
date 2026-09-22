@@ -1,20 +1,20 @@
 import axios from 'axios';
-import { logger } from '../logger';
-import type { ValueSetCache } from './valueset-cache';
-import { isTransientTerminologyFailure } from './terminology-api-error-policy';
+import { logger } from '../logger.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import { isTransientTerminologyFailure } from './terminology-api-error-policy.js';
 import {
   DEFAULT_VALUESET_EXPAND_TIMEOUT_MS,
   getMaxConcurrentRemoteTerminologyRequests,
   getRemoteTerminologyTimeoutMs,
   recordTerminologyResponse,
-} from './terminology-api-remote-policy';
-import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config';
-import type { TerminologyCircuitBreakerRegistry } from './terminology-circuit-breakers';
-import { getTerminologyServerScope } from './terminology-server-scope';
-import type { TerminologyResolutionConfig, TerminologyServerOverride } from './valueset-types';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
-import type { TerminologyRequestBroker } from './terminology-request-broker';
+} from './terminology-api-remote-policy.js';
+import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config.js';
+import type { TerminologyCircuitBreakerRegistry } from './terminology-circuit-breakers.js';
+import { getTerminologyServerScope } from './terminology-server-scope.js';
+import type { TerminologyResolutionConfig, TerminologyServerOverride } from './valueset-types.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
+import type { TerminologyRequestBroker } from './terminology-request-broker.js';
 
 interface ValueSetExpandRequest {
   broker: TerminologyRequestBroker;

@@ -2,8 +2,8 @@ import type {
   ElementDefinition,
   SlicingDefinition,
   StructureDefinition,
-} from '../core/structure-definition-types';
-import { extractFixedEntry } from './slice-utils';
+} from '../core/structure-definition-types.js';
+import { extractFixedEntry } from './slice-utils.js';
 
 export type TypeSpec = {
   code: string;

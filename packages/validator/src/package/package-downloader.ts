@@ -1,5 +1,5 @@
 import { PackageRegistryClient } from './package-registry-client.js';
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 import {
   packageErrorMetadata,
   packageReferenceMetadata,

@@ -1,6 +1,6 @@
 // FHIR IG package pins for the MII 2026 and HL7 Europe EHDS 2026 presets.
 
-import type { ValidationSettings } from '../settings';
+import type { ValidationSettings } from '../settings.js';
 
 export type MiiTerminologyMode = 'mii-local-blaze' | 'mii-ontoserver' | 'mii-hybrid';
 
@@ -9,7 +9,12 @@ export interface FhirPackagePin {
   version: string;
 }
 
+// The version the EPS 1.0.0-ballot closure declares as its dependency.
 export const IPS_PACKAGE_VERSION = '2.0.0' as const;
+
+// The version the international IPS validation target checks against. It ships
+// alongside the closure version, because one bundle has to serve both.
+export const IPS_TARGET_PACKAGE_VERSION = '2.0.1' as const;
 
 export const FHIR_CORE_PACKAGE_VERSIONS = {
   'hl7.fhir.r4.core': '4.0.1',
@@ -74,6 +79,8 @@ export const HL7_EU_EHDS_2026_PACKAGE_VERSIONS = {
   'hl7.fhir.eu.laboratory': '2.0.0',
   'hl7.fhir.eu.eps': '1.0.0-ballot',
   'hl7.fhir.eu.hdr': '0.1.0-ballot',
+  // EPS/IPS additional bindings reference eHDSI ValueSets outside the HL7 IGs.
+  'myhealth.eu.fhir.mvc-package': '9.1.0',
   'hl7.fhir.eu.imaging': '1.0.0-ballot',
   'hl7.fhir.eu.health-data-api': '1.0.0-ballot',
   // Transitive dependencies declared by the EPS 1.0.0-ballot closure. Pinned
@@ -93,7 +100,7 @@ export const HL7_EU_EPS_XTEHR_REFERENCE_PACKAGE: FhirPackagePin = {
 };
 
 export const HL7_EU_EHDS_2026_PACKAGE_SET: FhirPackagePin[] = Object.entries(
-  HL7_EU_EHDS_2026_PACKAGE_VERSIONS
+  HL7_EU_EHDS_2026_PACKAGE_VERSIONS,
 ).map(([id, version]) => ({ id, version }));
 
 // Overrides accepted by the MII/EHDS settings factories.

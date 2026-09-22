@@ -1,7 +1,7 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import type { Constraint } from '../core/structure-definition-types';
-import { resourceTypeOf } from '../core/fhir-resource';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import type { Constraint } from '../core/structure-definition-types.js';
+import { resourceTypeOf } from '../core/fhir-resource.js';
 
 export function validateDom3Constraint(
   resource: unknown,

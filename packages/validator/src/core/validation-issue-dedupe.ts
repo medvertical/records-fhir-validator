@@ -1,16 +1,19 @@
-import type { ValidationIssue } from '../types';
-import { normalizeIssuePathForDedupe } from './validation-issue-dedupe-constraints';
-import { collectDedupeContext } from './validation-issue-dedupe-context';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { normalizeIssuePathForDedupe } from './validation-issue-dedupe-constraints.js';
+import { collectDedupeContext } from './validation-issue-dedupe-context.js';
 import {
   createDedupeSuppressionRules,
   getSuppressionRuleId,
-} from './validation-issue-dedupe-rules';
+} from './validation-issue-dedupe-rules.js';
 import {
   getIssuePath,
   normalizeRequiredElementPath,
-} from './validation-issue-dedupe-utils';
-import { getEffectiveRuleId } from './validation-issue-dedupe-profile-signals';
-import { hasBundleEntryResourceIdentity } from './validation-issue-dedupe-bundle-path-utils';
+} from './validation-issue-dedupe-utils.js';
+import { getEffectiveRuleId } from './validation-issue-dedupe-profile-signals.js';
+import {
+  hasBundleEntryResourceIdentity,
+  isIndexedBundleEntryResourcePath,
+} from './validation-issue-dedupe-bundle-path-utils.js';
 
 /**
  * Dedupe issues by (code, path, severity, rule). Prevents reporting the same
@@ -206,7 +209,7 @@ function getSemanticDedupeKey(issue: ValidationIssue, ruleKey: string): string {
   // the same concrete instance path. Keep one row while preserving distinct
   // cardinalities/messages at that path.
   if (issue.code === 'structural-cardinality-min') {
-    return `${issue.code}:${pathKey}:${severityKey}:${issue.message}`;
+    return getCardinalityDedupeKey(issue, pathKey, severityKey);
   }
   // Generic HL7 issue codes (and other diagnostics without an explicit rule)
   // can legitimately describe multiple failures at the same element. The
@@ -215,4 +218,18 @@ function getSemanticDedupeKey(issue: ValidationIssue, ruleKey: string): string {
   // into one `invalid` issue at the same normalized path.
   const effectiveRuleKey = ruleKey || issue.message;
   return `${issue.code}:${pathKey}:${severityKey}:${effectiveRuleKey}`;
+}
+
+function getCardinalityDedupeKey(
+  issue: ValidationIssue,
+  pathKey: string,
+  severityKey: string,
+): string {
+  if (!isIndexedBundleEntryResourcePath(issue.path ?? '')) {
+    return `${issue.code}:${pathKey}:${severityKey}:${issue.message}`;
+  }
+  const details = getIssueDetails(issue);
+  const expectedMin = details?.expectedMin ?? details?.min ?? '';
+  const actualCount = details?.actualCount ?? details?.actual ?? '';
+  return `${issue.code}:${pathKey}:${severityKey}:${expectedMin}:${actualCount}`;
 }

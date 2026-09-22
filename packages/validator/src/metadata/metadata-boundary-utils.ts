@@ -1,5 +1,3 @@
-import type { ValidationContext } from '../types';
-
 export type FhirObject = Record<string, unknown>;
 
 export function isObjectRecord(value: unknown): value is FhirObject {
@@ -10,10 +8,6 @@ export function getStringField(value: unknown, field: string): string | undefine
   if (!isObjectRecord(value)) return undefined;
   const fieldValue = value[field];
   return typeof fieldValue === 'string' && fieldValue.length > 0 ? fieldValue : undefined;
-}
-
-export function isValidationContext(value: unknown): value is ValidationContext {
-  return isObjectRecord(value) && typeof value.resourceType === 'string';
 }
 
 export function getMetadataEngine(settings: unknown): string {

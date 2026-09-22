@@ -23,7 +23,7 @@ import type {
   AdvisorRuleTransform,
   ValidationIssue,
 } from '@records-fhir/validation-types';
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 
 // Re-export shared types so existing server imports continue to work
 export type { AdvisorRule, AdvisorRuleMatch, AdvisorRuleTransform };
@@ -111,13 +111,33 @@ function matchesRule(issue: ValidationIssue, match: AdvisorRuleMatch): boolean {
   return true;
 }
 
+/**
+ * Patterns already reported as uncompilable. Rule matching runs per issue, so
+ * without this a single broken rule would log once per finding.
+ */
+const reportedInvalidPatterns = new Set<string>();
+
 function matchesRegex(value: string | undefined, pattern: string): boolean {
   if (!value) return false;
   try {
     return new RegExp(pattern).test(value);
   } catch {
+    // A rule whose pattern does not compile never matches anything. Staying
+    // silent about it makes the rule look applied when it was never evaluated.
+    if (!reportedInvalidPatterns.has(pattern)) {
+      reportedInvalidPatterns.add(pattern);
+      logger.warn(
+        '[AdvisorRules] Ignoring a rule match: messageRegex is not a valid regular expression',
+        { messageRegex: pattern },
+      );
+    }
     return false;
   }
+}
+
+/** Test seam: rule sets change between runs, so the report-once memory must reset. */
+export function resetAdvisorRuleDiagnostics(): void {
+  reportedInvalidPatterns.clear();
 }
 
 // ============================================================================

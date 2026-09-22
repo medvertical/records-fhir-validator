@@ -154,6 +154,39 @@ try {
     validatorTarball,
   ], { cwd: packageDir });
 
+  await run('node', [
+    '--input-type=module',
+    '--eval',
+    [
+      "import { DISPATCHABLE_STRUCTURAL_ENGINES } from '@records-fhir/validation-types/validation/structural-engines';",
+      "if (DISPATCHABLE_STRUCTURAL_ENGINES.join(',') !== 'records,hapi,schema') process.exit(1);",
+    ].join('\n'),
+  ], { cwd: packageDir });
+
+  // Type-only exports erase at runtime, so importing them proves nothing. The
+  // declaration file is what a consumer's compiler reads. Comments are stripped
+  // first and only export statements are searched: a docblock mentioning the
+  // type is emitted into the declaration too, and would satisfy a bare name
+  // match while the export itself was gone.
+  const rootDeclaration = await readFile(
+    join(packageDir, 'node_modules', '@records-fhir', 'validator', 'dist', 'index.d.ts'),
+    'utf8',
+  );
+  const exportStatements = rootDeclaration
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\/\/[^\n]*/g, '')
+    .split(/;\s*\n/)
+    .filter((statement) => /^\s*export\b/.test(statement));
+  for (const exported of ['ValidationIssue', 'ValidationSettings']) {
+    const pattern = new RegExp(`(?:^|[{,\\s])(?:type\\s+)?${exported}(?:[},\\s]|$)`);
+    if (!exportStatements.some((statement) => pattern.test(statement))) {
+      throw new Error(
+        `${exported} is not exported from the packed root declaration; the public `
+          + 'signatures name it, so a consumer cannot type what this package returns',
+      );
+    }
+  }
+
   await writeFile(
     join(packageDir, 'smoke.mjs'),
     `

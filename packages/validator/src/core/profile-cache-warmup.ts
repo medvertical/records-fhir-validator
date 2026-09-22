@@ -1,8 +1,8 @@
-import type { ProfileCache } from '../cache/profile-cache';
-import { logger } from '../logger';
-import { getProfileSource, type ProfileSourceContext } from '../persistence';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { ProfileWarmupCoordinator } from './profile-warmup-coordinator';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import { logger } from '../logger.js';
+import { getProfileSource, type ProfileSourceContext } from '../persistence/index.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { ProfileWarmupCoordinator } from './profile-warmup-coordinator.js';
 
 /** @deprecated Reset the owning validator's coordinator through its administration API. */
 export function resetWarmupState(

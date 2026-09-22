@@ -1,9 +1,9 @@
-import { logger } from '../logger';
-import { parseReference } from './reference-type-extractor';
+import { logger } from '../logger.js';
+import { parseReference } from './reference-type-extractor.js';
 import {
   extractBundleEntries,
   findReferencesInResource,
-} from './bundle-reference-finder';
+} from './bundle-reference-finder.js';
 
 interface RecursiveReferenceFilterContext {
   startTime: number;

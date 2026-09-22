@@ -1,7 +1,7 @@
-import type { ValidationIssue } from '../types';
-import { validateReferenceFormat } from './reference-format-validator';
-import { getReferenceFieldName } from './reference-recursive-issues';
-import { createReferenceValidationIssue } from './reference-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateReferenceFormat } from './reference-format-validator.js';
+import { getReferenceFieldName } from './reference-recursive-issues.js';
+import { createReferenceValidationIssue } from './reference-utils.js';
 
 interface ReferenceTypeConstraintValidator {
   validateReferenceType(reference: string, resourceType: string, fieldPath: string): {

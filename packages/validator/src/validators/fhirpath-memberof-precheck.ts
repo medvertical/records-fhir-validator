@@ -1,10 +1,10 @@
-import { ValueSetPackageLoader } from './valueset-package-loader';
+import { ValueSetPackageLoader } from './valueset-package-loader.js';
 import {
   ConstraintExpressionCache,
   type SynchronousFHIRPathExpressionCache,
-} from './constraint-expression-cache';
-import { createMemberOfFunction } from './fhirpath-custom-functions';
-import { ValueSetCache } from './valueset-cache';
+} from './constraint-expression-cache.js';
+import { createMemberOfFunction } from './fhirpath-custom-functions.js';
+import { ValueSetCache } from './valueset-cache.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 type ObjectRecord = Record<string, unknown>;

@@ -6,7 +6,7 @@ import type {
   QualityRuleOutcome,
   QualityRuleScope,
   QualityRuleSeverity,
-} from './quality-rule-pack';
+} from './quality-rule-pack.js';
 
 export interface QualityAdvisoryApplication {
   packId: string;

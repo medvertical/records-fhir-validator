@@ -1,7 +1,7 @@
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
-import { createSafeValidationFailureMessage } from '../utils/validation-execution-failure';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createSafeValidationFailureMessage } from '../utils/validation-execution-failure.js';
 
 export function handleBundleValidationFailure(): ValidationIssue {
   logger.error('[BundleValidator] Bundle validation failed');

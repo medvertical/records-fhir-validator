@@ -1,7 +1,7 @@
 import {
   graphPatternMatches,
   graphValuesMatch,
-} from './validation-graph-value-matching';
+} from './validation-graph-value-matching.js';
 
 export function matchPatternWithDiagnostic(
   value: unknown,

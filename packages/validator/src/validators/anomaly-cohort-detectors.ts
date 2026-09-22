@@ -1,4 +1,4 @@
-import type { AnomalyDetectorConfig, AnomalyFinding } from './anomaly-types';
+import type { AnomalyDetectorConfig, AnomalyFinding } from './anomaly-types.js';
 import {
   collectReferences,
   getPrimaryCode,
@@ -8,7 +8,7 @@ import {
   getSubjectReference,
   toRecord,
   type FhirRecord,
-} from './anomaly-resource-utils';
+} from './anomaly-resource-utils.js';
 
 interface ResourceEntry {
   index: number;

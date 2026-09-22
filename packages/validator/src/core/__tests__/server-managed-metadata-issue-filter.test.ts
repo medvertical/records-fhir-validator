@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { shouldSuppressServerManagedMetadataIssue } from '../server-managed-metadata-issue-filter';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 function issue(overrides: Partial<ValidationIssue>): ValidationIssue {
   return {

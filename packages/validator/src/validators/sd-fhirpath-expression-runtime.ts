@@ -3,16 +3,16 @@ import {
   evaluateAsyncFHIRPathTerminology,
   hasAsyncFHIRPathTerminology,
   type FHIRPathTerminologyResolver,
-} from './fhirpath-async-terminology';
-import { prepareElementContext } from './sd-fhirpath-choice-utils';
+} from './fhirpath-async-terminology.js';
+import { prepareElementContext } from './sd-fhirpath-choice-utils.js';
 import {
   evaluateConstraintTarget,
   type ConstraintTargetEvaluation,
-} from './sd-fhirpath-constraint-target';
-import { SDFHIRPathExpressionCache } from './sd-fhirpath-expression-cache';
-import { evaluateCompiledSDFHIRPath } from './sd-fhirpath-runtime';
-import type { ValueSetCache } from './valueset-cache';
-import { ValueSetPackageLoader } from './valueset-package-loader';
+} from './sd-fhirpath-constraint-target.js';
+import { SDFHIRPathExpressionCache } from './sd-fhirpath-expression-cache.js';
+import { evaluateCompiledSDFHIRPath } from './sd-fhirpath-runtime.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import { ValueSetPackageLoader } from './valueset-package-loader.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 

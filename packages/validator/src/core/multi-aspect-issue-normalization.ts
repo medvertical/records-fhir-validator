@@ -1,9 +1,9 @@
-import type { AspectResult } from './multi-aspect-types';
+import type { AspectResult } from './multi-aspect-types.js';
 import {
   aggregateRemoteCodeSystemBudgetIssues,
   dedupeIssues,
   suppressRedundantBindingWarnings,
-} from './validation-utils';
+} from './validation-utils.js';
 
 export function normalizeIssuesByAspect(aspects: AspectResult[]): AspectResult[] {
   const suppressedIssues = suppressRedundantBindingWarnings(
@@ -25,8 +25,11 @@ export function normalizeIssuesByAspect(aspects: AspectResult[]): AspectResult[]
   }
 
   for (const aspect of aspects) {
-    const target = ensureAspect(aspect);
-    target.evidenceIssues?.push(...(aspect.evidenceIssues ?? aspect.issues));
+    for (const issue of aspect.evidenceIssues ?? aspect.issues) {
+      const name = issue.aspect || aspect.aspect;
+      const target = ensureAspect({ ...aspect, aspect: name });
+      target.evidenceIssues?.push(issue);
+    }
   }
 
   for (const aspect of aspects) {

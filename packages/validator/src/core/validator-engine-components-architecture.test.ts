@@ -2,28 +2,23 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-function readSource(file: string): string {
-  return readFileSync(resolve(process.cwd(), 'packages/validator/src/core', file), 'utf8');
-}
-
+/**
+ * The import boundary between the facade and the three component groups is
+ * enforced by config/module-boundaries.json against the AST.
+ *
+ * This one constraint has no equivalent there: the facade composes the groups
+ * and must not construct anything itself. Expressing it needs the shape of the
+ * expressions, not the imports, so it stays a source check — deliberately the
+ * only one left in this file. Earlier assertions here pinned the exact call
+ * text, which broke on renaming an argument and said nothing about structure.
+ */
 describe('validator engine component architecture', () => {
-  it('keeps the public component factory as a composition boundary', () => {
-    const facade = readSource('validator-engine-components.ts');
+  it('composes the component groups without constructing anything itself', () => {
+    const facade = readFileSync(
+      resolve(process.cwd(), 'packages/validator/src/core/validator-engine-components.ts'),
+      'utf8',
+    );
 
-    expect(facade).toMatch(/createValidatorCoreRuntime\(config\)/);
-    expect(facade).toMatch(/createValidatorExecutionComponents\(coreRuntime\)/);
-    expect(facade).toMatch(/createValidatorAdministrationComponents\(core, execution\)/);
     expect(facade).not.toMatch(/\bnew\s+[A-Z]/);
-    expect(facade).not.toMatch(/from ['"]\.\.\/validators\//);
-  });
-
-  it('keeps internal component groups independent from the public facade', () => {
-    const internals = [
-      'validator-core-components.ts',
-      'validator-execution-components.ts',
-      'validator-administration-components.ts',
-    ].map(readSource).join('\n');
-
-    expect(internals).not.toMatch(/from ['"]\.\/validator-engine-components['"]/);
   });
 });

@@ -7,9 +7,9 @@
  * Migrated from shared/validation-types.ts for better organization.
  */
 
-import type { ValidationAspectType, ValidationSeverityType } from './aspect-enums';
-import type { FindingAspectType, FindingSourceType } from './finding-source';
-import { removeAsciiControlCharacters } from './text-normalization';
+import type { ValidationAspectType, ValidationSeverityType } from './aspect-enums.js';
+import type { FindingAspectType, FindingSourceType } from './finding-source.js';
+import { removeAsciiControlCharacters } from './text-normalization.js';
 
 // ============================================================================
 // Message Signature Types
@@ -149,7 +149,8 @@ export interface ValidationMessageGroupDTO {
     uniqueValueCount?: number; // Count of distinct detail values (1 = uniform, >1 = varied)
     sampleDetails?: Record<string, unknown>; // Sample details for interpolation when uniform
     // Context fields for resource links
-    serverId?: number; // Server ID (for single-server queries, or first seen for multi-server)
+    serverId?: number; // Present only when the group belongs to one server.
+    serverCount?: number;
     resourceType?: string; // Primary resource type for this issue group
     resourceTypeCounts?: Record<string, number>; // Per-type resource counts (e.g. { Patient: 5, Encounter: 3 })
     profiles?: string[]; // Distinct profiles that produced occurrences in this group

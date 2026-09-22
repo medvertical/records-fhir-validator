@@ -28,17 +28,17 @@
  * - urn:uuid: values must contain valid, lowercase UUIDs
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { validateUrnUuid } from './terminology-resource-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { validateUrnUuid } from './terminology-resource-utils.js';
 import {
   validateCodeSystemResource,
   validateContainedCodeSystemResource,
-} from './codesystem-resource-validator';
-import { validateConceptMapResource } from './conceptmap-resource-validator';
-import { validateValueSetComposeFilters } from './valueset-compose-filter-validator';
-import { validateValueSetExpansion } from './valueset-expansion-validator';
-import { ValueSetCache } from './valueset-cache';
+} from './codesystem-resource-validator.js';
+import { validateConceptMapResource } from './conceptmap-resource-validator.js';
+import { validateValueSetComposeFilters } from './valueset-compose-filter-validator.js';
+import { validateValueSetExpansion } from './valueset-expansion-validator.js';
+import { ValueSetCache } from './valueset-cache.js';
 
 // ============================================================================
 // Constants

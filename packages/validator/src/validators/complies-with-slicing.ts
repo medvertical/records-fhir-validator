@@ -7,9 +7,9 @@ import {
   indexSlicingParents,
   type DiscriminatorValue,
   type SliceRecord,
-} from './complies-with-slicing-index';
+} from './complies-with-slicing-index.js';
 
-export { indexSlicingParents } from './complies-with-slicing-index';
+export { indexSlicingParents } from './complies-with-slicing-index.js';
 
 interface SlicingDiff {
   rulesMismatchPath?: string;

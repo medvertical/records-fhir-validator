@@ -1,9 +1,9 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { validateQuestionnaireQuantityAnswer } from './questionnaire-quantity-answer';
-import type { AnswerOption, QuestionnaireItem, QuestionnaireResponseAnswer } from './questionnaire-types';
-import { ValueSetCache } from './valueset-cache';
-import { validateQuestionnaireCodingAnswer } from './questionnaire-coding-answer-validator';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { validateQuestionnaireQuantityAnswer } from './questionnaire-quantity-answer.js';
+import type { AnswerOption, QuestionnaireItem, QuestionnaireResponseAnswer } from './questionnaire-types.js';
+import { ValueSetCache } from './valueset-cache.js';
+import { validateQuestionnaireCodingAnswer } from './questionnaire-coding-answer-validator.js';
 
 export function validateQuestionnaireAnswerTypes(
     answers: QuestionnaireResponseAnswer[],

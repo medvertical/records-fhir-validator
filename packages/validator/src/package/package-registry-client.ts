@@ -9,8 +9,8 @@
  * - Search by canonical: GET https://packages.fhir.org?canonical=<url>
  */
 
-import { logger } from '../logger';
-import { detectPackageForProfile } from './package-profile-detector';
+import { logger } from '../logger.js';
+import { detectPackageForProfile } from './package-profile-detector.js';
 import {
   packageErrorMetadata,
   packageReferenceMetadata,

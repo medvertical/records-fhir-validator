@@ -1,4 +1,4 @@
-import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types';
+import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types.js';
 
 export interface ExtensionValidationContext {
   resource: unknown;

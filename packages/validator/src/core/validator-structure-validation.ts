@@ -1,15 +1,15 @@
-import type { ValidationIssue } from '../types';
-import { logger } from '../logger';
-import { createValidationErrorIssue } from './validation-utils';
-import type { QuestionnaireContextRegistry } from './questionnaire-context-registry';
-import { withIssuesSchemaVersion } from './issue-schema-version';
-import { getDeclaredProfiles } from './declared-profile-utils';
-import { createSafeValidationFailureMessage } from '../utils/validation-execution-failure';
-import { isFhirResource, type FhirResource } from './fhir-resource';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { logger } from '../logger.js';
+import { createValidationErrorIssue } from './validation-utils.js';
+import type { QuestionnaireContextRegistry } from './questionnaire-context-registry.js';
+import { withIssuesSchemaVersion } from './issue-schema-version.js';
+import { getDeclaredProfiles } from './declared-profile-utils.js';
+import { createSafeValidationFailureMessage } from '../utils/validation-execution-failure.js';
+import { isFhirResource, type FhirResource } from './fhir-resource.js';
 import {
   validateStructureProfile,
   type StructureProfileValidationDeps,
-} from './structure-profile-validation';
+} from './structure-profile-validation.js';
 
 interface ValidateStructureDeps extends StructureProfileValidationDeps {
   questionnaireRegistry: QuestionnaireContextRegistry;

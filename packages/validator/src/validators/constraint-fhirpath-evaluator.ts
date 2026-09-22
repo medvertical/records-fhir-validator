@@ -1,12 +1,12 @@
-import { ConstraintExpressionCache } from './constraint-expression-cache';
-import type { ConstraintValidationState, FhirResource } from './constraint-validation-input';
+import { ConstraintExpressionCache } from './constraint-expression-cache.js';
+import type { ConstraintValidationState, FhirResource } from './constraint-validation-input.js';
 import {
   evaluateAsyncFHIRPathTerminology,
   hasAsyncFHIRPathTerminology,
   AsyncFHIRPathTerminologyCache,
   type FHIRPathTerminologyResolver,
-} from './fhirpath-async-terminology';
-import { toFHIRPathInvocationTable } from './sd-fhirpath-runtime';
+} from './fhirpath-async-terminology.js';
+import { toFHIRPathInvocationTable } from './sd-fhirpath-runtime.js';
 
 export function evaluateConstraintFHIRPath(
   context: unknown,

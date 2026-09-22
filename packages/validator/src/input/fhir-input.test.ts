@@ -281,3 +281,127 @@ describe('bounded FHIR NDJSON input adapter', () => {
       .toThrow('line 1 exceeded byte limit');
   });
 });
+
+describe('schema-driven XML conversion', () => {
+  it('types primitives from the definitions, not the element name', () => {
+    const parsed = parseFhirXml(`<Observation xmlns="http://hl7.org/fhir">
+      <valueQuantity><value value="185.5"/><unit value="cm"/></valueQuantity>
+    </Observation>`);
+    const resource = parsed.resources[0] as Record<string, any>;
+    // Quantity.value is a decimal, but the XML element is only called "value"
+    // and its parent is spelled valueQuantity — no name heuristic reaches it.
+    expect(resource.valueQuantity.value).toBe(185.5);
+    expect(resource.valueQuantity.unit).toBe('cm');
+  });
+
+  it('arrays single-occurrence repeating elements', () => {
+    const parsed = parseFhirXml(`<StructureDefinition xmlns="http://hl7.org/fhir">
+      <differential><element id="Address.country"><min value="1"/></element></differential>
+    </StructureDefinition>`);
+    const resource = parsed.resources[0] as Record<string, any>;
+    expect(Array.isArray(resource.differential.element)).toBe(true);
+    expect(resource.differential.element[0].min).toBe(1);
+  });
+
+  it('honours the release, which R4 and R5 disagree about', () => {
+    const xml = `<Appointment xmlns="http://hl7.org/fhir">
+      <participant><required value="true"/></participant>
+    </Appointment>`;
+    // Appointment.participant.required is a code in R4 and a boolean in R5.
+    const r4 = parseFhirXml(xml, {}, { fhirVersion: 'R4' }).resources[0] as Record<string, any>;
+    const r5 = parseFhirXml(xml, {}, { fhirVersion: 'R5' }).resources[0] as Record<string, any>;
+    expect(r4.participant[0].required).toBe('true');
+    expect(r5.participant[0].required).toBe(true);
+  });
+
+  it('converts decimals written with an exponent', () => {
+    // FHIR decimal admits an exponent. Without it these stayed strings and the
+    // validator reported a mismatch against the element's own decimal type.
+    const parsed = parseFhirXml(`<Parameters xmlns="http://hl7.org/fhir">
+      <parameter><name value="a"/><valueDecimal value="1e1"/></parameter>
+      <parameter><name value="b"/><valueDecimal value="1.0e-1"/></parameter>
+      <parameter><name value="c"/><valueInteger value="1e1"/></parameter>
+    </Parameters>`);
+    const resource = parsed.resources[0] as Record<string, any>;
+    expect(resource.parameter[0].valueDecimal).toBe(10);
+    expect(resource.parameter[1].valueDecimal).toBe(0.1);
+    // integer does not admit an exponent, so this stays as written
+    expect(resource.parameter[2].valueInteger).toBe('1e1');
+  });
+
+  it('gives R4B its own definitions rather than reusing R4', () => {
+    // EvidenceVariable.characteristic.timeFromStart is a Duration in R4, so
+    // its `value` is a decimal, and a BackboneElement in R4B, where it is not.
+    // Reusing the R4 table for R4B was wrong for every element the two
+    // releases do not share.
+    const xml = `<EvidenceVariable xmlns="http://hl7.org/fhir">
+      <characteristic><timeFromStart><value value="5"/></timeFromStart></characteristic>
+    </EvidenceVariable>`;
+    const r4 = parseFhirXml(xml, {}, { fhirVersion: 'R4' }).resources[0] as Record<string, any>;
+    const r4b = parseFhirXml(xml, {}, { fhirVersion: 'R4B' }).resources[0] as Record<string, any>;
+    expect(r4.characteristic[0].timeFromStart.value).toBe(5);
+    expect(r4b.characteristic[0].timeFromStart.value).toBe('5');
+  });
+
+  it('falls back to heuristics for types the definitions do not describe', () => {
+    const parsed = parseFhirXml(`<NotAFhirResource xmlns="http://hl7.org/fhir">
+      <active value="true"/><extension url="http://example.org/x"/>
+    </NotAFhirResource>`);
+    const resource = parsed.resources[0] as Record<string, any>;
+    expect(resource.active).toBe(true);
+    expect(Array.isArray(resource.extension)).toBe(true);
+  });
+});
+
+describe('XML serialisation diagnostics', () => {
+  it('reports text where the element allows none', () => {
+    // The text is dropped by the conversion, so an object-based validator
+    // cannot see it afterwards — the adapter has to report it while parsing.
+    const parsed = parseFhirXml(`<List xmlns="http://hl7.org/fhir">
+      <id value="val1">some text</id>
+    </List>`);
+    expect(parsed.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'xml-text-not-allowed',
+        message: "Text should not be present ('some text')",
+      }),
+    ]);
+  });
+
+  it('reports an attribute FHIR XML does not define', () => {
+    const parsed = parseFhirXml(`<List xmlns="http://hl7.org/fhir">
+      <id value="val1" other="x"/>
+    </List>`);
+    expect(parsed.diagnostics?.[0]).toMatchObject({ code: 'xml-attribute-undefined' });
+    expect(parsed.diagnostics?.[0].message).toContain("'@other'");
+  });
+
+  it('reports an attribute written with an empty value', () => {
+    // `url=""` is dropped by the conversion, after which it is
+    // indistinguishable from an attribute that was never written.
+    const parsed = parseFhirXml(`<Patient xmlns="http://hl7.org/fhir">
+      <extension url=""><valueString value="x"/></extension>
+    </Patient>`);
+    expect(parsed.diagnostics?.[0]).toMatchObject({
+      code: 'xml-attribute-empty',
+      message: 'value cannot be empty',
+    });
+  });
+
+  it('stays silent on a well-formed resource', () => {
+    const parsed = parseFhirXml(`<List xmlns="http://hl7.org/fhir">
+      <id value="val1"/><status value="current"/>
+    </List>`);
+    expect(parsed.diagnostics).toBeUndefined();
+  });
+
+  it('leaves a mis-namespaced narrative to the namespace check', () => {
+    // The div is missing the XHTML namespace, so it is walked as FHIR. Its
+    // markup must not be reported element by element as stray text; the
+    // namespace is the defect.
+    const parsed = parseFhirXml(`<List xmlns="http://hl7.org/fhir">
+      <text><status value="generated"/><div><p>narrative</p></div></text>
+    </List>`);
+    expect(parsed.diagnostics ?? []).toEqual([]);
+  });
+});

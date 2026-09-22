@@ -1,14 +1,14 @@
 import { normalizeProfileSourcesConfig } from '@records-fhir/validation-types';
-import { logger } from '../logger';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context';
-import { tryExternalProfileSource } from './sd-loader-external-profile-source';
-import { tryPackageRegistrySource } from './sd-loader-package-registry-source';
-import type { StructureDefinition } from './structure-definition-types';
-import { urlMatchesRequestedFhirVersion } from './sd-loader-version-utils';
+import { logger } from '../logger.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context.js';
+import { tryExternalProfileSource } from './sd-loader-external-profile-source.js';
+import { tryPackageRegistrySource } from './sd-loader-package-registry-source.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { urlMatchesRequestedFhirVersion } from './sd-loader-version-utils.js';
 
-export type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context';
+export type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context.js';
 
 export interface AutoDownloadAttemptResult {
   profile: StructureDefinition | null;

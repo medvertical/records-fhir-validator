@@ -88,6 +88,17 @@ describe('ContainedResourceValidator safety', () => {
     expect(issues.filter(issue => issue.code === 'contained-unresolved-reference')).toEqual([]);
   });
 
+  it('counts fragment-valued uri primitives as contained-resource usage', () => {
+    const issues = new ContainedResourceValidator().validate({
+      resourceType: 'ValueSet',
+      contained: [{ resourceType: 'CodeSystem', id: 'local-codes' }],
+      compose: { include: [{ system: '#local-codes' }] },
+    });
+
+    expect(issues.filter(issue => issue.code === 'contained-unreferenced')).toEqual([]);
+    expect(issues.filter(issue => issue.code === 'contained-unresolved-reference')).toEqual([]);
+  });
+
   it('keeps the first resource for duplicate ids across resolution and metadata', () => {
     const first = { resourceType: 'Patient', id: 'duplicate', active: true };
     const second = { resourceType: 'Patient', id: 'duplicate', active: false };

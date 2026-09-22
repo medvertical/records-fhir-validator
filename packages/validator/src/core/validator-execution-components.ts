@@ -1,5 +1,5 @@
-import { AnomalyDetector } from '../validators/anomaly-detector';
-import { BestPracticeValidator } from '../validators/best-practice-validator';
+import { AnomalyDetector } from '../validators/anomaly-detector.js';
+import { BestPracticeValidator } from '../validators/best-practice-validator.js';
 import {
   CustomRuleExecutor,
   InvariantExecutor,
@@ -8,9 +8,9 @@ import {
   ReferenceExecutor,
   StructuralExecutor,
   TerminologyExecutor,
-} from './executors';
-import { QuestionnaireContextRegistry } from './questionnaire-context-registry';
-import type { ValidatorCoreRuntime } from './validator-core-components';
+} from './executors/index.js';
+import { QuestionnaireContextRegistry } from './questionnaire-context-registry.js';
+import type { ValidatorCoreRuntime } from './validator-core-components.js';
 
 export interface ValidatorExecutionComponents {
   structuralExecutor: StructuralExecutor;

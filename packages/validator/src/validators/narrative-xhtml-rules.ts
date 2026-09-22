@@ -1,5 +1,5 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 import {
     findDisallowedNarrativeElements,
     findForbiddenNarrativePatterns,
@@ -8,7 +8,7 @@ import {
     hasNonWhitespaceNarrativeContent,
     hasValidNarrativeRoot,
     isNarrativeXhtmlWellformed,
-} from './narrative-xhtml-scanner';
+} from './narrative-xhtml-scanner.js';
 
 /**
  * htmlChecks() on non-narrative xhtml (e.g. the rendering-xhtml extension's

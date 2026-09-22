@@ -1,21 +1,21 @@
 import axios from 'axios';
-import type { CircuitBreaker } from '../terminology';
-import { logger } from '../logger';
-import { isTransientTerminologyFailure } from './terminology-api-error-policy';
+import type { CircuitBreaker } from '../terminology/index.js';
+import { logger } from '../logger.js';
+import { isTransientTerminologyFailure } from './terminology-api-error-policy.js';
 import {
   DEFAULT_REMOTE_TERMINOLOGY_TIMEOUT_MS,
   getRemoteTerminologyTimeoutMs,
   recordTerminologyResponse,
-} from './terminology-api-remote-policy';
-import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config';
-import type { SubsumptionOutcome } from './terminology-api-types';
-import { extractSubsumptionOutcome } from './terminology-parameters';
+} from './terminology-api-remote-policy.js';
+import type { TerminologyRequestConfigBuilder } from './terminology-api-request-config.js';
+import type { SubsumptionOutcome } from './terminology-api-types.js';
+import { extractSubsumptionOutcome } from './terminology-parameters.js';
 import type {
   TerminologyResolutionConfig,
   TerminologyServerOverride,
-} from './valueset-types';
-import type { TerminologyOperationCache } from './terminology-operation-cache';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+} from './valueset-types.js';
+import type { TerminologyOperationCache } from './terminology-operation-cache.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 interface SubsumesRequestOptions {
   cacheKey: string;

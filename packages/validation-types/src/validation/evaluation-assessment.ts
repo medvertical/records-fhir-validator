@@ -1,4 +1,4 @@
-import type { ValidationAspect } from './enums';
+import type { ValidationAspect } from './enums.js';
 
 export type EvaluationLaneStatus =
   | 'completed'

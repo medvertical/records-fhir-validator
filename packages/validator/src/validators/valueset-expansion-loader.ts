@@ -1,14 +1,14 @@
-import { logger } from '../logger';
-import type { TerminologyResolutionConfig } from './valueset-types';
-import { type FhirVersion } from './valueset-expansion-cache-key';
-import { getScopedExpansionCacheKey } from './valueset-server-routing';
-import { getKnownValueSetExpansion } from './valueset-known-expansions';
-import type { ValueSetCache } from './valueset-cache';
-import type { TerminologyApiClient } from './terminology-api-client';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
-import { canDelegateValueSetExpansion } from './valueset-delegation-policy';
+import { logger } from '../logger.js';
+import type { TerminologyResolutionConfig } from './valueset-types.js';
+import { type FhirVersion } from './valueset-expansion-cache-key.js';
+import { getScopedExpansionCacheKey } from './valueset-server-routing.js';
+import { getKnownValueSetExpansion } from './valueset-known-expansions.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import type { TerminologyApiClient } from './terminology-api-client.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
+import { canDelegateValueSetExpansion } from './valueset-delegation-policy.js';
 
 /**
  * ValueSet → code-set expansion, extracted from valueset-validator.ts.

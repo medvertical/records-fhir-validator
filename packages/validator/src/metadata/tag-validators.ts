@@ -9,11 +9,11 @@
  * Refactored to use createValidationIssue factory.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import { isObjectRecord } from './metadata-boundary-utils';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import { isObjectRecord } from './metadata-boundary-utils.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 /**
  * Validates meta.tag labels

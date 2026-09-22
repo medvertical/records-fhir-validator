@@ -1,13 +1,13 @@
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   getConstraintDedupeKeys,
   normalizeIssuePathForDedupe,
-} from './validation-issue-dedupe-constraints';
+} from './validation-issue-dedupe-constraints.js';
 import {
   getEffectiveRuleId,
   getSpecificConstraintKey,
-} from './validation-issue-dedupe-profile-signals';
-import { normalizeRequiredElementPath } from './validation-issue-dedupe-utils';
+} from './validation-issue-dedupe-profile-signals.js';
+import { normalizeRequiredElementPath } from './validation-issue-dedupe-utils.js';
 
 export function isRedundantNameInvariantIssue(
   issue: ValidationIssue,
@@ -60,6 +60,28 @@ export function isRedundantRequiredElementIssue(
   if (cardinalityMinPaths.size === 0) return false;
   if (!['structural-required-element-missing', 'required-element-missing', 'profile-mustsupport-missing'].includes(issue.code ?? '')) return false;
   return cardinalityMinPaths.has(normalizeRequiredElementPath(issue));
+}
+
+/**
+ * A pattern declared on an element is checked twice: the structural walk
+ * reports the deepest property that failed, the profile walk reports the
+ * element carrying the pattern. Both describe one violation, so keep the
+ * deeper diagnostic — it names the property the author has to change.
+ */
+export function isRedundantParentPatternMismatchIssue(
+  issue: ValidationIssue,
+  patternMismatchPaths: Set<string>,
+): boolean {
+  if (issue.code !== 'profile-pattern-mismatch' || patternMismatchPaths.size === 0) return false;
+  const path = normalizeIssuePathForDedupe(issue);
+  if (!path) return false;
+  for (const candidate of patternMismatchPaths) {
+    if (candidate.length > path.length && candidate.startsWith(path)) {
+      const boundary = candidate[path.length];
+      if (boundary === '.' || boundary === '[') return true;
+    }
+  }
+  return false;
 }
 
 export function isRedundantBundleInvariantPresenceIssue(

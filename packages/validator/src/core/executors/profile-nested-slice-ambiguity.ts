@@ -1,4 +1,4 @@
-import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
+import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
 
 type DiscriminatorPredicateBuilder = (
   discriminator: { type?: string; path?: string },

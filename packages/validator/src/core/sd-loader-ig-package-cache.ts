@@ -1,7 +1,7 @@
-import type { LoadedIGPackage } from './sd-loader-ig-package';
-import { sanitizeProfile } from './sd-loader-profile-sanitizer';
-import type { StructureDefinition } from './structure-definition-types';
-import { cacheKeyForProfile, fhirVersionFamily } from './sd-loader-version-utils';
+import type { LoadedIGPackage } from './sd-loader-ig-package.js';
+import { sanitizeProfile } from './sd-loader-profile-sanitizer.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { cacheKeyForProfile, fhirVersionFamily } from './sd-loader-version-utils.js';
 
 export function cacheLoadedIGPackage(params: {
   loaded: LoadedIGPackage;

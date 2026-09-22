@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { buildMultiAspectValidateCallback } from '../multi-aspect-validate-callback';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 vi.mock('../profile-loader-utils', () => ({
   loadProfileOrBase: vi.fn().mockResolvedValue({
@@ -14,25 +14,6 @@ vi.mock('../profile-loader-utils', () => ({
   }),
   createProfileFallbackIssue: vi.fn(),
   createProfileResourceTypeMismatchIssue: vi.fn(),
-}));
-
-vi.mock('../validators/deep-profile-validator', () => ({
-  deepProfileValidator: { validate: () => [] },
-}));
-vi.mock('../validators/deep-binding-validator', () => ({
-  deepBindingValidator: { validate: () => [] },
-}));
-vi.mock('../validators/sd-fhirpath-executor', () => ({
-  sdFHIRPathExecutor: { execute: async () => [] },
-}));
-vi.mock('../validators/contained-resource-validator', () => ({
-  containedResourceValidator: { validate: () => [] },
-}));
-vi.mock('../validators/universal-constraints-validator', () => ({
-  universalConstraintsValidator: { validate: () => [] },
-}));
-vi.mock('../validators/terminology-resource-validator', () => ({
-  terminologyResourceValidator: { validate: () => [] },
 }));
 
 const structuralIssue: ValidationIssue = {
@@ -68,6 +49,7 @@ function makeDeps(invariantExecutor: { validate: ReturnType<typeof vi.fn> }) {
     customRuleExecutor: { validate: async () => [] } as any,
     metadataExecutor: { validate: async () => [] } as any,
     bestPracticeValidator: { validate: () => [] } as any,
+    terminologyResourceValidator: { validate: () => [] } as any,
     strictMode: false,
   };
 }

@@ -1,26 +1,26 @@
-import type { CodeSystemValidationOperationContext } from './terminology-code-system-validation-operation';
-import { RemoteCodeSystemValidationBudget } from './terminology-api-remote-budget';
-import { TerminologyRequestConfigBuilder } from './terminology-api-request-config';
+import type { CodeSystemValidationOperationContext } from './terminology-code-system-validation-operation.js';
+import { RemoteCodeSystemValidationBudget } from './terminology-api-remote-budget.js';
+import { TerminologyRequestConfigBuilder } from './terminology-api-request-config.js';
 import type {
   CodeSystemValidationResult,
   RemoteValueSetValidationResult,
   SubsumptionOutcome,
-} from './terminology-api-types';
-import { TerminologyCircuitBreakerRegistry } from './terminology-circuit-breakers';
-import { TerminologyOperationCache } from './terminology-operation-cache';
+} from './terminology-api-types.js';
+import { TerminologyCircuitBreakerRegistry } from './terminology-circuit-breakers.js';
+import { TerminologyOperationCache } from './terminology-operation-cache.js';
 import {
   sharedTerminologyRequestBroker,
   type TerminologyRequestBroker,
-} from './terminology-request-broker';
-import type { TerminologySubsumptionOperationContext } from './terminology-subsumption-operation';
+} from './terminology-request-broker.js';
+import type { TerminologySubsumptionOperationContext } from './terminology-subsumption-operation.js';
 import {
   snapshotTerminologyConfig,
   terminologyAuthConfigsEqual,
   terminologyConfigsEqual,
-} from './terminology-config-snapshot';
-import type { TerminologyValueSetOperationsContext } from './terminology-valueset-operations';
-import { ValueSetCache } from './valueset-cache';
-import type { TerminologyResolutionConfig } from './valueset-types';
+} from './terminology-config-snapshot.js';
+import type { TerminologyValueSetOperationsContext } from './terminology-valueset-operations.js';
+import { ValueSetCache } from './valueset-cache.js';
+import type { TerminologyResolutionConfig } from './valueset-types.js';
 
 /** Owns mutable request state shared by terminology API operations. */
 export class TerminologyApiClientRuntime {

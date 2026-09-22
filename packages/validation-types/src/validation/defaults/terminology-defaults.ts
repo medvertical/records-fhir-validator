@@ -1,6 +1,6 @@
 // Default terminology servers, circuit-breaker, cache and advanced-terminology config.
 
-import type { TerminologyServer, CircuitBreakerConfig } from '../settings';
+import type { TerminologyServer, CircuitBreakerConfig } from '../settings.js';
 
 /**
  * Default terminology servers based on TERMINOLOGY_SERVER_TEST_RESULTS.md
@@ -22,7 +22,9 @@ export const DEFAULT_TERMINOLOGY_SERVERS: TerminologyServer[] = [
     lastFailureTime: null,
     circuitOpen: false,
     responseTimeAvg: 0,
-    testScore: 96
+    testScore: 96,
+    // Advertised by /metadata?mode=terminology, including the 20230731 release.
+    snomedEditions: ['900000000000207008']
   },
   {
     id: 'snowstorm-snomedtools',
@@ -55,7 +57,9 @@ export const DEFAULT_TERMINOLOGY_SERVERS: TerminologyServer[] = [
     lastFailureTime: null,
     circuitOpen: false,
     responseTimeAvg: 0,
-    testScore: 98
+    testScore: 98,
+    // Advertised by /metadata?mode=terminology; required for edition-specific routing.
+    snomedEditions: ['900000000000207008']
   },
   {
     id: 'tx-fhir-org-r5',

@@ -12,6 +12,12 @@ const patient = () => ({
 });
 
 describe('applyFixPatch — add', () => {
+  it.each(['Patient', 'text with "quotes"', 'line\nbreak', ''])('decodes JSON string patch values %j', value => {
+    const result = applyFixPatch(patient(), { action: 'add', path: 'Patient.gender', value: JSON.stringify(value) });
+    expect(result.applied).toBe(true);
+    expect(result.resource).toHaveProperty('gender', value);
+  });
+
   it('adds a missing scalar field', () => {
     const result = applyFixPatch(patient(), {
       action: 'add',
@@ -108,6 +114,13 @@ describe('applyFixPatch — replace', () => {
 });
 
 describe('applyFixPatch — remove', () => {
+  it('reports a missing property as unapplied and keeps the original resource', () => {
+    const resource = patient();
+    const result = applyFixPatch(resource, { action: 'remove', path: 'Patient.gender' });
+    expect(result).toMatchObject({ applied: false, resource });
+    expect(result.resource).toBe(resource);
+  });
+
   it('removes a scalar field', () => {
     const result = applyFixPatch(patient(), { action: 'remove', path: 'Patient.id' });
     expect(result.applied).toBe(true);

@@ -1,15 +1,15 @@
-import type { ValidationIssue } from '../types';
-import type { StructureDefinition } from './structure-definition-types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { createValidationIssue } from '../issues/index.js';
 import {
   buildBundleEntrySliceConformanceIssues,
   bundleEntryResourcePrefix,
-} from './bundle-entry-slice-conformance';
-import { getCompositionEntryTargetProfiles } from './composition-target-profiles';
-import { getDeclaredProfiles } from './declared-profile-utils';
-import type { BundleDocumentContextChildResult } from './bundle-document-context-types';
+} from './bundle-entry-slice-conformance.js';
+import { getCompositionEntryTargetProfiles } from './composition-target-profiles.js';
+import { getDeclaredProfiles } from './declared-profile-utils.js';
+import type { BundleDocumentContextChildResult } from './bundle-document-context-types.js';
 
-export type { BundleDocumentContextChildResult } from './bundle-document-context-types';
+export type { BundleDocumentContextChildResult } from './bundle-document-context-types.js';
 
 const TARGET_PROFILE_BLOCKING_ASPECTS = new Set([
   'structural',
@@ -19,6 +19,7 @@ const TARGET_PROFILE_BLOCKING_ASPECTS = new Set([
 
 const TARGET_PROFILE_BLOCKING_TERMINOLOGY_CODES = new Set([
   'terminology-binding-required',
+  'terminology-binding-required-code',
 ]);
 
 const KNOWN_IMPOSED_BUNDLE_PROFILES: Record<string, string[]> = {
@@ -64,7 +65,7 @@ export function buildBundleDocumentContextIssues(
   return dedupeDocumentContextIssues(issues);
 }
 
-function buildChildResultReferenceIndex(
+export function buildChildResultReferenceIndex(
   entries: unknown[],
   childResults: BundleDocumentContextChildResult[],
 ): Map<string, BundleDocumentContextChildResult> {
@@ -103,7 +104,8 @@ function buildCompositionTargetProfileIssues(
     const target = byReference.get(reference);
     if (!target) return;
 
-    const blockingIssues = getTargetProfileBlockingIssues(target.issues);
+    const blockingIssues = compositionChild.targetProfileIssues?.[entryPath]
+      ?? getTargetProfileBlockingIssues(target.issues);
     if (blockingIssues.length === 0) return;
 
     const targetProfiles =
@@ -156,7 +158,7 @@ function formatBundleTargetLabel(resourceType: string, id: unknown): string {
   return typeof id === 'string' && id.length > 0 ? `${resourceType}/${id}` : resourceType;
 }
 
-function visitCompositionSections(
+export function visitCompositionSections(
   sections: unknown[],
   pathPrefix: string,
   onEntry: (
@@ -184,7 +186,7 @@ function visitCompositionSections(
   }
 }
 
-function getTargetProfileBlockingIssues(issues: ValidationIssue[]): ValidationIssue[] {
+export function getTargetProfileBlockingIssues(issues: ValidationIssue[]): ValidationIssue[] {
   return issues.filter(issue => {
     if (issue.severity !== 'error' && issue.severity !== 'fatal') return false;
     if (issue.ruleId === 'profile-targetprofile-match-failed') return false;

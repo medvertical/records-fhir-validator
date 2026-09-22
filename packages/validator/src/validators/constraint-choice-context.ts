@@ -1,7 +1,7 @@
 import {
   isConcreteChoiceProperty,
   splitConcreteChoiceProperty,
-} from '../core/fhir-choice-property';
+} from '../core/fhir-choice-property.js';
 
 export function expressionStartsAtResourceRoot(expression: string | undefined, resourceType: string): boolean {
   if (!expression || !resourceType) return false;

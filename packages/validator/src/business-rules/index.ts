@@ -17,14 +17,14 @@ export {
     hasParentElement,
     hasAllAncestors,
     getPathDebugInfo,
-} from './element-path-resolver';
+} from './element-path-resolver.js';
 
 export {
     getValidationTargets,
     isArrayAtPath,
     expandPathWithArrayIndex,
-} from './element-validation-targets';
+} from './element-validation-targets.js';
 
-export { getValueAtPath } from '../core/validation-utils';
-export type { PathComponents } from './element-path-resolver';
-export type { ValidationTarget } from './element-validation-targets';
+export { getValueAtPath } from '../core/validation-utils.js';
+export type { PathComponents } from './element-path-resolver.js';
+export type { ValidationTarget } from './element-validation-targets.js';

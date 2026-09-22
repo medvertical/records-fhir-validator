@@ -1,11 +1,11 @@
-import { extractResourceType as _extractResourceType, parseReference, type ReferenceParseResult } from './reference-type-extractor';
+import { extractResourceType as _extractResourceType, parseReference, type ReferenceParseResult } from './reference-type-extractor.js';
 import {
   REFERENCE_TYPE_CONSTRAINTS,
   type ReferenceTypeConstraint,
-} from './reference-type-constraints';
+} from './reference-type-constraints.js';
 
-export { REFERENCE_TYPE_CONSTRAINTS } from './reference-type-constraints';
-export type { ReferenceTypeConstraint } from './reference-type-constraints';
+export { REFERENCE_TYPE_CONSTRAINTS } from './reference-type-constraints.js';
+export type { ReferenceTypeConstraint } from './reference-type-constraints.js';
 
 export interface ReferenceTypeValidationResult {
   isValid: boolean;

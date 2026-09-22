@@ -4,15 +4,23 @@
   "fhirTestCasesCommit": "8923095fc5e3750025f7dd71988c9e89083b1487",
   "fhirVersion": "R4",
   "overallScore": 100,
-  "count": 536,
+  "count": 390,
   "intentionalRegressions": [
     {
       "testName": "ips-nz-pj",
       "module": "bundle",
       "file": "ips-nz-pj.json",
       "expectedStatus": "fail",
-      "reason": "Vendored Java baseline predates designation-aware display matching: it errors on former LOINC 2.77 Long Common Names ('<X> Narrative' document-section forms) and even on 'Vital signs' for 8716-3, which current tx.fhir.org $validate-code accepts. Records accepts tx-verified current and former LOINC designations (see packages/validator/src/core/executors/terminology-display-rules.ts), so the four display errors this baseline expects are intentionally not reproduced.",
+      "reason": "The vendored Java baseline rejects 'Vital signs' as the display for http://loinc.org#8716-3, which current tx.fhir.org $validate-code accepts (verified 2026-08-25 by direct $validate-code calls for all four codes this fixture's baseline errors on). Records follows the terminology server, so it does not reproduce that one error. It does reproduce the other three, which are genuine wrong-display errors the server also rejects: 11369-6, 30954-2 and 29762-2 with '<X> Narrative' forms. Configured against a terminology server the comparison therefore differs by exactly one Java-only error; without one Records has no LOINC designations at all and reproduces none of the four. An earlier version of this note claimed all four were intentionally not reproduced and attributed it to former Long Common Names being accepted; both parts were wrong.",
       "introducedAt": "2026-08-22"
+    },
+    {
+      "testName": "bundle-enrl",
+      "module": "bundle",
+      "file": "bundle-enrl.json",
+      "expectedStatus": "fail",
+      "reason": "Records reported the same v2-0203 PRN wrong-display finding twice for one element: the designation table emitted it as an error at the resource-qualified path, and the Bundle profile's own snapshot walk re-ran the code-system check inside the entry and emitted it again as a warning at the unqualified path. Removing the duplicate at the source (see isBundleEntryResourceDescendantPath in packages/validator/src/core/executors/terminology-executor-helpers.ts) leaves exactly the one row the Java baseline has, and changes exactly one row across the whole lane. The score falls 0.7214 -> 0.6972 because the duplicate was load-bearing for the similarity heuristic, not because coverage was lost: it made the warning count match Java exactly (22 vs 22 -> 21 vs 22, -0.020), and compareOutcomePaths prefix-matched it against the Java IdentifierType binding warning at entry.resource.identifier.type -- a warning Records does not emit at all (Java has three inside entries; Records has only the top-level Bundle.identifier.type one). Measured: additionally emitting those three true findings lowers the score further, to 0.668-0.680, because the warning count then misses by two. No version of making Records more correct keeps this case above 0.70 while the error gap (64 vs 68) stands; that gap is the real distance to parity here and is tracked separately. Holding the score by keeping a duplicate in customer output was rejected deliberately.",
+      "introducedAt": "2026-08-25"
     }
   ],
   "passing": [
@@ -20,16 +28,6 @@
       "testName": "capstmt",
       "module": "api",
       "file": "capstmt.json"
-    },
-    {
-      "testName": "capstmt-deprecated",
-      "module": "api",
-      "file": "capstmt-deprecated.json"
-    },
-    {
-      "testName": "capstmt-deprecated-profile",
-      "module": "api",
-      "file": "capstmt-deprecated-profile.json"
     },
     {
       "testName": "sp-composite",
@@ -67,11 +65,6 @@
       "file": "patient-id-extensions.json"
     },
     {
-      "testName": "bundle-bad-empty",
-      "module": "bundle",
-      "file": "bundle-bad-empty.json"
-    },
-    {
       "testName": "bundle-conformsto",
       "module": "bundle",
       "file": "bundle-conformsto.json"
@@ -95,11 +88,6 @@
       "testName": "bundle-enrl",
       "module": "bundle",
       "file": "bundle-enrl.json"
-    },
-    {
-      "testName": "bundle-good-json",
-      "module": "bundle",
-      "file": "bundle-good.json"
     },
     {
       "testName": "bundle-id-1",
@@ -130,11 +118,6 @@
       "testName": "bundle-profiles",
       "module": "bundle",
       "file": "bundle-profiles.json"
-    },
-    {
-      "testName": "bundle-url-dash",
-      "module": "bundle",
-      "file": "bundle-url-dash.json"
     },
     {
       "testName": "bundle-urn",
@@ -207,32 +190,7 @@
       "file": "condition-extensions-on-pattern.json"
     },
     {
-      "testName": "deprecated-extension",
-      "module": "extensions",
-      "file": "patient-deprecated-extension.json"
-    },
-    {
-      "testName": "ext-ctxt-resource-bad",
-      "module": "extensions",
-      "file": "ext-ctxt-resource-bad.json"
-    },
-    {
-      "testName": "ext-ctxt-resource-good",
-      "module": "extensions",
-      "file": "ext-ctxt-resource-good.json"
-    },
-    {
       "testName": "extension-version-restriction-range-ctxt-r4",
-      "module": "extensions",
-      "file": "patient-version-range.json"
-    },
-    {
-      "testName": "extension-version-restriction-range-ctxt-r4b",
-      "module": "extensions",
-      "file": "patient-version-range.json"
-    },
-    {
-      "testName": "extension-version-restriction-range-ctxt-r5",
       "module": "extensions",
       "file": "patient-version-range.json"
     },
@@ -240,26 +198,6 @@
       "testName": "extension-version-restriction-range-r4",
       "module": "extensions",
       "file": "patient-version-range.json"
-    },
-    {
-      "testName": "extension-version-restriction-range-r4b",
-      "module": "extensions",
-      "file": "patient-version-range.json"
-    },
-    {
-      "testName": "extension-version-restriction-range-r5",
-      "module": "extensions",
-      "file": "patient-version-range.json"
-    },
-    {
-      "testName": "list-extension1",
-      "module": "extensions",
-      "file": "list-extension1.json"
-    },
-    {
-      "testName": "list-extension2",
-      "module": "extensions",
-      "file": "list-extension2.json"
     },
     {
       "testName": "maiden-name-extension",
@@ -277,42 +215,12 @@
       "file": "pat-example-ext.json"
     },
     {
-      "testName": "reslicing-extensions",
-      "module": "extensions",
-      "file": "reslicing-extensions-instance.json"
-    },
-    {
-      "testName": "reslicing-good-extensions",
-      "module": "extensions",
-      "file": "reslicing-good-extensions-instance.json"
-    },
-    {
       "testName": "standards-status-r4",
       "module": "extensions",
       "file": "cs-stds-status.json"
     },
     {
-      "testName": "standards-status-r4b",
-      "module": "extensions",
-      "file": "cs-stds-status.json"
-    },
-    {
-      "testName": "standards-status-r5",
-      "module": "extensions",
-      "file": "cs-stds-status.json"
-    },
-    {
       "testName": "standards-status-x-r4",
-      "module": "extensions",
-      "file": "cs-stds-status-x.json"
-    },
-    {
-      "testName": "standards-status-x-r4b",
-      "module": "extensions",
-      "file": "cs-stds-status-x.json"
-    },
-    {
-      "testName": "standards-status-x-r5",
       "module": "extensions",
       "file": "cs-stds-status-x.json"
     },
@@ -352,11 +260,6 @@
       "file": "json-good.json"
     },
     {
-      "testName": "list-contained-bad-json",
-      "module": "fmt",
-      "file": "list-contained-bad.json"
-    },
-    {
       "testName": "Observation-ex-pain.json",
       "module": "fmt",
       "file": "Observation-ex-pain.json"
@@ -365,11 +268,6 @@
       "testName": "test-ndjson",
       "module": "fmt",
       "file": "test-ndjson.ndjson"
-    },
-    {
-      "testName": "unicode-control-chars-json",
-      "module": "fmt",
-      "file": "unicode-problem.json"
     },
     {
       "testName": "us-docref.json",
@@ -447,11 +345,6 @@
       "file": "document-manifest-4.json"
     },
     {
-      "testName": "dr-bad-att-hash",
-      "module": "general",
-      "file": "dr-bad-att-hash.json"
-    },
-    {
       "testName": "dr-example-org",
       "module": "general",
       "file": "dr-example-org.json"
@@ -467,74 +360,9 @@
       "file": "empty-array.json"
     },
     {
-      "testName": "group-choice-bad1-json",
-      "module": "general",
-      "file": "group-choice-bad1.json"
-    },
-    {
-      "testName": "group-choice-bad2",
-      "module": "general",
-      "file": "group-choice-bad2.json"
-    },
-    {
-      "testName": "group-choice-bad3-json",
-      "module": "general",
-      "file": "group-choice-bad3.json"
-    },
-    {
-      "testName": "group-choice-empty-json",
-      "module": "general",
-      "file": "group-choice-empty.json"
-    },
-    {
-      "testName": "group-choice-good-json",
-      "module": "general",
-      "file": "group-choice-good.json"
-    },
-    {
-      "testName": "group-minimal-json",
-      "module": "general",
-      "file": "group-minimal.json"
-    },
-    {
-      "testName": "group-minimal-tiny",
-      "module": "general",
-      "file": "group-minimal-tiny.json"
-    },
-    {
       "testName": "line-pattern-card-test",
       "module": "general",
       "file": "linePatternTestPatient.json"
-    },
-    {
-      "testName": "list-bad-syntax-json",
-      "module": "general",
-      "file": "list-bad-syntax.json"
-    },
-    {
-      "testName": "list-empty1-json",
-      "module": "general",
-      "file": "list-empty1.json"
-    },
-    {
-      "testName": "list-empty2-json",
-      "module": "general",
-      "file": "list-empty2.json"
-    },
-    {
-      "testName": "list-minimal-json",
-      "module": "general",
-      "file": "list-minimal.json"
-    },
-    {
-      "testName": "list-unknown-prop",
-      "module": "general",
-      "file": "list-unknown-prop.json"
-    },
-    {
-      "testName": "list-wrong-order-json",
-      "module": "general",
-      "file": "list-wrong-order.json"
     },
     {
       "testName": "media-mime-type-notx",
@@ -552,29 +380,9 @@
       "file": "mimic/encounter.json"
     },
     {
-      "testName": "obs-decimal",
-      "module": "general",
-      "file": "obs-decimal.json"
-    },
-    {
       "testName": "obs-max-decimal",
       "module": "general",
       "file": "obs-max-decimal-instance.json"
-    },
-    {
-      "testName": "obs-sampled-data",
-      "module": "general",
-      "file": "obs-sampled-data.json"
-    },
-    {
-      "testName": "obs-vital-signs-mdc5",
-      "module": "general",
-      "file": "obs-vital-signs-mdc.json"
-    },
-    {
-      "testName": "observation-with-trailing-dot",
-      "module": "general",
-      "file": "observation-with-trailing-dot.json"
     },
     {
       "testName": "param-mintime",
@@ -592,11 +400,6 @@
       "file": "params-recursion.json"
     },
     {
-      "testName": "params-ws",
-      "module": "general",
-      "file": "params-ws.json"
-    },
-    {
       "testName": "pat-fixed-date",
       "module": "general",
       "file": "pat-fixed-date.json"
@@ -607,32 +410,12 @@
       "file": "pat-fixed-date.json"
     },
     {
-      "testName": "patient-duplicate",
-      "module": "general",
-      "file": "patient-duplicate.json"
-    },
-    {
       "testName": "patient-example-ra4",
       "module": "general",
       "file": "patient-example-ra4.json"
     },
     {
-      "testName": "patient-good-json",
-      "module": "general",
-      "file": "patient-good.json"
-    },
-    {
       "testName": "patient-id-bad-1 / R4",
-      "module": "general",
-      "file": "patient-id-bad-1.json"
-    },
-    {
-      "testName": "patient-id-bad-1 / R4B",
-      "module": "general",
-      "file": "patient-id-bad-1.json"
-    },
-    {
-      "testName": "patient-id-bad-1 / R5",
       "module": "general",
       "file": "patient-id-bad-1.json"
     },
@@ -642,64 +425,9 @@
       "file": "patient-id-bad-2.json"
     },
     {
-      "testName": "patient-id-bad-2 / R4B",
-      "module": "general",
-      "file": "patient-id-bad-2.json"
-    },
-    {
-      "testName": "patient-id-bad-2 / R5",
-      "module": "general",
-      "file": "patient-id-bad-2.json"
-    },
-    {
       "testName": "patient-id-bad-3 / R4",
       "module": "general",
       "file": "patient-id-bad-3.json"
-    },
-    {
-      "testName": "patient-id-bad-3 / R4B",
-      "module": "general",
-      "file": "patient-id-bad-3.json"
-    },
-    {
-      "testName": "patient-id-bad-3 / R5",
-      "module": "general",
-      "file": "patient-id-bad-3.json"
-    },
-    {
-      "testName": "patient-ig-ig",
-      "module": "general",
-      "file": "patient-ig-ig.json"
-    },
-    {
-      "testName": "patient-lang1-json",
-      "module": "general",
-      "file": "patient-lang1.json"
-    },
-    {
-      "testName": "patient-lang2-json",
-      "module": "general",
-      "file": "patient-lang2.json"
-    },
-    {
-      "testName": "patient-lang2a",
-      "module": "general",
-      "file": "patient-lang2a.json"
-    },
-    {
-      "testName": "patient-lang2b",
-      "module": "general",
-      "file": "patient-lang2b.json"
-    },
-    {
-      "testName": "patient-lang3-json",
-      "module": "general",
-      "file": "patient-lang3.json"
-    },
-    {
-      "testName": "primitive-good-ws-json",
-      "module": "general",
-      "file": "primitive-good-ws.json"
     },
     {
       "testName": "resource-invalid-eid-0",
@@ -790,21 +518,6 @@
       "testName": "encounter-period",
       "module": "invariants",
       "file": "encounter-period.json"
-    },
-    {
-      "testName": "fhirpath-bad",
-      "module": "invariants",
-      "file": "fhirpath-bad.json"
-    },
-    {
-      "testName": "fhirpath-good",
-      "module": "invariants",
-      "file": "fhirpath-good.json"
-    },
-    {
-      "testName": "fhirpath-null",
-      "module": "invariants",
-      "file": "fhirpath-null.json"
     },
     {
       "testName": "matchetype-extension-1",
@@ -1007,19 +720,9 @@
       "file": "matchetype/singleton-simple-wrong.json"
     },
     {
-      "testName": "slicing-parent-slice",
-      "module": "matchetype",
-      "file": "slicing-instance.json"
-    },
-    {
       "testName": "measure-report-ihe",
       "module": "measure",
       "file": "measure-report-ihe.json"
-    },
-    {
-      "testName": "measure-report-ihe-linked",
-      "module": "measure",
-      "file": "measure-report-ihe-r5.json"
     },
     {
       "testName": "mr-covid-m",
@@ -1122,24 +825,9 @@
       "file": "ad-practitioner-resource.json"
     },
     {
-      "testName": "additional-bindings-observation-1",
-      "module": "profile",
-      "file": "additional-bindings-observation.json"
-    },
-    {
       "testName": "additional-bindings-observation-2",
       "module": "profile",
       "file": "additional-bindings-observation.json"
-    },
-    {
-      "testName": "additional-bindings-observation-uc-n",
-      "module": "profile",
-      "file": "additional-bindings-observation-uc-n.json"
-    },
-    {
-      "testName": "additional-bindings-observation-uc-y",
-      "module": "profile",
-      "file": "additional-bindings-observation-uc-y.json"
     },
     {
       "testName": "bb-obs-value-is-not-in-valueset",
@@ -1162,11 +850,6 @@
       "file": "bnd-slicing-cgm.json"
     },
     {
-      "testName": "bp",
-      "module": "profile",
-      "file": "bp.json"
-    },
-    {
       "testName": "bundle-resolve-deep",
       "module": "profile",
       "file": "bundle-resolve-deep.json"
@@ -1175,136 +858,6 @@
       "testName": "cc-pattern-system-only",
       "module": "profile",
       "file": "cc-pattern-system-only-profile.json"
-    },
-    {
-      "testName": "cw-binding-strength-stronger",
-      "module": "profile",
-      "file": "compliesWith/binding-strength-stronger.json"
-    },
-    {
-      "testName": "cw-binding-strength-weaker",
-      "module": "profile",
-      "file": "compliesWith/binding-strength-weaker.json"
-    },
-    {
-      "testName": "cw-binding-subset",
-      "module": "profile",
-      "file": "compliesWith/binding-subset.json"
-    },
-    {
-      "testName": "cw-binding-superset",
-      "module": "profile",
-      "file": "compliesWith/binding-superset.json"
-    },
-    {
-      "testName": "cw-card-loosen-min",
-      "module": "profile",
-      "file": "compliesWith/card-loosen-min.json"
-    },
-    {
-      "testName": "cw-card-narrow-to-required",
-      "module": "profile",
-      "file": "compliesWith/card-narrow-to-required.json"
-    },
-    {
-      "testName": "cw-card-prohibit-allowed",
-      "module": "profile",
-      "file": "compliesWith/card-prohibit-allowed.json"
-    },
-    {
-      "testName": "cw-card-prohibit-required",
-      "module": "profile",
-      "file": "compliesWith/card-prohibit-required.json"
-    },
-    {
-      "testName": "cw-card-tighten",
-      "module": "profile",
-      "file": "compliesWith/card-tighten.json"
-    },
-    {
-      "testName": "cw-card-widen-max",
-      "module": "profile",
-      "file": "compliesWith/card-widen-max.json"
-    },
-    {
-      "testName": "cw-constraint-additional",
-      "module": "profile",
-      "file": "compliesWith/constraint-additional.json"
-    },
-    {
-      "testName": "cw-constraint-missing",
-      "module": "profile",
-      "file": "compliesWith/constraint-missing.json"
-    },
-    {
-      "testName": "cw-constraint-stricter",
-      "module": "profile",
-      "file": "compliesWith/constraint-stricter.json"
-    },
-    {
-      "testName": "cw-fixed-conflicts-pattern",
-      "module": "profile",
-      "file": "compliesWith/fixed-conflicts-pattern.json"
-    },
-    {
-      "testName": "cw-fixed-matches-pattern",
-      "module": "profile",
-      "file": "compliesWith/fixed-matches-pattern.json"
-    },
-    {
-      "testName": "cw-fixed-value-valid",
-      "module": "profile",
-      "file": "compliesWith/fixed-value-valid.json"
-    },
-    {
-      "testName": "cw-pattern-broader",
-      "module": "profile",
-      "file": "compliesWith/pattern-broader.json"
-    },
-    {
-      "testName": "cw-pattern-narrower",
-      "module": "profile",
-      "file": "compliesWith/pattern-narrower.json"
-    },
-    {
-      "testName": "cw-slice-adds",
-      "module": "profile",
-      "file": "compliesWith/slice-adds.json"
-    },
-    {
-      "testName": "cw-slice-closed-valid",
-      "module": "profile",
-      "file": "compliesWith/slice-closed-valid.json"
-    },
-    {
-      "testName": "cw-slice-compatible",
-      "module": "profile",
-      "file": "compliesWith/slice-compatible.json"
-    },
-    {
-      "testName": "cw-slice-extra-in-closed",
-      "module": "profile",
-      "file": "compliesWith/slice-extra-in-closed.json"
-    },
-    {
-      "testName": "cw-slice-loosen-card",
-      "module": "profile",
-      "file": "compliesWith/slice-loosen-card.json"
-    },
-    {
-      "testName": "cw-slice-missing-required",
-      "module": "profile",
-      "file": "compliesWith/slice-missing-required.json"
-    },
-    {
-      "testName": "cw-slice-open-vs-closed",
-      "module": "profile",
-      "file": "compliesWith/slice-open-vs-closed.json"
-    },
-    {
-      "testName": "cw-slice-tighten-card",
-      "module": "profile",
-      "file": "compliesWith/slice-tighten-card.json"
     },
     {
       "testName": "filter-display-error-with-path",
@@ -1325,36 +878,6 @@
       "testName": "fixed-quantity-binding-observation-2",
       "module": "profile",
       "file": "fixed-quantity-binding-observation-2.json"
-    },
-    {
-      "testName": "inactive-active-active",
-      "module": "profile",
-      "file": "inactive-ex-active.json"
-    },
-    {
-      "testName": "inactive-active-inactive",
-      "module": "profile",
-      "file": "inactive-ex-active.json"
-    },
-    {
-      "testName": "inactive-inactive-active",
-      "module": "profile",
-      "file": "inactive-ex-inactive.json"
-    },
-    {
-      "testName": "inactive-inactive-inactive",
-      "module": "profile",
-      "file": "inactive-ex-inactive.json"
-    },
-    {
-      "testName": "inactive-retired-active",
-      "module": "profile",
-      "file": "inactive-ex-retired.json"
-    },
-    {
-      "testName": "inactive-retired-inactive",
-      "module": "profile",
-      "file": "inactive-ex-retired.json"
     },
     {
       "testName": "jv-patient-bad",
@@ -1452,11 +975,6 @@
       "file": "parameters-profiled-resource-valid.json"
     },
     {
-      "testName": "patient-au-5",
-      "module": "profile",
-      "file": "patient-au-5.json"
-    },
-    {
       "testName": "patient-auto-profile",
       "module": "profile",
       "file": "patient-auto-profile.json"
@@ -1532,21 +1050,6 @@
       "file": "res-inv-example-good.json"
     },
     {
-      "testName": "reslicing-instance",
-      "module": "profile",
-      "file": "reslicing-instance.json"
-    },
-    {
-      "testName": "sdc-instance-bad",
-      "module": "profile",
-      "file": "sdc-instance-bad.json"
-    },
-    {
-      "testName": "sdc-instance-good",
-      "module": "profile",
-      "file": "sdc-instance-good.json"
-    },
-    {
       "testName": "sdc-inv-1",
       "module": "profile",
       "file": "sdc-inv-1.json"
@@ -1555,11 +1058,6 @@
       "testName": "sdoh-type-slice",
       "module": "profile",
       "file": "sdoh-type-slice.json"
-    },
-    {
-      "testName": "slice-instance",
-      "module": "profile",
-      "file": "slice-instance.json"
     },
     {
       "testName": "type-slicing-multiple",
@@ -1812,21 +1310,6 @@
       "file": "q_val_fail.json"
     },
     {
-      "testName": "q-base",
-      "module": "questionnaire",
-      "file": "q-base.json"
-    },
-    {
-      "testName": "q-derived-complies",
-      "module": "questionnaire",
-      "file": "q-derived-complies.json"
-    },
-    {
-      "testName": "q-derived-extends",
-      "module": "questionnaire",
-      "file": "q-derived-extends.json"
-    },
-    {
       "testName": "q-enablewhen-me-wrong",
       "module": "questionnaire",
       "file": "q-enablewhen-me-wrong.json"
@@ -2052,16 +1535,6 @@
       "file": "questionnaire/brianpos/url-value-qr.json"
     },
     {
-      "testName": "bundle-conditional-reference-bad",
-      "module": "references",
-      "file": "bundle-conditional-reference-bad.json"
-    },
-    {
-      "testName": "bundle-conditional-reference-good",
-      "module": "references",
-      "file": "bundle-conditional-reference-good.json"
-    },
-    {
       "testName": "bundle-document-versioned-references-bad",
       "module": "references",
       "file": "bundle-document-versioned-references-bad.json"
@@ -2075,11 +1548,6 @@
       "testName": "contained",
       "module": "references",
       "file": "contained.json"
-    },
-    {
-      "testName": "contained-canonical",
-      "module": "references",
-      "file": "contained-canonical.json"
     },
     {
       "testName": "contained-invariant",
@@ -2117,16 +1585,6 @@
       "file": "hakan-se.json"
     },
     {
-      "testName": "list-contained-json",
-      "module": "references",
-      "file": "list-contained.json"
-    },
-    {
-      "testName": "mixed-request-canonical-targets-profile",
-      "module": "references",
-      "file": "mixed-request-canonical-targets-profile.json"
-    },
-    {
       "testName": "parameters-reference",
       "module": "references",
       "file": "parameters-reference.json"
@@ -2152,11 +1610,6 @@
       "file": "params-reference-transaction-bundle.json"
     },
     {
-      "testName": "patient-duplicate-contained",
-      "module": "references",
-      "file": "patient-duplicate-contained.json"
-    },
-    {
       "testName": "ref-policy-default-apply-r5",
       "module": "references",
       "file": "ref-policy-r4.json"
@@ -2167,16 +1620,6 @@
       "file": "ref-policy-r4.json"
     },
     {
-      "testName": "ref-policy-default-r4",
-      "module": "references",
-      "file": "ref-policy-r5.json"
-    },
-    {
-      "testName": "ref-policy-default-r5",
-      "module": "references",
-      "file": "ref-policy-r5.json"
-    },
-    {
       "testName": "target-ref-profile-empty",
       "module": "references",
       "file": "target-ref-profile-empty.json"
@@ -2185,11 +1628,6 @@
       "testName": "scoring-test",
       "module": "scoring",
       "file": "scoring-test.json"
-    },
-    {
-      "testName": "custom-resource",
-      "module": "sd",
-      "file": "custom-resource.json"
     },
     {
       "testName": "ext-ccuk",
@@ -2205,16 +1643,6 @@
       "testName": "ext-derived-circle",
       "module": "sd",
       "file": "ext-derived-circle.json"
-    },
-    {
-      "testName": "ext-stds-status-deprecated",
-      "module": "sd",
-      "file": "ext-stds-status-deprecated.json"
-    },
-    {
-      "testName": "ext-stds-status-normative",
-      "module": "sd",
-      "file": "ext-stds-status-normative.json"
     },
     {
       "testName": "obs-mz",
@@ -2237,17 +1665,7 @@
       "file": "opdef2-params.json"
     },
     {
-      "testName": "sd-slices-ms",
-      "module": "sd",
-      "file": "sd-slices-ms.json"
-    },
-    {
       "testName": "structureDefinition-11179-objectClass-R4",
-      "module": "sd",
-      "file": "StructureDefinition-11179-objectClass.json"
-    },
-    {
-      "testName": "structureDefinition-11179-objectClass-R4B",
       "module": "sd",
       "file": "StructureDefinition-11179-objectClass.json"
     },
@@ -2307,11 +1725,6 @@
       "file": "allergy.json"
     },
     {
-      "testName": "AppointmentWithCodingFromFragmentCS",
-      "module": "tx",
-      "file": "AppointmentWithCodingFromFragmentCS.json"
-    },
-    {
       "testName": "canonical-url",
       "module": "tx",
       "file": "canonical-url.json"
@@ -2327,29 +1740,9 @@
       "file": "cm.json"
     },
     {
-      "testName": "coding-version-unpinned",
-      "module": "tx",
-      "file": "coding-version-unpinned.json"
-    },
-    {
-      "testName": "contained-canonical-bad",
-      "module": "tx",
-      "file": "contained-canonical-bad.json"
-    },
-    {
-      "testName": "contained-canonical-bad-2",
-      "module": "tx",
-      "file": "contained-canonical-bad-2.json"
-    },
-    {
       "testName": "contract-binding-test",
       "module": "tx",
       "file": "contract-binding-test.json"
-    },
-    {
-      "testName": "cs-bad-prop-code",
-      "module": "tx",
-      "file": "cs-bad-prop-code.json"
     },
     {
       "testName": "cs-bad-props",
@@ -2382,26 +1775,6 @@
       "file": "cs-order-prop.json"
     },
     {
-      "testName": "cs-order-prop-r5",
-      "module": "tx",
-      "file": "cs-order-prop.json"
-    },
-    {
-      "testName": "cs-val-cm",
-      "module": "tx",
-      "file": "cs-val-cm.json"
-    },
-    {
-      "testName": "cs-val-vs",
-      "module": "tx",
-      "file": "cs-val-vs.json"
-    },
-    {
-      "testName": "cs-val-vs-loinc",
-      "module": "tx",
-      "file": "cs-val-vs-loinc.json"
-    },
-    {
       "testName": "cvx",
       "module": "tx",
       "file": "cvx.json"
@@ -2410,41 +1783,6 @@
       "testName": "fr-regulee-finess",
       "module": "tx",
       "file": "fr-regulee-finess.json"
-    },
-    {
-      "testName": "map-general-test",
-      "module": "tx",
-      "file": "map-general-test.fml"
-    },
-    {
-      "testName": "map-general-test2",
-      "module": "tx",
-      "file": "map-general-test2.fml"
-    },
-    {
-      "testName": "mcode-pat",
-      "module": "tx",
-      "file": "mcode-pat.json"
-    },
-    {
-      "testName": "mcode-pat-bad",
-      "module": "tx",
-      "file": "mcode-pat-bad.json"
-    },
-    {
-      "testName": "medication-atc",
-      "module": "tx",
-      "file": "medication-atc.json"
-    },
-    {
-      "testName": "ns-instance",
-      "module": "tx",
-      "file": "ns-instance.json"
-    },
-    {
-      "testName": "obs-code-bad",
-      "module": "tx",
-      "file": "obs-code-bad.json"
     },
     {
       "testName": "obs-hgvs",
@@ -2505,11 +1843,6 @@
       "testName": "sct-version-issue",
       "module": "tx",
       "file": "sct-version-issue.json"
-    },
-    {
-      "testName": "search-parameter-with-no-matching-base",
-      "module": "tx",
-      "file": "search-parameter-with-no-matching-base.json"
     },
     {
       "testName": "snomed-ca",
@@ -2582,11 +1915,6 @@
       "file": "vs-canonical-urn-bad.json"
     },
     {
-      "testName": "vs-display-mixed",
-      "module": "tx",
-      "file": "vs-display-mixed.json"
-    },
-    {
       "testName": "vs-expansion",
       "module": "tx",
       "file": "vs-expansion.json"
@@ -2627,11 +1955,6 @@
       "file": "vs-loinc-filter.json"
     },
     {
-      "testName": "vs-sct-validation",
-      "module": "tx",
-      "file": "vs-sct-validation.json"
-    },
-    {
       "testName": "bad-markdown",
       "module": "xhtml",
       "file": "bad-markdown.json"
@@ -2647,54 +1970,9 @@
       "file": "cs-narrative-status.json"
     },
     {
-      "testName": "list-xhtml-attribute-json",
-      "module": "xhtml",
-      "file": "list-xhtml-attribute.json"
-    },
-    {
-      "testName": "list-xhtml-correct1-json",
-      "module": "xhtml",
-      "file": "list-xhtml-correct1.json"
-    },
-    {
-      "testName": "list-xhtml-correct2-json",
-      "module": "xhtml",
-      "file": "list-xhtml-correct2.json"
-    },
-    {
-      "testName": "list-xhtml-element-json",
-      "module": "xhtml",
-      "file": "list-xhtml-element.json"
-    },
-    {
-      "testName": "list-xhtml-syntax",
-      "module": "xhtml",
-      "file": "list-xhtml-syntax.json"
-    },
-    {
-      "testName": "list-xhtml-wrongns1-json",
-      "module": "xhtml",
-      "file": "list-xhtml-wrongns1.json"
-    },
-    {
-      "testName": "list-xhtml-wrongns2-json",
-      "module": "xhtml",
-      "file": "list-xhtml-wrongns2.json"
-    },
-    {
-      "testName": "list-xhtml-xxe",
-      "module": "xhtml",
-      "file": "list-xhtml-xxe.json"
-    },
-    {
       "testName": "pat-security-bad-xhtml",
       "module": "xhtml",
       "file": "pat-security-bad-xhtml.json"
-    },
-    {
-      "testName": "q-rendering-xhtml",
-      "module": "xhtml",
-      "file": "q-rendering-xhtml.json"
     }
   ]
 }

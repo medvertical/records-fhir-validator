@@ -1,4 +1,4 @@
-import type { CodeInfo } from './valueset-display-utils';
+import type { CodeInfo } from './valueset-display-utils.js';
 
 type CodingLike = {
   code?: unknown;

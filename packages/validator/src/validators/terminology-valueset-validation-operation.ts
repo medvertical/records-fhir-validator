@@ -1,27 +1,26 @@
-import { logger } from '../logger';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+import { logger } from '../logger.js';
+import { createHash } from 'node:crypto';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 import {
   makeValidateCodeCacheKey,
   makeValueSetNotResolvableCacheKey,
-} from './terminology-api-cache';
-import { getMaxConcurrentRemoteTerminologyRequests } from './terminology-api-remote-policy';
-import { runSingleFlight } from './terminology-pending-requests';
-import { getTerminologyServerScope } from './terminology-server-scope';
-import { executeValueSetValidateCodeRequest } from './terminology-valueset-validate-code-request';
-import type { TerminologyValueSetOperationsContext } from './terminology-valueset-operation-context';
-import { canDelegateCodeValidation } from './valueset-delegation-policy';
-import type { TerminologyServerOverride } from './valueset-types';
-import type { RemoteValueSetValidationResult } from './terminology-api-types';
+} from './terminology-api-cache.js';
+import { getMaxConcurrentRemoteTerminologyRequests } from './terminology-api-remote-policy.js';
+import { runSingleFlight } from './terminology-pending-requests.js';
+import { getTerminologyServerScope } from './terminology-server-scope.js';
+import { executeValueSetValidateCodeRequest } from './terminology-valueset-validate-code-request.js';
+import type { TerminologyValueSetOperationsContext } from './terminology-valueset-operation-context.js';
+import { canDelegateCodeValidation } from './valueset-delegation-policy.js';
+import type { TerminologyServerOverride, ValueSet } from './valueset-types.js';
+import type { RemoteValueSetValidationResult } from './terminology-api-types.js';
 
-const UNVERIFIED_REJECTION: RemoteValueSetValidationResult = {
-  accepted: false,
-  outcome: 'unverified',
-};
-
-const UNVERIFIED_ACCEPTANCE: RemoteValueSetValidationResult = {
-  accepted: true,
-  outcome: 'unverified',
-};
+function undecided(
+  reason: RemoteValueSetValidationResult['reason'],
+  serverUrl: string | undefined,
+  accepted = false,
+): RemoteValueSetValidationResult {
+  return { accepted, outcome: 'unverified', reason, ...(serverUrl ? { serverUrl } : {}) };
+}
 
 export interface RemoteValueSetValidationInput {
   code: string;
@@ -30,6 +29,7 @@ export interface RemoteValueSetValidationInput {
   bindingStrength?: 'required' | 'extensible' | 'preferred' | 'example';
   override?: TerminologyServerOverride;
   codeSystemVersion?: string;
+  valueSet?: ValueSet;
 }
 
 export async function validateCodeAgainstRemoteValueSet(
@@ -37,17 +37,20 @@ export async function validateCodeAgainstRemoteValueSet(
   input: RemoteValueSetValidationInput,
 ): Promise<RemoteValueSetValidationResult> {
   const config = context.getConfig();
-  if (!canDelegateCodeValidation(config)) return UNVERIFIED_REJECTION;
   const serverUrl = input.override?.url ?? config.serverUrl;
-  if (!serverUrl) return UNVERIFIED_REJECTION;
+  if (!canDelegateCodeValidation(config)) return undecided('delegation-disabled', serverUrl);
+  if (!serverUrl) return undecided('no-server', undefined);
   const serverScope = getTerminologyServerScope(
     serverUrl,
     input.override?.auth ?? config.auth,
   );
 
+  const definitionKey = input.valueSet
+    ? `${input.valueSetUrl}|definition:${createHash('sha256').update(JSON.stringify(input.valueSet)).digest('hex')}`
+    : input.valueSetUrl;
   const valueSetNotResolvableKey = makeValueSetNotResolvableCacheKey(
     serverScope,
-    input.valueSetUrl,
+    definitionKey,
     input.system,
     input.codeSystemVersion,
   );
@@ -56,14 +59,14 @@ export async function validateCodeAgainstRemoteValueSet(
       '[TerminologyApiClient] validate-code ValueSet not-resolvable cache hit',
       terminologyTargetMetadata(input.valueSetUrl),
     );
-    return UNVERIFIED_ACCEPTANCE;
+    return undecided('value-set-not-found', serverUrl, true);
   }
 
   const cacheKey = makeValidateCodeCacheKey(
     serverScope,
     input.system,
     input.code,
-    input.valueSetUrl,
+    definitionKey,
     input.bindingStrength,
     input.codeSystemVersion,
   );
@@ -93,7 +96,7 @@ export async function validateCodeAgainstRemoteValueSet(
           '[TerminologyApiClient] $validate-code circuit open',
           terminologyTargetMetadata(serverUrl, input.system, input.code, input.valueSetUrl),
         );
-        return UNVERIFIED_REJECTION;
+        return undecided('circuit-open', serverUrl);
       }
       const requestConfig = context.getConfig();
       return executeValueSetValidateCodeRequest({
@@ -110,6 +113,8 @@ export async function validateCodeAgainstRemoteValueSet(
         serverUrl,
         system: input.system,
         valueSetUrl: input.valueSetUrl,
+        valueSet: input.valueSet,
+        valueSetNotResolvableKey,
       }, context.requestBroker, getMaxConcurrentRemoteTerminologyRequests(requestConfig));
     },
   );

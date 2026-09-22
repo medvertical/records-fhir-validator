@@ -1,12 +1,12 @@
-import { logger } from '../logger';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import { type FhirVersion } from './valueset-expansion-cache-key';
-import type { TerminologyResolutionConfig } from './valueset-types';
+import { logger } from '../logger.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import { type FhirVersion } from './valueset-expansion-cache-key.js';
+import type { TerminologyResolutionConfig } from './valueset-types.js';
 import {
   TwoPhaseTerminologyExpansion,
   type TwoPhaseLookupResult,
-} from './terminology-two-phase-expansion';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+} from './terminology-two-phase-expansion.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 
 /**
  * Shadow/enforce evaluator for two-phase terminology expansion.

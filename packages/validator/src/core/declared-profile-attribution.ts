@@ -1,9 +1,9 @@
-import type { ValidationIssue } from '../types';
-import { normalizeChoiceTypePath } from './choice-type-path';
-import { getPrimaryDeclaredProfile } from './declared-profile-utils';
-import type { AspectResult } from './multi-aspect-types';
-import { isBestPracticeIssue, relabelProfileImposedIssue } from './profile-attribution-relabel';
-import type { ElementDefinition, StructureDefinition } from './structure-definition-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { normalizeChoiceTypePath } from './choice-type-path.js';
+import { getPrimaryDeclaredProfile } from './declared-profile-utils.js';
+import type { AspectResult } from './multi-aspect-types.js';
+import { isBestPracticeIssue, relabelProfileImposedIssue } from './profile-attribution-relabel.js';
+import type { ElementDefinition, StructureDefinition } from './structure-definition-types.js';
 
 /**
  * The applied profile counts as a declared substitution only when the resource

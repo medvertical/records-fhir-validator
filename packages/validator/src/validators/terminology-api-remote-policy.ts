@@ -1,13 +1,15 @@
-import { logger } from '../logger';
-import type { CircuitBreaker } from '../terminology';
-import type { TerminologyResolutionConfig } from './valueset-types';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+import { logger } from '../logger.js';
+import type { CircuitBreaker } from '../terminology/index.js';
+import type { TerminologyResolutionConfig } from './valueset-types.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export const DEFAULT_VALUESET_EXPAND_TIMEOUT_MS = 10000;
 export const DEFAULT_REMOTE_TERMINOLOGY_TIMEOUT_MS = 5000;
 
 const DEFAULT_SLOW_RESPONSE_THRESHOLD_MS = 2500;
-const DEFAULT_MAX_REMOTE_CODE_SYSTEM_VALIDATIONS = 10;
+// Concurrency, request timeouts and the circuit breaker bound remote load.
+// A lifetime quota silently stops checking every later resource in a warm runtime.
+const DEFAULT_MAX_REMOTE_CODE_SYSTEM_VALIDATIONS = Number.POSITIVE_INFINITY;
 
 function positiveNumber(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;

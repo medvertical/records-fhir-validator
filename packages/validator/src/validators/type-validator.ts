@@ -11,26 +11,26 @@
  * - FHIRPath types (http://hl7.org/fhirpath/System.String)
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { normalizeResourceType } from '../issues/resource-type-normalizer';
-import type { ElementType } from '../core/structure-definition-types';
-import { normalizeFhirType, getTypeDescription } from '../terminology';
-import { validateUriFormat } from './uri-format-validator';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { normalizeResourceType } from '../issues/resource-type-normalizer.js';
+import type { ElementType } from '../core/structure-definition-types.js';
+import { normalizeFhirType, getTypeDescription } from '../terminology/index.js';
+import { validateUriFormat } from './uri-format-validator.js';
 import {
   getActualFhirType,
   isExtensionOnly,
   matchesComplexType,
   matchesPrimitiveType,
   PRIMITIVE_TYPE_CODES,
-} from './type-matching-helpers';
-import { getResolvedPrimitiveSidecarType, isResolvedPrimitiveSidecarValue } from '../core/fhir-primitive-sidecar';
+} from './type-matching-helpers.js';
+import { getResolvedPrimitiveSidecarType, isResolvedPrimitiveSidecarValue } from '../core/fhir-primitive-sidecar.js';
 import {
   buildDateTimeFormatDetails,
   validateDateYearPlausibility,
   validatePrimitiveStringFormat,
-} from './primitive-string-format-validator';
-import { validateDecimalRange } from './decimal-range-validator';
+} from './primitive-string-format-validator.js';
+import { validateDecimalRange } from './decimal-range-validator.js';
 
 // ============================================================================
 // Type Validator

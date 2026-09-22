@@ -10,11 +10,11 @@
  * This validator ensures reference strings are well-formed according to FHIR specification.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types.js';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
 
 // ============================================================================
 // Reference Format Patterns

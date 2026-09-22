@@ -1,18 +1,18 @@
-import type { ProfileCache } from '../cache/profile-cache';
-import type { ValidationIssue, ValidationSettings } from '../types';
-import type { ProfileSourceContext } from '../persistence';
-import { getIncompatibleProfileResourceType } from './profile-resource-type';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { StructureDefinition } from './structure-definition-types';
-import { createValidationWarningIssue } from './validation-utils';
-import { suggestProfilesForUnresolvedCanonical } from './profile-canonical-suggestions';
-import { loadProfileForValidation, type FhirClientLike } from './profile-snapshot-loading';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import { getIncompatibleProfileResourceType } from './profile-resource-type.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { createValidationWarningIssue } from './validation-utils.js';
+import { suggestProfilesForUnresolvedCanonical } from './profile-canonical-suggestions.js';
+import { loadProfileForValidation, type FhirClientLike } from './profile-snapshot-loading.js';
 
-export type { FhirClientLike } from './profile-snapshot-loading';
-export { loadProfileForValidation, loadProfileWithSnapshot } from './profile-snapshot-loading';
-export { suggestProfilesForUnresolvedCanonical } from './profile-canonical-suggestions';
-export { createProfileResourceTypeMismatchIssue } from './profile-resource-type';
+export type { FhirClientLike } from './profile-snapshot-loading.js';
+export { loadProfileForValidation, loadProfileWithSnapshot } from './profile-snapshot-loading.js';
+export { suggestProfilesForUnresolvedCanonical } from './profile-canonical-suggestions.js';
+export { createProfileResourceTypeMismatchIssue } from './profile-resource-type.js';
 
 export interface ProfileLoadResult {
   structureDef: StructureDefinition | null;

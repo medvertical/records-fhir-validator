@@ -1,16 +1,17 @@
-import { ProfileCache } from '../cache/profile-cache';
-import { ConstraintValidator } from '../validators/constraint-validator';
-import { ElementRulesValidator } from '../validators/element-rules-validator';
-import { ExtensionValidator } from '../validators/extension-validator';
-import { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor';
-import { SlicingValidator } from '../validators/slicing-validator';
-import { TerminologyResourceValidator } from '../validators/terminology-resource-validator';
-import { TypeValidator } from '../validators/type-validator';
-import { ValueSetCache } from '../validators/valueset-cache';
-import { ValueSetValidator } from '../validators/valueset-validator';
-import { SnapshotGenerator } from './snapshot-generator';
-import { StructureDefinitionLoader } from './structure-definition-loader';
-import type { RecordsValidatorConfig } from './validator-engine-config';
+import { ProfileCache } from '../cache/profile-cache.js';
+import { ConstraintValidator } from '../validators/constraint-validator.js';
+import { ElementRulesValidator } from '../validators/element-rules-validator.js';
+import { ExtensionValidator } from '../validators/extension-validator.js';
+import { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor.js';
+import { SlicingValidator } from '../validators/slicing-validator.js';
+import { TerminologyResourceValidator } from '../validators/terminology-resource-validator.js';
+import { TypeValidator } from '../validators/type-validator.js';
+import { ValueSetCache } from '../validators/valueset-cache.js';
+import { ValueSetValidator } from '../validators/valueset-validator.js';
+import type { FhirVersionFamily } from './sd-loader-version-utils.js';
+import { SnapshotGenerator } from './snapshot-generator.js';
+import { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { RecordsValidatorConfig } from './validator-engine-config.js';
 
 export interface ValidatorCoreComponents {
   profileCache: ProfileCache;
@@ -62,12 +63,12 @@ export function createValidatorCoreRuntime(
     sdFHIRPathExecutor,
   );
   const slicingValidator = new SlicingValidator();
-  slicingValidator.setTypeProfileResolver(async (url: string) => {
-    const structureDefinition = await sdLoader.loadProfile(url);
+  slicingValidator.setTypeProfileResolver(async (url: string, fhirVersion: FhirVersionFamily = 'R4') => {
+    const structureDefinition = await sdLoader.loadProfile(url, fhirVersion);
     if (!structureDefinition) return null;
     if (structureDefinition.snapshot?.element?.length) return structureDefinition;
 
-    const elements = await snapshotGenerator.generateSnapshot(structureDefinition);
+    const elements = await snapshotGenerator.generateSnapshot(structureDefinition, { fhirVersion });
     return elements.length > 0
       ? { ...structureDefinition, snapshot: { element: elements } }
       : structureDefinition;

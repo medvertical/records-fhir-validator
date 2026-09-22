@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ValidationSettings } from '../types';
+import type { ValidationSettings } from '@records-fhir/validation-types';
 import type { RecordsValidatorComponents } from './validator-engine-components';
 import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator';
 import { ValidatorRuntimeControls } from './validator-runtime-controls';

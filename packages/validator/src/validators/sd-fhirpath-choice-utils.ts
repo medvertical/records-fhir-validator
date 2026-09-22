@@ -1,7 +1,7 @@
 import {
     isConcreteChoiceProperty,
     splitConcreteChoiceProperty,
-} from '../core/fhir-choice-property';
+} from '../core/fhir-choice-property.js';
 
 /**
  * FHIR primitive type codes. Choice property names capitalise the first

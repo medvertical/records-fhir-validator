@@ -1,4 +1,4 @@
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 export type BindingStrength = 'required' | 'extensible' | 'preferred' | 'example';
 
@@ -41,6 +41,7 @@ export function displaysEquivalentForCodeInfo(
   codeInfo: Pick<CodeInfo, 'system' | 'code'>,
 ): boolean {
   if (displaysEquivalent(expected, actual)) return true;
+  if (displayOperators(expected) !== displayOperators(actual)) return false;
 
   if (codeInfo.system === 'http://terminology.hl7.org/CodeSystem/v2-0203') {
     return stripIdentifierNumberSuffix(normalizeDisplay(expected)) === normalizeDisplay(actual);
@@ -49,6 +50,12 @@ export function displaysEquivalentForCodeInfo(
   if (codeInfo.system === 'http://loinc.org') {
     return loincDisplaysCompatible(expected, actual);
   }
+
+  if (codeInfo.system === 'http://snomed.info/sct'
+    && displaysEquivalent(
+      expected.replace(/\s+\(specimen\)\s*$/i, ''),
+      actual.replace(/\s+\(specimen\)\s*$/i, ''),
+    )) return true;
 
   if (
     codeInfo.system === 'http://snomed.info/sct'
@@ -70,15 +77,24 @@ function moderateSeverityDisplaysEquivalent(expected: string, actual: string): b
   return accepted.has(normalizeDisplay(expected)) && accepted.has(normalizeDisplay(actual));
 }
 
-function normalizeDisplay(display: string): string {
+export function normalizeDisplay(display: string): string {
   return stripTrailingSemanticTag(display)
     .trim()
     .normalize('NFKC')
+    .replace(/>=/g, '≥')
+    .replace(/<=/g, '≤')
+    .replace(/(^|[=\s])-(?=\s*$|\d)/g, '$1−')
     .replace(/['’]s\b/gi, '')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    // Grades and numeric comparisons change a concept's meaning.
+    .replace(/([+<>±−≥≤])/g, ' $1 ')
+    .replace(/[^\p{L}\p{N}+<>±−≥≤]+/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .toLocaleLowerCase();
+}
+
+function displayOperators(display: string): string {
+  return normalizeDisplay(display).match(/[+<>±−≥≤]/g)?.join('') ?? '';
 }
 
 function stripTrailingSemanticTag(display: string): string {

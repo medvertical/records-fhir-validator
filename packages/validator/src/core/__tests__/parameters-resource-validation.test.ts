@@ -4,7 +4,7 @@ import {
   rebaseParametersEmbeddedIssue,
   validateParametersResourceTree,
 } from '../parameters-resource-validation';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 const issueFixture = (overrides: Partial<ValidationIssue>): ValidationIssue => ({
   id: 'issue-1',

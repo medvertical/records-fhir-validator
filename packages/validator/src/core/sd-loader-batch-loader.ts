@@ -1,12 +1,12 @@
-import { logger } from '../logger';
-import type { StructureDefinition } from './structure-definition-types';
+import { logger } from '../logger.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 import {
   cacheKeyForProfile,
   matchesRequestedFhirVersion,
   normalizeVersionedCoreStructureDefinitionUrl,
   urlMatchesRequestedFhirVersion,
-} from './sd-loader-version-utils';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+} from './sd-loader-version-utils.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 interface LoadProfilesBatchArgs {
   urls: string[];

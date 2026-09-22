@@ -1,4 +1,4 @@
-import { parsePackageName } from './sd-loader-package-scanner';
+import { parsePackageName } from './sd-loader-package-scanner.js';
 
 export function matchesPackageVersionPin(
   packageName: string,

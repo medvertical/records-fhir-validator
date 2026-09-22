@@ -5,7 +5,7 @@
  * Extracted from reference-validator.ts to comply with global.mdc guidelines.
  */
 
-import type { ReferenceFieldDefinition, ReferenceFieldMap } from './reference-types';
+import type { ReferenceFieldDefinition, ReferenceFieldMap } from './reference-types.js';
 
 // ============================================================================
 // Reference Field Initialization

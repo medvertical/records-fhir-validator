@@ -1,10 +1,10 @@
 import fhirpath from 'fhirpath';
-import { getFhirPathModel } from './fhirpath-model-resolver';
-import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite';
+import { getFhirPathModel } from './fhirpath-model-resolver.js';
+import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite.js';
 import {
   VersionedExpressionCache,
   type FHIRPathExpressionCacheStats,
-} from './fhirpath-expression-cache-core';
+} from './fhirpath-expression-cache-core.js';
 
 function compileFHIRPathExpression(expression: string, fhirVersion: 'R4' | 'R5' | 'R6') {
   return fhirpath.compile(

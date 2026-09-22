@@ -1,23 +1,31 @@
 /**
  * Profile Executor
- * 
+ *
  * Validates FHIR profile conformance:
  * - StructureDefinition conformance
  * - Extension validation
  * - Slicing validation
  * - Profile constraint validation
+ * - Deep element conformance (fixed/pattern/cardinality against the snapshot)
+ * - StructureDefinition FHIRPath constraints
+ *
+ * Every profile-aspect validator is wired here rather than at a fan-out call
+ * site, so each fan-out path inherits the same rule set from one place.
  */
 
-import type { ValidationIssue } from '../../types';
-import type { StructureDefinition } from '../structure-definition-types';
-import type { ExtensionValidator } from '../../validators/extension-validator';
-import type { SlicingValidator, ReferenceResolver } from '../../validators/slicing-validator';
-import type { ConstraintValidator } from '../../validators/constraint-validator';
-import { GermanIdentifierValidator } from '../../validators/german-identifier-validator';
-import { GermanExtensionValidator } from '../../validators/german-extension-validator';
-import { logger } from '../../logger';
-import { createExecutorFailureIssue } from './executor-failure-issue';
-import { ProfileSlicingValidation } from './profile-slicing-validation';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition } from '../structure-definition-types.js';
+import type { ExtensionValidator } from '../../validators/extension-validator.js';
+import type { SlicingValidator, ReferenceResolver } from '../../validators/slicing-validator.js';
+import type { ConstraintValidator } from '../../validators/constraint-validator.js';
+import { GermanIdentifierValidator } from '../../validators/german-identifier-validator.js';
+import { GermanExtensionValidator } from '../../validators/german-extension-validator.js';
+import { deepProfileValidator } from '../../validators/deep-profile-validator.js';
+import { SDFHIRPathExecutor } from '../../validators/sd-fhirpath-executor.js';
+import type { FHIRPathTerminologyResolver } from '../../validators/fhirpath-async-terminology.js';
+import { logger } from '../../logger.js';
+import { createExecutorFailureIssue } from './executor-failure-issue.js';
+import { ProfileSlicingValidation } from './profile-slicing-validation.js';
 
 // ============================================================================
 // Types
@@ -33,6 +41,12 @@ export interface ProfileValidationContext {
   getValueAtPath: (resource: unknown, path: string) => unknown;
   referenceResolver?: ReferenceResolver | null;
   enclosingBundle?: Record<string, unknown>;
+  /**
+   * Callers that own a warmed executor pass it in so its expression and
+   * terminology caches stay shared; otherwise the executor's own is used.
+   */
+  sdFHIRPathExecutor?: SDFHIRPathExecutor;
+  terminologyResolver?: FHIRPathTerminologyResolver;
 }
 
 // ============================================================================
@@ -45,6 +59,7 @@ export class ProfileExecutor {
   private constraintValidator: ConstraintValidator;
   private germanIdentifierValidator: GermanIdentifierValidator;
   private germanExtensionValidator: GermanExtensionValidator;
+  private readonly ownSDFHIRPathExecutor = new SDFHIRPathExecutor();
 
   constructor(
     extensionValidator: ExtensionValidator,
@@ -126,6 +141,14 @@ export class ProfileExecutor {
         issues.push(...germanExtIssues);
       }
 
+      issues.push(...deepProfileValidator.validate({
+        resource,
+        resourceType: context.resourceType,
+        structureDef,
+        profileUrl,
+      }));
+      issues.push(...await this.runSnapshotFHIRPathConstraints(context));
+
       return issues;
 
     } catch {
@@ -134,4 +157,20 @@ export class ProfileExecutor {
     }
   }
 
+  private runSnapshotFHIRPathConstraints(
+    context: ProfileValidationContext,
+  ): Promise<ValidationIssue[]> {
+    const executor = context.sdFHIRPathExecutor ?? this.ownSDFHIRPathExecutor;
+    return executor.execute({
+      resource: context.resource,
+      resourceType: context.resourceType,
+      structureDef: context.structureDef,
+      bundle: context.enclosingBundle
+        ?? (context.resourceType === 'Bundle'
+          ? (context.resource as Record<string, unknown>)
+          : undefined),
+      fhirVersion: context.fhirVersion,
+      terminologyResolver: context.terminologyResolver,
+    });
+  }
 }

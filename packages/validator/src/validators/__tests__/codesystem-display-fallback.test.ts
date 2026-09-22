@@ -188,7 +188,7 @@ describe('ValueSetValidator CodeSystem display fallback', () => {
       2,
       '34117-2',
       'http://loinc.org',
-      undefined,
+      'History and physical note',
       { url: 'https://tx.fhir.org/r4', auth: undefined },
     );
   });

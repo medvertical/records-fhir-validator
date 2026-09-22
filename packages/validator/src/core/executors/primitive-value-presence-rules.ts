@@ -1,7 +1,7 @@
-import { isResolvedPrimitiveSidecarValue } from '../fhir-primitive-sidecar';
-import { createValidationIssue } from '../../issues';
-import type { ValidationIssue } from '../../types';
-import type { ElementDefinition } from '../structure-definition-types';
+import { isResolvedPrimitiveSidecarValue } from '../fhir-primitive-sidecar.js';
+import { createValidationIssue } from '../../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ElementDefinition } from '../structure-definition-types.js';
 
 const MUST_HAVE_VALUE_EXTENSION =
   'http://hl7.org/fhir/5.0/StructureDefinition/extension-ElementDefinition.mustHaveValue';

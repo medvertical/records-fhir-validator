@@ -5,10 +5,10 @@
  * Extracted to avoid circular dependencies between settings-utils and settings-validators.
  */
 
-import type { ValidationSettings } from './settings';
-import type { ValidationAspect, ValidationSeverity } from './enums';
-import { VALIDATION_ASPECTS } from './settings-types';
-import { normalizeValidationAspect, normalizeValidationAspects } from './aspect-aliases';
+import type { ValidationSettings } from './settings.js';
+import type { ValidationAspect, ValidationSeverity } from './enums.js';
+import { VALIDATION_ASPECTS } from './settings-types.js';
+import { normalizeValidationAspect, normalizeValidationAspects } from './aspect-aliases.js';
 
 /**
  * Get all enabled validation aspects from settings

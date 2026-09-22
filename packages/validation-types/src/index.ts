@@ -4,4 +4,4 @@
 //
 // Deep-path compatibility facades have been removed; keep new exports in
 // `./validation/index` so consumers use one package entrypoint.
-export * from './validation/index';
+export * from './validation/index.js';

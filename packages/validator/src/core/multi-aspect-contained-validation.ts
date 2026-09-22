@@ -1,14 +1,17 @@
+import { withProfileProvenanceDetails } from './profile-attribution-relabel.js';
 import { computeValidationIssueId } from '@records-fhir/validation-types';
-import type { ValidationIssue } from '../types';
-import { BatchValidationAbortedError } from './batch-validator';
-import type { AspectResult, ValidateOneFn } from './multi-aspect-types';
-import { getPrimaryDeclaredProfile } from './declared-profile-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { BatchValidationAbortedError } from './batch-validator.js';
+import type { AspectResult, ValidateOneFn } from './multi-aspect-types.js';
+import { getPrimaryDeclaredProfile } from './declared-profile-utils.js';
+import { awaitAllDrained } from '../utils/await-all-drained.js';
 
 export function attachAppliedProfile(issue: ValidationIssue, appliedProfile: string): ValidationIssue {
   if (issue.profile || !appliedProfile) return issue;
   return {
     ...issue,
     profile: appliedProfile,
+    details: withProfileProvenanceDetails(issue.details, { profileAttribution: 'validation-context' }),
     id: computeValidationIssueId({
       aspect: issue.aspect,
       severity: issue.severity,
@@ -53,7 +56,7 @@ export async function appendContainedResourceValidationResults(
       profileUrl: string;
     } => target !== null);
 
-  const results = await Promise.all(targets.map(async target => {
+  const results = await awaitAllDrained(targets.map(async target => {
     if (shouldStop?.()) throw new BatchValidationAbortedError();
     const result = await validateOne(
       target.resource,
@@ -74,30 +77,41 @@ export async function appendContainedResourceValidationResults(
   for (const target of results) {
     const prefix = `${parentResourceType}.contained[${target.index}]`;
     for (const childAspect of target.result.aspects) {
-      if (childAspect.aspect === 'metadata') continue;
-      const rewrittenIssues = childAspect.issues
-        .filter(issue => !isResolvedContainedReferenceIssue(issue, parentResource))
-        .map(issue => rewriteContainedIssue(
-          issue,
-          prefix,
-          parentResourceType,
-          target.resourceType,
-          target.resource,
-        ));
-      if (rewrittenIssues.length === 0) continue;
-
-      let parentAspect = parentAspects.find(aspect => aspect.aspect === childAspect.aspect);
-      if (!parentAspect) {
-        parentAspect = { aspect: childAspect.aspect, issues: [], validationTime: 0, isValid: true };
-        parentAspects.push(parentAspect);
-      }
-      parentAspect.issues.push(...rewrittenIssues);
-      parentAspect.validationTime += childAspect.validationTime;
-      parentAspect.isValid = parentAspect.issues.every(issue =>
-        issue.severity !== 'error' && issue.severity !== 'fatal'
-      );
+      mergeContainedAspect(parentAspects, childAspect, parentResource, {
+        prefix, parentResourceType, resourceType: target.resourceType, resource: target.resource,
+      });
     }
   }
+}
+
+function mergeContainedAspect(
+  parentAspects: AspectResult[],
+  childAspect: AspectResult,
+  parentResource: Record<string, unknown>,
+  target: { prefix: string; parentResourceType: string; resourceType: string; resource: Record<string, unknown> },
+): void {
+  if (childAspect.aspect === 'metadata') return;
+  const rewrite = (issues: ValidationIssue[]) => issues
+    .filter(issue => !isResolvedContainedReferenceIssue(issue, parentResource))
+    .map(issue => rewriteContainedIssue(
+      issue, target.prefix, target.parentResourceType, target.resourceType, target.resource,
+    ));
+  const rewrittenIssues = rewrite(childAspect.issues);
+  const rewrittenEvidence = rewrite(childAspect.evidenceIssues ?? childAspect.issues);
+  if (rewrittenIssues.length === 0 && rewrittenEvidence.length === 0) return;
+
+  let parentAspect = parentAspects.find(aspect => aspect.aspect === childAspect.aspect);
+  if (!parentAspect) {
+    parentAspect = { aspect: childAspect.aspect, issues: [], evidenceIssues: [], validationTime: 0, isValid: true };
+    parentAspects.push(parentAspect);
+  }
+  parentAspect.evidenceIssues ??= [...parentAspect.issues];
+  parentAspect.issues.push(...rewrittenIssues);
+  parentAspect.evidenceIssues.push(...rewrittenEvidence);
+  parentAspect.validationTime += childAspect.validationTime;
+  parentAspect.isValid = parentAspect.issues.every(issue =>
+    issue.severity !== 'error' && issue.severity !== 'fatal'
+  );
 }
 
 function rewriteContainedIssue(

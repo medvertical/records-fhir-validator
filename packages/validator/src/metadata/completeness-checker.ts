@@ -4,10 +4,10 @@
  * Validates that required metadata fields are present based on resource type.
  */
 
-import type { ValidationIssue } from '../types';
-import { RESOURCE_METADATA_REQUIREMENTS } from './metadata-types';
-import { isObjectRecord } from './metadata-boundary-utils';
-import { createMetadataIssue } from './metadata-issue';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { RESOURCE_METADATA_REQUIREMENTS } from './metadata-types.js';
+import { isObjectRecord } from './metadata-boundary-utils.js';
+import { createMetadataIssue } from './metadata-issue.js';
 
 /**
  * Validate required metadata based on resource type

@@ -1,7 +1,7 @@
-import type { ValidationIssue } from '../types';
-import type { StructureDefinition } from './structure-definition-types';
-import type { ReferenceResolver, ReferenceTargetValidator } from '../validators/reference-target-validator';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition } from './structure-definition-types.js';
+import type { ReferenceResolver, ReferenceTargetValidator } from '../validators/reference-target-validator.js';
+import { createValidationIssue } from '../issues/index.js';
 
 /**
  * Opt-in target-profile-conformance pass (gap P-2): for each reference whose

@@ -12,8 +12,8 @@
  * the Questionnaire-specific checks, so we skip Questionnaire here.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 
 /** Identifier regex from the FHIR R4 invariant. */
 const IDENTIFIER_REGEX = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
@@ -57,6 +57,54 @@ export class CanonicalResourceInvariantValidator {
      * knowledge-artifact resource. Returns an empty array for resource
      * types that don't carry the invariant.
      */
+    /**
+     * A constraint key identifies an invariant. Reusing one for a different
+     * expression means two different rules answer to the same name, and a
+     * reader tracing a failure back to its definition finds the wrong one.
+     * Reusing a key for the *same* expression is how a profile restates an
+     * inherited invariant and is allowed.
+     */
+    private validateConstraintKeyReuse(resource: Record<string, unknown>): ValidationIssue[] {
+        const issues: ValidationIssue[] = [];
+        const seen = new Map<string, { expression: string; location: string }>();
+
+        for (const source of ['differential', 'snapshot'] as const) {
+            const container = asRecord(resource[source]);
+            const elements = Array.isArray(container?.element) ? container.element : [];
+            for (const element of elements) {
+                const elementRecord = asRecord(element);
+                const location = typeof elementRecord?.path === 'string' ? elementRecord.path : '';
+                const constraints = Array.isArray(elementRecord?.constraint)
+                    ? elementRecord.constraint
+                    : [];
+                for (const constraint of constraints) {
+                    const record = asRecord(constraint);
+                    const key = typeof record?.key === 'string' ? record.key : '';
+                    if (!key) continue;
+                    const expression = typeof record?.expression === 'string' ? record.expression : '';
+                    const previous = seen.get(key);
+                    if (!previous) {
+                        seen.set(key, { expression, location });
+                        continue;
+                    }
+                    if (previous.expression === expression) continue;
+                    issues.push(createValidationIssue({
+                        code: 'canonical-resource-constraint-key-reused',
+                        path: location || 'StructureDefinition',
+                        resourceType: 'StructureDefinition',
+                        customMessage:
+                            `The constraint key '${key}' already exists at the location `
+                            + `'${previous.location}' with a different expression`,
+                        severityOverride: 'error',
+                        details: { key, location, previousLocation: previous.location },
+                    }));
+                }
+            }
+        }
+
+        return issues;
+    }
+
     validate(resource: unknown): ValidationIssue[] {
         const resourceRecord = asRecord(resource);
         if (!resourceRecord || typeof resourceRecord.resourceType !== 'string') return [];
@@ -78,6 +126,10 @@ export class CanonicalResourceInvariantValidator {
                     severityOverride: 'warning',
                 }));
             }
+        }
+
+        if (rt === 'StructureDefinition') {
+            issues.push(...this.validateConstraintKeyReuse(resourceRecord));
         }
 
         // Resource-specific business rules

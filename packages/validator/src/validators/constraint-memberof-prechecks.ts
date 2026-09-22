@@ -1,13 +1,13 @@
-import type { ConstraintExpressionCache } from './constraint-expression-cache';
+import type { ConstraintExpressionCache } from './constraint-expression-cache.js';
 import {
   evaluateOptionalMemberOfUnion,
   evaluateSimpleMemberOfExists,
   evaluateTrailingMemberOf,
   rewriteLegacyValueSetInExists,
   type MemberOfPrecheckResult,
-} from './fhirpath-memberof-precheck';
-import type { ValueSetCache } from './valueset-cache';
-import { ValueSetPackageLoader } from './valueset-package-loader';
+} from './fhirpath-memberof-precheck.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import { ValueSetPackageLoader } from './valueset-package-loader.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 

@@ -5,8 +5,8 @@
  * Fallback: the embedder's DB-backed ProfilePackageMapper (when wired).
  */
 
-import { logger } from '../logger';
-import { getProfileSource } from '../persistence';
+import { logger } from '../logger.js';
+import { getProfileSource } from '../persistence/index.js';
 import {
   isSafePackageId,
   packageErrorMetadata,

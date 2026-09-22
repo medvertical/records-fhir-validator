@@ -1,24 +1,19 @@
-import {
-  isErrorValidationSeverity,
-  type ValidationResult,
-  type ValidationSettings,
-} from '@records-fhir/validation-types';
-import type { IReferenceValidator, ValidationContext, ValidationIssue } from '../types';
-import { ReferenceTypeExtractor } from './reference-type-extractor';
-import { validateContainedReferenceIssues } from './reference-contained-validation';
-import { getRecursiveValidationConfig } from './reference-validation-args';
-import type { BatchCheckConfig } from './reference-http-client';
-import type { RecursiveValidationConfig } from './recursive-reference-validator';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import { ReferenceTypeExtractor } from './reference-type-extractor.js';
+import { validateContainedReferenceIssues } from './reference-contained-validation.js';
+import { getRecursiveValidationConfig } from './reference-validation-args.js';
+import type { BatchCheckConfig } from './reference-http-client.js';
+import type { RecursiveValidationConfig } from './recursive-reference-validator.js';
 import {
   createReferenceValidatorDependencies,
   type ReferenceValidatorDependencies,
-} from './reference-validator-dependencies';
+} from './reference-validator-dependencies.js';
 import {
   ReferenceValidationWorkflow,
   type ReferenceResourceFetcher,
-} from './reference-validation-workflow';
+} from './reference-validation-workflow.js';
 
-export class ReferenceValidator implements IReferenceValidator {
+export class ReferenceValidator {
   private referenceTypeExtractor: ReferenceTypeExtractor;
   private readonly constraintValidator: ReferenceValidatorDependencies['constraintValidator'];
   private readonly containedResolver: ReferenceValidatorDependencies['containedResolver'];
@@ -52,49 +47,13 @@ export class ReferenceValidator implements IReferenceValidator {
     });
   }
 
-  async validate(
-    resource: unknown,
-    context: ValidationContext
-  ): Promise<ValidationResult> {
-    const startTime = Date.now();
-    const version = context.fhirVersion || 'R4';
-
-    const issues = await this.validateInternal(
-      resource,
-      context.resourceType,
-      version,
-      context.settings
-    );
-
-    const validationTime = Date.now() - startTime;
-    const isValid = issues.length === 0 || !issues.some(
-      i => isErrorValidationSeverity(i.severity),
-    );
-
-    return {
-      resourceId: context.resourceId || getResourceString(resource, 'id') || 'unknown',
-      resourceType: context.resourceType,
-      isValid,
-      issues,
-      aspects: [{
-        aspect: 'reference',
-        isValid,
-        issues,
-        validationTime,
-        status: 'completed'
-      }],
-      validatedAt: new Date(),
-      validationTime,
-      fhirVersion: version
-    };
-  }
-
   async validateInternal(
     resource: unknown,
     resourceType: string,
     fhirClientOrVersion?: unknown, // Can be a compatible FHIR client or version string
     fhirVersionOrSettings?: 'R4' | 'R5' | 'R6' | ValidationSettings,
-    settings?: ValidationSettings
+    settings?: ValidationSettings,
+    resourceFetcher?: ReferenceResourceFetcher,
   ): Promise<ValidationIssue[]> {
     return this.validationWorkflow.validate(
       resource,
@@ -102,6 +61,7 @@ export class ReferenceValidator implements IReferenceValidator {
       fhirClientOrVersion,
       fhirVersionOrSettings,
       settings,
+      resourceFetcher,
     );
   }
 
@@ -239,10 +199,4 @@ export class ReferenceValidator implements IReferenceValidator {
   public filterExistingReferences(references: string[], config?: Partial<BatchCheckConfig>) {
     return this.batchedChecker.filterExistingReferences(references, config);
   }
-}
-
-function getResourceString(resource: unknown, key: string): string | undefined {
-  if (!resource || typeof resource !== 'object' || Array.isArray(resource)) return undefined;
-  const value = (resource as Record<string, unknown>)[key];
-  return typeof value === 'string' ? value : undefined;
 }

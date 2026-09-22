@@ -1,8 +1,8 @@
 import type { PackageDownloader } from '../package/package-downloader.js';
 import type { PackageRegistryClient } from '../package/package-registry-client.js';
-import type { ProfileSourcesConfig } from '../types';
-import type { PackageProfileIndexCache } from './sd-loader-package-profile-index';
-import type { StructureDefinition } from './structure-definition-types';
+import type { ProfileSourcesConfig } from '@records-fhir/validation-types';
+import type { PackageProfileIndexCache } from './sd-loader-package-profile-index.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 
 /** Shared dependencies and cache ownership exposed to remote profile sources. */
 export interface AutoDownloadSourceContext {

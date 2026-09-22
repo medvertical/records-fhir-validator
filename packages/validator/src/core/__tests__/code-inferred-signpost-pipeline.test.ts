@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import { CODE_INFERRED_SIGNPOST_CODE } from '../code-inferred-profile-attribution';
 import type { StructureDefinitionLoader } from '../structure-definition-loader';
 import type { StructureDefinition } from '../structure-definition-types';
@@ -73,7 +73,7 @@ function pipelineContext(profiles: StructureDefinition[]): RecordsSingleResource
     setProfileResolutionContext: vi.fn(),
     getAvailableProfiles: () => [...byUrl.keys()],
   } as unknown as StructureDefinitionLoader;
-  return {
+  const context: RecordsSingleResourceValidationContext = {
     sdLoader,
     profileCache: undefined as never,
     snapshotGenerator: {} as never,
@@ -90,7 +90,10 @@ function pipelineContext(profiles: StructureDefinition[]): RecordsSingleResource
     validateBundleEntriesIfNeeded: vi.fn(async () => []),
     validateContainedResourcesIfNeeded: vi.fn(async () => []),
     validateParametersResourcesIfNeeded: vi.fn(async () => []),
+    validateAgainstProfile: (resource, profileUrl, fhirVersion) =>
+      executeRecordsResourceValidation({ resource, profileUrl, fhirVersion }, context, Date.now()),
   };
+  return context;
 }
 
 async function runPipeline(
@@ -105,6 +108,28 @@ async function runPipeline(
 }
 
 describe('code-inferred profile signpost and attribution (single-resource pipeline)', () => {
+  it('applies the mandated profile beside a different declared profile', async () => {
+    const declared = 'urn:declared-observation';
+    const issues = await runPipeline(observation('8480-6', { profile: [declared] }),
+      [profile(declared), profile(BP_PROFILE_URL)]);
+
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'structural-cardinality-min', profile: BP_PROFILE_URL }),
+      expect.objectContaining({ code: 'profile-slice-count', profile: BP_PROFILE_URL }),
+    ]));
+  });
+
+  it('propagates a failed mandated-profile pass to the validation error boundary', async () => {
+    const declared = 'urn:declared-observation';
+    const context = pipelineContext([profile(declared)]);
+    const failure = new Error('profile evaluator failed');
+    context.validateAgainstProfile = async () => { throw failure; };
+
+    await expect(executeRecordsResourceValidation({
+      resource: observation('8480-6', { profile: [declared] }), fhirVersion: 'R4',
+    }, context, Date.now())).rejects.toBe(failure);
+  });
+
   it('signposts bp for a systolic 8480-6 Observation and attributes its errors to the profile aspect', async () => {
     const issues = await runPipeline(observation('8480-6'), [profile(BP_PROFILE_URL)]);
 

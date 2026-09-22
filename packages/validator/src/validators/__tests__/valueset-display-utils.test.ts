@@ -2,6 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { displaysEquivalent, displaysEquivalentForCodeInfo } from '../valueset-display-utils';
 
 describe('valueset display equivalence', () => {
+  it.each([
+    ['Urine leukocyte test = +', 'Urine leukocyte test'],
+    ['Urine leukocyte test +', 'Urine leukocyte test ++'],
+    ['Urine test = -', 'Urine test'],
+    ['Concentration >= 5', 'Concentration > 5'],
+    ['Temperature -5', 'Temperature 5'],
+  ])('preserves the meaning of %s versus %s', (expected, actual) => {
+    expect(displaysEquivalent(expected, actual)).toBe(false);
+    expect(displaysEquivalentForCodeInfo(expected, actual, { system: 'http://loinc.org' })).toBe(false);
+  });
+
+  it('accepts equivalent typography for grades and comparisons', () => {
+    expect(displaysEquivalent('Urine test = +', 'Urine test +')).toBe(true);
+    expect(displaysEquivalent('Concentration >= 5', 'Concentration ≥5')).toBe(true);
+  });
+
   it('ignores punctuation-only display differences', () => {
     expect(displaysEquivalent('Encounter for check up', "Encounter for 'check-up'")).toBe(true);
   });
@@ -17,6 +33,14 @@ describe('valueset display equivalence', () => {
   it('keeps clinically different labels distinct', () => {
     expect(displaysEquivalent('Essential hypertension', 'Hypertension')).toBe(false);
     expect(displaysEquivalent('Driver license number', 'Driver License')).toBe(false);
+  });
+
+  it('accepts a SNOMED specimen name with its semantic tag without hiding different specimens', () => {
+    const coding = { system: 'http://snomed.info/sct', code: '258603007' };
+    expect(displaysEquivalentForCodeInfo('Respiratory specimen', 'Respiratory specimen (specimen)', coding)).toBe(true);
+    expect(displaysEquivalentForCodeInfo('Respiratory specimen', 'Urine specimen (specimen)', coding)).toBe(false);
+    expect(displaysEquivalentForCodeInfo('Respiratory specimen', 'Respiratory specimen (specimen)',
+      { system: 'https://example.org/codes', code: 'example' })).toBe(false);
   });
 
   it('allows identifier type displays without the optional number suffix', () => {

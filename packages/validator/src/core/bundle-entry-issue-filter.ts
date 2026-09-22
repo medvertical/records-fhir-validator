@@ -1,4 +1,4 @@
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 const EMBEDDED_METADATA_COMPLETENESS_CODES = new Set([
   'required-metadata-missing-lastUpdated',

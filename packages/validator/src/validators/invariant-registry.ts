@@ -59,6 +59,13 @@ const SPECIALISED_INVARIANT_HANDLERS: Record<string, string> = {
   'cmp-1': 'resource-specific-constraints-validator.ts',
   'cmp-2': 'resource-specific-constraints-validator.ts',
 
+  // CodeSystem / ValueSet: optional canonical names must only be checked when
+  // present. The dedicated validator owns that guard; the generic FHIRPath
+  // evaluator otherwise treats the empty `name.matches(...)` result as a
+  // failed invariant.
+  'csd-0': 'canonical-resource-invariant-validator.ts',
+  'vsd-0': 'canonical-resource-invariant-validator.ts',
+
   // DomainResource: contained resource restrictions + narrative
   // presence. dom-2..dom-5 are errors; dom-6 is a best-practice
   // warning handled by best-practice-validator.ts.
@@ -112,7 +119,7 @@ const SPECIALISED_INVARIANT_HANDLERS: Record<string, string> = {
   'ref-1': 'universal-constraints-validator.ts',
 };
 
-// Note: most canonical-resource naming invariants (`mea-0`, `csd-0`, `cnl-0`,
+// Note: most canonical-resource naming invariants (`mea-0`, `cnl-0`,
 // `sev-0`, `apr-1`, …) are handled by
 // `canonical-resource-invariant-validator.ts`, but they are ALSO
 // severity=warning in the R4 base package and do not currently appear
@@ -120,9 +127,10 @@ const SPECIALISED_INVARIANT_HANDLERS: Record<string, string> = {
 // of this registry preserves existing behaviour — the generic
 // executor already treats most of them as a no-op because they are
 // warnings rather than errors. If a future refactor flips them to
-// error-severity evaluation, they should be registered here per-key. `que-0`
-// is registered above because Questionnaire has a dedicated validator and
-// live runs showed duplicate specialised + generic diagnostics.
+// error-severity evaluation, they should be registered here per-key. `csd-0`,
+// `vsd-0`, and `que-0` are registered above because focused conformance runs
+// prove that their generic diagnostics duplicate or contradict the dedicated
+// validators.
 
 export const InvariantRegistry = {
   /**

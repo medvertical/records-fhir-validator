@@ -139,22 +139,21 @@ describe('HL7 Europe EHDS 2026 package lane', () => {
     });
   });
 
-  it('creates an EHDS preset on top of the MII baseline', () => {
+  it('creates an independent EHDS preset without MII assignments', () => {
     const settings = createEhds2026ValidationSettings();
 
     for (const { id, version } of MII_2026_PACKAGE_SET) {
-      expect(settings.packageDownload?.pinnedVersions[id]).toBe(version);
-      expect(settings.packageDownload?.approvedPackages).toContain(id);
+      expect(settings.packageDownload?.pinnedVersions[id]).toBeUndefined();
+      expect(settings.hapiConfig?.igPackages).not.toContain(`${id}#${version}`);
     }
     for (const { id, version } of HL7_EU_EHDS_2026_PACKAGE_SET) {
       expect(settings.packageDownload?.pinnedVersions[id]).toBe(version);
       expect(settings.packageDownload?.approvedPackages).toContain(id);
       expect(settings.hapiConfig?.igPackages).toContain(`${id}#${version}`);
     }
-    expect(settings.hapiConfig?.igPackages).toContain(
+    expect(settings.hapiConfig?.igPackages).not.toContain(
       'de.medizininformatikinitiative.kerndatensatz.consent#2026.0.1-rc-2'
     );
-    expect(settings.mii?.preset).toBe('ehds-2026');
-    expect(settings.mii?.terminologyMode).toBe('mii-local-blaze');
+    expect(settings.mii).toBeUndefined();
   });
 });

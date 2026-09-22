@@ -124,6 +124,66 @@ describe('universalConstraintsValidator', () => {
     }));
   });
 
+  it('reports ele-1 for a primitive whose only child is its id', () => {
+    // <implicitRules id="i1"/> — no value, and the expression discounts id:
+    // `hasValue() or (children().count() > id.count())`.
+    const issues = universalConstraintsValidator.validate({
+      resourceType: 'Patient',
+      id: 'pat-good',
+      _implicitRules: { id: 'i1' },
+      language: 'en-AU',
+    });
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      code: 'ele-1-violation',
+      path: 'Patient.implicitRules',
+    }));
+  });
+
+  it('accepts a primitive whose sidecar carries an extension', () => {
+    const issues = universalConstraintsValidator.validate({
+      resourceType: 'Patient',
+      _active: {
+        extension: [{
+          url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
+          valueCode: 'unknown',
+        }],
+      },
+    });
+
+    expect(issues.filter(issue => issue.code === 'ele-1-violation')).toEqual([]);
+  });
+
+  it('does not report ele-1 when the primitive carries a value', () => {
+    const issues = universalConstraintsValidator.validate({
+      resourceType: 'Patient',
+      implicitRules: 'http://example.org/rules',
+      _implicitRules: { id: 'i1' },
+    });
+
+    expect(issues.filter(issue => issue.code === 'ele-1-violation')).toEqual([]);
+  });
+
+  it('leaves extensions to ext-1', () => {
+    const issues = universalConstraintsValidator.validate({
+      resourceType: 'Patient',
+      extension: [{ url: 'http://example.org/x', _valueString: { id: 'e1' } }],
+    });
+
+    expect(issues.filter(issue => issue.code === 'ele-1-violation')).toEqual([]);
+  });
+
+  it('does not walk into narrative markup', () => {
+    // A narrative whose namespace is wrong reaches the validator as a walked
+    // tree rather than a string. It is XHTML, not FHIR elements.
+    const issues = universalConstraintsValidator.validate({
+      resourceType: 'List',
+      text: { status: 'generated', div: { p: {} } },
+    });
+
+    expect(issues.filter(issue => issue.code === 'ele-1-violation')).toEqual([]);
+  });
+
   it('terminates safely for cyclic object graphs', () => {
     const resource: Record<string, unknown> = {
       resourceType: 'Patient',

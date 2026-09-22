@@ -7,7 +7,7 @@ import {
   getPresentProperty,
   getResourceType,
   parseFhirDateTime,
-} from './validator-utils';
+} from './validator-utils.js';
 
 const RULE_ID = 'patient-age-validation';
 

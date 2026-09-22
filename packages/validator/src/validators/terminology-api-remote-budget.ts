@@ -1,7 +1,7 @@
-import { logger } from '../logger';
-import { getMaxRemoteCodeSystemValidations } from './terminology-api-remote-policy';
-import type { TerminologyResolutionConfig } from './valueset-types';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+import { logger } from '../logger.js';
+import { getMaxRemoteCodeSystemValidations } from './terminology-api-remote-policy.js';
+import type { TerminologyResolutionConfig } from './valueset-types.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export class RemoteCodeSystemValidationBudget {
   private validationCount = 0;

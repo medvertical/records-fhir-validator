@@ -1,5 +1,5 @@
-import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology';
-import type { FHIRPathBundleInput } from './fhirpath-functions';
+import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology.js';
+import type { FHIRPathBundleInput } from './fhirpath-functions.js';
 
 export interface SDFHIRPathEvaluationScope {
   bundle?: FHIRPathBundleInput;

@@ -1,7 +1,7 @@
-import type { SlicingDefinition } from '../core/structure-definition-types';
-import { getValueAtPath } from './slice-utils';
-import { normalizeDiscriminatorPath } from './slice-discriminator-constraints';
-import { stripCanonicalVersion } from './slice-type-discriminator';
+import type { SlicingDefinition } from '../core/structure-definition-types.js';
+import { getValueAtPath } from './slice-utils.js';
+import { normalizeDiscriminatorPath } from './slice-discriminator-constraints.js';
+import { stripCanonicalVersion } from './slice-type-discriminator.js';
 
 type ProfileResolverFn = (profileUrl: string) => Promise<{ baseDefinition?: string } | null>;
 

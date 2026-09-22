@@ -1,7 +1,8 @@
-import type { ReferenceResolver } from '../validators/slicing-validator';
-import type { MultiAspectDeps } from './multi-aspect-dependencies';
-import type { MultiAspectValidateResult } from './multi-aspect-types';
-import { MultiAspectValidationSession } from './multi-aspect-validation-session';
+import type { ReferenceResolver } from '../validators/slicing-validator.js';
+import type { ProfileApplicationSource } from '@records-fhir/validation-types';
+import type { MultiAspectDeps } from './multi-aspect-dependencies.js';
+import type { MultiAspectValidateResult } from './multi-aspect-types.js';
+import { MultiAspectValidationSession } from './multi-aspect-validation-session.js';
 
 /** Compose one isolated validation session, including its profile cache and recursive context. */
 export function buildMultiAspectValidateCallback(
@@ -16,6 +17,7 @@ export function buildMultiAspectValidateCallback(
   ) => void | Promise<void>,
   externalReferenceResolver?: ReferenceResolver,
   serverId?: number,
+  profileSources?: ReadonlyMap<unknown, ProfileApplicationSource>,
 ): (
   resource: unknown,
   profileUrl: string,
@@ -30,5 +32,6 @@ export function buildMultiAspectValidateCallback(
     onEmbeddedResourceValidated,
     externalReferenceResolver,
     serverId,
+    profileSources,
   }).validate;
 }

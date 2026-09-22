@@ -18,13 +18,13 @@ import type {
   FHIRSchemaElement,
   FHIRSchemaSlice,
   StructureDefinition,
-} from './fhir-schema-types';
+} from './fhir-schema-types.js';
 import {
   mergeDifferentialWithBase,
   resolveElements,
   type BaseResolver,
-} from './structure-definition-elements';
-import { populateSchemaElements } from './fhir-schema-tree-builder';
+} from './structure-definition-elements.js';
+import { populateSchemaElements } from './fhir-schema-tree-builder.js';
 
 export type {
   FHIRSchema,
@@ -35,7 +35,7 @@ export type {
   FHIRSchemaSlicing,
   SDElement,
   StructureDefinition,
-} from './fhir-schema-types';
+} from './fhir-schema-types.js';
 export { mergeDifferentialWithBase };
 export type { BaseResolver };
 

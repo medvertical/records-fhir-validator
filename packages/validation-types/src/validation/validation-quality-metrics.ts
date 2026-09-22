@@ -1,4 +1,4 @@
-import type { ValidationCompletenessMetrics } from './validation-completeness-metrics';
+import type { ValidationCompletenessMetrics } from './validation-completeness-metrics.js';
 
 export interface ValidationQualityMetrics {
   overallQualityScore: number;

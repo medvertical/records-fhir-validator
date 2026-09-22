@@ -8,7 +8,7 @@ import {
   summarizeIssueFingerprints,
   type ExpectedIssueAnchor,
 } from '../issue-contract';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 const issue: ValidationIssue = {
   aspect: 'profile',

@@ -4,7 +4,7 @@
  * Codes for terminology/value set binding validation.
  */
 
-import type { ValidationCodeMetadata } from './validation-code-types';
+import type { ValidationCodeMetadata } from './validation-code-types.js';
 
 export const TerminologyCodes = {
     'terminology-binding-required': {
@@ -52,6 +52,16 @@ export const TerminologyCodes = {
         aspect: 'terminology',
         severity: 'error',
         description: 'Required binding code is missing',
+    },
+    'terminology-valueset-version-unresolved': {
+        aspect: 'terminology',
+        severity: 'warning',
+        description: 'Pinned ValueSet version could not be resolved',
+    },
+    'terminology-system-undetermined': {
+        aspect: 'terminology',
+        severity: 'error',
+        description: 'System URI could not be determined for a bare code',
     },
     'terminology-valueset-error': {
         aspect: 'terminology',

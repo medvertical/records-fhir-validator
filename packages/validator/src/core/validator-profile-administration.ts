@@ -1,9 +1,9 @@
-import type { ProfileCache } from '../cache/profile-cache';
-import { logger } from '../logger';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { StructureDefinition } from './structure-definition-types';
-import { loadProfileWithSnapshot } from './profile-loader-utils';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import { logger } from '../logger.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { loadProfileWithSnapshot } from './profile-loader-utils.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 
@@ -40,7 +40,9 @@ export class ValidatorProfileAdministration {
   }
 
   clearProfileCache(): void {
+    this.sdLoader.clearCache();
     this.profileCache.clear();
+    this.snapshotGenerator.clearCache();
     logger.info('[RecordsValidator] Profile cache cleared');
   }
 

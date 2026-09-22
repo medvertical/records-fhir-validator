@@ -1,12 +1,12 @@
-import { makeValueSetNotResolvableCacheKey } from './terminology-api-cache';
-import { getTerminologyServerScope } from './terminology-server-scope';
-import { expandValueSetViaTerminologyServer } from './terminology-valueset-expand-request';
-import type { TerminologyValueSetOperationsContext } from './terminology-valueset-operation-context';
-import { canDelegateValueSetExpansion } from './valueset-delegation-policy';
-import type { TerminologyServerOverride } from './valueset-types';
+import { makeValueSetNotResolvableCacheKey } from './terminology-api-cache.js';
+import { getTerminologyServerScope } from './terminology-server-scope.js';
+import { expandValueSetViaTerminologyServer } from './terminology-valueset-expand-request.js';
+import type { TerminologyValueSetOperationsContext } from './terminology-valueset-operation-context.js';
+import { canDelegateValueSetExpansion } from './valueset-delegation-policy.js';
+import type { TerminologyServerOverride } from './valueset-types.js';
 
-export type { TerminologyValueSetOperationsContext } from './terminology-valueset-operation-context';
-export { validateCodeAgainstRemoteValueSet } from './terminology-valueset-validation-operation';
+export type { TerminologyValueSetOperationsContext } from './terminology-valueset-operation-context.js';
+export { validateCodeAgainstRemoteValueSet } from './terminology-valueset-validation-operation.js';
 
 export async function executeRemoteValueSetExpansion(
   context: TerminologyValueSetOperationsContext,

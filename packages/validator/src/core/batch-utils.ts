@@ -7,9 +7,9 @@ export {
   deduplicateResources,
   groupResourcesByProfile,
   type DeduplicationResult,
-} from './batch-resource-planning';
-export { preloadProfiles } from './profile-batch-preloader';
+} from './batch-resource-planning.js';
+export { preloadProfiles } from './profile-batch-preloader.js';
 export {
   resetWarmupState,
   warmupProfileCacheFromDatabase,
-} from './profile-cache-warmup';
+} from './profile-cache-warmup.js';

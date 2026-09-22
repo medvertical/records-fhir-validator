@@ -15,7 +15,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { StructuralExecutor, type StructuralValidationContext } from '../structural-executor';
 import type { StructureDefinition, ElementDefinition } from '../../structure-definition-types';
-import type { ValidationIssue } from '../../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 // Mock dependencies
 vi.mock('../../../../validators/cardinality-validator', () => ({

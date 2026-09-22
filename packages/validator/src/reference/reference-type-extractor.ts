@@ -12,17 +12,17 @@ import {
   KNOWN_FHIR_RESOURCE_TYPES,
   getKnownFhirResourceTypes,
   isFhirVersionPathSegment,
-} from './reference-resource-types';
+} from './reference-resource-types.js';
 import type {
   ReferenceParseResult,
   ReferenceTypeExtractionOptions,
-} from './reference-type-extractor-types';
-import { parseAbsoluteReference, parseCanonicalReference } from './reference-url-parser';
+} from './reference-type-extractor-types.js';
+import { parseAbsoluteReference, parseCanonicalReference } from './reference-url-parser.js';
 
 export type {
   ReferenceParseResult,
   ReferenceTypeExtractionOptions,
-} from './reference-type-extractor-types';
+} from './reference-type-extractor-types.js';
 
 // ============================================================================
 // Types

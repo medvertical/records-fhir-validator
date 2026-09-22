@@ -1,9 +1,9 @@
 import {
   findChoiceSidecarProperty,
   findConcreteChoiceProperty,
-} from '../core/fhir-choice-property';
-import { isRecord } from '../core/fhir-resource';
-import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar';
+} from '../core/fhir-choice-property.js';
+import { isRecord } from '../core/fhir-resource.js';
+import { resolveFhirSegmentValue } from '../core/fhir-primitive-sidecar.js';
 
 export type GetValueAtPath<TResource> = (
   resource: TResource,

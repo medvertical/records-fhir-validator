@@ -1,10 +1,10 @@
-import type { CodeSystemValidationIssue } from './terminology-api-types';
+import type { CodeSystemValidationIssue } from './terminology-api-types.js';
 import {
     getNestedString,
     getOperationOutcomeIssueValues,
     getParametersEntries,
     isTerminologyResponseRecord,
-} from './terminology-response-utils';
+} from './terminology-response-utils.js';
 
 function normalizeOutcomeSeverity(severity: unknown): CodeSystemValidationIssue['severity'] {
     if (severity === 'error' || severity === 'warning' || severity === 'information') return severity;

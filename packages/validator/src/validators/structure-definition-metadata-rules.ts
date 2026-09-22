@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { STATUS_CONSISTENCY, WG_CONTACT_URL, WG_PUBLISHER } from './sd-wg-mappings';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { STATUS_CONSISTENCY, WG_CONTACT_URL, WG_PUBLISHER } from './sd-wg-mappings.js';
 
 export function validateStructureDefinitionWgConsistency(resource: unknown): ValidationIssue[] {
   if (!isRecord(resource)) return [];

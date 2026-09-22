@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  anyDisplayEquivalent,
   extractAcceptedDisplays,
   extractExpectedDisplay,
   uniqueAcceptedDisplays,
@@ -26,7 +27,21 @@ function observationWithDisplay(
   };
 }
 
+function medicationWithSnomedDisplay(display: string, code = '322236009'): Record<string, unknown> {
+  return {
+    resourceType: 'Medication',
+    code: { coding: [{ system: 'http://snomed.info/sct', code, display }] },
+  };
+}
+
 describe('terminology display rule helpers', () => {
+  it('retains result grades in remote designations and deduplication', () => {
+    const displays = ['Urine leukocyte test = +', 'Urine leukocyte test = ++'];
+    expect(anyDisplayEquivalent(displays, 'Urine leukocyte test')).toBe(false);
+    expect(anyDisplayEquivalent(displays, 'Urine leukocyte test +')).toBe(true);
+    expect(uniqueAcceptedDisplays(displays)).toEqual(displays);
+  });
+
   it('extracts a single accepted display', () => {
     expect(extractAcceptedDisplays("Wrong Display Name 'BMI'. Valid display is 'Body mass index (BMI) [Ratio]'"))
       .toEqual(['Body mass index (BMI) [Ratio]']);
@@ -70,6 +85,26 @@ describe('terminology display rule helpers', () => {
 });
 
 describe('validateKnownLoincDisplays', () => {
+  it('leaves SNOMED designation membership to the edition-aware terminology validator', () => {
+    expect(validateKnownLoincDisplays({
+      resourceType: 'Medication',
+      code: { coding: [{
+        system: 'http://snomed.info/sct', code: '322236009',
+        display: 'Acetaminophen 500 mg oral tablet',
+      }] },
+    })).toEqual([]);
+  });
+
+  it('does not reject a versioned Coding using the unversioned display table', () => {
+    expect(validateKnownLoincDisplays({
+      resourceType: 'Observation',
+      code: { coding: [{
+        system: 'http://loinc.org', code: '8716-3',
+        version: '2.10', display: 'Version-specific designation',
+      }] },
+    })).toEqual([]);
+  });
+
   it('accepts the exact Long Common Name', () => {
     expect(validateKnownLoincDisplays(observationWithDisplay('Vital signs note'))).toEqual([]);
   });
@@ -91,6 +126,18 @@ describe('validateKnownLoincDisplays', () => {
       code: 'terminology-display-mismatch',
       path: 'Observation.code.coding[0].display',
     }));
+  });
+
+  it('leaves an unknown SNOMED designation to the edition-aware resolver', () => {
+    expect(validateKnownLoincDisplays(
+      medicationWithSnomedDisplay('Something else entirely'),
+    )).toEqual([]);
+  });
+
+  it('accepts the SNOMED synonym the curated entry had been missing', () => {
+    expect(validateKnownLoincDisplays(
+      medicationWithSnomedDisplay('Acetaminophen 500 mg oral tablet'),
+    )).toEqual([]);
   });
 
   // LOINC 2.78 renamed document-section LCNs from '<X> Narrative' to

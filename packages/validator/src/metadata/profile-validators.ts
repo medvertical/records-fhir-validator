@@ -9,15 +9,15 @@
  * Refactored to use createValidationIssue factory.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import { isValidUrl } from './uri-validators';
-import { logger } from '../logger';
-import { isObjectRecord } from './metadata-boundary-utils';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import { isValidUrl } from './uri-validators.js';
+import { logger } from '../logger.js';
+import { isObjectRecord } from './metadata-boundary-utils.js';
 import {
   createSafeValidationFailureMessage,
   validationFailureMetadata,
-} from '../utils/validation-execution-failure';
+} from '../utils/validation-execution-failure.js';
 
 /**
  * Validates meta.profile URLs and accessibility

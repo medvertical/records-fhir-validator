@@ -76,6 +76,7 @@ describe('versioned ValueSet binding resolution', () => {
       expect.objectContaining({ url: 'https://uk-snomed.example/fhir' }),
       'R4',
       VERSION,
+      expect.any(Array),
     );
     expect(
       harness.terminologyDiagnostics.unverifiedBindings.byReason['versioned-binding-unverified'],

@@ -1,18 +1,15 @@
-import type { ProfileSourceContext } from '../persistence';
-import type { ValidationIssue, ValidationSettings } from '../types';
-import { validateBestPractices } from '../validators/best-practice-validator';
-import { containedResourceValidator } from '../validators/contained-resource-validator';
-import { deepBindingValidator } from '../validators/deep-binding-validator';
-import { deepProfileValidator } from '../validators/deep-profile-validator';
-import type { ReferenceTargetValidator } from '../validators/reference-target-validator';
-import { universalConstraintsValidator } from '../validators/universal-constraints-validator';
-import type { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor';
-import { validateReferenceTargetProfileConformance } from './multi-aspect-target-profile-conformance';
-import type { MultiAspectDeps } from './multi-aspect-dependencies';
-import type { MultiAspectResourceContext } from './multi-aspect-resource-preparation';
-import type { AspectResult, ValidateOneFn } from './multi-aspect-types';
-import type { createMultiAspectRunner } from './multi-aspect-runner';
-import { getValueAtPath } from './validation-utils';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import { validateBestPractices } from '../validators/best-practice-validator.js';
+import type { ReferenceTargetValidator } from '../validators/reference-target-validator.js';
+import type { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor.js';
+import { validateReferenceTargetProfileConformance } from './multi-aspect-target-profile-conformance.js';
+import type { MultiAspectDeps } from './multi-aspect-dependencies.js';
+import type { MultiAspectResourceContext } from './multi-aspect-resource-preparation.js';
+import type { AspectResult, ValidateOneFn } from './multi-aspect-types.js';
+import type { createMultiAspectRunner } from './multi-aspect-runner.js';
+import { getValueAtPath } from './validation-utils.js';
+import type { ReferenceResourceFetcher } from '../reference/reference-fetch-deadline.js';
 
 interface ExecuteSelectedAspectsOptions {
   deps: MultiAspectDeps;
@@ -32,10 +29,12 @@ interface ExecuteSelectedAspectsOptions {
   containingResource?: Record<string, unknown>;
   throwIfStopped: () => void;
   sdFHIRPathExecutor: SDFHIRPathExecutor;
+  referenceResourceFetcher?: ReferenceResourceFetcher;
 }
 
 export async function executeSelectedAspects(options: ExecuteSelectedAspectsOptions): Promise<void> {
   const { context: ctx, deps, selectedAspects, runAspect } = options;
+  deps.terminologyExecutor?.setSourceContext?.(options.profileSourceContext);
   if (selectedAspects.has('structural')) {
     await runAspect('structural', async () => [
       ...await deps.structuralExecutor.validate(ctx.resource, { ...ctx, getValueAtPath }),
@@ -56,26 +55,15 @@ export async function executeSelectedAspects(options: ExecuteSelectedAspectsOpti
 
   if (selectedAspects.has('profile')) {
     schedule(runAspect('profile', async () => {
-      const profileIssues = await deps.profileExecutor.validate({ ...ctx, getValueAtPath });
-      const deepProfileIssues = deepProfileValidator.validate({
-        resource: ctx.resource,
-        resourceType: ctx.resourceType,
-        structureDef: ctx.structureDef,
-        profileUrl: ctx.profileUrl,
-      });
-      const fhirPathIssues = await options.sdFHIRPathExecutor.execute({
-        resource: ctx.resource,
-        resourceType: ctx.resourceType,
-        structureDef: ctx.structureDef,
-        bundle: ctx.enclosingBundle ?? (ctx.resourceType === 'Bundle' ? ctx.resource : undefined),
-        fhirVersion: ctx.fhirVersion,
+      const profileIssues = await deps.profileExecutor.validate({
+        ...ctx,
+        getValueAtPath,
+        sdFHIRPathExecutor: options.sdFHIRPathExecutor,
         terminologyResolver: deps.terminologyExecutor.getFHIRPathTerminologyResolver?.(),
       });
       return [
         ...(options.profileFallbackIssue ? [options.profileFallbackIssue] : []),
         ...profileIssues,
-        ...deepProfileIssues,
-        ...fhirPathIssues,
       ];
     }), true);
   } else if (options.profileFallbackIssue) {
@@ -86,27 +74,29 @@ export async function executeSelectedAspects(options: ExecuteSelectedAspectsOpti
     schedule(runAspect('terminology', async () => [
       ...await deps.terminologyExecutor.validate({
         resource: ctx.resource,
+        resourceType: ctx.resourceType,
         structureDef: ctx.structureDef,
         getValueAtPath,
         fhirVersion: ctx.fhirVersion,
         sourceContext: options.profileSourceContext,
       }),
-      ...deepBindingValidator.validate({
-        resource: ctx.resource,
-        resourceType: ctx.resourceType,
-        structureDef: ctx.structureDef,
-      }),
+      ...deps.terminologyResourceValidator.validate(ctx.resource, ctx.fhirVersion),
     ]), true);
   }
 
-  if (preInvariantAspects.length > 0) {
-    await Promise.all(preInvariantAspects);
-    options.throwIfStopped();
-  }
-  scheduleParallelAspects(options, parallelAspects);
-  if (parallelAspects.length > 0) {
-    await Promise.all(parallelAspects);
-    options.throwIfStopped();
+  try {
+    if (preInvariantAspects.length > 0) {
+      await Promise.all(preInvariantAspects);
+      options.throwIfStopped();
+    }
+    scheduleParallelAspects(options, parallelAspects);
+    if (parallelAspects.length > 0) {
+      await Promise.all(parallelAspects);
+      options.throwIfStopped();
+    }
+  } finally {
+    // A cancellation rejects one runner while its admitted siblings may still own I/O.
+    await Promise.allSettled([...preInvariantAspects, ...parallelAspects]);
   }
 }
 
@@ -118,9 +108,16 @@ function scheduleParallelAspects(
   if (selectedAspects.has('reference')) {
     parallelAspects.push(runAspect('reference', async () => {
       const referenceIssues = await deps.referenceExecutor.validate({
+        fhirClient: deps.fhirClient,
         resource: ctx.resource,
         fhirVersion: ctx.fhirVersion,
         settings: options.settings,
+        resourceFetcher: async (reference, fetchOptions) => {
+          fetchOptions?.signal?.throwIfAborted();
+          return ctx.referenceResolver?.(reference)
+            ?? await options.referenceResourceFetcher?.(reference, fetchOptions)
+            ?? null;
+        },
       });
       const wantsTargetProfiles = !options.skipTargetProfileConformance
         && options.settings?.recursiveReferenceValidation?.validateTargetProfiles === true
@@ -150,26 +147,21 @@ function scheduleParallelAspects(
   }
 
   if (selectedAspects.has('invariant')) {
-    parallelAspects.push(runAspect('invariant', async () => [
-      ...await deps.invariantExecutor.validate({
-        resource: ctx.resource,
-        structureDef: ctx.structureDef,
-        profileUrl: ctx.profileUrl,
-        existingIssues: options.collectedAspects.flatMap(aspect => aspect.issues),
-      }),
-      ...containedResourceValidator.validate(ctx.resource),
-      ...universalConstraintsValidator.validate(ctx.resource),
-      ...deps.terminologyResourceValidator.validate(ctx.resource, ctx.fhirVersion),
-    ]));
+    parallelAspects.push(runAspect('invariant', () => deps.invariantExecutor.validate({
+      resource: ctx.resource,
+      structureDef: ctx.structureDef,
+      profileUrl: ctx.profileUrl,
+      existingIssues: options.collectedAspects.flatMap(aspect => aspect.issues),
+    })));
   }
 
-  if (selectedAspects.has('custom_rule') && options.runCustomRules) {
-    parallelAspects.push(runAspect('custom_rule', () => deps.customRuleExecutor.validate({
+  if (selectedAspects.has('custom_rule')) {
+    parallelAspects.push(runAspect('custom_rule', async () => options.runCustomRules ? deps.customRuleExecutor.validate({
       resource: ctx.resource,
       structureDef: ctx.structureDef,
       fhirVersion: ctx.fhirVersion,
       organizationId: options.organizationId,
-    })));
+    }) : []));
   }
   if (selectedAspects.has('metadata')) {
     parallelAspects.push(runAspect(

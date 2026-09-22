@@ -4,7 +4,7 @@
  * Shared types, constants, and enums for validation settings.
  */
 
-import type { ValidationAspect } from './enums';
+import type { ValidationAspect } from './enums.js';
 
 // ============================================================================
 // Conformance/Infrastructure Resource Types (excluded from bulk validation)

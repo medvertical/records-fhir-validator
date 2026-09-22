@@ -1,29 +1,34 @@
-import type { Binding } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
+import type { Binding } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import {
+  unverifiedBindingKey,
+  type TerminologyServerAttempt,
+  type UnverifiedBindingDiagnostic,
+} from '../issues/unverified-binding-diagnostic.js';
 import type {
   CodeSystemValidationResult,
   TerminologyApiClient,
-} from './terminology-api-client';
-import type { SubsumptionOutcome } from './terminology-api-types';
-import type { BindingStrength } from './valueset-display-utils';
-import { expandValueSet } from './valueset-expansion-loader';
-import type { FhirVersion } from './valueset-expansion-cache-key';
-import { validateValueSetMembership } from './valueset-membership-validator';
-import { preloadCommonValueSets } from './valueset-cache-operations';
+} from './terminology-api-client.js';
+import type { SubsumptionOutcome } from './terminology-api-types.js';
+import type { BindingStrength } from './valueset-display-utils.js';
+import { expandValueSet } from './valueset-expansion-loader.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
+import { validateValueSetMembership } from './valueset-membership-validator.js';
+import { preloadCommonValueSets } from './valueset-cache-operations.js';
 import {
   validateBinding as validateBindingFlow,
   type BindingValidationDeps,
   type ValidateBindingOptions,
-} from './valueset-binding-validator';
-import { resolveCodeBindingSafely as runSafeBindingResolution } from './valueset-binding-resolution-safety';
-import { resolveValueSetCodeBinding } from './valueset-code-binding-resolver';
-import type { ValueSetCodeSystemOperations } from './valueset-code-system-operations';
-import { isValueSetAvailable as resolveValueSetAvailability } from './valueset-availability';
+} from './valueset-binding-validator.js';
+import { resolveCodeBindingSafely as runSafeBindingResolution } from './valueset-binding-resolution-safety.js';
+import { resolveValueSetCodeBinding } from './valueset-code-binding-resolver.js';
+import type { ValueSetCodeSystemOperations } from './valueset-code-system-operations.js';
+import { isValueSetAvailable as resolveValueSetAvailability } from './valueset-availability.js';
 import type {
   CodeBindingOutcome,
   TerminologyServerOverride,
-} from './valueset-types';
-import type { ValueSetValidatorRuntime } from './valueset-validator-runtime';
+} from './valueset-types.js';
+import type { ValueSetValidatorRuntime } from './valueset-validator-runtime.js';
 
 type ResolveCodeBinding = (
   code: string,
@@ -203,6 +208,10 @@ export class ValueSetValidationPipeline {
       packageLoader: this.runtime.packageLoader,
       resolveCodeBindingForBinding: this.resolveCodeBindingForBinding.bind(this),
       isValueSetAvailable: this.isValueSetAvailable.bind(this),
+      getUnverifiedBindingDiagnostic: (code, system, valueSetUrl, fhirVersion, codeSystemVersion) =>
+        this.runtime.unverifiedBindingDiagnostics.get(
+          unverifiedBindingKey(code, system, valueSetUrl, fhirVersion, codeSystemVersion),
+        ),
     };
   }
 
@@ -229,6 +238,7 @@ export class ValueSetValidationPipeline {
     override: TerminologyServerOverride | undefined,
     fhirVersion?: FhirVersion,
     codeSystemVersion?: string,
+    attempts?: TerminologyServerAttempt[],
   ): Promise<CodeBindingOutcome> {
     return this.getCodeSystems().validateViaServer({
       code,
@@ -238,7 +248,22 @@ export class ValueSetValidationPipeline {
       override,
       fhirVersion,
       codeSystemVersion,
+      attempts,
     });
+  }
+
+  private rememberUnverifiedBinding(
+    code: string,
+    system: string | undefined,
+    valueSetUrl: string,
+    fhirVersion: FhirVersion | undefined,
+    codeSystemVersion: string | undefined,
+    diagnostic: UnverifiedBindingDiagnostic,
+  ): void {
+    this.runtime.unverifiedBindingDiagnostics.set(
+      unverifiedBindingKey(code, system, valueSetUrl, fhirVersion, codeSystemVersion),
+      diagnostic,
+    );
   }
 
   private async resolveCodeBindingSafely(
@@ -261,6 +286,12 @@ export class ValueSetValidationPipeline {
         codeSystemVersion,
       ),
       this.runtime.terminologyDiagnostics,
+      () => this.rememberUnverifiedBinding(code, system, valueSetUrl, fhirVersion, codeSystemVersion, {
+        cause: 'validation-error',
+        localExpansion: 'none',
+        serverAttempts: [],
+        packageScope: this.runtime.packageLoader.hasHostPackageScope() ? 'tenant' : 'none',
+      }),
     );
   }
 
@@ -281,6 +312,9 @@ export class ValueSetValidationPipeline {
       resolveServerForSystem: this.resolveServerForSystem.bind(this),
       terminologyDiagnostics: this.runtime.terminologyDiagnostics,
       twoPhaseShadow: this.runtime.twoPhaseShadow,
+      recordUnverifiedBinding: diagnostic => this.rememberUnverifiedBinding(
+        code, system, valueSetUrl, fhirVersion, codeSystemVersion, diagnostic,
+      ),
       validateViaServer: this.validateCodeViaTerminologyServer.bind(this),
     }, code, system, valueSetUrl, bindingStrength, fhirVersion, elementPath, codeSystemVersion);
   }

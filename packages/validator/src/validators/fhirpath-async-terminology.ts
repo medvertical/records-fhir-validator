@@ -1,21 +1,21 @@
 import fhirpath from 'fhirpath';
 
-import { getFhirPathModel } from './fhirpath-model-resolver';
-import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
-import { buildAsyncTerminologyInvocationTable } from './fhirpath-terminology-invocations';
-import { rewriteFHIRPathTerminologyFunctions } from './fhirpath-terminology-rewrite';
+import { getFhirPathModel } from './fhirpath-model-resolver.js';
+import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { buildAsyncTerminologyInvocationTable } from './fhirpath-terminology-invocations.js';
+import { rewriteFHIRPathTerminologyFunctions } from './fhirpath-terminology-rewrite.js';
 import type {
   FHIRPathInvocationTable as InvocationTable,
   FHIRPathTerminologyResolver,
   FHIRPathTerminologyVersion as FhirVersion,
-} from './fhirpath-terminology-types';
+} from './fhirpath-terminology-types.js';
 
 export {
   FHIRPathTerminologyUnverifiedError,
   type FHIRPathTerminologyResolver,
-} from './fhirpath-terminology-types';
-export { rewriteFHIRPathTerminologyFunctions } from './fhirpath-terminology-rewrite';
+} from './fhirpath-terminology-types.js';
+export { rewriteFHIRPathTerminologyFunctions } from './fhirpath-terminology-rewrite.js';
 
 type CompiledExpression = ReturnType<typeof fhirpath.compile>;
 const MAX_CACHE_ENTRIES_PER_RESOLVER = 500;

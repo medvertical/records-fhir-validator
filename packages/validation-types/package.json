@@ -1,7 +1,7 @@
 {
   "name": "@records-fhir/validation-types",
-  "version": "0.1.9",
-  "description": "Validation-domain TypeScript types for the Records FHIR validator: ValidationIssue, ValidationSettings, ValidationResult, advisor rules, fix suggestions. No runtime code, no DB coupling.",
+  "version": "0.1.12",
+  "description": "Validation-domain types and runtime schemas, settings policies and fix suggestions for the Records FHIR validator. No database coupling.",
   "type": "module",
   "license": "Apache-2.0",
   "publishConfig": {
@@ -35,9 +35,17 @@
       "types": "./dist/validation/index.d.ts",
       "import": "./dist/validation/index.js"
     },
+    "./validation/aspect-aliases": {
+      "types": "./dist/validation/aspect-aliases.d.ts",
+      "import": "./dist/validation/aspect-aliases.js"
+    },
     "./validation/aspect-enums": {
       "types": "./dist/validation/aspect-enums.d.ts",
       "import": "./dist/validation/aspect-enums.js"
+    },
+    "./validation/enums": {
+      "types": "./dist/validation/enums.d.ts",
+      "import": "./dist/validation/enums.js"
     },
     "./validation/settings": {
       "types": "./dist/validation/settings.d.ts",
@@ -46,10 +54,22 @@
     "./validation/settings-defaults": {
       "types": "./dist/validation/settings-defaults.d.ts",
       "import": "./dist/validation/settings-defaults.js"
+    },
+    "./validation/settings-schema": {
+      "types": "./dist/validation/settings-schema.d.ts",
+      "import": "./dist/validation/settings-schema.js"
+    },
+    "./validation/settings-types": {
+      "types": "./dist/validation/settings-types.d.ts",
+      "import": "./dist/validation/settings-types.js"
+    },
+    "./validation/structural-engines": {
+      "types": "./dist/validation/structural-engines.d.ts",
+      "import": "./dist/validation/structural-engines.js"
     }
   },
   "scripts": {
-    "build": "node ../../scripts/run-typescript-native.mjs -p tsconfig.build.json && tsx ../../scripts/fix-esm-specifiers.ts dist",
+    "build": "node ../../scripts/run-typescript-native.mjs -p tsconfig.build.json",
     "typecheck": "node ../../scripts/run-typescript-native.mjs -p tsconfig.json --noEmit",
     "prepack": "npm run build",
     "pack:dry": "npm pack --dry-run"

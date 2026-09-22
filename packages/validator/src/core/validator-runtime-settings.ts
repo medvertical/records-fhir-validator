@@ -1,8 +1,8 @@
-import type { ValidationSettings } from '../types';
+import type { ValidationSettings } from '@records-fhir/validation-types';
 import { normalizeProfileSourcesConfig } from '@records-fhir/validation-types';
-import type { TerminologyResolutionConfig } from '../validators/valueset-validator';
-import { DEFAULT_RESOLUTION_CONFIG } from '../validators/valueset-types';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
+import type { TerminologyResolutionConfig } from '../validators/valueset-validator.js';
+import { DEFAULT_RESOLUTION_CONFIG } from '../validators/valueset-types.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
 
 export function expandHomePath(pathStr: string): string {
   if (pathStr.startsWith('$HOME/') || pathStr.startsWith('$HOME\\')) {

@@ -3,7 +3,7 @@ import {
   type FHIRPathInvocationTable,
   type FHIRPathTerminologyResolver,
   type FHIRPathTerminologyVersion,
-} from './fhirpath-terminology-types';
+} from './fhirpath-terminology-types.js';
 
 const MAX_TERMINOLOGY_INPUTS = 32;
 const MAX_CANONICAL_LENGTH = 2_048;

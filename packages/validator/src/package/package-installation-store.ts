@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 import {
   isSafePackageId,
   isSafePackageVersion,
@@ -14,6 +14,7 @@ import {
 } from './package-downloader-paths.js';
 import { compareVersions } from '../package-resolver/version-comparator.js';
 import { invalidatePackageProfileIndex } from './package-profile-index-metadata.js';
+import { reportUnreadablePackageStore } from './package-store-diagnostics.js';
 
 export interface InstalledPackage {
   packageId: string;
@@ -136,7 +137,8 @@ export class PackageInstallationStore {
       return entries
         .filter(entry => entry.isDirectory() && isSafeInstalledPackageDirectoryName(entry.name))
         .map(entry => entry.name);
-    } catch {
+    } catch (error: unknown) {
+      reportUnreadablePackageStore('PackageInstallationStore', this.cachePath, error);
       return [];
     }
   }

@@ -19,8 +19,8 @@
  * Attachment in R4/R5 are additionally treated as attachment slots.
  */
 
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
 import { createHash } from 'node:crypto';
 
 // Keys that are Attachment-typed everywhere they occur in FHIR R4/R5.

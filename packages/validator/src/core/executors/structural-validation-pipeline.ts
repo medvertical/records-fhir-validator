@@ -1,21 +1,22 @@
-import { BoundedLruCache } from '../../cache/bounded-lru-cache';
-import type { ValidationIssue } from '../../types';
-import { validateChoiceTypeProperties } from '../../validators/choice-type-property-validator';
-import type { TerminologyResolutionConfig } from '../../validators/valueset-validator';
-import { ContentReferenceElementsCache } from '../content-reference-elements';
-import type { StructureDefinitionLoader } from '../structure-definition-loader';
-import type { StructureDefinition } from '../structure-definition-types';
-import { getValueAtPath as getValueAtPathUtil } from '../validation-utils';
-import { validateResourceSanity } from './structural-resource-sanity';
-import { validateRequiredSnapshotFields } from './structural-required-fields';
-import { validateStructuralSnapshot } from './structural-snapshot-validation';
-import type { StructuralValidatorComponents } from './structural-validator-components';
+import { BoundedLruCache } from '../../cache/bounded-lru-cache.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateChoiceTypeProperties } from '../../validators/choice-type-property-validator.js';
+import type { TerminologyResolutionConfig } from '../../validators/valueset-validator.js';
+import { ContentReferenceElementsCache } from '../content-reference-elements.js';
+import type { StructureDefinitionLoader } from '../structure-definition-loader.js';
+import type { StructureDefinition } from '../structure-definition-types.js';
+import { getValueAtPath as getValueAtPathUtil } from '../validation-utils.js';
+import { validateResourceSanity } from './structural-resource-sanity.js';
+import { validateRequiredSnapshotFields } from './structural-required-fields.js';
+import { validateStructuralSnapshot } from './structural-snapshot-validation.js';
+import type { StructuralValidatorComponents } from './structural-validator-components.js';
 import {
   buildSnapshotIndex,
   detectUnknownProperties,
   makeWalkerDeps,
   type SnapshotIndex,
-} from './unknown-property-walker';
+} from './unknown-property-walker.js';
+import { createProfileUnreadable } from '../../issues/profile-completeness-issues.js';
 
 export type StructuralResource = Record<string, unknown>;
 export type StructuralValueAtPath = (
@@ -75,12 +76,15 @@ export class StructuralValidationPipeline {
       );
     }
 
+    let profileLoadFailure: ValidationIssue | undefined;
     if (!structureDef) {
-      structureDef = await this.loadStructureDefinition(
+      const loaded = await this.loadStructureDefinition(
         resource,
         profileUrl,
         fhirVersion || 'R4',
       );
+      structureDef = loaded.structureDef;
+      profileLoadFailure = loaded.loadFailure;
     }
 
     if (!getValueAtPath) {
@@ -89,6 +93,7 @@ export class StructuralValidationPipeline {
 
     const effectiveProfileUrl = profileUrl || structureDef?.url;
     const issues: ValidationIssue[] = [];
+    if (profileLoadFailure) issues.push(profileLoadFailure);
 
     if (structureDef?.snapshot?.element) {
       issues.push(...await validateStructuralSnapshot({
@@ -191,17 +196,30 @@ export class StructuralValidationPipeline {
     this.validators.mustSupport.setMustSupportSeverity(severity);
   }
 
+  /**
+   * The loader answers `null` for a profile that is not there, so a throw means
+   * something else failed. Both used to collapse into "no profile", which skips
+   * every snapshot-based check below without a trace.
+   */
   private async loadStructureDefinition(
     resource: StructuralResource,
     profileUrl: string | undefined,
     fhirVersion: 'R4' | 'R5' | 'R6',
-  ): Promise<StructureDefinition | null> {
+  ): Promise<{ structureDef: StructureDefinition | null; loadFailure?: ValidationIssue }> {
     const profileUrlToUse = profileUrl
       || `http://hl7.org/fhir/StructureDefinition/${String(resource.resourceType)}`;
     try {
-      return await this.sdLoader.loadProfile(profileUrlToUse, fhirVersion);
-    } catch {
-      return null;
+      return { structureDef: await this.sdLoader.loadProfile(profileUrlToUse, fhirVersion) };
+    } catch (error: unknown) {
+      return {
+        structureDef: null,
+        loadFailure: createProfileUnreadable({
+          profileUrl: profileUrlToUse,
+          resourceType: String(resource.resourceType ?? 'Resource'),
+          reason: 'structural-profile',
+          error,
+        }),
+      };
     }
   }
 

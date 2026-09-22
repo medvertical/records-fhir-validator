@@ -1,5 +1,5 @@
-import type { FhirResourceRecord } from '../reference/bundle-reference-types';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
+import type { FhirResourceRecord } from '../reference/bundle-reference-types.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
 
 const DEFAULT_MAX_QUESTIONNAIRE_ALIASES = 768;
 

@@ -1,14 +1,14 @@
-import type { ValidationIssue } from '../../types';
-import { createTerminologyIssue } from '../../terminology/terminology-issue';
-import { ValueSetCache } from '../../validators/valueset-cache';
-import { ValueSetPackageLoader } from '../../validators/valueset-package-loader';
-import { isAssertableCodeSystem } from '../../validators/valueset-code-system-rules';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createTerminologyIssue } from '../../terminology/terminology-issue.js';
+import { ValueSetCache } from '../../validators/valueset-cache.js';
+import { ValueSetPackageLoader } from '../../validators/valueset-package-loader.js';
+import { isAssertableCodeSystem } from '../../validators/valueset-code-system-rules.js';
 import {
   getProfileSource,
   getProfileSourceRevision,
   type ProfileSourceContext,
-} from '../../persistence';
-import { BoundedLruCache } from '../../cache/bounded-lru-cache';
+} from '../../persistence/index.js';
+import { BoundedLruCache } from '../../cache/bounded-lru-cache.js';
 
 type CodeSystemReferenceMode = 'syntax' | 'not-found';
 

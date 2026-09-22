@@ -1,8 +1,8 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import { extractReferencesWithPaths } from './bundle-reference-utils';
-import { validateSearchsetBundle } from './bundle-searchset-rules';
-import { displayValue, getBundleEntries, toBundleRecord } from './bundle-validator-records';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { extractReferencesWithPaths } from './bundle-reference-utils.js';
+import { validateSearchsetBundle } from './bundle-searchset-rules.js';
+import { displayValue, getBundleEntries, toBundleRecord } from './bundle-validator-records.js';
 
 export function validateBundleTypeRules(
   bundle: Record<string, unknown>,
@@ -57,17 +57,28 @@ export function validateBundleFullUrlPresence(
     const resource = toBundleRecord(entry?.resource);
     if (!entry || !resource || (entry.fullUrl !== undefined && entry.fullUrl !== null)) continue;
     const resourceType = displayValue(resource.resourceType, 'unknown');
-    issues.push(issue(
-      'bundle-entry-missing-fullurl',
-      `Bundle.entry[${index}].fullUrl`,
-      mandatory
-        ? `Entry[${index}] (${resourceType}) must have a fullUrl in a ${bundleType} Bundle`
-        : `Entry[${index}] (${resourceType}) should have a fullUrl`,
-      mandatory ? 'error' : 'warning',
-    ));
+    // "The fullUrl element SHALL have a value except that: fullUrl can be
+    // empty on a POST" — the entry creates the resource, so there is no URL
+    // for it yet. A relative reference inside it is still unanchored, which is
+    // reported below on its own.
+    if (!createsTheResource(entry)) {
+      issues.push(issue(
+        'bundle-entry-missing-fullurl',
+        `Bundle.entry[${index}].fullUrl`,
+        mandatory
+          ? `Entry[${index}] (${resourceType}) must have a fullUrl in a ${bundleType} Bundle`
+          : `Entry[${index}] (${resourceType}) should have a fullUrl`,
+        mandatory ? 'error' : 'warning',
+      ));
+    }
     if (mandatory) issues.push(...relativeReferenceIssues(resource, index));
   }
   return issues;
+}
+
+function createsTheResource(entry: Record<string, unknown>): boolean {
+  const request = toBundleRecord(entry.request);
+  return typeof request?.method === 'string' && request.method.toUpperCase() === 'POST';
 }
 
 function relativeReferenceIssues(resource: Record<string, unknown>, entryIndex: number): ValidationIssue[] {

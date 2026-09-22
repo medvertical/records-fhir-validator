@@ -1,8 +1,8 @@
-import type { ValidationIssue } from '../types';
-import { createValidationIssue } from '../issues';
-import type { CodeSystemConcept } from './valueset-types';
-import type { ValueSetCache } from './valueset-cache';
-import { ValueSetPackageLoader } from './valueset-package-loader';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createValidationIssue } from '../issues/index.js';
+import type { CodeSystemConcept } from './valueset-types.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import { ValueSetPackageLoader } from './valueset-package-loader.js';
 import {
   buildDisplayMismatchFixHint,
   displayMismatchSeverityForBinding,
@@ -10,9 +10,9 @@ import {
   resourceTypeFromElementPath,
   type BindingStrength,
   type CodeInfo,
-} from './valueset-display-utils';
-import { type FhirVersion, versionedExpansionCacheKey } from './valueset-expansion-cache-key';
-import { codeSystemCanonicalsEquivalent } from './code-system-canonical-aliases';
+} from './valueset-display-utils.js';
+import { type FhirVersion, versionedExpansionCacheKey } from './valueset-expansion-cache-key.js';
+import { codeSystemCanonicalsEquivalent } from './code-system-canonical-aliases.js';
 
 export async function validateDisplayMatchesCodeSystem(
   rawCode: unknown,

@@ -1,8 +1,8 @@
 import {
   ConstraintExpressionCache,
   type SynchronousFHIRPathExpressionCache,
-} from './constraint-expression-cache';
-import { createFHIRPathContext, resolveFunction } from './fhirpath-functions';
+} from './constraint-expression-cache.js';
+import { createFHIRPathContext, resolveFunction } from './fhirpath-functions.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 type ObjectRecord = Record<string, unknown>;

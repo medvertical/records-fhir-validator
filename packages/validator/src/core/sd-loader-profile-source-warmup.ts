@@ -1,10 +1,10 @@
-import { logger } from '../logger';
-import { getProfileSource } from '../persistence';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { profileMatchesCanonical } from './sd-loader-profile-identity';
-import { sanitizeProfile } from './sd-loader-profile-sanitizer';
-import { cacheKeyForProfile, fhirVersionFamily } from './sd-loader-version-utils';
-import type { StructureDefinition } from './structure-definition-types';
+import { logger } from '../logger.js';
+import { getProfileSource } from '../persistence/index.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { profileMatchesCanonical } from './sd-loader-profile-identity.js';
+import { sanitizeProfile } from './sd-loader-profile-sanitizer.js';
+import { cacheKeyForProfile, fhirVersionFamily } from './sd-loader-version-utils.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 
 export async function warmUpProfilesFromDatabase(params: {
   cache: Map<string, StructureDefinition>;

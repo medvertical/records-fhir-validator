@@ -15,7 +15,7 @@ export type {
   ValidationQualityReport,
   ValidationQualityTrend,
   ValidationReliabilityMetrics,
-} from './validation-quality-metrics';
+} from './validation-quality-metrics.js';
 
 export type {
   ValidationConfidenceAction,
@@ -23,7 +23,7 @@ export type {
   ValidationConfidenceIssue,
   ValidationConfidenceMetrics,
   ValidationResultWithConfidence,
-} from './validation-confidence-metrics';
+} from './validation-confidence-metrics.js';
 
 export type {
   MissingValidationArea,
@@ -33,4 +33,4 @@ export type {
   ValidationCoverageMetrics,
   ValidationGap,
   ValidationResultWithCompleteness,
-} from './validation-completeness-metrics';
+} from './validation-completeness-metrics.js';

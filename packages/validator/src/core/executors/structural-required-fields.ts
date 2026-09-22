@@ -1,16 +1,16 @@
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import type {
   ElementDefinition,
   StructureDefinition,
-} from '../structure-definition-types';
-import type { ComplexTypeValidator } from '../../validators/complex-type-validator';
-import { getValidationTargets, shouldValidateRequired } from '../../business-rules';
-import { logger } from '../../logger';
-import { getDirectValue } from './structural-executor-helpers';
-import { shouldSkipSnapshotElement } from './structural-element-rules';
-import { createValidationErrorIssue } from '../core-validation-issue';
-import { createExecutorFailureIssue } from './executor-failure-issue';
-import { sensitiveValueMetadata } from '../../utils/sensitive-logging-metadata';
+} from '../structure-definition-types.js';
+import type { ComplexTypeValidator } from '../../validators/complex-type-validator.js';
+import { getValidationTargets, shouldValidateRequired } from '../../business-rules/index.js';
+import { logger } from '../../logger.js';
+import { getDirectValue } from './structural-executor-helpers.js';
+import { shouldSkipSnapshotElement } from './structural-element-rules.js';
+import { createValidationErrorIssue } from '../core-validation-issue.js';
+import { createExecutorFailureIssue } from './executor-failure-issue.js';
+import { sensitiveValueMetadata } from '../../utils/sensitive-logging-metadata.js';
 
 interface RequiredFieldsValidationInput {
   resource: Record<string, unknown>;

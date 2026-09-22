@@ -1,32 +1,31 @@
 import { computeValidationIssueId } from '@records-fhir/validation-types';
-import { getValidationTargets, shouldValidateRequired } from '../../business-rules';
-import type { ProfileSourceContext } from '../../persistence';
-import type { ValidationIssue } from '../../types';
-import type { ValueSetCache } from '../../validators/valueset-cache';
-import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
-import { additionalBindingsForElement } from './terminology-additional-bindings';
-import { pinBindingToDependencyPins } from './terminology-binding-dependency-pins';
+import { getValidationTargets, shouldValidateRequired } from '../../business-rules/index.js';
+import type { ProfileSourceContext } from '../../persistence/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ValueSetCache } from '../../validators/valueset-cache.js';
+import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
+import { additionalBindingsForElement } from './terminology-additional-bindings.js';
+import { pinBindingToDependencyPins } from './terminology-binding-dependency-pins.js';
 import {
   applyValueSetSliceMembershipPolicy,
   effectiveBindingForElement,
-  pinBindingToProfileVersion,
   selectSliceScopedValues,
   selectValuesForBinding,
   shouldSuppressNonRequiredBindingForOwnFixedPattern,
   shouldSuppressValueSetSliceMembershipIssue,
   shouldValidateBindingForValue,
-} from './terminology-binding-selection';
+} from './terminology-binding-selection.js';
 import {
   getElementTypeCodes,
   getResourceType,
   isDirectResourceElementPath,
-} from './terminology-executor-helpers';
-import { validateExternalCodeSystems } from './terminology-external-code-system-rules';
-import { UCUM_BEARING_TYPES, validateUcumAtPath } from './terminology-ucum-rules';
-import type { TerminologySlicePlanCache } from './terminology-slice-plan-cache';
-import type { CodeSystemReferenceLookupCache } from './terminology-code-system-reference-rules';
-import type { UcumCodeValidator } from '../../validators/ucum-validator';
-import type { TerminologyBindingValidationPort, TerminologyValidationPort } from './terminology-validation-port';
+} from './terminology-executor-helpers.js';
+import { validateExternalCodeSystems } from './terminology-external-code-system-rules.js';
+import { UCUM_BEARING_TYPES, validateUcumAtPath } from './terminology-ucum-rules.js';
+import type { TerminologySlicePlanCache } from './terminology-slice-plan-cache.js';
+import type { CodeSystemReferenceLookupCache } from './terminology-code-system-reference-rules.js';
+import type { UcumCodeValidator } from '../../validators/ucum-validator.js';
+import type { TerminologyBindingValidationPort, TerminologyValidationPort } from './terminology-validation-port.js';
 
 export interface TerminologyElementValidationParams {
   resource: unknown;
@@ -152,6 +151,7 @@ async function validateElementBinding(
     }
     return issues;
   }
+  if (value === null || value === undefined || !shouldValidateBindingForValue(elementDef, value)) return [];
 
   const perCandidateIssues: ValidationIssue[][] = [];
   for (const candidate of selectValuesForBinding(elementDef, value, structureDef, slicePlanCache)) {
@@ -170,17 +170,16 @@ async function createCandidateBindingValidator(
   slicePlanCache: TerminologySlicePlanCache,
 ): Promise<(candidate: unknown, path: string) => Promise<ValidationIssue[]>> {
   const { elementDef, structureDef, profileUrl, fhirVersion } = params;
-  // Same-IG pin first (the profile's own version), then the dependency pins
-  // of the profile's source package for cross-IG canonicals.
+  // The owning package and its dependencies pin actual ValueSet resource versions.
   const effectiveBinding = await pinBindingToDependencyPins(
-    pinBindingToProfileVersion(effectiveBindingForElement(elementDef), structureDef),
+    effectiveBindingForElement(elementDef),
     structureDef,
     fhirVersion,
   );
   const additionalBindings = await Promise.all(
     additionalBindingsForElement(elementDef)
       .map(binding => pinBindingToDependencyPins(
-        pinBindingToProfileVersion(binding, structureDef),
+        binding,
         structureDef,
         fhirVersion,
       )),

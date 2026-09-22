@@ -1,4 +1,4 @@
-import type { StructureDefinition } from './structure-definition-types';
+import type { StructureDefinition } from './structure-definition-types.js';
 
 export function getCompositionEntryTargetProfiles(
   structureDef: StructureDefinition | undefined,

@@ -14,7 +14,7 @@ describe('walkResourceExtensions', () => {
       url: 'https://acme.test/fhir/StructureDefinition/deep',
       valueString: 'found',
     }];
-    const isExtensionUrlResolvable = vi.fn(async () => true);
+    const resolveExtensionUrl = vi.fn(async () => 'resolvable' as const);
     const visited = new Set<string>();
 
     await walkResourceExtensions(
@@ -33,12 +33,12 @@ describe('walkResourceExtensions', () => {
       [],
       {
         maxNestedExtensionDepth: 5,
-        isExtensionUrlResolvable,
+        resolveExtensionUrl,
         getDeclaredContexts: async () => null,
       },
     );
 
-    expect(isExtensionUrlResolvable).toHaveBeenCalledWith(
+    expect(resolveExtensionUrl).toHaveBeenCalledWith(
       'https://acme.test/fhir/StructureDefinition/deep',
       'R4',
     );
@@ -65,7 +65,7 @@ describe('walkResourceExtensions', () => {
       [],
       {
         maxNestedExtensionDepth: 5,
-        isExtensionUrlResolvable: async () => true,
+        resolveExtensionUrl: async () => 'resolvable' as const,
         getDeclaredContexts: async () => null,
       },
     );

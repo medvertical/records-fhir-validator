@@ -1,17 +1,17 @@
-import type { ValidationIssue } from '../types';
-import { resourceTypeOf } from '../core/fhir-resource';
-import type { StructureDefinition } from '../core/structure-definition-types';
-import type { StructureDefinitionLoader } from '../core/structure-definition-loader';
-import { logger } from '../logger';
-import type { TypeValidator } from './type-validator';
-import type { ValueSetValidator } from './valueset-validator';
-import type { ElementRulesValidator } from './element-rules-validator';
-import type { ExtensionValidationContext } from './extension-types';
-import type { SDFHIRPathExecutor } from './sd-fhirpath-executor';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
-import type { ExtensionProfileCache } from './extension-profile-cache';
-import { validateExtensionValueElements } from './extension-value-profile-validation';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { resourceTypeOf } from '../core/fhir-resource.js';
+import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { StructureDefinitionLoader } from '../core/structure-definition-loader.js';
+import { logger } from '../logger.js';
+import type { TypeValidator } from './type-validator.js';
+import type { ValueSetValidator } from './valueset-validator.js';
+import type { ElementRulesValidator } from './element-rules-validator.js';
+import type { ExtensionValidationContext } from './extension-types.js';
+import type { SDFHIRPathExecutor } from './sd-fhirpath-executor.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
+import type { ExtensionProfileCache } from './extension-profile-cache.js';
+import { validateExtensionValueElements } from './extension-value-profile-validation.js';
 
 interface ValidateExtensionProfileParams {
   extension: Record<string, unknown>;

@@ -1,7 +1,7 @@
-import type { Constraint } from '../core/structure-definition-types';
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import type { ConstraintValidationState, FhirResource } from './constraint-validation-input';
+import type { Constraint } from '../core/structure-definition-types.js';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ConstraintValidationState, FhirResource } from './constraint-validation-input.js';
 
 export function constraintOutcomeIssues(
   passed: boolean,
@@ -27,8 +27,12 @@ export function buildConstraintViolationIssue(
   const isDomConstraint = constraint.key?.startsWith('dom-');
   const isDom6 = constraint.key === 'dom-6';
   const isWarningConstraint = constraint.severity === 'warning' && !escalateToError;
-  const shouldDemoteToInfo = (isWarningConstraint && !isDomConstraint)
-    || (isDom6 && strictnessMode !== 'strict');
+  // A profile that declares `severity: warning` on a constraint means warning,
+  // and the reference validator reports it as one. Demoting every non-dom
+  // warning constraint to information diverged from that on every fixture
+  // carrying such a constraint. dom-6 keeps its demotion: it is a best-practice
+  // narrative rule the reference validator also treats as advisory.
+  const shouldDemoteToInfo = (isDom6 && strictnessMode !== 'strict');
   const issueCode = isDom6
     ? 'dom-6'
     : ((isWarningConstraint && (!isDomConstraint || (isDom6 && shouldDemoteToInfo)))

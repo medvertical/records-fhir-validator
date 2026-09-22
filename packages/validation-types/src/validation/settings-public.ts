@@ -1,5 +1,5 @@
-import type { ValidationSettings } from './settings';
-import type { TerminologyAuthConfig, TerminologyServer } from './settings-terminology';
+import type { ValidationSettings } from './settings.js';
+import type { TerminologyAuthConfig, TerminologyServer } from './settings-terminology.js';
 
 type TerminologySecretField =
   | 'password'

@@ -17,7 +17,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 import { SD_LOADER_INDEX_FILENAME } from '../package/package-profile-index-metadata.js';
 import {
     packageErrorMetadata,

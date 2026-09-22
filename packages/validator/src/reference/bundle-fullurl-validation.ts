@@ -1,4 +1,4 @@
-import type { BundleEntry, BundleIssue } from './bundle-reference-types';
+import type { BundleEntry, BundleIssue } from './bundle-reference-types.js';
 
 function parseRestfulFullUrlResourceIdentity(fullUrl: string): { resourceType: string; id: string } | null {
   const match = fullUrl.match(/(?:^|\/)([A-Z][a-zA-Z]+)\/([^/?#|]+)$/);

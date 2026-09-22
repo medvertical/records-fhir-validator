@@ -225,18 +225,10 @@ describe('MetadataValidator', () => {
       expect(issues.some(issue => issue.code === 'missing-meta')).toBe(false);
     });
 
-    it('should return a structured result for a non-object resource at the context boundary', async () => {
-      const result = await validator.validate(42, {
-        resource: 42,
-        resourceType: 'Patient',
-        fhirVersion: 'R4',
-      });
+    it('flags a non-object resource instead of crashing', async () => {
+      const issues = await validator.validate(42, 'Patient', 'R4');
 
-      expect(Array.isArray(result)).toBe(false);
-      if (!Array.isArray(result)) {
-        expect(result.isValid).toBe(false);
-        expect(result.issues.some(issue => issue.code === 'metadata-invalid-resource')).toBe(true);
-      }
+      expect(issues.some(issue => issue.code === 'metadata-invalid-resource')).toBe(true);
     });
 
     it('should not crash when a JavaScript caller supplies a null context', async () => {

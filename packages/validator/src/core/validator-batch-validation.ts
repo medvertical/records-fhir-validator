@@ -1,9 +1,9 @@
-import type { ValidationIssue, ValidationSettings } from '../types';
-import type { ProfileCache } from '../cache/profile-cache';
-import type { BestPracticeValidator } from '../validators/best-practice-validator';
-import type { StructureDefinitionLoader } from './structure-definition-loader';
-import type { SnapshotGenerator } from './snapshot-generator';
-import type { FhirClientLike } from './profile-loader-utils';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
+import type { ProfileCache } from '../cache/profile-cache.js';
+import type { BestPracticeValidator } from '../validators/best-practice-validator.js';
+import type { StructureDefinitionLoader } from './structure-definition-loader.js';
+import type { SnapshotGenerator } from './snapshot-generator.js';
+import type { FhirClientLike } from './profile-loader-utils.js';
 import type {
   CustomRuleExecutor,
   InvariantExecutor,
@@ -12,23 +12,23 @@ import type {
   ReferenceExecutor,
   StructuralExecutor,
   TerminologyExecutor,
-} from './executors';
-import { logger } from '../logger';
+} from './executors/index.js';
+import { logger } from '../logger.js';
 import {
   BatchValidationAbortedError,
   executeBatchValidation,
   type BatchValidationOptions,
-} from './batch-validator';
-import { buildMultiAspectValidateCallback } from './multi-aspect-validate-callback';
-import type { MultiAspectValidateResult } from './multi-aspect-types';
-import type { QuestionnaireContextRegistry } from './questionnaire-context-registry';
-import type { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor';
-import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator';
-import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator';
-import { groupResourcesByProfile } from './batch-resource-planning';
-import type { ProfileSourceContext } from '../persistence';
-import type { RecordsValidatorComponents } from './validator-engine-components';
-import { isRecord } from './fhir-resource';
+} from './batch-validator.js';
+import { buildMultiAspectValidateCallback } from './multi-aspect-validate-callback.js';
+import type { MultiAspectValidateResult } from './multi-aspect-types.js';
+import type { QuestionnaireContextRegistry } from './questionnaire-context-registry.js';
+import type { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor.js';
+import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator.js';
+import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator.js';
+import { groupResourcesByProfile } from './batch-resource-planning.js';
+import type { ProfileSourceContext } from '../persistence/index.js';
+import type { RecordsValidatorComponents } from './validator-engine-components.js';
+import { isRecord } from './fhir-resource.js';
 
 export interface RecordsBatchValidationContext {
   sdLoader: StructureDefinitionLoader;
@@ -126,6 +126,7 @@ export async function validateRecordsBatch(
         options.onEmbeddedResourceValidated,
         options.referenceResolver,
         options.serverId,
+        profileSourcesByResource(resources, options),
       ),
     });
   }
@@ -152,6 +153,9 @@ export async function validateRecordsAspects(
   options: BatchValidationOptions,
   context: RecordsBatchValidationContext,
 ): Promise<MultiAspectValidateResult> {
+  if (options.profileSources && options.profileSources.length !== 1) {
+    throw new Error('Direct aspect validation requires one profile source');
+  }
   if (!options.aspects?.length || !options.settings) {
     throw new Error('Direct aspect validation requires aspects and settings');
   }
@@ -197,6 +201,7 @@ export async function validateRecordsAspects(
     options.onEmbeddedResourceValidated,
     options.referenceResolver,
     options.serverId,
+    profileSourcesByResource([resource], options),
   );
   const execute = () => validate(resource, profileUrl, fhirVersion);
   const result = options.scheduleValidation
@@ -207,4 +212,10 @@ export async function validateRecordsAspects(
     await options.onResourceValidated(resource, result);
   }
   return result;
+}
+
+function profileSourcesByResource(resources: unknown[], options: BatchValidationOptions) {
+  const sources = options.profileSources
+    ?? (options.profileUrl ? resources.map(() => 'explicit-run' as const) : undefined);
+  return sources ? new Map(resources.map((resource, index) => [resource, sources[index]])) : undefined;
 }

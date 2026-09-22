@@ -2,9 +2,9 @@ import * as fs from 'fs';
 import * as https from 'https';
 import { createHash } from 'node:crypto';
 import axios, { type AxiosRequestConfig } from 'axios';
-import { logger } from '../logger';
-import type { TerminologyApiAuthConfig } from './valueset-types';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+import { logger } from '../logger.js';
+import type { TerminologyApiAuthConfig } from './valueset-types.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 type OAuth2Token = {
   accessToken: string;

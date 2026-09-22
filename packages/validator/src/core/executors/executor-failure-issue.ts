@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../../types';
-import { createSafeValidationFailureMessage } from '../../utils/validation-execution-failure';
-import { createValidationErrorIssue } from '../core-validation-issue';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createSafeValidationFailureMessage } from '../../utils/validation-execution-failure.js';
+import { createValidationErrorIssue } from '../core-validation-issue.js';
 
 export function createExecutorFailureIssue(
   aspect: ValidationIssue['aspect'],

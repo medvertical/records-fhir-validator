@@ -1,8 +1,8 @@
 import {
   canonicalBasesMatch,
   canonicalValuesMatch,
-} from './slice-canonical-matching';
-import { valuesMatch } from './slice-value-equality';
+} from './slice-canonical-matching.js';
+import { valuesMatch } from './slice-value-equality.js';
 
 export function valueMatchesFixedConstraint(
   actualValue: unknown,

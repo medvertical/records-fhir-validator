@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as tar from 'tar';
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 import {
   isIgnorablePackageArchiveMetadata,
   isSafePackageArchiveEntry,

@@ -31,10 +31,10 @@
  *     two-error shape Java uses for these cases.
  */
 
-import type { ValidationIssue } from '../types';
-import type { StructureDefinition, ElementDefinition } from '../core/structure-definition-types';
-import { createValidationIssue } from '../issues';
-import { resourceTypeOf } from '../core/fhir-resource';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { StructureDefinition, ElementDefinition } from '../core/structure-definition-types.js';
+import { createValidationIssue } from '../issues/index.js';
+import { resourceTypeOf } from '../core/fhir-resource.js';
 
 const UNIVERSAL_PRIMITIVE_KEYS = new Set([
   'id', 'extension', 'modifierExtension',

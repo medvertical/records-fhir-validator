@@ -1,6 +1,6 @@
-import type { ValidationIssue } from '../types';
-import { createMetadataIssue } from './metadata-issue';
-import type { ProvenanceResource } from './provenance-chain-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createMetadataIssue } from './metadata-issue.js';
+import type { ProvenanceResource } from './provenance-chain-types.js';
 
 interface ProvenanceIssueInput {
   resource: ProvenanceResource;

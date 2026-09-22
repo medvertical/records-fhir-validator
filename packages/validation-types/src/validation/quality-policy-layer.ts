@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { QUALITY_RULE_SEVERITIES } from './quality-rule-schema-foundations';
-import { qualityThresholdSchema } from './quality-threshold';
+import { QUALITY_RULE_SEVERITIES } from './quality-rule-schema-foundations.js';
+import { qualityThresholdSchema } from './quality-threshold.js';
 
 const packReferenceSchema = z.string()
   .min(3)
@@ -24,6 +24,7 @@ export const qualityRuleOverrideSchema = z.object({
 });
 
 export const qualityPolicyLayerSchema = z.object({
+  qualityAssessmentEnabled: z.boolean().optional(),
   commonPacks: z.array(packReferenceSchema).max(128).optional(),
   localPacks: z.array(packReferenceSchema).max(128).optional(),
   disabledPacks: z.array(packReferenceSchema).max(128).optional(),

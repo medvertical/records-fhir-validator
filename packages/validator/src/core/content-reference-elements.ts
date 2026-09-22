@@ -1,4 +1,4 @@
-import type { ElementDefinition } from './structure-definition-types';
+import type { ElementDefinition } from './structure-definition-types.js';
 
 export class ContentReferenceElementsCache {
   private readonly expanded = new WeakMap<ElementDefinition[], ElementDefinition[]>();

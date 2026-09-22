@@ -1,8 +1,8 @@
-import { createValidationIssue } from '../issues';
-import type { ValidationIssue } from '../types';
-import type { QuestionnaireItem, QuestionnaireResponseAnswer } from './questionnaire-types';
-import type { ValueSetCache } from './valueset-cache';
-import type { CodeSystem, CodeSystemConcept } from './valueset-types';
+import { createValidationIssue } from '../issues/index.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { QuestionnaireItem, QuestionnaireResponseAnswer } from './questionnaire-types.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import type { CodeSystem, CodeSystemConcept } from './valueset-types.js';
 
 export function validateQuestionnaireCodingAnswer(
   answer: QuestionnaireResponseAnswer,

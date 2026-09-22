@@ -1,22 +1,23 @@
-import type { ValidationIssue } from '../types';
-import type { TypeValidator } from './type-validator';
-import { ValueSetValidator, type TerminologyResolutionConfig } from './valueset-validator';
-import type { StructureDefinition, ElementDefinition } from '../core/structure-definition-types';
-import type { StructureDefinitionLoader } from '../core/structure-definition-loader';
-import { logger } from '../logger';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { TypeValidator } from './type-validator.js';
+import { ValueSetValidator, type TerminologyResolutionConfig } from './valueset-validator.js';
+import type { StructureDefinition, ElementDefinition } from '../core/structure-definition-types.js';
+import type { StructureDefinitionLoader } from '../core/structure-definition-loader.js';
+import { logger } from '../logger.js';
 import {
     isPrimitiveType,
-} from '../core/executors/structural-executor-helpers';
-import { checkExtensionExt1, checkPeriodPer1 } from './complex-type-invariants';
+} from '../core/executors/structural-executor-helpers.js';
+import { checkExtensionExt1, checkPeriodPer1 } from './complex-type-invariants.js';
+import { checkRangeBounds, isRangeBoundType } from './range-bound-invariants.js';
 import {
     narrowChoiceTypeForConcreteSegment,
     rewriteChoiceTypeBasePath,
     shouldSkipComplexDeepValidation,
-} from './complex-type-path-rules';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { ComplexTypeDefinitionResolver } from './complex-type-definition-resolver';
-import { validateComplexTypeSubElement } from './complex-type-sub-element-validation';
-import { DatatypeInvariantEvaluator } from './datatype-invariant-evaluator';
+} from './complex-type-path-rules.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { ComplexTypeDefinitionResolver } from './complex-type-definition-resolver.js';
+import { validateComplexTypeSubElement } from './complex-type-sub-element-validation.js';
+import { DatatypeInvariantEvaluator } from './datatype-invariant-evaluator.js';
 
 export class ComplexTypeValidator {
     private valueSetValidator: ValueSetValidator;
@@ -89,6 +90,11 @@ export class ComplexTypeValidator {
             if (primaryType.code === 'Period') {
                 const per1Issue = checkPeriodPer1(value, basePath);
                 if (per1Issue) issues.push(per1Issue);
+            }
+
+            if (isRangeBoundType(primaryType.code)) {
+                const boundsIssue = checkRangeBounds(value, basePath, primaryType.code, fhirVersion);
+                if (boundsIssue) issues.push(boundsIssue);
             }
 
             const typeDefinition = await this.definitionResolver.loadTypeDefinition(

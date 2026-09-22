@@ -1,4 +1,4 @@
-import type { VersionAlgorithm } from './types';
+import type { VersionAlgorithm } from './types.js';
 
 const SEMVER_REGEX = /^(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z0-9.-]+))?(?:\+[a-zA-Z0-9.-]+)?$/;
 const INTEGER_REGEX = /^\d{6,}$/;

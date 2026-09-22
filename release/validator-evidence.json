@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "id": "validator-archived-evidence-2026-09-09",
+  "claimStatus": "historical-only",
+  "selectionBasis": "Explicitly pinned tracked reports, preserving their original recorded outcomes and exclusions. These measurements do not certify the currently exported package versions.",
+  "artifactSnapshotRevision": "772066438429b72fbf554a064c10a707c32afa9a",
+  "missingProvenance": "Legacy reports do not record the npm validator/validation-types package versions or tested source revision; null means unknown and must not be filled from the exporting checkout.",
+  "lanes": {
+    "hl7": {
+      "artifact": "conformance-results/report-2026-08-24.json",
+      "scope": "FHIR JSON resource comparisons under the recorded report policy. XML, adjacent standards and pre-filtered fixtures are excluded.",
+      "measuredPackages": {
+        "validator": null,
+        "validationTypes": null
+      },
+      "testedSourceRevision": null,
+      "oracle": {
+        "name": "HL7 Java OperationOutcome baselines",
+        "version": null,
+        "fhirTestCasesCommit": "8923095fc5e3750025f7dd71988c9e89083b1487"
+      }
+    },
+    "mii": {
+      "artifact": "conformance-results/mii-triangulation-2026-07-23.json",
+      "scope": "MII package-example resources in the recorded profile/terminology scope; not site certification or full Must-Support readiness.",
+      "measuredPackages": {
+        "validator": null,
+        "validationTypes": null
+      },
+      "testedSourceRevision": null,
+      "oracle": {
+        "name": "MII reference validator",
+        "version": null
+      }
+    },
+    "fhirSchema": {
+      "artifact": "conformance-results/fhir-schema-dual-path-all-2026-07-23.json",
+      "scope": "Graph/current-engine comparison for selected structural/profile issue families; does not broaden the headline JSON lane.",
+      "measuredPackages": {
+        "validator": null,
+        "validationTypes": null
+      },
+      "testedSourceRevision": null,
+      "oracle": {
+        "name": "Java/reference outcomes with CLI supplement",
+        "version": null
+      },
+      "supplement": "conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json"
+    }
+  },
+  "artifacts": [
+    {
+      "path": "conformance-results/baseline-passing.json",
+      "sha256": "0333c754dab19eda6e8619e44471783cf55dd633e5fb5b02edd448351ed57ff3"
+    },
+    {
+      "path": "conformance-results/baseline-backlog-discovery-2026-05-03.json",
+      "sha256": "c3aa8a2e39e04ffa9812ed647ae9d508e722d2b401b39f1c7514df54e122ec7a"
+    },
+    {
+      "path": "conformance-results/hl7-validator-testkit-2026-05-20.json",
+      "sha256": "8fdd44ecdeb00ffc164c97d3b792a1fbea0b29aedea4930805de3ee7c34f4abc"
+    },
+    {
+      "path": "conformance-results/report-2026-07-01.json",
+      "sha256": "feb5735b74b1dc0ea93d148d95cded44fa5c8c5e394915efc888cd7c7e75d6ae"
+    },
+    {
+      "path": "conformance-results/report-2026-07-21.json",
+      "sha256": "90870ded66a966b990d61bcc16750e3a5a7a291739e00b74b19939fb7d35a154"
+    },
+    {
+      "path": "conformance-results/report-2026-07-23.json",
+      "sha256": "a0271c39aee0fa39d84e5ed3e38e2318cea877dccacb260d27b3df7e7460152a"
+    },
+    {
+      "path": "conformance-results/mii-triangulation-2026-07-01.json",
+      "sha256": "264563c04ff6eae6da0e1b3806afbc9bdd224bbd3c76fce29586a696e8d4361b"
+    },
+    {
+      "path": "conformance-results/mii-triangulation-2026-07-21.json",
+      "sha256": "9982a232a1203a740cb6370d798c7e8ff941a15c8562e9ab60935bd3d650d5b6"
+    },
+    {
+      "path": "conformance-results/mii-triangulation-2026-07-23.json",
+      "sha256": "9a20fe8fd4ee5b120adb201436323603d6dca5d61fc35a4b94a50fe499922b51"
+    },
+    {
+      "path": "conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json",
+      "sha256": "c5c39355fd125ff187ea9361aa822f31157187e7cb191d5e89e2d67f10831b5e"
+    },
+    {
+      "path": "conformance-results/fhir-schema-dual-path-all-2026-07-01.json",
+      "sha256": "24fe10d821d9bd7dfa6c48c5032e9a3e78fd0305e00861041accd7356bf2b267"
+    },
+    {
+      "path": "conformance-results/fhir-schema-dual-path-all-2026-07-23.json",
+      "sha256": "13882605621125cd9813bb91a17395e1162d71438078ba00942db5d3fdd20811"
+    },
+    {
+      "path": "conformance-results/fhir-schema-dual-path-actions-2026-07-01.json",
+      "sha256": "c8d557f8e2c358bd6ca2cc9c0f9f90651e2265c85ca79d160526624c194e7f4c"
+    },
+    {
+      "path": "conformance-results/fhir-schema-dual-path-actions-2026-07-01.md",
+      "sha256": "626f64c1cbcaddfa76f9b8899bf147ad9e2a4e5ed8c950dd11e2fe75f5a703ff"
+    },
+    {
+      "path": "conformance-results/validator-claims-2026-07-01.json",
+      "sha256": "157428744626456910df643ac18e32f73dd7d50f08e72e7e19bae19895d67fb9"
+    },
+    {
+      "path": "conformance-results/validator-claims-2026-07-01.md",
+      "sha256": "131f161ecd0c4ff701f23d8da0e2e53e51ab6d5fdebac37ba951a3f38bb58e08"
+    },
+    {
+      "path": "conformance-results/validator-claims-2026-07-21.json",
+      "sha256": "658d64fa723f5e91d0e5f34ca12799fb19a69595bfe20ce8950f99a51237f1ed"
+    },
+    {
+      "path": "conformance-results/validator-claims-2026-07-21.md",
+      "sha256": "2e43c7630ca8471a65a82a001910af521571353a1ba5cc9136587a05fc21c2e9"
+    },
+    {
+      "path": "conformance-results/validator-claims-2026-07-23.json",
+      "sha256": "fb7d9d739433815d5c33146d2588f9a3f27641685e0a3e76485f2a5ec1116141"
+    },
+    {
+      "path": "conformance-results/validator-claims-2026-07-23.md",
+      "sha256": "de462868505ccf3ccb05391a6d6e3ee9185a1c8fbd26456c90e0679dd6ae338c"
+    },
+    {
+      "path": "conformance-results/report-2026-08-24.json",
+      "sha256": "4edc2aa43d2f94e032d660eaa4cf83ffb2f05514a2b140f84f36b9ce95abd3e3"
+    }
+  ]
+}

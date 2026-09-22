@@ -1,12 +1,12 @@
-import { createValidationIssue } from '../../issues';
-import { logger } from '../../logger';
-import type { ValidationIssue } from '../../types';
-import { getErrorMessage } from '../../utils/error-utils';
+import { createValidationIssue } from '../../issues/index.js';
+import { logger } from '../../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { getErrorMessage } from '../../utils/error-utils.js';
 import {
   createSafeValidationFailureMessage,
   validationFailureMetadata,
-} from '../../utils/validation-execution-failure';
-import type { ElementDefinition, StructureDefinition } from '../structure-definition-types';
+} from '../../utils/validation-execution-failure.js';
+import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

@@ -63,12 +63,36 @@ describe('constraint evaluation failure policy', () => {
         code: 'profile-constraint-evaluation-error',
         severity: 'information',
         ruleId: 'demo-1',
+        details: expect.objectContaining({ validationStatus: 'incomplete' }),
       }),
     ]);
-    expect(record).not.toHaveBeenCalled();
     expect(logs.warn).toHaveBeenCalledWith(
       '[ConstraintValidator] Constraint evaluation failed',
       expect.any(Object),
+    );
+  });
+
+  // A FHIRPath 3.0 function fhirpath.js does not implement crashes the
+  // compiler with a message no classifier can read. The constraint still
+  // produced no verdict, so the skip count has to include it.
+  it('counts a failure it cannot name', () => {
+    const record = vi.fn();
+
+    handleConstraintEvaluationFailure({
+      constraint,
+      diagnosticTracker: { record },
+      elementPath: 'CodeSystem.concept',
+      error: new TypeError("Cannot read properties of undefined (reading '0')"),
+      profileUrl: 'http://hl7.org/fhir/StructureDefinition/CodeSystem',
+      resourceType: 'CodeSystem',
+    });
+
+    expect(record).toHaveBeenCalledWith(
+      'evaluation-error',
+      constraint,
+      'http://hl7.org/fhir/StructureDefinition/CodeSystem',
+      'CodeSystem.concept',
+      "Cannot read properties of undefined (reading '0')",
     );
   });
 });

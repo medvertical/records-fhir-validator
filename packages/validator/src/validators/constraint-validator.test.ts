@@ -806,3 +806,34 @@ describe('ConstraintValidator', () => {
     expect(issuesStrict[0].message).toContain('[escalated from warning in strict mode]');
   });
 });
+
+describe('profile constraint severity', () => {
+  it('reports a warning-severity profile constraint as a warning', async () => {
+    // The profile's declared severity is the answer. Demoting these to
+    // information diverged from the reference validator on every fixture that
+    // carries one.
+    const { buildConstraintViolationIssue } = await import('./constraint-violation-issue');
+    const issue = buildConstraintViolationIssue(
+      { resourceType: 'Patient' } as never,
+      'Patient.identifier',
+      { key: 'min-digits-sor', severity: 'warning', human: 'at least 15 digits', expression: 'x' } as never,
+      'http://example.org/p',
+      'normal' as never,
+    );
+    expect(issue.severity).not.toBe('info');
+    expect(issue.code).toBe('profile-constraint-warning');
+  });
+
+  it('keeps dom-6 advisory, which the reference validator also treats as advisory', async () => {
+    const { buildConstraintViolationIssue } = await import('./constraint-violation-issue');
+    const issue = buildConstraintViolationIssue(
+      { resourceType: 'Patient' } as never,
+      'Patient.',
+      { key: 'dom-6', severity: 'warning', human: 'narrative', expression: 'x' } as never,
+      'http://example.org/p',
+      'normal' as never,
+    );
+    expect(issue.severity).toBe('info');
+    expect(issue.code).toBe('dom-6');
+  });
+});

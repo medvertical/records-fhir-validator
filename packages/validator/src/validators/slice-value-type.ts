@@ -1,4 +1,4 @@
-import { getResolvedPrimitiveSidecarType } from '../core/fhir-primitive-sidecar';
+import { getResolvedPrimitiveSidecarType } from '../core/fhir-primitive-sidecar.js';
 
 export function inferType(value: unknown): string {
   const sidecarType = getResolvedPrimitiveSidecarType(value);

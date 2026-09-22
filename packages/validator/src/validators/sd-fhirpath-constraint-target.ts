@@ -1,19 +1,19 @@
-import type { Constraint } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
-import { appendHtmlChecksConstraintIssues } from './fhirpath-html-checks';
+import type { Constraint } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { appendHtmlChecksConstraintIssues } from './fhirpath-html-checks.js';
 import {
   evaluateSimpleMemberOfExists,
   evaluateTrailingMemberOf,
   rewriteLegacyValueSetInExists,
-} from './fhirpath-memberof-precheck';
-import { evaluateResolveExistsConstraint } from './fhirpath-resolve-precheck';
-import { constraintPassed } from './sd-fhirpath-result-utils';
-import { createConstraintViolation } from './sd-fhirpath-issue-factory';
-import type { ValueSetPackageLoader } from './valueset-package-loader';
-import type { FHIRPathBundleInput } from './fhirpath-functions';
-import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology';
-import type { ValueSetCache } from './valueset-cache';
-import type { SynchronousFHIRPathExpressionCache } from './constraint-expression-cache';
+} from './fhirpath-memberof-precheck.js';
+import { evaluateResolveExistsConstraint } from './fhirpath-resolve-precheck.js';
+import { constraintPassed } from './sd-fhirpath-result-utils.js';
+import { createConstraintViolation } from './sd-fhirpath-issue-factory.js';
+import type { ValueSetPackageLoader } from './valueset-package-loader.js';
+import type { FHIRPathBundleInput } from './fhirpath-functions.js';
+import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology.js';
+import type { ValueSetCache } from './valueset-cache.js';
+import type { SynchronousFHIRPathExpressionCache } from './constraint-expression-cache.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 

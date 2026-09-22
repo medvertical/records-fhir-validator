@@ -1,5 +1,5 @@
-import { CircuitBreaker } from '../terminology';
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
+import { CircuitBreaker } from '../terminology/index.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
 
 type TerminologyOperation =
   | 'codesystem-validate-code'

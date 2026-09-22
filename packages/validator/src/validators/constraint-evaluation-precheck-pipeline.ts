@@ -1,14 +1,14 @@
-import type { Constraint } from '../core/structure-definition-types';
-import type { ValidationIssue } from '../types';
-import { resolveConstraintContext } from './constraint-context-resolver';
-import type { ConstraintExpressionCache } from './constraint-expression-cache';
-import { ConstraintMemberOfPrechecks } from './constraint-memberof-prechecks';
-import type { ConstraintValidationState, FhirResource } from './constraint-validation-input';
-import { constraintOutcomeIssues } from './constraint-violation-issue';
-import { appendHtmlChecksConstraintIssues } from './fhirpath-html-checks';
-import { evaluateResolveExistsConstraint } from './fhirpath-resolve-precheck';
-import { getEvaluationContext } from './constraint-path-utils';
-import type { ValueSetCache } from './valueset-cache';
+import type { Constraint } from '../core/structure-definition-types.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { resolveConstraintContext } from './constraint-context-resolver.js';
+import type { ConstraintExpressionCache } from './constraint-expression-cache.js';
+import { ConstraintMemberOfPrechecks } from './constraint-memberof-prechecks.js';
+import type { ConstraintValidationState, FhirResource } from './constraint-validation-input.js';
+import { constraintOutcomeIssues } from './constraint-violation-issue.js';
+import { appendHtmlChecksConstraintIssues } from './fhirpath-html-checks.js';
+import { evaluateResolveExistsConstraint } from './fhirpath-resolve-precheck.js';
+import { getEvaluationContext } from './constraint-path-utils.js';
+import type { ValueSetCache } from './valueset-cache.js';
 
 export type ConstraintPrecheckResult =
   | { handled: true; issues: ValidationIssue[] }
@@ -61,9 +61,10 @@ export class ConstraintEvaluationPrecheckPipeline {
       return { handled: true, issues: htmlIssues };
     }
 
+    const resolvedContext = resolveConstraintContext(resource, elementPath, expression);
     const simpleMemberOf = await this.memberOfPrechecks.evaluateSimple(
-      expression,
-      resource,
+      resolvedContext.expression,
+      resolvedContext.context,
       resource.resourceType,
       state.fhirVersion,
       terminologyResolverConfigured,
@@ -73,15 +74,14 @@ export class ConstraintEvaluationPrecheckPipeline {
     }
 
     const trailingMemberOf = this.memberOfPrechecks.evaluateTrailing(
-      expression,
-      resource,
+      resolvedContext.expression,
+      resolvedContext.context,
       state.fhirVersion,
     );
     if (trailingMemberOf !== null) {
       return this.outcome(trailingMemberOf, resource, elementPath, constraint, profileUrl, state);
     }
 
-    const resolvedContext = resolveConstraintContext(resource, elementPath, expression);
     const resolvableExpression = terminologyResolverConfigured
       ? this.memberOfPrechecks.rewriteLegacyExpression(resolvedContext.expression)
       : resolvedContext.expression;

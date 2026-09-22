@@ -138,7 +138,8 @@ function coerceValue(raw: string | undefined): unknown {
   const trimmed = raw.trim();
   if (
     (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    (trimmed.startsWith('[') && trimmed.endsWith(']')) ||
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
   ) {
     try {
       return JSON.parse(trimmed);
@@ -240,6 +241,9 @@ export function applyFixPatch(
         }
         arr.splice(finalSeg.index, 1);
       } else {
+        if (!Object.prototype.hasOwnProperty.call(parent, finalSeg.key)) {
+          return { applied: false, resource, reason: `Path target does not exist: ${patch.path}` };
+        }
         delete parent[finalSeg.key];
       }
       return { applied: true, resource: cloned };

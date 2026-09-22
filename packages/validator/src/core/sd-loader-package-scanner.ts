@@ -5,17 +5,17 @@
  * package source walker. Compatibility exports remain available here.
  */
 
-import { logger } from '../logger';
-import { loadFromPersistentIndex, saveToPersistentIndex } from './sd-loader-persistent-index';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
-import { walkPackageSource } from './sd-loader-package-source-walker';
+import { logger } from '../logger.js';
+import { loadFromPersistentIndex, saveToPersistentIndex } from './sd-loader-persistent-index.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
+import { walkPackageSource } from './sd-loader-package-source-walker.js';
 
-export { compareVersions } from '../package-resolver/version-comparator';
+export { compareVersions } from '../package-resolver/version-comparator.js';
 export {
   parsePackageName,
   scanPackageDirectory,
-} from './sd-loader-package-source-walker';
+} from './sd-loader-package-source-walker.js';
 
 export interface ScanCacheDirectoryOptions {
   packageVersionPins?: Record<string, string>;

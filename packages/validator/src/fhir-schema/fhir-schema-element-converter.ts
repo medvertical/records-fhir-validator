@@ -3,7 +3,7 @@ import type {
   FHIRSchemaElement,
   SDElement,
   StructureDefinition,
-} from './fhir-schema-types';
+} from './fhir-schema-types.js';
 
 export type TargetProfileTypeResolver = (canonical: string) => StructureDefinition | undefined;
 

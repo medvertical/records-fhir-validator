@@ -11,12 +11,12 @@
  * embedders inject their implementation.
  */
 
-import type { StructureDefinition } from './structure-definition-types';
-import { logger } from '../logger';
-import { getProfileSource, type ProfileSourceContext } from '../persistence';
-import { profileMatchesCanonical } from './sd-loader-profile-identity';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata';
+import type { StructureDefinition } from './structure-definition-types.js';
+import { logger } from '../logger.js';
+import { getProfileSource, type ProfileSourceContext } from '../persistence/index.js';
+import { profileMatchesCanonical } from './sd-loader-profile-identity.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 
 function matchesFhirVersion(sd: StructureDefinition, fhirVersion: 'R4' | 'R5' | 'R6'): boolean {
   const sdFhirVersion = (sd as { fhirVersion?: string }).fhirVersion;

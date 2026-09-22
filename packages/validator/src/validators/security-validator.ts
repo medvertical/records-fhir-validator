@@ -1,13 +1,13 @@
-import { createValidationIssue } from '../issues';
-import { logger } from '../logger';
-import type { ValidationIssue } from '../types';
-import { createSafeValidationFailureMessage } from '../utils/validation-execution-failure';
-import { detectPHIInNarrative, detectSensitiveIdentifiers } from './security-pii-detector';
-import { validateAuditTrail, validateSecurityLabels } from './security-policy-checks';
-import type { SecurityValidationConfig } from './security-validation-types';
-import { asSecurityRecord, getSecurityResourceType } from './security-validator-utils';
+import { createValidationIssue } from '../issues/index.js';
+import { logger } from '../logger.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { createSafeValidationFailureMessage } from '../utils/validation-execution-failure.js';
+import { detectPHIInNarrative, detectSensitiveIdentifiers } from './security-pii-detector.js';
+import { validateAuditTrail, validateSecurityLabels } from './security-policy-checks.js';
+import type { SecurityValidationConfig } from './security-validation-types.js';
+import { asSecurityRecord, getSecurityResourceType } from './security-validator-utils.js';
 
-export type { PHIDetectionResult, PIILocale, SecurityValidationConfig } from './security-validation-types';
+export type { PHIDetectionResult, PIILocale, SecurityValidationConfig } from './security-validation-types.js';
 
 const DEFAULT_SECURITY_CONFIG: SecurityValidationConfig = {
     detectPHI: true,

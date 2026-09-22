@@ -1,7 +1,7 @@
-import { logger } from '../logger';
-import type { TerminologyResolutionConfig, ValueSetValidator } from '../validators/valueset-validator';
-import type { StructuralExecutor, TerminologyExecutor } from './executors';
-import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata';
+import { logger } from '../logger.js';
+import type { TerminologyResolutionConfig, ValueSetValidator } from '../validators/valueset-validator.js';
+import type { StructuralExecutor, TerminologyExecutor } from './executors/index.js';
+import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 
 export class ValidatorTerminologyAdministration {
   constructor(

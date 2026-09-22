@@ -10,7 +10,7 @@
  * goes from 4158 canonicals to ~7 when only US Core is installed.
  */
 
-import type { PinnedCanonical } from './types';
+import type { PinnedCanonical } from './types.js';
 
 export interface CanonicalGraph {
   outgoingRefs: Map<string, Set<string>>;

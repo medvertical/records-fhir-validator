@@ -1,15 +1,15 @@
-import { BoundedLruCache } from '../cache/bounded-lru-cache';
-import type { StructureDefinitionLoader } from '../core/structure-definition-loader';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import type { StructureDefinitionLoader } from '../core/structure-definition-loader.js';
 import type {
   ElementDefinition,
   StructureDefinition,
-} from '../core/structure-definition-types';
+} from '../core/structure-definition-types.js';
 import {
   isPrimitiveType,
   mergeElementConstraints,
-} from '../core/executors/structural-executor-helpers';
-import { logger } from '../logger';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
+} from '../core/executors/structural-executor-helpers.js';
+import { logger } from '../logger.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 

@@ -1,14 +1,14 @@
-import { createValidationIssue } from '../issues';
-import { normalizeResourceType } from '../issues/resource-type-normalizer';
-import type { ValidationIssue } from '../types';
-import { isWhitespaceOnlyString } from './string-character-rules';
+import { createValidationIssue } from '../issues/index.js';
+import { normalizeResourceType } from '../issues/resource-type-normalizer.js';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { isWhitespaceOnlyString } from './string-character-rules.js';
 
 const INVALID_FORMAT_VALUE_PREVIEW_LIMIT = 120;
 
-// HL7 Type_Specific_Checks_DT_DateTime_Reasonable bounds: years before 1800
-// or more than 80 years in the future are flagged as likely data-entry errors.
+// Freeze the 2026 reference year so persisted evidence remains reproducible.
+// Advancing this window requires a validation ruleset version change.
 const MIN_PLAUSIBLE_YEAR = 1800;
-const PLAUSIBLE_YEARS_AHEAD = 80;
+const MAX_PLAUSIBLE_YEAR = 2106;
 
 export function validatePrimitiveStringFormat(
   value: string,
@@ -90,7 +90,7 @@ export function validateDateYearPlausibility(
   const yearDigits = value.match(/^\d{4}/);
   if (!yearDigits) return null;
   const year = Number(yearDigits[0]);
-  const maxPlausibleYear = new Date().getUTCFullYear() + PLAUSIBLE_YEARS_AHEAD;
+  const maxPlausibleYear = MAX_PLAUSIBLE_YEAR;
   if (year >= MIN_PLAUSIBLE_YEAR && year <= maxPlausibleYear) return null;
   return createValidationIssue({
     code: 'date-year-implausible',

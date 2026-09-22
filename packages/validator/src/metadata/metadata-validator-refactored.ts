@@ -1,8 +1,4 @@
-import type { ValidationContext, ValidationIssue } from '../types';
-import {
-  isErrorValidationSeverity,
-  type ValidationResult,
-} from '@records-fhir/validation-types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 /**
  * Structural shape of the host's HAPI validation coordinator. The
  * full implementation lives server-side and depends on the HAPI
@@ -18,16 +14,15 @@ interface RecordsMetadataValidator {
   isAvailable(): boolean;
   validateMetadata(resource: unknown): Promise<ValidationIssue[]>;
 }
-import { logger } from '../logger';
+import { logger } from '../logger.js';
 import {
   getMetadataEngine,
   getStringField,
   isObjectRecord,
-  isValidationContext,
-} from './metadata-boundary-utils';
-import { createMetadataIssue } from './metadata-issue';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { LocalMetadataRulePipeline } from './metadata-local-rule-pipeline';
+} from './metadata-boundary-utils.js';
+import { createMetadataIssue } from './metadata-issue.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { LocalMetadataRulePipeline } from './metadata-local-rule-pipeline.js';
 
 function buildInvalidResourceIssue(
   resource: unknown,
@@ -105,51 +100,15 @@ export class MetadataValidator {
 
   async validate(
     resource: unknown,
-    resourceTypeOrContext: string | ValidationContext,
+    resourceType?: string,
     fhirVersion?: 'R4' | 'R5' | 'R6',
     coordinator?: HapiValidationCoordinator,
     settings?: unknown,
     profileUrl?: string
-  ): Promise<ValidationIssue[] | ValidationResult> {
-    if (isValidationContext(resourceTypeOrContext)) {
-      const context = resourceTypeOrContext;
-      const startTime = Date.now();
-      const version = context.fhirVersion || 'R4';
-
-      const issues = await this.validateInternal(
-        resource,
-        context.resourceType,
-        version
-      );
-
-      const validationTime = Date.now() - startTime;
-      const isValid = issues.length === 0 || !issues.some(
-        i => isErrorValidationSeverity(i.severity),
-      );
-
-      return {
-        resourceId: context.resourceId || getStringField(resource, 'id') || 'unknown',
-        resourceType: context.resourceType,
-        isValid,
-        issues,
-        aspects: [{
-          aspect: 'metadata',
-          isValid,
-          issues,
-          validationTime,
-          status: 'completed'
-        }],
-        validatedAt: new Date(),
-        validationTime,
-        fhirVersion: version
-      };
-    }
-
+  ): Promise<ValidationIssue[]> {
     return this.validateInternal(
       resource,
-      typeof resourceTypeOrContext === 'string'
-        ? resourceTypeOrContext
-        : getStringField(resource, 'resourceType') || 'Unknown',
+      resourceType ?? getStringField(resource, 'resourceType') ?? 'Unknown',
       fhirVersion,
       coordinator,
       settings,

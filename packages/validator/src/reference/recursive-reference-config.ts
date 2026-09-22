@@ -1,4 +1,4 @@
-import { extractReferencesToValidate } from './recursive-reference-helpers';
+import { extractReferencesToValidate } from './recursive-reference-helpers.js';
 
 export interface RecursiveValidationConfig {
   enabled: boolean;

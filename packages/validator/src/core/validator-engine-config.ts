@@ -1,4 +1,4 @@
-import { expandHomePath } from './validator-runtime-settings';
+import { expandHomePath } from './validator-runtime-settings.js';
 
 export interface RecordsValidatorConfig {
   packageCachePath?: string;

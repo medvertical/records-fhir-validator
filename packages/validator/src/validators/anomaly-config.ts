@@ -1,7 +1,7 @@
 import {
   DEFAULT_ANOMALY_DETECTOR_CONFIG,
   type AnomalyDetectorConfig,
-} from './anomaly-types';
+} from './anomaly-types.js';
 
 export function normalizeAnomalyDetectorConfig(
   config: Partial<AnomalyDetectorConfig>,

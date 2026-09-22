@@ -1,7 +1,7 @@
 import type {
   FhirInputLimits,
   ParsedFhirInput,
-} from './fhir-input-types';
+} from './fhir-input-types.js';
 
 const DEFAULT_MAX_BYTES = 100 * 1024 * 1024;
 const DEFAULT_MAX_LINE_BYTES = 20 * 1024 * 1024;

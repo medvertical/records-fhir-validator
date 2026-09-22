@@ -1,16 +1,16 @@
-import type { ValidationIssue } from '../types';
-import { logger } from '../logger';
-import { createValidationErrorIssue } from './validation-utils';
-import { withIssuesSchemaVersion } from './issue-schema-version';
+import type { ValidationIssue } from '@records-fhir/validation-types';
+import { logger } from '../logger.js';
+import { createValidationErrorIssue } from './validation-utils.js';
+import { withIssuesSchemaVersion } from './issue-schema-version.js';
 import {
   createSafeValidationFailureMessage,
   validationFailureMetadata,
-} from '../utils/validation-execution-failure';
+} from '../utils/validation-execution-failure.js';
 import {
   executeRecordsResourceValidation,
   type RecordsSingleResourceValidationContext,
   type RecordsSingleResourceValidationInput,
-} from './validator-single-resource-pipeline';
+} from './validator-single-resource-pipeline.js';
 
 export async function validateRecordsResource(
   input: RecordsSingleResourceValidationInput,
@@ -23,6 +23,7 @@ export async function validateRecordsResource(
     settings,
     fhirClient,
     referenceResolver,
+    bundleCanonicalResolver,
     organizationId,
     serverId,
   } = input;
@@ -34,6 +35,7 @@ export async function validateRecordsResource(
     settings,
     fhirClient,
     referenceResolver,
+    bundleCanonicalResolver,
     organizationId,
     serverId,
   };

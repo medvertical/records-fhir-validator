@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { TerminologyApiAuthConfig } from './valueset-types';
+import type { TerminologyApiAuthConfig } from './valueset-types.js';
 
 export function getTerminologyServerScope(
   serverUrl: string,

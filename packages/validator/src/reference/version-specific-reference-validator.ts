@@ -1,13 +1,13 @@
 import {
   extractBundleEntries,
   findReferencesInResource,
-} from './bundle-reference-finder';
+} from './bundle-reference-finder.js';
 import type {
   VersionedReferenceInfo,
   VersionIntegrityCheckResult,
   VersionConsistencyCheckResult,
   VersionAvailabilityCheckResult,
-} from './version-specific-reference-types';
+} from './version-specific-reference-types.js';
 import {
   checkVersionConsistency,
   compareReferenceVersions,
@@ -16,15 +16,15 @@ import {
   stripReferenceVersion,
   toVersionedReference,
   validateVersionedReference,
-} from './version-reference-syntax';
-import { checkVersionAvailability } from './version-reference-availability';
+} from './version-reference-syntax.js';
+import { checkVersionAvailability } from './version-reference-availability.js';
 
 export type {
   VersionedReferenceInfo,
   VersionIntegrityCheckResult,
   VersionConsistencyCheckResult,
   VersionAvailabilityCheckResult,
-} from './version-specific-reference-types';
+} from './version-specific-reference-types.js';
 
 export class VersionSpecificReferenceValidator {
   parseVersionedReference(reference: string): VersionedReferenceInfo {

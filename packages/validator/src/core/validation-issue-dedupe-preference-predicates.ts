@@ -1,9 +1,9 @@
-import type { ValidationIssue } from '../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   getInvalidUriIssueKey,
   getTerminologyCodeInvalidKey,
   getTerminologyDisplayMismatchKey,
-} from './validation-issue-dedupe-utils';
+} from './validation-issue-dedupe-utils.js';
 
 export function isRedundantInvalidUriIssue(
   issue: ValidationIssue,

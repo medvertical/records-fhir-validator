@@ -17,7 +17,7 @@ import {
   type BatchValidationOptions,
   type BatchValidatorContext,
 } from '../batch-validator';
-import type { ValidationIssue } from '../../types';
+import type { ValidationIssue } from '@records-fhir/validation-types';
 
 // ---------------------------------------------------------------------------
 // Minimal stubs — we're testing orchestration, not profile loading
@@ -283,5 +283,31 @@ describe('executeBatchValidation', () => {
       expect(result.isValid).toBe(true);
       expect(result.aspects).toHaveLength(1);
     });
+  });
+});
+
+describe('batch worker lifecycle', () => {
+  it('drains started workers after failure and emits no late completion callback', async () => {
+    let finish!: () => void;
+    const gate = new Promise<void>(resolve => { finish = resolve; });
+    const validate = vi.fn(async (resource: unknown) => {
+      if ((resource as { id: string }).id === 'slow') await gate;
+      else throw new Error('synthetic executor failed');
+      return [];
+    });
+    const callback = vi.fn();
+    let settled = false;
+    const pending = executeBatchValidation(
+      [patient('bad', 'bad'), patient('slow', 'slow'), patient('never', 'never')],
+      { ...BASE_OPTIONS, maxConcurrency: 2, onResourceValidated: callback },
+      makeContext(validate),
+    ).finally(() => { settled = true; });
+    const rejection = expect(pending).rejects.toThrow('synthetic executor failed');
+    await vi.waitFor(() => expect(validate).toHaveBeenCalledTimes(2));
+    expect(settled).toBe(false);
+    finish();
+    await rejection;
+    expect(validate).toHaveBeenCalledTimes(2);
+    expect(callback).not.toHaveBeenCalled();
   });
 });

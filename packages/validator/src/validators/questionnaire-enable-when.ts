@@ -1,5 +1,5 @@
-import type { EnableWhen, QuestionnaireItem, QuestionnaireResponseAnswer } from './questionnaire-types';
-import { visitQuestionnaireResponseItems } from './questionnaire-response-traversal';
+import type { EnableWhen, QuestionnaireItem, QuestionnaireResponseAnswer } from './questionnaire-types.js';
+import { visitQuestionnaireResponseItems } from './questionnaire-response-traversal.js';
 
 export function buildQuestionnaireAnswerMap(
     items: unknown[],

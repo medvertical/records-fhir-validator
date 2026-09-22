@@ -1,19 +1,16 @@
 import {
   displaysEquivalentForCodeInfo,
-} from './valueset-display-utils';
+} from './valueset-display-utils.js';
 import type {
   TerminologyResolutionConfig,
   TerminologyServerOverride,
-} from './valueset-types';
+} from './valueset-types.js';
 import {
   TerminologyApiClient,
   type CodeSystemValidationResult,
-} from './terminology-api-client';
-import type { FhirVersion } from './valueset-expansion-cache-key';
-import {
-  extractSnomedEditionIdentifier,
-  isTerminologyServerEligible,
-} from './valueset-server-routing';
+} from './terminology-api-client.js';
+import type { FhirVersion } from './valueset-expansion-cache-key.js';
+import { listFallbackTerminologyServers } from './valueset-server-routing.js';
 
 export async function validateCodeInCodeSystemWithFallbacks({
   apiClient,
@@ -42,6 +39,7 @@ export async function validateCodeInCodeSystemWithFallbacks({
       apiClient,
       code,
       codeSystemVersion,
+      display,
       fhirVersion,
       primaryOverride,
       primaryResult: result,
@@ -90,6 +88,7 @@ async function validateCodeMembershipWithFallbackServers({
   apiClient,
   code,
   codeSystemVersion,
+  display,
   fhirVersion,
   primaryOverride,
   primaryResult,
@@ -99,6 +98,7 @@ async function validateCodeMembershipWithFallbackServers({
   apiClient: TerminologyApiClient;
   code: string;
   codeSystemVersion?: string;
+  display?: string;
   fhirVersion?: FhirVersion;
   primaryOverride?: TerminologyServerOverride;
   primaryResult: CodeSystemValidationResult;
@@ -107,21 +107,21 @@ async function validateCodeMembershipWithFallbackServers({
 }): Promise<CodeSystemValidationResult> {
   if (!shouldTryCodeMembershipFallback(primaryResult, primaryOverride)) return primaryResult;
 
-  const fallbackServers = getFallbackTerminologyServers(
+  const fallbackServers = listFallbackTerminologyServers(
     resolutionConfig, primaryOverride, system, codeSystemVersion, fhirVersion,
   );
   if (fallbackServers.length === 0) return primaryResult;
 
+  let displayMismatch: CodeSystemValidationResult | undefined;
   for (const server of fallbackServers) {
     const fallbackResult = await callCodeSystemValidator(
-      apiClient, code, system, undefined, server, codeSystemVersion,
+      apiClient, code, system, display, server, codeSystemVersion,
     );
-    if (fallbackResult.valid || isDisplayMismatchResult(fallbackResult)) {
-      return fallbackResult;
-    }
+    if (fallbackResult.valid) return fallbackResult;
+    if (isDisplayMismatchResult(fallbackResult)) displayMismatch ??= fallbackResult;
   }
 
-  return primaryResult;
+  return displayMismatch ?? primaryResult;
 }
 
 function shouldTryCodeMembershipFallback(
@@ -173,7 +173,7 @@ async function validateDisplayMismatchWithFallbackServers({
   resolutionConfig: TerminologyResolutionConfig;
   system: string;
 }): Promise<CodeSystemValidationResult> {
-  const fallbackServers = getFallbackTerminologyServers(
+  const fallbackServers = listFallbackTerminologyServers(
     resolutionConfig, primaryOverride, system, codeSystemVersion, fhirVersion,
   );
   if (fallbackServers.length === 0) return primaryResult;
@@ -214,7 +214,7 @@ async function validateInactiveCodeWithFallbackServers({
 }): Promise<CodeSystemValidationResult> {
   if (!isInactiveResult(primaryResult)) return primaryResult;
 
-  const fallbackServers = getFallbackTerminologyServers(
+  const fallbackServers = listFallbackTerminologyServers(
     resolutionConfig, primaryOverride, system, codeSystemVersion, fhirVersion,
   );
   if (fallbackServers.length === 0) return primaryResult;
@@ -237,35 +237,6 @@ async function validateInactiveCodeWithFallbackServers({
   }
 
   return primaryResult;
-}
-
-function getFallbackTerminologyServers(
-  resolutionConfig: TerminologyResolutionConfig,
-  primaryOverride: { url: string } | undefined,
-  system: string,
-  codeSystemVersion?: string,
-  fhirVersion?: FhirVersion,
-): TerminologyServerOverride[] {
-  const skippedUrls = new Set<string>();
-  if (primaryOverride?.url) {
-    skippedUrls.add(primaryOverride.url);
-  } else if (resolutionConfig.serverUrl) {
-    skippedUrls.add(resolutionConfig.serverUrl);
-  }
-
-  const requestedEdition = system === 'http://snomed.info/sct'
-    ? extractSnomedEditionIdentifier(codeSystemVersion)
-    : undefined;
-  return (resolutionConfig.servers || [])
-    .filter(server => isTerminologyServerEligible(server, fhirVersion) && Boolean(server.url))
-    .filter(server => !skippedUrls.has(server.url))
-    .filter(server => !requestedEdition || server.snomedEditions?.some(edition =>
-      extractSnomedEditionIdentifier(edition) === requestedEdition))
-    .map(server => ({
-      url: server.url,
-      auth: server.authConfig,
-      ...(requestedEdition ? { authoritativeSnomedEdition: true } : {}),
-    }));
 }
 
 function callCodeSystemValidator(

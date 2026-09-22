@@ -1,8 +1,8 @@
 import { promises as fs } from 'fs';
-import { logger } from '../logger';
-import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata';
-import { validationFailureMetadata } from '../utils/validation-execution-failure';
-import { scanCacheDirectory } from './sd-loader-package-scanner';
+import { logger } from '../logger.js';
+import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
+import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { scanCacheDirectory } from './sd-loader-package-scanner.js';
 
 export async function scanProfileSources(params: {
   packageSources: string[];

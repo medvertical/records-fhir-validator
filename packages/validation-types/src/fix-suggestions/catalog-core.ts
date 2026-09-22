@@ -1,5 +1,5 @@
-import type { FixSuggestion } from './types';
-import { CATALOG_METADATA } from './catalog-metadata';
+import type { FixSuggestion } from './types.js';
+import { CATALOG_METADATA } from './catalog-metadata.js';
 
 export const CATALOG_CORE: Record<string, FixSuggestion> = {
     // -------------------------------------------------------------------------

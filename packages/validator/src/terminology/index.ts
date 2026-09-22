@@ -17,13 +17,13 @@
  * here.
  */
 
-export { CircuitBreaker } from './circuit-breaker';
+export { CircuitBreaker } from './circuit-breaker.js';
 export type {
     CircuitState,
     CircuitBreakerConfig,
     CircuitBreakerState,
     CircuitBreakerStats,
-} from './circuit-breaker';
+} from './circuit-breaker.js';
 
 export {
     isFhirPrimitive,
@@ -36,4 +36,4 @@ export {
     matchesAnyType,
     getTypeDescription,
     getNormalizedTypeList,
-} from './fhir-type-mapper';
+} from './fhir-type-mapper.js';

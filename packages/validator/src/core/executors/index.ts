@@ -4,26 +4,26 @@
  * Exports all validation executors for per-aspect validation
  */
 
-export { StructuralExecutor } from './structural-executor';
-export type { StructuralValidationContext } from './structural-executor';
+export { StructuralExecutor } from './structural-executor.js';
+export type { StructuralValidationContext } from './structural-executor.js';
 
-export { ProfileExecutor } from './profile-executor';
-export type { ProfileValidationContext } from './profile-executor';
+export { ProfileExecutor } from './profile-executor.js';
+export type { ProfileValidationContext } from './profile-executor.js';
 
-export { TerminologyExecutor } from './terminology-executor';
-export type { TerminologyValidationContext } from './terminology-executor';
+export { TerminologyExecutor } from './terminology-executor.js';
+export type { TerminologyValidationContext } from './terminology-executor.js';
 
-export { ReferenceExecutor } from './reference-executor';
-export type { ReferenceValidationContext } from './reference-executor';
+export { ReferenceExecutor } from './reference-executor.js';
+export type { ReferenceValidationContext } from './reference-executor.js';
 
-export { InvariantExecutor } from './invariant-executor';
-export { InvariantExecutor as BusinessRuleExecutor } from './invariant-executor';
-export type { InvariantValidationContext } from './invariant-executor';
-export type { InvariantValidationContext as BusinessRuleValidationContext } from './invariant-executor';
+export { InvariantExecutor } from './invariant-executor.js';
+export { InvariantExecutor as BusinessRuleExecutor } from './invariant-executor.js';
+export type { InvariantValidationContext } from './invariant-executor.js';
+export type { InvariantValidationContext as BusinessRuleValidationContext } from './invariant-executor.js';
 
-export { CustomRuleExecutor } from './custom-rule-executor';
-export type { CustomRuleValidationContext } from './custom-rule-executor';
+export { CustomRuleExecutor } from './custom-rule-executor.js';
+export type { CustomRuleValidationContext } from './custom-rule-executor.js';
 
-export { MetadataExecutor } from './metadata-executor';
+export { MetadataExecutor } from './metadata-executor.js';
 
 
