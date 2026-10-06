@@ -67,3 +67,25 @@ describe.each(paths)('$name cancellation drains admitted children', ({ run }) =>
     expect(started).toBe(2);
   });
 });
+
+// The reference validator evaluates dom-6 as `(%rootResource != $this) or text.div.exists()`.
+describe('narrative advice for contained resources', () => {
+  const narrativeless = (resourceType: string) => ({
+    isValid: true,
+    aspects: [{ aspect: 'profile', validationTime: 0, isValid: true, issues: [
+      { aspect: 'profile', severity: 'warning' as const, code: 'dom-6', path: `${resourceType}.text`, message: 'A resource should have narrative' },
+      { aspect: 'profile', severity: 'error' as const, code: 'required', path: `${resourceType}.name`, message: 'name required' },
+    ] }],
+  });
+
+  it('is left out, as a contained resource is not the resource validated', async () => {
+    const aspects: Parameters<typeof appendContainedResourceValidationResults>[4] = [];
+    await appendContainedResourceValidationResults(contained, 'R4', 0, async () => narrativeless('Patient'), aspects, undefined, undefined);
+    expect(aspects.flatMap(aspect => aspect.issues).map(issue => issue.code)).toEqual(['required', 'required']);
+
+    const legacy = await validateContainedResourceTree(contained, {
+      recursionDepth: 0, maxDepth: 3, validate: async () => narrativeless('Patient').aspects[0].issues,
+    });
+    expect(legacy.map(issue => issue.code)).toEqual(['required', 'required']);
+  });
+});

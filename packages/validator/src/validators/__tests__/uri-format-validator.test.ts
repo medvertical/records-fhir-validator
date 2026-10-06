@@ -19,7 +19,9 @@ describe('validateUriFormat', () => {
     }));
   });
 
-  it.each(['urn:oid:1', 'urn:oid:1.40.3', 'urn:oid:2.03.4'])(
+  // 1.1 and 1.2 are syntactically well-formed but, like the reference
+  // validator, treated as registration-authority roots rather than namespaces.
+  it.each(['urn:oid:1', 'urn:oid:1.40.3', 'urn:oid:2.03.4', 'urn:oid:1.1', 'urn:oid:1.2'])(
     'rejects syntactically invalid OID URIs: %s',
     (value) => {
       expect(validateUriFormat(
@@ -51,16 +53,30 @@ describe('validateUriFormat', () => {
     )).toBeNull();
 
     expect(validateUriFormat(
-      'urn:oid:1.2',
+      'urn:oid:1.3.6',
       'DocumentReference.contained[1].identifier[0].system',
       'DocumentReference',
     )).toBeNull();
+  });
 
-    expect(validateUriFormat(
-      'urn:oid:1.1',
-      'List.contained[1].identifier[0].system',
-      'List',
-    )).toBeNull();
+  it.each([
+    ['urn:uuid:questionnaire', 'Bundle.entry[0].fullUrl'],
+    ['urn:uuid:questionnaire', 'Bundle.entry[2].resource.questionnaire'],
+    ['urn:uuid:C757873D-EC9A-4326-A141-556F43239520', 'Observation.code.coding[0].system'],
+  ])('rejects the urn:uuid %s at %s', (value, path) => {
+    expect(validateUriFormat(value, path, 'Bundle')).toEqual(expect.objectContaining({
+      code: 'structural-invalid-uri',
+      severity: 'error',
+      details: expect.objectContaining({ value, expectedUriType: 'UUID URN' }),
+    }));
+  });
+
+  it.each([
+    'urn:uuid:c757873d-ec9a-4326-a141-556f43239520',
+    'urn:uuid:c757873d-ec9a-4326-a141-556f43239520#contained',
+    'urn:uuid:c757873d-ec9a-4326-a141-556f43239520|1.0',
+  ])('accepts the urn:uuid %s', (value) => {
+    expect(validateUriFormat(value, 'QuestionnaireResponse.questionnaire', 'QuestionnaireResponse')).toBeNull();
   });
 
   it('does not hide invalid OIDs in Coding.system relative-URI paths', () => {
@@ -492,6 +508,25 @@ describe('validateUriFormat', () => {
       'Endpoint.extension[0].valueCanonical',
       'Endpoint',
     )).toEqual(expect.objectContaining({
+      code: 'structural-invalid-uri',
+      severity: 'error',
+    }));
+  });
+
+  // smart-r4 ClinicalImpression/3689267: a plain uri may be relative.
+  it.each([
+    ['QuestionnaireResponse/3689263', 'ClinicalImpression.protocol[0]'],
+    ['contracts/terms', 'Contract.url'],
+  ])('accepts the relative uri %s at %s', (value, path) => {
+    expect(validateUriFormat(value, path, path.split('.')[0])).toBeNull();
+  });
+
+  it.each([
+    ['ValueSet/local', 'Questionnaire.item[0].answerValueSet', 'canonical'],
+    ['length', 'Questionnaire.contained[0].url', 'uri'],
+    ['ValueSet/local', 'Bundle.entry[1].resource.url', 'uri'],
+  ] as const)('requires an absolute %s at %s', (value, path, primitiveType) => {
+    expect(validateUriFormat(value, path, path.split('.')[0], undefined, primitiveType)).toEqual(expect.objectContaining({
       code: 'structural-invalid-uri',
       severity: 'error',
     }));

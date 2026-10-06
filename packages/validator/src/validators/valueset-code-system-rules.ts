@@ -1,3 +1,4 @@
+import { isHl7CoreNamespaceUrl } from '../core/executors/terminology-hl7-namespace-rules.js';
 import type { FhirVersion } from './valueset-expansion-cache-key.js';
 import type { CodeSystemValidationResult } from './terminology-api-client.js';
 import type {
@@ -32,6 +33,16 @@ export function findCodeSystemConcept(
     if (nested) return nested;
   }
   return null;
+}
+
+/**
+ * The reference validator's test, without its clock: a `deprecationDate`
+ * alone turns deprecated as time passes, which a stored result cannot follow.
+ */
+export function isDeprecatedConcept(concept: CodeSystemConcept): boolean {
+  return (concept.property ?? []).some(property =>
+    (property.code === 'status' && property.valueCode === 'deprecated')
+    || (property.code === 'deprecated' && property.valueBoolean === true));
 }
 
 export function buildUnverifiableCodeSystemResult(
@@ -91,4 +102,28 @@ export function buildUnverifiableCodeSystemResult(
     message: `Could not verify SNOMED CT code '${code}' against an authoritative unversioned SNOMED edition. ` +
       'Configure a SNOMED-preferred terminology server or provide a versioned Coding.version to enforce code membership.',
   };
+}
+
+/**
+ * A CodeSystem in the core namespace (`http://hl7.org/fhir/resource-types`)
+ * belongs to one release of the specification, and later releases rename or
+ * retire some (R5 has `fhir-types`). Another release's copy does not define
+ * it for the one being validated, as in the reference validator, which loads
+ * only that release's core package.
+ */
+export function isCodeSystemForRequestedRelease(
+    canonical: string,
+    codeSystem: CodeSystem,
+    preferredFhirMajor?: string,
+    requestedVersion?: string,
+): boolean {
+    if (requestedVersion || !preferredFhirMajor || !isHl7CoreNamespaceUrl(canonical)) return true;
+    const releaseMajor = typeof codeSystem.version === 'string'
+        ? codeSystem.version.match(/^(\d+)\.\d+\.\d+/)?.[1]
+        : undefined;
+    return !releaseMajor || releaseMajor === preferredFhirMajor;
+}
+
+export function majorFhirVersion(major?: string): FhirVersion | undefined {
+    return major === '4' ? 'R4' : major === '5' ? 'R5' : major === '6' ? 'R6' : undefined;
 }

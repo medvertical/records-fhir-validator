@@ -1,0 +1,84 @@
+{
+  "kind": "Original metadata-only FHIR publication/terminology version fixtures",
+  "entries": [
+    {
+      "id": "r4",
+      "file": "r4-codesystem.json",
+      "originalPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/hl7.fhir.r4.core#4.0.1/package/CodeSystem-encounter-status.json",
+      "sha256": "a002d81b5713b8224dea019af6a1486ea530fe599da6e51db398ae716e549c16",
+      "packageManifestPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/hl7.fhir.r4.core#4.0.1/package/package.json",
+      "packageManifestSha256": "7614377a54db343e48a9b3b862114f9f63ad1d5f746f6f0f7af68e55ac81c6f7",
+      "packageDirectory": "hl7.fhir.r4.core#4.0.1",
+      "packageName": "hl7.fhir.r4.core",
+      "packageVersion": "4.0.1",
+      "fhirVersions": [
+        "4.0.1"
+      ],
+      "codeSystemUrl": "http://hl7.org/fhir/encounter-status",
+      "codeSystemBusinessVersion": "4.0.1",
+      "content": "complete",
+      "conceptCodes": [
+        "planned",
+        "arrived",
+        "triaged",
+        "in-progress",
+        "onleave",
+        "finished",
+        "cancelled",
+        "entered-in-error",
+        "unknown"
+      ]
+    },
+    {
+      "id": "r5",
+      "file": "r5-codesystem.json",
+      "originalPath": "/Users/sheydin/.fhir/packages/hl7.fhir.r5.core#5.0.0/package/CodeSystem-encounter-status.json",
+      "sha256": "7f674af82c2ee748292cfb75b0a0d2a12be2b9cdf34753a798b2e3d59f203f93",
+      "packageManifestPath": "/Users/sheydin/.fhir/packages/hl7.fhir.r5.core#5.0.0/package/package.json",
+      "packageManifestSha256": "5ee555ae53b7688664d13e7862b48686d0939a70a70668502d25ddc82215c923",
+      "packageDirectory": "hl7.fhir.r5.core#5.0.0",
+      "packageName": "hl7.fhir.r5.core",
+      "packageVersion": "5.0.0",
+      "fhirVersions": [
+        "5.0.0"
+      ],
+      "codeSystemUrl": "http://hl7.org/fhir/encounter-status",
+      "codeSystemBusinessVersion": "5.0.0",
+      "content": "complete",
+      "conceptCodes": [
+        "planned",
+        "in-progress",
+        "on-hold",
+        "discharged",
+        "completed",
+        "cancelled",
+        "discontinued",
+        "entered-in-error",
+        "unknown"
+      ]
+    },
+    {
+      "id": "tho",
+      "file": "tho-codesystem.json",
+      "originalPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/hl7.terminology.r4#7.2.0/package/CodeSystem-condition-category.json",
+      "sha256": "8ec95bcebb940efc083466cdbbed153f6e50b37e1a5fb49cc41934257cbf5df5",
+      "packageManifestPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/hl7.terminology.r4#7.2.0/package/package.json",
+      "packageManifestSha256": "4736e1417401ba10d3f9c7a92cb4a2474cebec62d2a90c916e2e6b4d215564ec",
+      "packageDirectory": "hl7.terminology.r4#7.2.0",
+      "packageName": "hl7.terminology.r4",
+      "packageVersion": "7.2.0",
+      "fhirVersions": [
+        "4.0.1"
+      ],
+      "codeSystemUrl": "http://terminology.hl7.org/CodeSystem/condition-category",
+      "codeSystemBusinessVersion": "2.0.0",
+      "content": "complete",
+      "conceptCodes": [
+        "problem-list-item",
+        "encounter-diagnosis",
+        "diagnostic-report-impression"
+      ]
+    }
+  ],
+  "r4bLimit": "No original R4B definition bytes located. R4B neighbor selection tests are explicitly synthetic policy controls, not a genuine R4B dataset claim."
+}

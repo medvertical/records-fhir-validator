@@ -14,6 +14,8 @@ export function mergeTerminologyResolutionConfig(
   return cloneTerminologyResolutionConfig({
     ...current,
     ...update,
+    // A default is an explicit policy for this configuration, never an inherited earlier request.
+    defaultCodeSystemVersions: update.defaultCodeSystemVersions,
     serverDelegation: update.serverDelegation === undefined
       ? current.serverDelegation
       : {

@@ -1,5 +1,6 @@
 import type { ReferenceResolver } from '../validators/slicing-validator.js';
 import { normalizeFhirReferenceKey } from './fhir-reference-key.js';
+import { collectParametersEmbeddedResources } from './parameters-resource-validation.js';
 
 type FhirResource = Record<string, unknown>;
 
@@ -35,7 +36,8 @@ export function createBundleReferenceResolver(
   const contained = Array.isArray(rootResource.contained)
     ? rootResource.contained
     : [];
-  const bundleIndex = bundle ? indexCache.get(bundle) : null;
+  const group = bundle ?? (rootResource.resourceType === 'Parameters' ? rootResource : undefined);
+  const bundleIndex = group ? indexCache.get(group) : null;
 
   if (contained.length === 0 && !bundleIndex?.hasEntries) return null;
   const containedById = contained.length > 0
@@ -100,11 +102,23 @@ export function combineReferenceResolvers(
   return reference => primary(reference) ?? fallback(reference);
 }
 
+/**
+ * A Parameters groups the resources in its parameters the way a Bundle groups
+ * its entries: the reference validator resolves references between them (Da
+ * Vinci RA's submitted MeasureReport names the Patient beside it).
+ */
+function groupedEntries(group: Record<string, unknown>): unknown[] {
+  if (group.resourceType === 'Parameters') {
+    return collectParametersEmbeddedResources(group).map(embedded => ({ resource: embedded.resource }));
+  }
+  return Array.isArray(group.entry) ? group.entry : [];
+}
+
 function buildBundleReferenceIndex(bundle: Record<string, unknown>): BundleReferenceIndex {
   const fullUrl = new Map<string, FhirResource>();
   const relative = new Map<string, FhirResource>();
   const canonical = new Map<string, FhirResource>();
-  const entries = Array.isArray(bundle.entry) ? bundle.entry : [];
+  const entries = groupedEntries(bundle);
 
   for (const entry of entries) {
     if (!isObjectRecord(entry) || !isObjectRecord(entry.resource)) continue;

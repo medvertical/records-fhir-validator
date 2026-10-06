@@ -2,10 +2,10 @@ import { logger } from '../logger.js';
 import type { StructureDefinition } from './structure-definition-types.js';
 import {
   cacheKeyForProfile,
-  matchesRequestedFhirVersion,
   normalizeVersionedCoreStructureDefinitionUrl,
   urlMatchesRequestedFhirVersion,
 } from './sd-loader-version-utils.js';
+import { profileMatchesCanonical } from './sd-loader-profile-identity.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
 interface LoadProfilesBatchArgs {
@@ -38,7 +38,8 @@ export async function loadProfilesBatchWithCache({
     await Promise.all(uncachedUrls.map(async url => {
       try {
         const sd = await loadProfileWithTimeout(url, fhirVersion, loadProfile);
-        if (sd) {
+        const resolvedUrl = resolvePinnedCanonical(normalizeVersionedCoreStructureDefinitionUrl(url, fhirVersion));
+        if (sd && profileMatchesCanonical(sd, url, fhirVersion) && profileMatchesCanonical(sd, resolvedUrl, fhirVersion)) {
           results.set(url, sd);
         }
       } catch (error: unknown) {
@@ -82,9 +83,10 @@ function collectUncachedUrls(
     const resolvedUrl = resolvePinnedCanonical(lookupUrl);
     const cacheKey = cacheKeyForProfile(resolvedUrl, fhirVersion);
     const cached = cache.get(cacheKey);
-    if (cached && matchesRequestedFhirVersion(cached, fhirVersion)) {
+    if (cached && profileMatchesCanonical(cached, url, fhirVersion) && profileMatchesCanonical(cached, resolvedUrl, fhirVersion)) {
       results.set(url, cached);
     } else {
+      if (cached) cache.delete(cacheKey);
       uncachedUrls.push(url);
     }
   }

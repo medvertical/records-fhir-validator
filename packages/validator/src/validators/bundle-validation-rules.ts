@@ -33,13 +33,14 @@ export async function validateBundleRules(
   bundle: Record<string, unknown>,
   resolver: BundleValidationResolver,
   entryValidator?: EntryResourceValidator,
+  fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
 ): Promise<ValidationIssue[]> {
   const issues = structureIssues(bundle, resolver);
   const bundleType = resolver.getBundleType(bundle);
   if (bundleType) issues.push(...validateBundleTypeRules(bundle, bundleType));
   const strictReferences = bundleHasDuplicateEntryIds(bundle);
   if (bundleType === 'document' || bundleType === 'message') {
-    issues.push(...validateBundleReachability(bundle, bundleType, strictReferences));
+    issues.push(...validateBundleReachability(bundle, bundleType, strictReferences, fhirVersion));
   }
   issues.push(
     ...validateBundleCrossEntryReferences(bundle, bundleType, strictReferences),

@@ -130,6 +130,20 @@ describe('TypeValidator', () => {
       expect(issues.some(issue => issue.code === 'structural-type-mismatch')).toBe(false);
     });
 
+    // Core example Binary/example wraps its base64 with spaces.
+    it('discourages whitespace in base64 for R4 and forbids it from R5', async () => {
+      const types: ElementType[] = [{ code: 'base64Binary' }];
+      const wrapped = 'PFBh cmFt\nZXRl';
+
+      const r4 = await validator.validate(wrapped, types, 'Binary.data');
+      const r5 = await validator.validate(wrapped, types, 'Binary.data', undefined, 'R5');
+
+      expect(r4).toEqual([expect.objectContaining({ code: 'structural-base64-whitespace', severity: 'warning' })]);
+      expect(r5).toEqual([expect.objectContaining({ code: 'structural-base64-whitespace', severity: 'error' })]);
+      expect(await validator.validate('PFBh cmF', types, 'Binary.data'))
+        .toEqual([expect.objectContaining({ code: 'structural-invalid-base64-format' })]);
+    });
+
     it('uses the path resource type for invalid URI format issues', async () => {
       const types: ElementType[] = [{ code: 'uri' }];
       const issues = await validator.validate(

@@ -26,4 +26,6 @@ export {
     isForPublication,
 } from './publication-escalation.js';
 
+export { applyBestPracticeSeverity } from './best-practice-severity.js';
+
 export type { ValidationStrictness } from './strictness-filter.js';

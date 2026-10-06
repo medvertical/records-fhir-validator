@@ -8,6 +8,7 @@ export type UnverifiedBindingCause =
     | 'empty-expansion'
     | 'unsupported-filter'
     | 'unenumerable-system-include'
+    | 'incomplete-expansion'
     | 'unresolvable-snomed-extension-filter'
     | 'versioned-binding-unverified'
     | 'validation-error';
@@ -78,8 +79,11 @@ export function describeUnverifiedBinding(diagnostic: UnverifiedBindingDiagnosti
         case 'unresolvable-snomed-extension-filter':
             return 'The value set definition was found, but its compose rules cannot be evaluated locally. '
                 + 'Configure a terminology server that knows the value set, or install the package that carries the complete CodeSystem.';
+        case 'incomplete-expansion':
+            return 'The value set\'s stored expansion lists fewer codes than it declares, so absence from it proves nothing. '
+                + 'Configure a terminology server that knows the value set, or install a package with its complete expansion.';
         case 'versioned-binding-unverified':
-            return 'The coding pins a CodeSystem version; only a terminology server that serves that version can confirm the code.';
+            return 'Install the exact CodeSystem version and its ValueSet definitions, or configure a terminology server that can verify this versioned binding.';
         case 'validation-error':
             return 'The binding check failed unexpectedly. Check the validator logs, then validate again.';
     }

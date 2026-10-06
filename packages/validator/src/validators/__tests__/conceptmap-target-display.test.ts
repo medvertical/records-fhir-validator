@@ -14,6 +14,7 @@ describe('TerminologyResourceValidator — ConceptMap target-display checks', ()
     valueSetCache.setCodeSystem(targetCsUrl, {
       resourceType: 'CodeSystem',
       url: targetCsUrl,
+      version: '1.2.3',
       content: 'complete',
       concept: [
         { code: 'c1', display: 'display 1' },
@@ -53,6 +54,7 @@ describe('TerminologyResourceValidator — ConceptMap target-display checks', ()
   });
 
   it('checks displays when the target canonical includes a version', () => {
+    valueSetCache.setCodeSystem(`${targetCsUrl}|1.2.3`, valueSetCache.getCodeSystem(targetCsUrl)!);
     const issues = validator.validate(cm({
       target: `${targetCsUrl}|1.2.3`,
       element: [{ code: 'source', target: [{ code: 'c1', display: 'wrong' }] }],

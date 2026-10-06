@@ -70,13 +70,23 @@ export const TerminologyCodes = {
     },
     'terminology-display-mismatch': {
         aspect: 'terminology',
-        severity: 'warning',
+        severity: 'error',
         description: 'Coding display does not match CodeSystem concept display',
     },
     'terminology-code-inactive': {
         aspect: 'terminology',
         severity: 'warning',
         description: 'CodeSystem concept is inactive',
+    },
+    'terminology-code-retired': {
+        aspect: 'terminology',
+        severity: 'warning',
+        description: 'CodeSystem concept is retired',
+    },
+    'terminology-code-deprecated': {
+        aspect: 'terminology',
+        severity: 'warning',
+        description: 'CodeSystem concept is deprecated',
     },
     'terminology-code-system-version-mismatch': {
         aspect: 'terminology',
@@ -98,6 +108,16 @@ export const TerminologyCodes = {
         severity: 'error',
         description: 'Coding.system is a local reference instead of an absolute CodeSystem URI',
     },
+    'terminology-binding-extensible-no-code': {
+        aspect: 'terminology',
+        severity: 'warning',
+        description: 'CodeableConcept bound extensibly carries no coding',
+    },
+    'terminology-codesystem-undefined': {
+        aspect: 'terminology',
+        severity: 'error',
+        description: 'Coding.system names a URL in the HL7 core namespace that no HL7 package defines',
+    },
     'terminology-codesystem-unresolvable': {
         aspect: 'terminology',
         severity: 'warning',
@@ -117,6 +137,11 @@ export const TerminologyCodes = {
         aspect: 'terminology',
         severity: 'information',
         description: 'ValueSet could not be resolved, so binding validation is incomplete',
+    },
+    'terminology-snomed-syntax-unverified': {
+        aspect: 'terminology',
+        severity: 'information',
+        description: 'SNOMED CT expression syntax check reached a resource limit and is incomplete',
     },
 } as const satisfies Record<string, ValidationCodeMetadata>;
 

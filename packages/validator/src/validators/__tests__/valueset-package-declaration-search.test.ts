@@ -29,7 +29,7 @@ describe('resolving a canonical from what packages declare', () => {
   async function packageHolding(
     root: string,
     name: string,
-    resource: { filename: string; version?: string; url?: string },
+    resource: { filename: string; version?: string; url?: string; content?: string },
   ): Promise<void> {
     const packageDir = path.join(root, name, 'package');
     await mkdir(packageDir, { recursive: true });
@@ -46,6 +46,7 @@ describe('resolving a canonical from what packages declare', () => {
       resourceType: 'CodeSystem',
       url,
       ...(resource.version ? { version: resource.version } : {}),
+      ...(resource.content ? { content: resource.content } : {}),
     }));
   }
 
@@ -86,6 +87,38 @@ describe('resolving a canonical from what packages declare', () => {
   it('reports no answer when a store has no index to read', async () => {
     const absent = path.join(tmpdir(), 'declaration-search-absent');
     expect(await rankedDeclarationsForCanonical([absent], 'CodeSystem', CANONICAL, undefined, undefined)).toBeNull();
+  });
+
+  it('passes over a content stub for a newer copy that carries the content', async () => {
+    const cdcrec = 'urn:oid:2.16.840.1.113883.6.238';
+    const root = await store();
+    await packageHolding(root, 'hl7.terminology.r4#6.5.0', {
+      filename: 'CodeSystem-CDCREC.json', url: cdcrec, version: '3.0.2', content: 'not-present',
+    });
+    await packageHolding(root, 'hl7.fhir.us.core#3.1.1', {
+      filename: 'CodeSystem-cdcrec.json', url: cdcrec, version: '3.1.1', content: 'complete',
+    });
+    await packageHolding(root, 'old.copy#1.0.0', {
+      filename: 'CodeSystem-cdcrec.json', url: cdcrec, version: '1.2', content: 'complete',
+    });
+
+    const ranked = await rankedDeclarationsForCanonical([root], 'CodeSystem', cdcrec, '4', undefined);
+    expect(ranked![0].declaration.packageName).toBe('hl7.terminology.r4#6.5.0');
+    expect(await readDeclaredResource(ranked!, cdcrec)).toMatchObject({ version: '3.1.1', content: 'complete' });
+  });
+
+  it('keeps a stub from the canonical authority over an older complete copy elsewhere', async () => {
+    const v2 = 'http://terminology.hl7.org/CodeSystem/v2-0350';
+    const root = await store();
+    await packageHolding(root, 'hl7.terminology.r4#6.5.0', {
+      filename: 'CodeSystem-v2-0350.json', url: v2, version: '2.2.0', content: 'not-present',
+    });
+    await packageHolding(root, 'hl7.fhir.r4.core#4.0.1', {
+      filename: 'CodeSystem-v2-0350.json', url: v2, version: '2.9', content: 'complete',
+    });
+
+    const ranked = await rankedDeclarationsForCanonical([root], 'CodeSystem', v2, '4', undefined);
+    expect(await readDeclaredResource(ranked!, v2)).toMatchObject({ content: 'not-present' });
   });
 
   it('skips a declaration whose file no longer parses', async () => {

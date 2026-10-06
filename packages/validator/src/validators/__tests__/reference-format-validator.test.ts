@@ -327,4 +327,29 @@ describe('ReferenceFormatValidator', () => {
             expect(validator.validateAllReferences(resource)).toEqual([]);
         });
     });
+
+    describe('references with a path before ResourceType/id', () => {
+        it.each(['/fhir/Patient/5e5534f221f44a589ce64f6feb830b35/_history/1', 'fhir/Patient/1'])(
+            'only warns about %s',
+            (reference) => {
+                expect(validator.validateReferenceString(reference, 'subject', 'Observation')).toEqual([
+                    expect.objectContaining({ code: 'reference-path-prefixed', severity: 'warning' }),
+                ]);
+            },
+        );
+
+        it.each(['patient/1', 'Practitioner/{{fhir_practitioner_id}}', '/fhir/Unknownthing/1', 'Patient:123'])(
+            'still rejects %s',
+            (reference) => {
+                expect(validator.validateReferenceString(reference, 'subject', 'Observation')).toEqual([
+                    expect.objectContaining({ code: 'reference-invalid-format', severity: 'error' }),
+                ]);
+            },
+        );
+
+        // SMART Health Cards name Bundle entries `resource:0` and reference them so.
+        it('accepts any absolute URI the reference validator accepts', () => {
+            expect(validator.validateReferenceString('resource:0', 'Bundle.entry[1].resource.patient', 'Bundle')).toEqual([]);
+        });
+    });
 });

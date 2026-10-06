@@ -28,9 +28,10 @@ function validateCompositionSection(
   const issues: ValidationIssue[] = [];
 
   try {
-    const hasText = isRecord(value.text) &&
-      typeof value.text.div === 'string' &&
-      value.text.div.length > 0;
+    // cmp-1 is `text.exists() or entry.exists() or section.exists()`: a
+    // Narrative without its div still exists. The missing div is its own
+    // finding (Narrative.div is required), as in the reference validator.
+    const hasText = isRecord(value.text) && Object.keys(value.text).length > 0;
     const entries = Array.isArray(value.entry)
       ? value.entry.filter(isRecord)
       : [];

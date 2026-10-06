@@ -1,3 +1,4 @@
+import { AsyncResource } from 'node:async_hooks';
 export type TerminologyRemoteOperation =
   | 'codesystem-subsumes'
   | 'codesystem-validate-code'
@@ -59,7 +60,7 @@ export class TerminologyRequestBroker {
       const request: PendingRequest<T> = {
         enqueuedAt: Date.now(),
         operation,
-        run: task,
+        run: AsyncResource.bind(task),
         resolve,
         reject,
       };

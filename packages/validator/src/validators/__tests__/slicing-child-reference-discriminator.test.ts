@@ -75,7 +75,7 @@ const resolveContained = (reference: string): unknown => contained[reference] ??
 
 const entry = (reference: string) => ({ item: { reference } });
 
-function errorCodes(issues: ValidationIssue[]): string[] {
+function errorCodes(issues: ValidationIssue[]): Array<string | undefined> {
   return issues.filter(issue => issue.severity === 'error').map(issue => issue.code);
 }
 
@@ -120,7 +120,8 @@ describe('type discriminator through a child reference (item.resolve())', () => 
 
     expect(errorCodes(issues)).toEqual([]);
     expect(issues).toContainEqual(expect.objectContaining({
-      code: 'profile-slice-validation-error',
+      code: 'profile-slice-validation-incomplete',
+      severity: 'information',
       details: expect.objectContaining({ reason: 'unresolved-reference-discriminator' }),
     }));
   });
@@ -159,3 +160,17 @@ describe('type discriminator through a child reference (item.resolve())', () => 
     expect(referenceDiscriminatorCouldNotBeResolved(entry('Condition/remote'), discriminator, resolveContained)).toBe(true);
   });
 });
+
+// MedMorph slices Library.relatedArtifact by the profile of what its
+// canonical `resource` resolves to; a canonical Records cannot read leaves the
+// slicing undecided, as an unreadable Reference does.
+describe('canonical targets of a resolve() discriminator', () => {
+  const byTargetProfile = { type: 'profile' as const, path: 'resource.resolve()' };
+  const artifact = { type: 'composed-of', resource: 'http://hl7.org/fhir/us/medmorph/ValueSet/us-ph-valueset-chlamydia-example' };
+
+  it('counts a canonical nothing resolves as unresolved', () => {
+    expect(referenceDiscriminatorCouldNotBeResolved(artifact, byTargetProfile, () => null)).toBe(true);
+    expect(referenceDiscriminatorCouldNotBeResolved(artifact, byTargetProfile, () => ({ resourceType: 'ValueSet' }))).toBe(false);
+  });
+});
+

@@ -16,10 +16,12 @@ import {
   type CodeInfo,
 } from './valueset-display-utils.js';
 import { type FhirVersion } from './valueset-expansion-cache-key.js';
-import { validateDisplayMatchesCodeSystem } from './valueset-display-validator.js';
+import { validateDisplaysForCodeInfos } from './valueset-display-validator.js';
 import type { ValueSetCache } from './valueset-cache.js';
 import type { ValueSetPackageLoader } from './valueset-package-loader.js';
 import { validateCodeSystemVersions } from './valueset-binding-version-validator.js';
+import { bindingWithoutCodeIssues } from './valueset-binding-no-code-rules.js';
+import { systemlessCodingSatisfiesBinding } from './valueset-systemless-coding.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import type { UnverifiedBindingDiagnostic } from '../issues/unverified-binding-diagnostic.js';
 
@@ -28,6 +30,7 @@ export type ValidateBindingOptions = {
   profileUrl?: string;
   fhirVersion?: FhirVersion;
   unverifiedSeverity?: ValidationSeverity;
+  displayLanguage?: string;
 };
 
 /**
@@ -84,6 +87,7 @@ export async function validateBinding(
     const codeInfos = extractCodeInfos(code);
     if (codeInfos.length === 0) {
       if (!valueSetUrl) return issues;
+      issues.push(...bindingWithoutCodeIssues(code, binding, elementPath, valueSetUrl, options?.profileUrl));
 
       const strictRequired = deps.resolutionConfig.strictUnverifiedRequiredBindings
         && binding.strength === 'required';
@@ -170,11 +174,12 @@ async function validateExtractedCodeBindings(
   ));
 
   for (const codeInfo of codeInfos) {
-    // A code primitive inherits the CodeSystem from its binding, but a Coding
-    // inside Coding/CodeableConcept does not. Without Coding.system it cannot
-    // prove membership in a required ValueSet even when the bare code text
-    // happens to occur in the local expansion.
-    if (binding.strength === 'required' && codedDatatypeRequiresSystem && !codeInfo.system) {
+    // A code primitive inherits the CodeSystem from its binding; a Coding does
+    // not, and its bare code text occurring in the expansion proves nothing.
+    if (codedDatatypeRequiresSystem && !codeInfo.system) {
+      if (await systemlessCodingSatisfiesBinding(
+        deps.packageLoader, rawCode, codeInfo.code, valueSetUrl, binding.strength, options?.fhirVersion,
+      )) validCodeInfos.push(codeInfo);
       continue;
     }
     const outcome = await deps.resolveCodeBindingForBinding(
@@ -224,13 +229,14 @@ async function validateExtractedCodeBindings(
   }
 
   issues.push(...await validateDisplaysForCodeInfos(
-    deps,
-    rawCode,
-    validCodeInfos,
-    valueSetUrl,
-    binding,
-    elementPath,
-    options,
+    rawCode, validCodeInfos, valueSetUrl, elementPath, {
+      bindingStrength: binding.strength as BindingStrength | undefined,
+      profileUrl: options?.profileUrl, fhirVersion: options?.fhirVersion, displayLanguage: options?.displayLanguage,
+      resolveMembership: (codeInfo, version) => deps.resolveCodeBindingForBinding(codeInfo.code, codeInfo.system,
+        valueSetUrl, binding.strength as BindingStrength, options?.fhirVersion, elementPath, version),
+      cache: deps.cache, packageLoader: deps.packageLoader,
+      defaultCodeSystemVersions: deps.resolutionConfig.defaultCodeSystemVersions,
+    },
   ));
 
   if (
@@ -277,37 +283,6 @@ async function validateExtractedCodeBindings(
  */
 function systemLivesOnSiblingCoding(elementPath: string): boolean {
   return /\.coding(\[\d+\])?\.code$/.test(elementPath);
-}
-
-async function validateDisplaysForCodeInfos(
-  deps: BindingValidationDeps,
-  rawCode: unknown,
-  codeInfos: CodeInfo[],
-  valueSetUrl: string,
-  binding: Binding,
-  elementPath: string,
-  options?: ValidateBindingOptions,
-): Promise<ValidationIssue[]> {
-  const issues: ValidationIssue[] = [];
-  for (const codeInfo of codeInfos) {
-    const displayIssue = await validateDisplayMatchesCodeSystem(
-      rawCode,
-      codeInfo,
-      valueSetUrl,
-      elementPath,
-      {
-        bindingStrength: binding.strength as BindingStrength | undefined,
-        profileUrl: options?.profileUrl,
-        fhirVersion: options?.fhirVersion,
-        cache: deps.cache,
-        packageLoader: deps.packageLoader,
-      },
-    );
-    if (displayIssue) {
-      issues.push(displayIssue);
-    }
-  }
-  return issues;
 }
 
 /**

@@ -1,3 +1,5 @@
+import { resolveCodeSystemVersion, snapshotTerminologyConfig } from './terminology-config-snapshot.js';
+import { isImportedNamedCodeRejection } from './imported-terminology-inventory.js';
 import type { FhirVersion } from './valueset-expansion-cache-key.js';
 import type { ValueSetCache } from './valueset-cache.js';
 import type { ValueSetPackageLoader } from './valueset-package-loader.js';
@@ -41,11 +43,9 @@ export class ValueSetCodeSystemOperations {
     fhirVersion?: FhirVersion,
     codeSystemVersion?: string,
   ): TerminologyServerOverride | undefined {
+    const config = this.dependencies.getResolutionConfig();
     return resolveTerminologyServerForSystem(
-      this.dependencies.getResolutionConfig(),
-      system,
-      codeSystemVersion,
-      fhirVersion,
+      config, system, codeSystemVersion, fhirVersion,
     );
   }
 
@@ -65,6 +65,7 @@ export class ValueSetCodeSystemOperations {
     codeSystemVersion?: string;
     attempts?: TerminologyServerAttempt[];
   }): Promise<CodeBindingOutcome> {
+    const config = this.dependencies.getResolutionConfig();
     return validateCodeViaTerminologyServerWithFilters({
       apiClient: this.dependencies.apiClient,
       packageLoader: this.dependencies.packageLoader,
@@ -78,7 +79,7 @@ export class ValueSetCodeSystemOperations {
       codeSystemVersion: options.codeSystemVersion,
       attempts: options.attempts,
       fallbackServers: listFallbackTerminologyServers(
-        this.dependencies.getResolutionConfig(),
+        config,
         options.override,
         options.system,
         options.codeSystemVersion,
@@ -93,50 +94,64 @@ export class ValueSetCodeSystemOperations {
     display?: string,
     fhirVersion?: FhirVersion,
     codeSystemVersion?: string,
+    displayLanguage?: string,
   ): Promise<CodeSystemValidationResult> {
+    const resolutionConfig = snapshotTerminologyConfig(this.dependencies.getResolutionConfig());
+    const selectedVersion = resolveCodeSystemVersion(resolutionConfig, system, codeSystemVersion);
     const localResult = await this.validateLocal(
       code,
       system,
       display,
       fhirVersion,
-      codeSystemVersion,
+      selectedVersion,
+      displayLanguage,
     );
-    const resolutionConfig = this.dependencies.getResolutionConfig();
     if (localResult) {
+      if (isImportedNamedCodeRejection(localResult, code, system, fhirVersion, selectedVersion)) return localResult;
       return buildUnverifiableCodeSystemResult(
-        code, system, localResult, resolutionConfig, codeSystemVersion, fhirVersion,
+        code, system, localResult, resolutionConfig, selectedVersion, fhirVersion,
       ) ?? localResult;
     }
-    if (!this.isExternal(system, fhirVersion)) return { valid: true };
-    if (!canDelegateCodeValidation(resolutionConfig)) return { valid: true };
+    if (!isExternalCodeSystem(system) && !(resolutionConfig.servers ?? []).some(server =>
+      isTerminologyServerEligible(server, fhirVersion) && server.preferredSystems?.includes(system))) return { valid: true };
+    if (!canDelegateCodeValidation(resolutionConfig)) return {
+      valid: true,
+      reason: 'delegation-disabled',
+      message: 'CodeSystem membership was not verified because terminology code validation delegation is disabled.',
+    };
 
-    const primaryOverride = this.resolveServer(system, fhirVersion, codeSystemVersion);
+    const primaryOverride = resolveTerminologyServerForSystem(resolutionConfig, system, selectedVersion, fhirVersion);
     if (
-      isSnomedEditionRouteMissing(system, codeSystemVersion, primaryOverride)
-      || !this.hasServer(primaryOverride, fhirVersion)
+      isSnomedEditionRouteMissing(system, selectedVersion, primaryOverride)
+      || !hasTerminologyServer(resolutionConfig, primaryOverride, fhirVersion)
     ) {
       return buildUnverifiableCodeSystemResult(
         code,
         system,
         { valid: false, reason: 'code-unknown' },
         resolutionConfig,
-        codeSystemVersion,
+        selectedVersion,
         fhirVersion,
-      ) ?? { valid: true };
+      ) ?? {
+        valid: true,
+        reason: 'no-server',
+        message: 'CodeSystem membership was not verified because no enabled terminology server is available for this FHIR release.',
+      };
     }
 
     const result = await validateCodeInCodeSystemWithFallbacks({
       apiClient: this.dependencies.apiClient,
       code,
-      codeSystemVersion,
+      codeSystemVersion: selectedVersion,
       display,
+      displayLanguage,
       fhirVersion,
       primaryOverride,
       resolutionConfig,
       system,
     });
     return buildUnverifiableCodeSystemResult(
-      code, system, result, resolutionConfig, codeSystemVersion, fhirVersion,
+      code, system, result, resolutionConfig, selectedVersion, fhirVersion,
     ) ?? result;
   }
 
@@ -146,6 +161,7 @@ export class ValueSetCodeSystemOperations {
     display?: string,
     fhirVersion?: FhirVersion,
     codeSystemVersion?: string,
+    displayLanguage?: string,
   ): Promise<CodeSystemValidationResult | null> {
     return validateCodeInLocalCodeSystem(
       { cache: this.dependencies.cache, packageLoader: this.dependencies.packageLoader },
@@ -153,11 +169,14 @@ export class ValueSetCodeSystemOperations {
       system,
       display,
       fhirVersion,
-      codeSystemVersion,
+      resolveCodeSystemVersion(this.dependencies.getResolutionConfig(), system, codeSystemVersion),
+      displayLanguage,
     );
   }
 
   async resolveSubsumption(system: string, codeA: string, codeB: string): Promise<SubsumptionOutcome> {
+    // The transport has no version parameter, so it cannot answer for an explicit default edition.
+    if (resolveCodeSystemVersion(this.dependencies.getResolutionConfig(), system) !== undefined) return 'unknown';
     const override = this.resolveServer(system);
     if (!this.hasServer(override)) return 'unknown';
     return this.dependencies.apiClient.subsumes(system, codeA, codeB, override);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildBundleDocumentContextIssues } from '../bundle-document-context';
+import { buildBundleDocumentContextIssues, withoutSupersededSliceMinimums } from '../bundle-document-context';
 import type { StructureDefinition } from '../structure-definition-types';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 
@@ -216,5 +216,74 @@ describe('buildBundleDocumentContextIssues', () => {
       issue.ruleId === 'slice-min-composition-conformance' &&
       (issue.details as Record<string, unknown>)?.sourceProfile === 'http://hl7.org/fhir/StructureDefinition/Resource'
     )).toHaveLength(0);
+  });
+
+  it('does not attribute the composition slice to a versioned core Bundle base', () => {
+    const ipsBundle = {
+      resourceType: 'StructureDefinition',
+      url: 'http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips',
+      version: '2.0.1',
+      type: 'Bundle',
+      baseDefinition: 'http://hl7.org/fhir/StructureDefinition/Bundle|4.0.1',
+    } as StructureDefinition;
+    const composition = {
+      resourceType: 'Composition',
+      id: 'composition',
+      section: [{ entry: [{ reference: 'urn:uuid:condition' }] }],
+    };
+    const bundle = {
+      resourceType: 'Bundle',
+      type: 'document',
+      entry: [
+        { fullUrl: 'urn:uuid:composition', resource: composition },
+        { fullUrl: 'urn:uuid:condition', resource: { resourceType: 'Condition', id: 'condition' } },
+      ],
+    };
+    const compositionProfile = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/StructureDefinition/test-composition',
+      type: 'Composition',
+      snapshot: {
+        element: [{
+          id: 'Composition.section.entry',
+          path: 'Composition.section.entry',
+          type: [{ code: 'Reference', targetProfile: ['http://example.org/StructureDefinition/problem-condition'] }],
+        }],
+      },
+    } as StructureDefinition;
+
+    const issues = buildBundleDocumentContextIssues(bundle, [
+      { index: 0, entryResource: composition, resourceType: 'Composition', issues: [], structureDef: compositionProfile },
+      { index: 1, entryResource: bundle.entry[1].resource, resourceType: 'Condition', issues: [terminologyBindingIssue] },
+    ], ipsBundle);
+
+    expect(issues
+      .filter(issue => issue.ruleId === 'slice-min-composition-conformance')
+      .map(issue => (issue.details as Record<string, unknown>)?.sourceProfile))
+      .toEqual(['http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips']);
+  });
+});
+
+describe('withoutSupersededSliceMinimums', () => {
+  const sliceMinimum = (sliceName: string): ValidationIssue => ({
+    aspect: 'profile', severity: 'error', code: 'profile-slice-min-cardinality', path: 'Bundle.entry',
+    message: `Slice '${sliceName}' minimum cardinality not met`, details: { sliceName },
+  });
+  const compositionContext: ValidationIssue = {
+    aspect: 'profile', severity: 'error', code: 'profile-slice-min-cardinality', path: 'Bundle',
+    message: 'Bundle requires a conformant Bundle.entry:composition slice, but none was found.',
+    ruleId: 'slice-min-composition-conformance', details: { sliceName: 'composition' },
+  };
+
+  it('drops the slicer\'s minimum for a slice the document context reports with its causes', () => {
+    expect(withoutSupersededSliceMinimums(
+      [sliceMinimum('composition'), sliceMinimum('patient')],
+      [compositionContext],
+    )).toEqual([sliceMinimum('patient')]);
+  });
+
+  it('keeps every minimum when the document context reports no missing slice', () => {
+    const issues = [sliceMinimum('composition')];
+    expect(withoutSupersededSliceMinimums(issues, [])).toBe(issues);
   });
 });

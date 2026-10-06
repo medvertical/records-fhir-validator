@@ -1,9 +1,12 @@
+import { withSliceInstanceEvidence } from './slice-instance-evidence.js';
+import { ProfileReferenceUnavailableError, profileReferenceUnavailableIssue } from '../core/profile-reference-authority.js';
 /** Validates FHIR slice identity, cardinality, discriminators, and content. */
 
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { extractSlicingInfo as externalExtractSlicingInfo } from './slice-info-extractor.js';
 import type { ReferenceResolver } from './slice-types.js';
 import type { StructureDefinition } from '../core/structure-definition-types.js';
+import type { ProfileReferenceSource } from '../core/profile-reference-pins.js';
 import { createIsolatedSlicingValueSetLoader } from './slicing-valueset-loader.js';
 import { type FhirVersionFamily } from '../core/sd-loader-version-utils.js';
 import { ConstraintValidator } from './constraint-validator.js';
@@ -12,6 +15,7 @@ import type { ValueSetLoaderLike } from './slice-info-extractor.js';
 import { handleSlicingValidationFailure } from './slicing-validation-failure.js';
 import { validateResolvedSlicing } from './slicing-resolved-validation.js';
 import { logSlicingValidationStart } from './slicing-validation-logging.js';
+import type { ProfileConformanceCheck } from './sd-fhirpath-profile-conformance.js';
 
 // ============================================================================
 // Types
@@ -40,11 +44,24 @@ export type { ReferenceResolver, SliceDefinition } from './slice-types.js';
  * Callback that resolves a profile URL to its StructureDefinition. Used by
  * the slicing validator to follow `type[].profile` on slice elements and
  * extract discriminator patterns (e.g. ISiKLoincCoding → patternUri on
- * Coding.system).
+ * Coding.system). `referencingProfile` is the profile whose slice names the
+ * type profile; its package dependencies decide the release.
  */
 export type TypeProfileResolver = (
   profileUrl: string,
   fhirVersion?: FhirVersionFamily,
+  referencingProfile?: ProfileReferenceSource,
+) => Promise<StructureDefinition | null>;
+
+/**
+ * A resolver bound to one validation: canonicals the slices name resolve in
+ * the context of the sliced profile; a caller resolving a canonical from
+ * elsewhere names its own referencing profile, or null when the instance
+ * itself declares the canonical.
+ */
+type BoundTypeProfileResolver = (
+  profileUrl: string,
+  referencingProfile?: ProfileReferenceSource | null,
 ) => Promise<StructureDefinition | null>;
 
 type SlicingInfoExtractor = typeof externalExtractSlicingInfo;
@@ -111,6 +128,11 @@ export class SlicingValidator {
     this.mustSupportSeverity = severity;
   }
 
+  /** A value set's codes as the slice matchers read them; null when it cannot be expanded. */
+  public loadValueSetCodes(valueSetUrl: string): Promise<string[] | null> {
+    return this.getValueSetLoader().loadValueSet(valueSetUrl);
+  }
+
   /**
    * Validate slicing for a specific element path
    */
@@ -122,51 +144,67 @@ export class SlicingValidator {
     slicingElementId?: string,
     fhirVersion: FhirVersionFamily = 'R4',
     rootResource?: unknown,
+    // Where the sliced element sits in the instance (`item[1].adjudication`);
+    // `elementPath` names it in the profile, where its slices are defined.
+    instancePath: string = elementPath,
+    profileConformance?: ProfileConformanceCheck,
   ): Promise<ValidationIssue[]> {
-    const issues: ValidationIssue[] = [];
+    return withSliceInstanceEvidence(async () => {
+      const issues: ValidationIssue[] = [];
 
-    try {
-      // Slice type profiles must resolve within the validated release: the
-      // same canonical carries different cardinalities across R4/R5/R6.
-      const typeProfileResolver = this.typeProfileResolverFor(fhirVersion);
-      const slicingInfo = await this.extractSlicingInfo(
-        elementPath, profileSD, slicingElementId, typeProfileResolver,
-      );
+      try {
+        // Slice type profiles must resolve within the validated release: the
+        // same canonical carries different cardinalities across R4/R5/R6.
+        const typeProfileResolver = this.typeProfileResolverFor(fhirVersion, profileSD, issues, instancePath);
+        const slicingInfo = await this.extractSlicingInfo(
+          elementPath, profileSD, slicingElementId, typeProfileResolver,
+        );
 
-      if (!slicingInfo || slicingInfo.slices.length === 0) {
-        // No slicing defined for this element
-        return issues;
+        if (!slicingInfo || slicingInfo.slices.length === 0) {
+          // No slicing defined for this element
+          return issues;
+        }
+        const compatibleSlices = slicingInfo.slices.filter((slice) =>
+          isSliceCompatibleWithFhirVersion(slice, fhirVersion),
+        );
+        if (compatibleSlices.length === 0) {
+          return issues;
+        }
+
+        logSlicingValidationStart(elements.length, compatibleSlices.length, instancePath);
+
+        const effectiveReferenceResolver = referenceResolverOverride ?? this.referenceResolver ?? null;
+        issues.push(
+          ...(await validateResolvedSlicing({
+            elements,
+            elementPath: instancePath,
+            definitionPath: elementPath,
+            selectedSlicingElementId: slicingInfo.selectedSlicingElementId,
+            profile: profileSD,
+            slices: compatibleSlices,
+            slicing: slicingInfo.slicing,
+            referenceResolver: effectiveReferenceResolver,
+            mustSupportSeverity: this.mustSupportSeverity,
+            fhirVersion,
+            typeProfileResolver,
+            typeProfileConstraintValidator: this.typeProfileConstraintValidator,
+            rootResource,
+            profileConformance: profileConformance && (async (...args) => {
+              try { return await profileConformance(...args); }
+              catch (error: unknown) {
+                if (!(error instanceof ProfileReferenceUnavailableError)) throw error;
+                addUnavailableIssue(issues, error, instancePath);
+                return undefined;
+              }
+            }),
+          })),
+        );
+      } catch (error: unknown) {
+        issues.push(handleSlicingValidationFailure(error, instancePath));
       }
-      const compatibleSlices = slicingInfo.slices.filter((slice) =>
-        isSliceCompatibleWithFhirVersion(slice, fhirVersion),
-      );
-      if (compatibleSlices.length === 0) {
-        return issues;
-      }
 
-      logSlicingValidationStart(elements.length, compatibleSlices.length, elementPath);
-
-      const effectiveReferenceResolver = referenceResolverOverride ?? this.referenceResolver ?? null;
-      issues.push(
-        ...(await validateResolvedSlicing({
-          elements,
-          elementPath,
-          profile: profileSD,
-          slices: compatibleSlices,
-          slicing: slicingInfo.slicing,
-          referenceResolver: effectiveReferenceResolver,
-          mustSupportSeverity: this.mustSupportSeverity,
-          fhirVersion,
-          typeProfileResolver,
-          typeProfileConstraintValidator: this.typeProfileConstraintValidator,
-          rootResource,
-        })),
-      );
-    } catch (error: unknown) {
-      issues.push(handleSlicingValidationFailure(error, elementPath));
-    }
-
-    return issues;
+      return issues;
+    });
   }
 
   /**
@@ -179,8 +217,8 @@ export class SlicingValidator {
   private async extractSlicingInfo(
     elementPath: string,
     profileSD: StructureDefinition,
-    slicingElementId?: string,
-    typeProfileResolver: TypeProfileResolver | null = this.typeProfileResolver,
+    slicingElementId: string | undefined,
+    typeProfileResolver: BoundTypeProfileResolver | null,
   ) {
     return this.slicingInfoExtractor(
       elementPath,
@@ -188,11 +226,31 @@ export class SlicingValidator {
       typeProfileResolver,
       this.getValueSetLoader(),
       slicingElementId,
+      typeProfileResolver ? (url, source) => typeProfileResolver(url, source) : undefined,
     );
   }
 
-  private typeProfileResolverFor(fhirVersion: FhirVersionFamily): TypeProfileResolver | null {
+  private typeProfileResolverFor(
+    fhirVersion: FhirVersionFamily,
+    referencingProfile: ProfileReferenceSource,
+    issues: ValidationIssue[],
+    path: string,
+  ): BoundTypeProfileResolver | null {
     const resolver = this.typeProfileResolver;
-    return resolver ? (profileUrl) => resolver(profileUrl, fhirVersion) : null;
+    return resolver
+      ? async (profileUrl, source = referencingProfile) => {
+        try { return await resolver(profileUrl, fhirVersion, source ?? undefined); }
+        catch (error: unknown) {
+          if (!(error instanceof ProfileReferenceUnavailableError)) throw error;
+          addUnavailableIssue(issues, error, path);
+          return null;
+        }
+      }
+      : null;
   }
+}
+
+function addUnavailableIssue(issues: ValidationIssue[], error: ProfileReferenceUnavailableError, path: string): void {
+  const issue = profileReferenceUnavailableIssue(error, path);
+  if (!issues.some(existing => existing.id === issue.id)) issues.push(issue);
 }

@@ -1,6 +1,9 @@
+import { inheritCodeSystemVerification, isVerifiedCodeSystemResult } from './code-system-validation-evidence.js';
 import {
-  displaysEquivalentForCodeInfo,
-} from './valueset-display-utils.js';
+  extractAcceptedDisplays,
+  hasAuthoritativeDisplayMismatch,
+  sourceDisplaysEquivalent,
+} from './valueset-display-evidence.js';
 import type {
   TerminologyResolutionConfig,
   TerminologyServerOverride,
@@ -17,6 +20,7 @@ export async function validateCodeInCodeSystemWithFallbacks({
   code,
   codeSystemVersion,
   display,
+  displayLanguage,
   fhirVersion,
   primaryOverride,
   resolutionConfig,
@@ -26,13 +30,14 @@ export async function validateCodeInCodeSystemWithFallbacks({
   code: string;
   codeSystemVersion?: string;
   display?: string;
+  displayLanguage?: string;
   fhirVersion?: FhirVersion;
   primaryOverride?: TerminologyServerOverride;
   resolutionConfig: TerminologyResolutionConfig;
   system: string;
 }): Promise<CodeSystemValidationResult> {
   const result = await callCodeSystemValidator(
-    apiClient, code, system, display, primaryOverride, codeSystemVersion,
+    apiClient, code, system, display, primaryOverride, codeSystemVersion, displayLanguage,
   );
   if (!display || !isDisplayMismatchResult(result)) {
     const codeMembershipResult = await validateCodeMembershipWithFallbackServers({
@@ -40,6 +45,7 @@ export async function validateCodeInCodeSystemWithFallbacks({
       code,
       codeSystemVersion,
       display,
+      displayLanguage,
       fhirVersion,
       primaryOverride,
       primaryResult: result,
@@ -50,6 +56,7 @@ export async function validateCodeInCodeSystemWithFallbacks({
       apiClient,
       code,
       codeSystemVersion,
+      displayLanguage,
       fhirVersion,
       primaryOverride,
       primaryResult: codeMembershipResult,
@@ -57,25 +64,31 @@ export async function validateCodeInCodeSystemWithFallbacks({
       system,
     });
   }
-  if (isEquivalentDisplayMismatch(code, system, display, result)) {
-    return { valid: true };
-  }
-
-  const displayResult = await validateDisplayMismatchWithFallbackServers({
-    apiClient,
-    code,
-    codeSystemVersion,
-    display,
-    fhirVersion,
-    primaryOverride,
-    primaryResult: result,
-    resolutionConfig,
-    system,
-  });
+  const equivalent = isEquivalentDisplayMismatch(code, system, display, result);
+  const { reason: _reason, issues, ...retainedResult } = result;
+  const displayResult = equivalent
+    ? inheritCodeSystemVerification({
+      ...retainedResult,
+      valid: true,
+      ...(issues ? { issues: issues.filter(issue => issue.code !== 'invalid-display') } : {}),
+    }, result)
+    : await validateDisplayMismatchWithFallbackServers({
+      apiClient,
+      code,
+      codeSystemVersion,
+      display,
+      displayLanguage,
+      fhirVersion,
+      primaryOverride,
+      primaryResult: result,
+      resolutionConfig,
+      system,
+    });
   return validateInactiveCodeWithFallbackServers({
     apiClient,
     code,
     codeSystemVersion,
+    displayLanguage,
     fhirVersion,
     primaryOverride,
     primaryResult: displayResult,
@@ -89,6 +102,7 @@ async function validateCodeMembershipWithFallbackServers({
   code,
   codeSystemVersion,
   display,
+  displayLanguage,
   fhirVersion,
   primaryOverride,
   primaryResult,
@@ -99,6 +113,7 @@ async function validateCodeMembershipWithFallbackServers({
   code: string;
   codeSystemVersion?: string;
   display?: string;
+  displayLanguage?: string;
   fhirVersion?: FhirVersion;
   primaryOverride?: TerminologyServerOverride;
   primaryResult: CodeSystemValidationResult;
@@ -115,9 +130,9 @@ async function validateCodeMembershipWithFallbackServers({
   let displayMismatch: CodeSystemValidationResult | undefined;
   for (const server of fallbackServers) {
     const fallbackResult = await callCodeSystemValidator(
-      apiClient, code, system, display, server, codeSystemVersion,
+      apiClient, code, system, display, server, codeSystemVersion, displayLanguage,
     );
-    if (fallbackResult.valid) return fallbackResult;
+    if (isConfirmedAcceptance(fallbackResult)) return fallbackResult;
     if (isDisplayMismatchResult(fallbackResult)) displayMismatch ??= fallbackResult;
   }
 
@@ -142,13 +157,15 @@ function isEquivalentDisplayMismatch(
   actualDisplay: string,
   result: CodeSystemValidationResult,
 ): boolean {
+  if (hasAuthoritativeDisplayMismatch(result) || result.reason !== 'display-mismatch'
+    || result.issues?.some(issue => issue.severity === 'error' && issue.code !== 'invalid-display')) return false;
   const expectedDisplays = [
-    ...extractExpectedDisplaysFromMessage(result.message),
-    ...(result.issues ?? []).flatMap(issue => extractExpectedDisplaysFromMessage(issue.message)),
+    ...extractAcceptedDisplays(result.message),
+    ...(result.issues ?? []).flatMap(issue => extractAcceptedDisplays(issue.message)),
   ];
 
   return expectedDisplays.some(expected =>
-    displaysEquivalentForCodeInfo(expected, actualDisplay, { code, system }),
+    sourceDisplaysEquivalent(expected, actualDisplay, { code, system }),
   );
 }
 
@@ -157,6 +174,7 @@ async function validateDisplayMismatchWithFallbackServers({
   code,
   codeSystemVersion,
   display,
+  displayLanguage,
   fhirVersion,
   primaryOverride,
   primaryResult,
@@ -167,6 +185,7 @@ async function validateDisplayMismatchWithFallbackServers({
   code: string;
   codeSystemVersion?: string;
   display: string;
+  displayLanguage?: string;
   fhirVersion?: FhirVersion;
   primaryOverride?: TerminologyServerOverride;
   primaryResult: CodeSystemValidationResult;
@@ -180,13 +199,17 @@ async function validateDisplayMismatchWithFallbackServers({
 
   for (const server of fallbackServers) {
     const fallbackResult = await callCodeSystemValidator(
-      apiClient, code, system, display, server, codeSystemVersion,
+      apiClient, code, system, display, server, codeSystemVersion, displayLanguage,
     );
-    if (fallbackResult.valid) {
-      return {
+    if (isConfirmedAcceptance(fallbackResult)) {
+      const retainedIssues = primaryResult.issues?.filter(issue => issue.code !== 'invalid-display') ?? [];
+      const independentError = retainedIssues.some(issue => issue.severity === 'error');
+      return inheritCodeSystemVerification({
         ...fallbackResult,
+        ...(independentError ? { valid: false, reason: 'code-unknown' as const, message: primaryResult.message } : {}),
         inactive: primaryResult.inactive || fallbackResult.inactive,
-      };
+        ...(retainedIssues.length > 0 ? { issues: [...retainedIssues, ...(fallbackResult.issues ?? [])] } : {}),
+      }, fallbackResult);
     }
   }
 
@@ -197,6 +220,7 @@ async function validateInactiveCodeWithFallbackServers({
   apiClient,
   code,
   codeSystemVersion,
+  displayLanguage,
   fhirVersion,
   primaryOverride,
   primaryResult,
@@ -206,6 +230,7 @@ async function validateInactiveCodeWithFallbackServers({
   apiClient: TerminologyApiClient;
   code: string;
   codeSystemVersion?: string;
+  displayLanguage?: string;
   fhirVersion?: FhirVersion;
   primaryOverride?: TerminologyServerOverride;
   primaryResult: CodeSystemValidationResult;
@@ -223,16 +248,17 @@ async function validateInactiveCodeWithFallbackServers({
     // Validate the code status only. Passing the original display here can
     // turn an otherwise active code into a display-mismatch result.
     const fallbackResult = await callCodeSystemValidator(
-      apiClient, code, system, undefined, server, codeSystemVersion,
+      apiClient, code, system, undefined, server, codeSystemVersion, displayLanguage,
     );
-    if (fallbackResult.valid && !isInactiveResult(fallbackResult)) {
+    if (isConfirmedAcceptance(fallbackResult) && !isInactiveResult(fallbackResult)) {
       const filteredIssues = primaryResult.issues?.filter(issue => !isInactiveIssue(issue)) ?? [];
-      const { message: _message, issues: _issues, ...activeResult } = primaryResult;
-      return {
+      const { message, issues: _issues, ...activeResult } = primaryResult;
+      return inheritCodeSystemVerification({
         ...activeResult,
         inactive: false,
+        ...(!primaryResult.valid || filteredIssues.length > 0 ? { message } : {}),
         ...(filteredIssues.length > 0 ? { issues: filteredIssues } : {}),
-      };
+      }, primaryResult);
     }
   }
 
@@ -246,7 +272,11 @@ function callCodeSystemValidator(
   display: string | undefined,
   override: TerminologyServerOverride | undefined,
   codeSystemVersion: string | undefined,
+  displayLanguage: string | undefined,
 ): Promise<CodeSystemValidationResult> {
+  if (displayLanguage) return apiClient.validateCodeInCodeSystem(
+    code, system, display, override, codeSystemVersion, displayLanguage,
+  );
   return codeSystemVersion === undefined
     ? apiClient.validateCodeInCodeSystem(code, system, display, override)
     : apiClient.validateCodeInCodeSystem(code, system, display, override, codeSystemVersion);
@@ -257,16 +287,9 @@ function isDisplayMismatchResult(result: CodeSystemValidationResult): boolean {
     || Boolean(result.issues?.some(issue => issue.code === 'invalid-display'));
 }
 
-function extractExpectedDisplaysFromMessage(message: string | undefined): string[] {
-  if (!message) return [];
-
-  const validDisplayIndex = message.toLocaleLowerCase().indexOf('valid display');
-  if (validDisplayIndex < 0) return [];
-
-  const validDisplayClause = message.slice(validDisplayIndex);
-  return [...validDisplayClause.matchAll(/'([^']+)'/g)]
-    .map(match => match[1])
-    .filter((display): display is string => Boolean(display?.trim()));
+function isConfirmedAcceptance(result: CodeSystemValidationResult): boolean {
+  return result.valid && isVerifiedCodeSystemResult(result) && result.reason === undefined
+    && !result.incompleteCodeSystem && !result.issues?.some(issue => issue.severity === 'error');
 }
 
 function isInactiveResult(result: CodeSystemValidationResult): boolean {
@@ -274,6 +297,6 @@ function isInactiveResult(result: CodeSystemValidationResult): boolean {
     || Boolean(result.issues?.some(isInactiveIssue));
 }
 
-function isInactiveIssue(issue: { message?: string }): boolean {
-  return /inactive/i.test(issue.message ?? '');
+function isInactiveIssue(issue: { code: string; severity?: string; message?: string }): boolean {
+  return issue.code === 'code-comment' && issue.severity !== 'error' && /inactive/i.test(issue.message ?? '');
 }

@@ -119,4 +119,30 @@ describe('mandated profile validation', () => {
     );
     expect(collected[0].issues).toHaveLength(1);
   });
+
+  // Finland's kanta-document-metadata-profile imposes the agent roles of
+  // kanta-document-other-metadata-profile on the Provenance declaring it.
+  it('validates a resource against the profiles its applied profile imposes', async () => {
+    const FI = 'https://hl7.fi/fhir/finnish-base-profiles/StructureDefinition/';
+    const provenance = { resourceType: 'Provenance', agent: [{ who: { display: 'Pirkanmaa' } }] };
+    const applied = { extension: [
+      { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile', valueCanonical: `${FI}kanta-document-other-metadata-profile` },
+      { url: 'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile', valueCanonical: `${FI}kanta-document-metadata-profile` },
+    ] };
+    const seen: string[] = [];
+    const collected: AspectResult[] = [aspect([])];
+
+    await appendMandatedProfileValidationResults(provenance, `${FI}kanta-document-metadata-profile`, 'R4', 0,
+      async (_resource, profileUrl) => {
+        seen.push(profileUrl);
+        return { isValid: false, aspects: [aspect([{
+          severity: 'error', code: 'structural-cardinality-min', path: 'Provenance.agent[0].role',
+          message: 'Element Provenance.agent[0].role has too few values: expected at least 1, found 0', aspect: 'structural',
+        } as never])] } as MultiAspectValidateResult;
+      },
+      collected, undefined, undefined, undefined, applied);
+
+    expect(seen).toEqual([`${FI}kanta-document-other-metadata-profile`]);
+    expect(collected[0].issues).toMatchObject([{ path: 'Provenance.agent[0].role', profile: `${FI}kanta-document-other-metadata-profile` }]);
+  });
 });

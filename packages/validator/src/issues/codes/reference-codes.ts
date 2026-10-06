@@ -15,6 +15,11 @@ export const ReferenceCodes = {
         severity: 'error',
         description: 'Reference is empty',
     },
+    'reference-without-display': {
+        aspect: 'reference',
+        severity: 'warning',
+        description: 'Reference has neither a reference, an identifier nor a display',
+    },
     'reference-invalid-contained': {
         aspect: 'reference',
         severity: 'error',
@@ -29,6 +34,11 @@ export const ReferenceCodes = {
         aspect: 'reference',
         severity: 'error',
         description: 'Invalid reference format',
+    },
+    'reference-path-prefixed': {
+        aspect: 'reference',
+        severity: 'warning',
+        description: 'Relative reference carries a path before ResourceType/id',
     },
     'reference-invalid-bundle-relative': {
         aspect: 'reference',
@@ -64,6 +74,11 @@ export const ReferenceCodes = {
         aspect: 'reference',
         severity: 'error',
         description: 'Referenced resource not found',
+    },
+    'reference-target-profile-noncompliant': {
+        aspect: 'reference',
+        severity: 'error',
+        description: 'Reference target conforms to none of the targetProfiles made for its type',
     },
     'reference-validation-error': {
         aspect: 'reference',

@@ -72,3 +72,27 @@ describe('binding diagnostics on structurally mismatched values', () => {
       .toEqual([structural, binding]);
   });
 });
+
+describe('binding warnings next to an invalid code', () => {
+  it('drops only the warning of the repeat whose code is invalid', () => {
+    const invalidCode = issue({
+      aspect: 'terminology',
+      severity: 'error',
+      code: 'terminology-code-invalid',
+      path: 'ImagingStudy.series[0].performer[1].function.coding[0].code',
+      message: "Unknown code 'ZZZZ'",
+    });
+    const binding = (index: number) => issue({
+      aspect: 'terminology',
+      severity: 'warning',
+      code: 'terminology-binding-extensible',
+      path: `ImagingStudy.series[0].performer[${index}].function`,
+      message: 'Code is not in the extensible ValueSet',
+    });
+
+    const [first, second] = [binding(0), binding(1)];
+
+    expect(suppressRedundantBindingWarnings([invalidCode, first, second]))
+      .toEqual([invalidCode, first]);
+  });
+});

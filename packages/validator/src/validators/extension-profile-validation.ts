@@ -1,7 +1,13 @@
+import { copyProfilePackageProvenance } from '../package/canonical-pin-provenance.js';
+import { extensionDefinitionCacheKey, loadExtensionProfile, rethrowUnavailableProfile } from './extension-profile-cache.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { resourceTypeOf } from '../core/fhir-resource.js';
 import type { StructureDefinition } from '../core/structure-definition-types.js';
-import type { StructureDefinitionLoader } from '../core/structure-definition-loader.js';
+import type {
+  ProfileReferenceSource,
+  StructureDefinitionLoader,
+} from '../core/structure-definition-loader.js';
+import { SnapshotGenerator } from '../core/snapshot-generator.js';
 import { logger } from '../logger.js';
 import type { TypeValidator } from './type-validator.js';
 import type { ValueSetValidator } from './valueset-validator.js';
@@ -12,6 +18,8 @@ import { validationFailureMetadata } from '../utils/validation-execution-failure
 import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 import type { ExtensionProfileCache } from './extension-profile-cache.js';
 import { validateExtensionValueElements } from './extension-value-profile-validation.js';
+import { focusResourceOf } from './sd-fhirpath-focus-resource.js';
+import { validateExtensionValueSlicing } from './extension-value-slicing.js';
 
 interface ValidateExtensionProfileParams {
   extension: Record<string, unknown>;
@@ -24,6 +32,8 @@ interface ValidateExtensionProfileParams {
   elementRulesValidator: ElementRulesValidator;
   profileCache: ExtensionProfileCache<StructureDefinition>;
   sdFHIRPathExecutor: SDFHIRPathExecutor;
+  /** The profile naming `profileUrl`; the validated profile unless nested. */
+  referencingProfile?: ProfileReferenceSource;
 }
 
 export async function validateAgainstExtensionProfile({
@@ -37,22 +47,34 @@ export async function validateAgainstExtensionProfile({
   elementRulesValidator,
   profileCache,
   sdFHIRPathExecutor,
+  referencingProfile = context.profileSD,
 }: ValidateExtensionProfileParams): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
 
-  const profileCacheKey = `${context.fhirVersion}|${profileUrl}`;
-  let structureDef: StructureDefinition | null | undefined = profileCache.get(profileCacheKey);
+  let selected: StructureDefinition | null;
+  try { selected = await loadExtensionProfile(sdLoader, profileUrl, referencingProfile, context.fhirVersion); }
+  catch (error: unknown) {
+    rethrowUnavailableProfile(error);
+    logger.warn('[ExtensionValidator] Failed to load extension profile', {
+      ...profileCanonicalMetadata(profileUrl), ...validationFailureMetadata(error),
+    });
+    return issues;
+  }
+  if (!selected) return issues;
+  const profileCacheKey = extensionDefinitionCacheKey(selected, context.fhirVersion);
+  const suppliedSnapshot = Boolean(selected.snapshot?.element?.length);
+  let structureDef: StructureDefinition | null | undefined = suppliedSnapshot ? profileCache.get(profileCacheKey) : undefined;
   if (structureDef === undefined) {
-    try {
-      structureDef = await sdLoader.loadProfile(profileUrl, context.fhirVersion);
-    } catch (error: unknown) {
-      logger.warn('[ExtensionValidator] Failed to load extension profile', {
-        ...profileCanonicalMetadata(profileUrl),
-        ...validationFailureMetadata(error),
+    structureDef = selected;
+    if (structureDef && !structureDef.snapshot?.element?.length && structureDef.differential?.element?.length) {
+      const element = await new SnapshotGenerator(sdLoader).generateSnapshot(structureDef, {
+        fhirVersion: context.fhirVersion, cacheResults: false,
       });
-      structureDef = null;
+      const snapshotProfile = { ...structureDef, snapshot: { element } };
+      copyProfilePackageProvenance(structureDef, snapshotProfile);
+      structureDef = snapshotProfile;
     }
-    if (structureDef) profileCache.set(profileCacheKey, structureDef);
+    if (structureDef && suppliedSnapshot) profileCache.set(profileCacheKey, structureDef);
   }
 
   if (!structureDef?.snapshot?.element) {
@@ -71,7 +93,8 @@ export async function validateAgainstExtensionProfile({
   };
   const constraintIssues = await sdFHIRPathExecutor.execute({
     resource: extensionResource,
-    rootResource: context.resource,
+    rootResource: context.rootResource ?? context.resource,
+    focusResource: context.rootResource ? context.resource : focusResourceOf(context.resource, path),
     resourceType: 'Extension',
     structureDef,
     fhirVersion: context.fhirVersion,
@@ -83,6 +106,8 @@ export async function validateAgainstExtensionProfile({
       path,
       resourceTypeOf(context.resource, 'Unknown'),
     )));
+  issues.push(...(await validateExtensionValueSlicing(extensionResource, structureDef, context, sdLoader))
+    .map(issue => rebaseExtensionConstraintIssue(issue, path, resourceTypeOf(context.resource, 'Unknown'))));
 
   const valueElements = structureDef.snapshot.element.filter(
     (el) => el.path?.startsWith('Extension.value')
@@ -97,8 +122,8 @@ export async function validateAgainstExtensionProfile({
     typeValidator,
     valueSetValidator,
     elementRulesValidator,
+    definition: structureDef,
   }));
-
   return issues;
 }
 
@@ -116,6 +141,7 @@ function rebaseExtensionConstraintIssue(
   return {
     ...issue,
     path: rebasedPath,
+    ...(issue.target ? { target: { ...issue.target, path: rebasedPath } } : {}),
     resourceType,
     details: {
       ...(typeof issue.details === 'object' && issue.details !== null ? issue.details : {}),

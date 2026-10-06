@@ -23,9 +23,16 @@ import { GermanExtensionValidator } from '../../validators/german-extension-vali
 import { deepProfileValidator } from '../../validators/deep-profile-validator.js';
 import { SDFHIRPathExecutor } from '../../validators/sd-fhirpath-executor.js';
 import type { FHIRPathTerminologyResolver } from '../../validators/fhirpath-async-terminology.js';
+import {
+  precomputeProfileConformance,
+  type ProfileConformanceCheck,
+  type ProfileConformanceLookup,
+} from '../../validators/sd-fhirpath-profile-conformance.js';
 import { logger } from '../../logger.js';
 import { createExecutorFailureIssue } from './executor-failure-issue.js';
 import { ProfileSlicingValidation } from './profile-slicing-validation.js';
+import { profileCanonicalAliasIssue } from '../profile-canonical-alias.js';
+import { profileForConcreteResource } from '../profile-resource-type.js';
 
 // ============================================================================
 // Types
@@ -47,6 +54,7 @@ export interface ProfileValidationContext {
    */
   sdFHIRPathExecutor?: SDFHIRPathExecutor;
   terminologyResolver?: FHIRPathTerminologyResolver;
+  profileConformance?: ProfileConformanceCheck;
 }
 
 // ============================================================================
@@ -80,9 +88,12 @@ export class ProfileExecutor {
     context: ProfileValidationContext
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
+    let profileConformance: ProfileConformanceLookup | undefined;
 
     try {
-      const { resource, structureDef, profileUrl, fhirVersion, strictMode, getValueAtPath, referenceResolver, enclosingBundle } = context;
+      const { resource, profileUrl, fhirVersion, strictMode, getValueAtPath, referenceResolver, enclosingBundle } = context;
+      const structureDef = profileForConcreteResource(context.structureDef, context.resourceType, fhirVersion);
+      const effectiveContext = structureDef === context.structureDef ? context : { ...context, structureDef };
       this.profileSlicingValidation.setMustSupportSeverity(
         strictMode ? 'warning' : 'information',
       );
@@ -97,7 +108,9 @@ export class ProfileExecutor {
           strictMode,
           fhirVersion,
           profileUrl,
-          getValueAtPath
+          getValueAtPath,
+          referenceResolver,
+          profileConformance: context.profileConformance,
         }
       );
 
@@ -110,15 +123,19 @@ export class ProfileExecutor {
           getValueAtPath,
           referenceResolver,
           fhirVersion,
+          profileConformance: context.profileConformance,
         }));
 
         // 3. Validate FHIRPath constraints
         // Using snapshot elements which contain the constraints
+        profileConformance = context.profileConformance
+          ? await precomputeProfileConformance(structureDef.snapshot.element, resource, context.profileConformance)
+          : undefined;
         const constraintIssues = await this.constraintValidator.validate(
           resource,
           structureDef.snapshot.element,
           profileUrl,
-          { strictMode, fhirVersion, bundle: enclosingBundle } // Pass strictMode + FHIR version + Bundle context
+          { strictMode, fhirVersion, bundle: enclosingBundle, profileConformance },
         );
         issues.push(...constraintIssues);
       } else {
@@ -141,13 +158,16 @@ export class ProfileExecutor {
         issues.push(...germanExtIssues);
       }
 
+      const aliasIssue = profileCanonicalAliasIssue(resource, context.resourceType, profileUrl, structureDef);
+      if (aliasIssue) issues.push(aliasIssue);
+
       issues.push(...deepProfileValidator.validate({
         resource,
         resourceType: context.resourceType,
         structureDef,
         profileUrl,
       }));
-      issues.push(...await this.runSnapshotFHIRPathConstraints(context));
+      issues.push(...await this.runSnapshotFHIRPathConstraints(effectiveContext, profileConformance));
 
       return issues;
 
@@ -159,6 +179,7 @@ export class ProfileExecutor {
 
   private runSnapshotFHIRPathConstraints(
     context: ProfileValidationContext,
+    profileConformance: ProfileConformanceLookup | undefined,
   ): Promise<ValidationIssue[]> {
     const executor = context.sdFHIRPathExecutor ?? this.ownSDFHIRPathExecutor;
     return executor.execute({
@@ -171,6 +192,7 @@ export class ProfileExecutor {
           : undefined),
       fhirVersion: context.fhirVersion,
       terminologyResolver: context.terminologyResolver,
+      profileConformance,
     });
   }
 }

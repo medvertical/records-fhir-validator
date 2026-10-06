@@ -71,4 +71,24 @@ describe('validateExtensionContextUsage', () => {
     });
     expect(getDeclaredContexts).not.toHaveBeenCalled();
   });
+
+  it('derives an undefined cross-version extension\'s context from its url, and only warns', async () => {
+    const url = 'http://hl7.org/fhir/4.0/StructureDefinition/extension-AuditEvent.agent.network.type';
+    const check = (elementPath: string) => validateExtensionContextUsage({
+      url,
+      path: `${elementPath}.extension[0]`,
+      site: { resourceType: 'AuditEvent', elementPath, attachment: 'element' },
+      resourceType: 'AuditEvent',
+      fhirVersion: 'R5',
+      getDeclaredContexts: async () => null,
+      resolveLogicalPaths: async usage => [usage.elementPath],
+    });
+
+    expect(await check('AuditEvent.agent')).toEqual([expect.objectContaining({
+      code: 'profile-extension-context-wrong',
+      severity: 'warning',
+      message: expect.stringContaining('allowed for this version = e:AuditEvent.agent.network'),
+    })]);
+    expect(await check('AuditEvent.agent.network')).toEqual([]);
+  });
 });

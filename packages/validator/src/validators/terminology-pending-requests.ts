@@ -15,6 +15,6 @@ export async function runSingleFlight<T>(
     try {
         return await request;
     } finally {
-        pendingRequests.delete(cacheKey);
+        if (pendingRequests.get(cacheKey) === request) pendingRequests.delete(cacheKey);
     }
 }

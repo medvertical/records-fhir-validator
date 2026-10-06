@@ -1,10 +1,12 @@
 import { BoundedLruCache } from '../../cache/bounded-lru-cache.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
+import { validateCapabilityStatementSearchParams } from '../../validators/capability-statement-rules.js';
 import { validateChoiceTypeProperties } from '../../validators/choice-type-property-validator.js';
 import type { TerminologyResolutionConfig } from '../../validators/valueset-validator.js';
 import { ContentReferenceElementsCache } from '../content-reference-elements.js';
 import type { StructureDefinitionLoader } from '../structure-definition-loader.js';
 import type { StructureDefinition } from '../structure-definition-types.js';
+import type { ProfileReferenceSource } from '../profile-reference-authority.js';
 import { getValueAtPath as getValueAtPathUtil } from '../validation-utils.js';
 import { validateResourceSanity } from './structural-resource-sanity.js';
 import { validateRequiredSnapshotFields } from './structural-required-fields.js';
@@ -17,6 +19,11 @@ import {
   type SnapshotIndex,
 } from './unknown-property-walker.js';
 import { createProfileUnreadable } from '../../issues/profile-completeness-issues.js';
+import {
+  createProfileResourceTypeMismatchIssue,
+  getIncompatibleProfileResourceType,
+  isUsableResourceBaseProfile,
+} from '../profile-resource-type.js';
 
 export type StructuralResource = Record<string, unknown>;
 export type StructuralValueAtPath = (
@@ -33,6 +40,7 @@ export interface StructuralValidationContext {
   structureDef?: StructureDefinition | null;
   getValueAtPath?: StructuralValueAtPath;
   contextQuestionnaire?: unknown;
+  enclosingBundle?: Record<string, unknown>;
   settings?: unknown;
   referenceResolver?: ((reference: string) => unknown) | null;
 }
@@ -57,8 +65,8 @@ export class StructuralValidationPipeline {
     this.validators.complexType.configureTerminologyResolution(config);
   }
 
-  validateBundle(resource: unknown): Promise<ValidationIssue[]> {
-    return this.validators.bundle.validateBundle(resource);
+  validateBundle(resource: unknown, fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'): Promise<ValidationIssue[]> {
+    return this.validators.bundle.validateBundle(resource, undefined, fhirVersion);
   }
 
   async validate(
@@ -91,9 +99,24 @@ export class StructuralValidationPipeline {
       getValueAtPath = getValueAtPathUtil;
     }
 
-    const effectiveProfileUrl = profileUrl || structureDef?.url;
+    let effectiveProfileUrl = profileUrl || structureDef?.url;
     const issues: ValidationIssue[] = [];
     if (profileLoadFailure) issues.push(profileLoadFailure);
+    const incompatibleProfileType = getIncompatibleProfileResourceType(
+      structureDef, resource.resourceType, fhirVersion || 'R4',
+    );
+    if (incompatibleProfileType) {
+      const declaredProfileUrl = effectiveProfileUrl ?? `http://hl7.org/fhir/StructureDefinition/${incompatibleProfileType}`;
+      const base = await this.loadStructureDefinition(resource, undefined, fhirVersion || 'R4');
+      structureDef = isUsableResourceBaseProfile(base.structureDef, resource.resourceType, fhirVersion || 'R4')
+        ? base.structureDef : null;
+      effectiveProfileUrl = `http://hl7.org/fhir/StructureDefinition/${resource.resourceType}`;
+      issues.push(createProfileResourceTypeMismatchIssue(
+        declaredProfileUrl, resource.resourceType, incompatibleProfileType,
+        structureDef !== null,
+      ));
+      if (base.loadFailure) issues.push(base.loadFailure);
+    }
 
     if (structureDef?.snapshot?.element) {
       issues.push(...await validateStructuralSnapshot({
@@ -111,7 +134,8 @@ export class StructuralValidationPipeline {
     issues.push(...this.validateResourceIdAndArrays(
       resource,
       ctx.contextQuestionnaire,
-      { warnOnUnresolvedQuestionnaireReference: true },
+      { warnOnUnresolvedQuestionnaireReference: true, enclosingBundle: ctx.enclosingBundle, forPublication: typeof ctx.settings === 'object' && ctx.settings !== null
+        && 'forPublication' in ctx.settings && ctx.settings.forPublication === true },
       fhirVersion || 'R4',
     ));
 
@@ -120,6 +144,7 @@ export class StructuralValidationPipeline {
     }
 
     issues.push(...await this.validateCompliesWith(resource, fhirVersion || 'R4'));
+    issues.push(...await validateCapabilityStatementSearchParams(resource, fhirVersion || 'R4'));
     return issues;
   }
 
@@ -143,7 +168,7 @@ export class StructuralValidationPipeline {
   validateResourceIdAndArrays(
     resource: StructuralResource,
     contextQuestionnaire?: unknown,
-    options: { warnOnUnresolvedQuestionnaireReference?: boolean } = {},
+    options: { warnOnUnresolvedQuestionnaireReference?: boolean; enclosingBundle?: Record<string, unknown>; forPublication?: boolean } = {},
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ): ValidationIssue[] {
     return validateResourceSanity(
@@ -235,6 +260,11 @@ export class StructuralValidationPipeline {
       bundleValidator: this.validators.bundle,
       questionnaireValidator: this.validators.questionnaire,
       contentReferenceElementsCache: this.contentReferenceElementsCache,
+      loadStructureDefinition: (url: string, version: 'R4' | 'R5' | 'R6') => this.sdLoader.loadProfile(url, version),
+      loadReferencedProfile: typeof this.sdLoader.loadReferencedProfile === 'function'
+        ? (url: string, source: ProfileReferenceSource, version: 'R4' | 'R5' | 'R6') =>
+          this.sdLoader.loadReferencedProfile(url, source, version)
+        : undefined,
       detectUnknownElements: (
         target: StructuralResource,
         definition: StructureDefinition,

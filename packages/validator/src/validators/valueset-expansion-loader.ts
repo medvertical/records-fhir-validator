@@ -32,10 +32,11 @@ export async function expandValueSet(
   valueSetUrl: string,
   fhirVersion?: FhirVersion,
 ): Promise<Set<string>> {
+  return deps.cache.sourceContexts.run(fhirVersion, async () => {
   const { cache, apiClient, packageLoader, resolutionConfig } = deps;
 
   // Check cache first
-  const cacheKey = getScopedExpansionCacheKey(valueSetUrl, resolutionConfig, fhirVersion);
+  const cacheKey = getScopedExpansionCacheKey(valueSetUrl, resolutionConfig, fhirVersion ?? cache.sourceContexts.context()?.fhirVersion);
   const cached = cache.getExpandedCodes(cacheKey);
   if (cached) {
     return cached;
@@ -109,4 +110,5 @@ export async function expandValueSet(
   // Cache even if empty
   cache.setExpandedCodes(cacheKey, expandedCodes);
   return expandedCodes;
+  });
 }

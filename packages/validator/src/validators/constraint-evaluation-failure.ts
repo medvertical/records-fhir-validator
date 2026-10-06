@@ -39,7 +39,13 @@ export function handleConstraintEvaluationFailure(
       skipReason,
       ...sensitiveValueMetadata(input.constraint.key),
     });
-    return [];
+    return [createConstraintEvaluationError(
+      input.constraint,
+      input.elementPath,
+      input.resourceType,
+      input.error,
+      input.profileUrl,
+    )];
   }
 
   // Still a constraint that produced no verdict, so it belongs in the same

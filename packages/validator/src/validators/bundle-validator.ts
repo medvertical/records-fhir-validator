@@ -19,13 +19,14 @@ export class BundleValidator {
   async validateBundle(
     resource: unknown,
     entryValidator?: EntryResourceValidator,
+    fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ): Promise<ValidationIssue[]> {
     const bundle = toBundleRecord(resource);
     if (bundle?.resourceType !== 'Bundle') return [];
     const issues: ValidationIssue[] = [];
     logger.debug('[BundleValidator] Validating Bundle structure and references');
     try {
-      issues.push(...await validateBundleRules(bundle, this.bundleResolver, entryValidator));
+      issues.push(...await validateBundleRules(bundle, this.bundleResolver, entryValidator, fhirVersion));
       logger.debug(`[BundleValidator] Found ${issues.length} issues in Bundle`);
     } catch {
       issues.push(handleBundleValidationFailure());

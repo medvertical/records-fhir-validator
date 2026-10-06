@@ -59,7 +59,8 @@ describe('sd-loader-package-scanner', () => {
 
     expect(firstScanned).toBe(1);
     expect(firstProfiles.has(latestProfile)).toBe(true);
-    expect(firstProfiles.has(oldProfile)).toBe(false);
+    // Deduplication scans the newest release; the older one stays indexed.
+    expect(firstProfiles.has(oldProfile)).toBe(true);
 
     const index = JSON.parse(await readFile(path.join(root, 'sdloader-profile-index.json'), 'utf-8'));
     expect(index.packages.map((pkg: { name: string }) => pkg.name)).toEqual(['example.fhir.package#2.0.0']);
@@ -79,7 +80,7 @@ describe('sd-loader-package-scanner', () => {
     await scanCacheDirectory(root, secondProfiles);
 
     expect(secondProfiles.has(latestProfile)).toBe(true);
-    expect(secondProfiles.has(oldProfile)).toBe(false);
+    expect(secondProfiles.has(oldProfile)).toBe(true);
   });
 
   it('keeps a build-time index valid after packages are copied with new mtimes', async () => {

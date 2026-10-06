@@ -33,7 +33,7 @@ describe('assessSlicingVerifiability', () => {
 
     expect(assessment.blockingIssues).toHaveLength(1);
     expect(assessment.blockingIssues[0]).toMatchObject({
-      code: 'profile-slice-validation-error',
+      code: 'profile-slice-validation-incomplete',
       severity: 'information',
       path: elementPath,
       details: {

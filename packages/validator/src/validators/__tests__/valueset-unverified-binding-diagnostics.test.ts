@@ -87,7 +87,7 @@ describe('unverified binding diagnostics', () => {
         cause: 'empty-expansion',
         localExpansion: 'none',
         serverAttempts: [],
-        serverSkipped: 'no-server',
+        serverSkipped: 'delegation-disabled',
         packageScope: 'none',
       },
     });

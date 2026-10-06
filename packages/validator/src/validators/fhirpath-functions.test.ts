@@ -18,6 +18,30 @@ describe('FHIRPath helper functions', () => {
     expect(resolveFunction([{ reference: 'Patient/12' }], context)).toEqual([patient12]);
   });
 
+  // Da Vinci PCT's packet invariant resolves `descendants().reference`, the strings themselves.
+  it('resolves a reference string as well as a Reference', () => {
+    const patient = { resourceType: 'Patient', id: 'p1' };
+    const context = createFHIRPathContext({ resourceType: 'Bundle' }, [patient]);
+
+    expect(resolveFunction(['Patient/p1'], context)).toEqual([patient]);
+    expect(resolveFunction(['Patient/p2'], context)).toEqual([]);
+  });
+
+  // The packet is validated on its own or among other resources of a batch.
+  it('resolves against the entries of the Bundle being evaluated', () => {
+    const patient = { resourceType: 'Patient', id: 'p1' };
+    const coverage = { resourceType: 'Coverage', id: 'c1' };
+    const bundle = { resourceType: 'Bundle', entry: [
+      { fullUrl: 'http://example.org/fhir/Patient/p1', resource: patient },
+      { fullUrl: 'http://example.org/fhir/Coverage/c1', resource: coverage },
+    ] };
+
+    expect(resolveFunction(['Patient/p1'], createFHIRPathContext(bundle))).toEqual([patient]);
+    expect(resolveFunction([{ reference: 'http://example.org/fhir/Coverage/c1' }],
+      createFHIRPathContext(bundle, new Map([['Organization/o1', { resourceType: 'Organization', id: 'o1' }]]))))
+      .toEqual([coverage]);
+  });
+
   it('normalizes absolute and versioned references to ResourceType/id', () => {
     const patient = { resourceType: 'Patient', id: 'one' };
     const context = createFHIRPathContext(

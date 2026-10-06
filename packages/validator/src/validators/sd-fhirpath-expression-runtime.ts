@@ -1,10 +1,10 @@
+import { normalizePrimitiveConstraintExpression } from './fhirpath-primitive-expression.js';
 import {
   AsyncFHIRPathTerminologyCache,
   evaluateAsyncFHIRPathTerminology,
   hasAsyncFHIRPathTerminology,
   type FHIRPathTerminologyResolver,
 } from './fhirpath-async-terminology.js';
-import { prepareElementContext } from './sd-fhirpath-choice-utils.js';
 import {
   evaluateConstraintTarget,
   type ConstraintTargetEvaluation,
@@ -52,13 +52,15 @@ export class SDFHIRPathExpressionRuntime {
     userInvocationTable?: unknown,
     fhirVersion: FhirVersion = 'R4',
     terminologyResolver?: FHIRPathTerminologyResolver,
+    focusResource?: unknown,
   ): unknown | Promise<unknown> {
-    const preparedContext = prepareElementContext(context, expression);
+    expression = normalizePrimitiveConstraintExpression(expression, context);
     if (terminologyResolver && hasAsyncFHIRPathTerminology(expression)) {
       return evaluateAsyncFHIRPathTerminology({
         expression,
-        context: preparedContext,
+        context,
         rootResource,
+        focusResource,
         fhirVersion,
         resolver: terminologyResolver,
         userInvocationTable,
@@ -70,9 +72,10 @@ export class SDFHIRPathExpressionRuntime {
     if (!compiled) throw new Error(`Failed to compile FHIRPath expression: ${expression}`);
     return evaluateCompiledSDFHIRPath(
       compiled,
-      preparedContext,
+      context,
       rootResource,
       userInvocationTable,
+      focusResource,
     );
   }
 }

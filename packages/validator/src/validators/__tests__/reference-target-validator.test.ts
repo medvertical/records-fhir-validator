@@ -476,3 +476,30 @@ describe('ReferenceTargetValidator', () => {
     )).toEqual([]);
   });
 });
+
+// CH eMed profiles the Medication a dispense names as
+// ch-emed-medication-medicationdispense: its id ends in another resource type.
+describe('target profiles whose ids mislead', () => {
+  const MEDICATION = 'http://fhir.ch/ig/ch-emed/StructureDefinition/ch-emed-medication-medicationdispense';
+  const dispenseProfile = {
+    resourceType: 'StructureDefinition',
+    url: 'http://fhir.ch/ig/ch-emed/StructureDefinition/ch-emed-medicationdispense',
+    type: 'MedicationDispense',
+    snapshot: { element: [
+      { id: 'MedicationDispense', path: 'MedicationDispense' },
+      { id: 'MedicationDispense.medication[x]', path: 'MedicationDispense.medication[x]', type: [{ code: 'Reference', targetProfile: [MEDICATION] }] },
+    ] },
+  } as unknown as StructureDefinition;
+  const dispense = { resourceType: 'MedicationDispense', medicationReference: { reference: 'Medication/m1' } };
+
+  it('are named for loading until their type is known, then type the target', () => {
+    const known = new Map<string, string>();
+    const validator = new ReferenceTargetValidator();
+    validator.setProfileTypeResolver(url => known.get(url) ?? null);
+
+    expect(validator.untypedTargetProfiles(dispenseProfile)).toEqual([MEDICATION]);
+    known.set(MEDICATION, 'Medication');
+    expect(validator.untypedTargetProfiles(dispenseProfile)).toEqual([]);
+    expect(validator.validate(dispense, dispenseProfile).filter(issue => issue.code === 'reference-target-type-invalid')).toEqual([]);
+  });
+});

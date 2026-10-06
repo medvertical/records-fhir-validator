@@ -13,27 +13,40 @@ export interface ChildCardinality {
 export function resolveValueOccurrences(
   root: unknown,
   relativePath: string,
+  // Whether the last segment's values are parents whose children are read next.
+  asParents = false,
 ): ValueOccurrence[] {
   let contexts: ValueOccurrence[] = [{ value: root, path: '' }];
-  for (const segment of relativePath.split('.').filter(Boolean)) {
+  const segments = relativePath.split('.').filter(Boolean);
+  segments.forEach((segment, position) => {
+    const descends = asParents || position < segments.length - 1;
     const next: ValueOccurrence[] = [];
     for (const context of contexts) {
       const resolved = resolveFhirSegmentValue(context.value, segment);
       const segmentPath = context.path ? `${context.path}.${segment}` : segment;
+      const sidecar = descends && isRecord(context.value) ? context.value[`_${segment}`] : undefined;
       if (Array.isArray(resolved)) {
         resolved.forEach((value, index) => {
-          if (value !== undefined && value !== null) {
-            next.push({ value, path: `${segmentPath}[${index}]` });
-          }
+          const element = descends ? elementOf(value, Array.isArray(sidecar) ? sidecar[index] : undefined) : value;
+          if (element !== undefined && element !== null) next.push({ value: element, path: `${segmentPath}[${index}]` });
         });
       } else if (resolved !== undefined && resolved !== null) {
-        next.push({ value: resolved, path: segmentPath });
+        next.push({ value: descends ? elementOf(resolved, sidecar) : resolved, path: segmentPath });
       }
     }
     contexts = next;
-    if (contexts.length === 0) break;
-  }
+  });
   return contexts;
+}
+
+/** A primitive's own children (`id`, `extension`) sit in its `_name` sidecar. */
+function elementOf(value: unknown, sidecar: unknown): unknown {
+  if (value === null || typeof value === 'object') return value;
+  return isRecord(sidecar) ? sidecar : {};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function getChildCardinalities(
@@ -46,7 +59,7 @@ export function getChildCardinalities(
 
   const parentPath = segments.join('.');
   const parents = parentPath
-    ? resolveValueOccurrences(root, parentPath)
+    ? resolveValueOccurrences(root, parentPath, true)
     : [{ value: root, path: '' }];
 
   return parents.map(parent => {

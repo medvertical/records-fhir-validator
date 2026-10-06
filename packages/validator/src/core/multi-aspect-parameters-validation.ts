@@ -2,6 +2,7 @@ import { computeValidationIssueId, type ValidationIssue } from '@records-fhir/va
 import { BatchValidationAbortedError } from './batch-validator.js';
 import type { AspectResult, ValidateOneFn } from './multi-aspect-types.js';
 import { awaitAllDrained } from '../utils/await-all-drained.js';
+import { validateDeclaredProfiles } from './multi-aspect-embedded-profiles.js';
 import {
   collectParametersEmbeddedResources,
   rebaseParametersEmbeddedIssue,
@@ -27,12 +28,17 @@ export async function appendParametersResourceValidationResults(
 
   const results = await awaitAllDrained(embeddedResources.map(async embedded => {
     if (shouldStop?.()) throw new BatchValidationAbortedError();
-    const result = await validateOne(
+    const result = await validateDeclaredProfiles(
+      validateOne,
+      shouldStop,
       embedded.resource,
       embedded.profileUrl,
       fhirVersion,
       recursionDepth + 1,
       enclosingBundle,
+      false,
+      // The Parameters groups its resources; they resolve each other's references.
+      parentResource,
     );
     if (shouldStop?.()) throw new BatchValidationAbortedError();
     return { ...embedded, result };

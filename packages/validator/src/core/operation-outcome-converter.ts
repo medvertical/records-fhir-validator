@@ -20,6 +20,10 @@ import {
 } from './operation-outcome-issue-mapping.js';
 
 export { mapToHl7IssueType, normalizeToHl7Severity } from './operation-outcome-issue-mapping.js';
+import {
+  createUnknownOutcomeIssue, decodeIssueMetadata, encodeIssueMetadata, selectIssueMetadata,
+  type FhirIssueMetadataExtension,
+} from './operation-outcome-metadata.js';
 
 // ============================================================================
 // FHIR OperationOutcome Types (minimal, spec-conformant)
@@ -31,6 +35,7 @@ export interface FhirOperationOutcome {
 }
 
 export interface FhirOperationOutcomeIssue {
+  extension?: FhirIssueMetadataExtension[];
   severity: 'fatal' | 'error' | 'warning' | 'information';
   code: string;
   details?: {
@@ -107,6 +112,7 @@ export function issueToOperationOutcomeIssue(
     result.location = [issue.path];
   }
 
+  result.extension = encodeIssueMetadata(issue);
   return result;
 }
 
@@ -124,7 +130,9 @@ export function toOperationOutcome(
 ): FhirOperationOutcome {
   return {
     resourceType: 'OperationOutcome',
-    issue: issues.map(issueToOperationOutcomeIssue),
+    issue: (issues.length ? issues : [createUnknownOutcomeIssue(
+      'No findings were reported; validation completeness is unknown.',
+    )]).map(issueToOperationOutcomeIssue),
   };
 }
 
@@ -136,13 +144,23 @@ export function fromOperationOutcome(
   outcome: unknown,
 ): ValidationIssue[] {
   const outcomeRecord = asRecord(outcome);
-  if (!outcomeRecord || !Array.isArray(outcomeRecord.issue)) return [];
+  if (outcomeRecord?.resourceType !== 'OperationOutcome' || !Array.isArray(outcomeRecord.issue)) {
+    return [createUnknownOutcomeIssue('No usable OperationOutcome was supplied; validation completeness is unknown.')];
+  }
 
-  return outcomeRecord.issue.flatMap(candidate => {
+  const imported = outcomeRecord.issue.flatMap(candidate => {
     const ooIssue = asRecord(candidate);
     if (!ooIssue) return [];
     return [operationOutcomeIssueToValidationIssue(ooIssue)];
   });
+  if (outcomeRecord.issue.some(candidate => !asRecord(candidate))) {
+    for (const issue of imported) issue.details = {
+      ...asRecord(issue.details), validationComplete: false, validationStatus: 'incomplete',
+    };
+  }
+  return imported.length ? imported : [createUnknownOutcomeIssue(
+    'No usable findings were supplied; validation completeness is unknown.',
+  )];
 }
 
 /**
@@ -157,12 +175,17 @@ export function detailedResultToOperationOutcome(
 ): FhirOperationOutcome {
   const resultRecord = asRecord(result);
   if (!resultRecord || !Array.isArray(resultRecord.issues)) {
-    return { resourceType: 'OperationOutcome', issue: [] };
+    return toOperationOutcome([]);
   }
 
+  const discarded = resultRecord.issues.some(candidate => !asRecord(candidate));
   const mapped: ValidationIssue[] = resultRecord.issues.flatMap(candidate => {
     const issue = asRecord(candidate);
     if (!issue) return [];
+    const metadata = selectIssueMetadata(issue);
+    if (discarded || !isImportedSeverity(issue.severity) || !metadata.aspect) {
+      metadata.details = { ...metadata.details, validationComplete: false, validationStatus: 'incomplete' };
+    }
     return [{
       aspect: stringValue(issue.aspect) ?? 'structural',
       severity: normalizeImportedSeverity(issue.severity),
@@ -171,6 +194,7 @@ export function detailedResultToOperationOutcome(
       code: stringValue(issue.code),
       expression: stringValue(issue.expression),
       humanReadable: stringValue(issue.humanReadable),
+      ...metadata,
     }];
   });
 
@@ -181,25 +205,37 @@ function operationOutcomeIssueToValidationIssue(
   ooIssue: Record<string, unknown>,
 ): ValidationIssue {
   const details = asRecord(ooIssue.details);
-  const recordsCode = getRecordsCode(details?.coding);
+  const trace = recordsCodeEvidence(details?.coding);
+  const recordsCode = trace.code;
   const hl7Code = stringValue(ooIssue.code) ?? 'processing';
-  const aspect = recordsCode
+  const metadata = decodeIssueMetadata(ooIssue.extension, recordsCode);
+  if (trace.ambiguous) metadata.details = {
+    ...metadata.details, validationComplete: false, validationStatus: 'incomplete',
+  };
+  const aspect = metadata.aspect ?? (recordsCode
     ? mapRecordsCodeToAspect(recordsCode, hl7Code)
-    : mapHl7CodeToAspect(hl7Code);
+    : mapHl7CodeToAspect(hl7Code));
   const severity = normalizeImportedSeverity(ooIssue.severity);
   const message = stringValue(ooIssue.diagnostics) ?? stringValue(details?.text) ?? '';
   const expression = firstString(ooIssue.expression);
-  const path = expression ?? firstString(ooIssue.location) ?? '';
+  const path = metadata.aspect
+    ? firstString(ooIssue.location) ?? expression ?? ''
+    : expression ?? firstString(ooIssue.location) ?? '';
   const code = recordsCode ?? hl7Code;
   const humanReadable = stringValue(details?.text);
+  const malformedIssue = !isImportedSeverity(ooIssue.severity) || ooIssue.severity === 'info' || !stringValue(ooIssue.code)?.trim();
+  if (malformedIssue) metadata.details = { ...metadata.details, validationComplete: false, validationStatus: 'incomplete' };
 
   return {
-    id: computeValidationIssueId({
+    ...metadata,
+    id: metadata.id ?? computeValidationIssueId({
       aspect,
       severity,
       code,
       message,
       path,
+      profile: metadata.profile,
+      ruleId: metadata.ruleId,
     }),
     aspect,
     severity,
@@ -212,19 +248,16 @@ function operationOutcomeIssueToValidationIssue(
   };
 }
 
-function getRecordsCode(codingValue: unknown): string | undefined {
-  if (!Array.isArray(codingValue)) return undefined;
-  for (const candidate of codingValue) {
-    const coding = asRecord(candidate);
-    if (
-      coding?.system === RECORDS_CODE_SYSTEM &&
-      typeof coding.code === 'string' &&
-      coding.code.length > 0
-    ) {
-      return coding.code;
-    }
+function recordsCodeEvidence(codingValue: unknown): { code?: string; ambiguous: boolean } {
+  if (!Array.isArray(codingValue)) {
+    return { ambiguous: asRecord(codingValue)?.system === RECORDS_CODE_SYSTEM };
   }
-  return undefined;
+  const codings = codingValue.map(asRecord).filter(coding => coding?.system === RECORDS_CODE_SYSTEM);
+  if (!codings.length) return { ambiguous: false };
+  const code = codings[0]?.code;
+  if (codings.length !== 1 || typeof code !== 'string' || !code.trim() || code.length > 4096
+    || [...code].some(character => character.charCodeAt(0) < 32)) return { ambiguous: true };
+  return { code, ambiguous: false };
 }
 
 function mapRecordsCodeToAspect(code: string, hl7Code: string): string {
@@ -238,6 +271,10 @@ function mapRecordsCodeToAspect(code: string, hl7Code: string): string {
   if (code.startsWith('invariant-')) return 'invariant';
   if (/^(structural|bundle)-/.test(code)) return 'structural';
   return mapHl7CodeToAspect(hl7Code);
+}
+
+function isImportedSeverity(value: unknown): boolean {
+  return typeof value === 'string' && ['fatal', 'error', 'warning', 'information', 'info'].includes(value);
 }
 
 function normalizeImportedSeverity(value: unknown): ValidationIssue['severity'] {

@@ -1,0 +1,799 @@
+{
+  "schema": "records.validator.finite-engineering-acceptance.v1",
+  "generatedAt": "2026-10-05T06:12:50.328429+00:00",
+  "artifactRole": "current finite engineering acceptance, separate from archived comparison lanes",
+  "acceptanceStatus": "accepted-with-explicit-Medication-release-exception",
+  "releasePreparationClosingAuditRecordedSeparately": true,
+  "noGlobalOrWholeResource100ParityClaim": true,
+  "humanAuthorization": {
+    "wording": "Mach",
+    "context": "Immediate explicit proposal to adopt eleven ICU profile corrections and the justified Medication release exception",
+    "decisions": {
+      "receiptId": "2026-10-05-validator-release-decisions",
+      "bytes": 3172,
+      "sha256": "1db3120ced4f6beee5ba16740cbcecb1028fe862eeacb1a48385029ea7762751",
+      "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+    }
+  },
+  "scope": "Existing expressly fixed FHIR/MII release obligations and original finite P/N/U countercontrols; no support or denominator reduction",
+  "versions": {
+    "validator": "0.8.0",
+    "validationTypes": "0.1.13"
+  },
+  "runtimeSha256": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+  "currentDocumentationSourceEpoch": "9606550b81081235c63bc50cea608c8569b614f7ce955b29c10c773cc31ce2ad",
+  "measurementsKeepTheirActualEpochs": true,
+  "approvedCorpusRevision": {
+    "discovered": 552,
+    "measured": 442,
+    "excluded": 110,
+    "changedInputHashes": 11,
+    "allOther541InputsUnchanged": true,
+    "originalCorpusDigest": "50eb2863c38f087bc17d9ac8a56573e1e331c469c22cb28f8ac3d7b01d489483",
+    "revisedCorpusDigest": "1daebdc35e664b1bc3ab4bf19bf64af377ff50d7ef8c51e6f04b5183bc9e8de1",
+    "originalWholeInputMetadataLedger": {
+      "receiptId": "receipt",
+      "bytes": 377086,
+      "sha256": "7bdba40e5bed0d2793a907b9ca68b43535713a5494e3f3712ea29553904f8de8",
+      "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+    },
+    "corrections": [
+      {
+        "id": "mii2026/mii-2026-icu-observation-mii-exa-icu-ect-blutfluss-extrakorporaler-gasaustausch-gemessen.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "38b103794de1bdbd796cc79a8d1367747acae28a78088829a1e4ce4ed34f64b2",
+        "revisedSha256": "a00a744c4b9fb3efde53757c43ec502b7a6d7df9a93a55c5255b1fdd9c3ccc94",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-blutfluss-extrakorporaler-gasaustausch",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-blutfluss-extrakorporaler-gasaustausch",
+        "ownDefinitionSha256": "3560d8d5ad1f16828aa77c992914b017875a21e05baa99bbbdf37d4a43f34278",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Observation"
+      },
+      {
+        "id": "mii2026/mii-2026-icu-observation-mii-exa-icu-ect-dauer-extrakorporaler-gasaustausch-gemessen.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "17344c4d9dd5a602f8b200eaf0b7421be16380de92a86677ed2a15c5210b299f",
+        "revisedSha256": "a8024227e3786241b090858d217d2e697526431935f5f261ce807e799d34522a",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-dauer-extrakorporaler-gasaustausch",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-dauer-extrakorporaler-gasaustausch",
+        "ownDefinitionSha256": "97bed5d5b7adf0434e2e32a1313c9bd40d53a3e949f60f49f678eb674fc4283f",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Observation"
+      },
+      {
+        "id": "mii2026/mii-2026-icu-observation-mii-exa-icu-ect-dauer-haemodialysesitzung-gemessen.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "a60f11a61a8fd4b8d9efa909d361fdf98300f6a766780224c1ac576ebd3890b4",
+        "revisedSha256": "c4ba3720782f381fb0ed38ef905f4375c7837d795a43d6051d0063314aa62f2d",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-dauer-haemodialysesitzung",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-dauer-haemodialysesitzung",
+        "ownDefinitionSha256": "0424aeab6e0ed587fd2469b8fefccdab2deb1679c7332d2ed0e2910b20b4b259",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Observation"
+      },
+      {
+        "id": "mii2026/mii-2026-icu-observation-mii-exa-icu-ect-gasfluss-eingestellt.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "d3f0c1cf4affd7510b1d545b0c77d9b63bc0e44d20dc19a96fe4881690ec74b2",
+        "revisedSha256": "85feb138f714940f31b5231bfd96cccab05d31ecc0e2a95aa2060ea98dc9f33f",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-gasfluss",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-gasfluss",
+        "ownDefinitionSha256": "cfbb085d7d61a9c7aca77ac1cc535634c6f9e0d62100cbf6f3b5849411f75a39",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Observation"
+      },
+      {
+        "id": "mii2026/mii-2026-icu-observation-mii-exa-icu-ect-haemodialyse-blutfluss-eingestellt.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "4ad80966904f955e4a322ffdc5d0536daad42e1910bea2c2c4030d288278afba",
+        "revisedSha256": "6433333f20b54902eb1929851aa39e4d778eb92d6206bcfb6654e79702f4276e",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-haemodialyse-blutfluss",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-haemodialyse-blutfluss",
+        "ownDefinitionSha256": "aac74aed876e43c1e8885d76611d522c077c96ea417a74efbb4e9664b5235827",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Observation"
+      },
+      {
+        "id": "mii2026/mii-2026-icu-observation-mii-exa-icu-ect-haemodialyse-blutfluss-gemessen.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "aa67cced9d95c2373c193e3ed025ea3216a401f922cbbf417963315ea755ad8d",
+        "revisedSha256": "1d1508ba435ba6b4511ebc55fbcc93b4444bfdc4bc5d5004e62938ece7bdac19",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-haemodialyse-blutfluss",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-haemodialyse-blutfluss",
+        "ownDefinitionSha256": "aac74aed876e43c1e8885d76611d522c077c96ea417a74efbb4e9664b5235827",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Observation"
+      },
+      {
+        "id": "mii2026/mii-2026-icu-observation-mii-exa-icu-ect-ionisiertes-kalzium-aus-nierenersatzverfahren-gemessen.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "55b5c4c380dab87419aab3f781e5fca53bdb3d426eb7b8c5437a85614308d935",
+        "revisedSha256": "5e6b35ec064d9512e5ededf34fa8d300b0a2e662bb795b54f6230a81be7a1982",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-ionisiertes-kalzium-nierenersatzverfahren",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ionisiertes-kalzium-nierenersatzverfahren",
+        "ownDefinitionSha256": "4d9fed868b2b94067300f8770049d2d829b6d342fb7f16817fb49fda8ed668f9",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Observation"
+      },
+      {
+        "id": "mii2026/mii-2026-icu-observation-mii-exa-icu-ect-substituatfluss-eingestellt.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "960e167215aae7960847e117f13efbb0dbeabb47d1b3978962ef6ec1b3283b63",
+        "revisedSha256": "13ab1a72eea5725987f59d84fa599e38aa1ee5212b2afdb2e3404a945a5f33c8",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-substituatfluss",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-substituatfluss",
+        "ownDefinitionSha256": "aaf7d9a86efefc329b6b7d59850efc73062a76441ea874ef9a3c8d5bb77a7a96",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Observation"
+      },
+      {
+        "id": "mii2026/mii-2026-icu-observation-mii-exa-icu-ect-substituatvolumen-eingestellt.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "bdefaca286e1842c73c1b8d5057badc6d97ca801227df54b82c5ffca9244e229",
+        "revisedSha256": "4d59954456c69d590a705f92be6f761e1f40bd2a5a09a5cfa4346d67fd0160bf",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-substituatvolumen",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-substituatvolumen",
+        "ownDefinitionSha256": "d03d8bafe2e541873825aae0d8a7631989f08f4b2f022592778b9eeb90705fe0",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Observation"
+      },
+      {
+        "id": "mii2026/mii-2026-icu-observation-mii-exa-icu-ect-venoeser-druck-gemessen.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "34aae063465914142c72dd7399d9775af9effe8edd6cf2cb2f030ce306d5c39d",
+        "revisedSha256": "4a1ea58a63faaed0fb340e098f7104959002a8a3c0f95ef48a9e61806ce3bdfb",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-venoeser-druck",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-venoeser-druck",
+        "ownDefinitionSha256": "fa75ebcc73c128f3a5ee3025b7db456cbea00cedaef6b5acde5fec84e605126c",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Observation"
+      },
+      {
+        "id": "mii2026/mii-2026-icu-procedure-mii-exa-icu-ecmo.json",
+        "jsonPointer": "/meta/profile/0",
+        "originalSha256": "23b41a80373a8564260eabaee68880c114ae0ef590865e6355629039f50cd467",
+        "revisedSha256": "d112c6d995df22622c55b8fdd2df2f4642dec4d8be1866374fd20c8bb259c27d",
+        "originalProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-ect-extrakorporales-verfahren",
+        "revisedProfile": "https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-extrakorporales-verfahren",
+        "ownDefinitionSha256": "b894cba01a5d770f8275c2615b02d48807eaf8515bcecec4d76c68bdff584ca2",
+        "ownVersion": "2026.0.2",
+        "fhirVersion": "4.0.1",
+        "type": "Procedure"
+      }
+    ]
+  },
+  "currentMII442": {
+    "actualSummary": {
+      "fixtures": 442,
+      "clean": 441,
+      "noisy": 1,
+      "precisionPct": 99.8,
+      "totalFalsePositives": 0,
+      "excluded": 110
+    },
+    "unroundedPrecisionPct": 99.77375565610859,
+    "originalThresholds": {
+      "minPrecisionPct": 99,
+      "minFixtures": 440,
+      "maxExcluded": 110
+    },
+    "actualGateExitCode": 0,
+    "actualSource": "cf586cb42e382754eafd34845d8f018c02382dcf76a1c231c8b2f5b47bfeb8cd",
+    "actualRuntime": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+    "report": {
+      "receiptId": "mii-2026-precision-loop103-g1-2026-10-05",
+      "bytes": 150454,
+      "sha256": "8f6c8f254e759cfc80e2a9382410f57e03fab2eb14f34796557a01d99349f897",
+      "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+    },
+    "proof": {
+      "receipt": {
+        "receiptId": "loop103-revised-mii442-actual-g1",
+        "bytes": 1806,
+        "sha256": "c94aab9250627cf9d292ddec6250c767ac8a0d671f299f2717bab1abb0d8510b",
+        "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+      },
+      "actualStartedAt": "2026-10-05T04:44:43.407Z",
+      "actualFinishedAt": "2026-10-05T04:46:39.361Z",
+      "actualSourceBefore": "cf586cb42e382754eafd34845d8f018c02382dcf76a1c231c8b2f5b47bfeb8cd",
+      "actualSourceAfter": "cf586cb42e382754eafd34845d8f018c02382dcf76a1c231c8b2f5b47bfeb8cd",
+      "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+      "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+      "exitCode": 0,
+      "command": [
+        "env",
+        "TSX_TSCONFIG_PATH=/private/tmp/loop67-built-tsconfig.json",
+        "node_modules/.bin/tsx",
+        "--tsconfig",
+        "/private/tmp/loop67-built-tsconfig.json",
+        "/private/tmp/loop103-mii442-selection-draft-g1/selection-runner.mts",
+        "--source-sha256",
+        "cf586cb42e382754eafd34845d8f018c02382dcf76a1c231c8b2f5b47bfeb8cd",
+        "--runtime-sha256",
+        "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+        "--output",
+        "/private/tmp/loop103-mii442-selection-execution-g1",
+        "--",
+        "--corpus",
+        "quality-corpus/r4/profiled/mii-2026",
+        "--report-prefix",
+        "mii-2026-precision-loop103-g1",
+        "--min-precision",
+        "99",
+        "--min-fixtures",
+        "440",
+        "--max-excluded",
+        "110"
+      ],
+      "log": {
+        "receiptId": "loop103-revised-mii442-actual-g1",
+        "bytes": 60424,
+        "sha256": "6bc19be967093a53955c229e4ecbb4f2593984878682d1ba397d0982a5a8f240",
+        "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+      }
+    },
+    "selectionObserver": {
+      "receiptId": "selection-report",
+      "bytes": 3211478,
+      "sha256": "dbc4768c89fd28049cf5ca36697fa9e35ae54d02619982db01831693eb1cc9d8",
+      "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+    },
+    "actualWholeOwnSDMatches": 11,
+    "allElevenICURawErrorsOrFatals": 0,
+    "allElevenICUIncompleteResources": 11,
+    "ICUIncompleteIssueOccurrences": 86,
+    "remainingFailedFixture": {
+      "file": "mii-2026-laborbefund-service-request-service-request-mii-exa-labor-laboranforderung.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": false,
+      "runtimeError": "Required fixture profile could not be resolved: https://www.medizininformatik-initiative.de/fhir/core/modul-labor/StructureDefinition/ServiceRequestLab|2026.0.0|2026.0.0"
+    },
+    "qualifier": "Clean is error-filter acceptance, not full terminology completeness or clinical whole-resource P."
+  },
+  "approvedReleaseException": {
+    "caseId": "med-example",
+    "rawComparisonScore": 0.375,
+    "rawRegressionGateExitCode": 1,
+    "genuineASKUnknownOccurrences": 6,
+    "genuinePZNUnknownOccurrences": 1,
+    "actualOwnCodeSystems": "de.basisprofil.r4#1.0.0; own businessversion1.0.0; content=not-present; zero concepts",
+    "remainingUnknownsVisible": true,
+    "rawGateRemainsFailed": true,
+    "appliesOnlyToReleaseDecision": true,
+    "severityBaselineACKSkipThresholdComparatorChanged": false,
+    "reason": "Documented Records information/incomplete policy preserves genuine unavailable code authority; historical HAPI warning policy is a justified compatibility difference. No code membership P/N can be inferred from metadata-only content.",
+    "ownAuthorityAudit": {
+      "receiptId": "audit",
+      "bytes": 12312,
+      "sha256": "098ca2a9993eec5fe7f0a8e281c66ca8fc226091ef4daad9d0a472d05323f2c1",
+      "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+    },
+    "actualMedicationReport": {
+      "receiptId": "report",
+      "bytes": 3532205,
+      "sha256": "5872ded4c85834d2df24b8a1c9425e881276b694475d5a3a02b4502e8439a9b0",
+      "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+    }
+  },
+  "finiteCountercontrols": {
+    "Questionnaire60": {
+      "P": 12,
+      "N": 24,
+      "U": 24
+    },
+    "Document9": {
+      "P": 2,
+      "N": 5,
+      "U": 2
+    },
+    "Measure7": {
+      "publicAPIControlsPassed": 7,
+      "CQLexecutionU": 7
+    },
+    "AP7Native27": {
+      "boundedP": 4,
+      "ownRuleN": 19,
+      "authorityU": 4,
+      "all27RecordsRawIncomplete": true,
+      "actualNativeRequests": 108,
+      "actualNativePairs": 54,
+      "report": {
+        "receiptId": "paired-ap7-27-report",
+        "bytes": 43512305,
+        "sha256": "7cdf21d5420695a42ed92c3d60d32cd428b4979ddd1fc5b2c4553e8e3d66d9fe",
+        "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+      }
+    },
+    "authoritativePriorCheckpoint": {
+      "receiptId": "validator-release-progress-2026-10-05-loop99-status-g3",
+      "bytes": 17468,
+      "sha256": "21edb23bb62fbe02b15de9fbcdc0ef9e2c5db4287e53ee632f80e7a6d601e721",
+      "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+    },
+    "currentRequirementMatrix": {
+      "receiptId": "matrix",
+      "bytes": 25105,
+      "sha256": "46ac65d358e5aa0692e26c99fb91117468ff6094fc3ee3c14fab09d724e0051e",
+      "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+    }
+  },
+  "engineeringChecks": {
+    "validatorPassed": 6562,
+    "RecordsPassed": 2777,
+    "CLIPassed": 75,
+    "officialSourceChecksPassed": 30,
+    "officialBuiltPackageChecksPassed": 3,
+    "packedConsumerPassed": true,
+    "defectDetection": "280/280",
+    "actualExistingReceipts": [
+      {
+        "kind": "loop98-validator-full-g1",
+        "passed": 6562,
+        "failed": 0,
+        "existingSkipped": 4,
+        "report": {
+          "receiptId": "loop98-validator-full-g1",
+          "bytes": 2373572,
+          "sha256": "a33f05a00536beb8cccaa449bba41674607b6d21ed71ce0d91c4adcca1fc4af8",
+          "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+        },
+        "proof": {
+          "receipt": {
+            "receiptId": "loop98-validator-full-g1",
+            "bytes": 1444,
+            "sha256": "42daf7a418b2d7decab92f7fd8c5bde9175df894d951a09b18c75f76e5513962",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          },
+          "actualStartedAt": "2026-10-05T00:19:34.576Z",
+          "actualFinishedAt": "2026-10-05T00:22:21.988Z",
+          "actualSourceBefore": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "actualSourceAfter": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "exitCode": 0,
+          "command": [
+            "env",
+            "-u",
+            "TSX_TSCONFIG_PATH",
+            "node",
+            "scripts/ci/assert-suites-collected.mjs",
+            "--manifest",
+            "tests/integration/test-lanes.json",
+            "--manifest-lanes",
+            "validator",
+            "--report-output",
+            ".cache/review/parity-plan/loop98-validator-full-g1.json",
+            "--config",
+            "vitest.config.validator.ts",
+            "--maxWorkers=2",
+            "--reporter=dot"
+          ],
+          "log": {
+            "receiptId": "loop98-validator-full-g1",
+            "bytes": 220950,
+            "sha256": "f890b6c4cfa41327678773e970e68a4686e6bafc4b8e12751134221b6963a600",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          }
+        }
+      },
+      {
+        "kind": "loop99-records-validation-g2",
+        "passed": 2777,
+        "failed": 0,
+        "existingSkipped": 4,
+        "report": {
+          "receiptId": "loop99-records-validation-g2",
+          "bytes": 1022323,
+          "sha256": "0268f2d8bb4c6f0f2c42da297469674d21b62faded3c599efaed9507fb2e918b",
+          "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+        },
+        "proof": {
+          "receipt": {
+            "receiptId": "loop99-records-validation-g2",
+            "bytes": 1617,
+            "sha256": "55d026b8c9e0e3dea8abdd9b5cf3b64aa417791fe7aad8f24a3b0ba3189f2812",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          },
+          "actualStartedAt": "2026-10-05T01:29:27.941Z",
+          "actualFinishedAt": "2026-10-05T01:33:32.983Z",
+          "actualSourceBefore": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "actualSourceAfter": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "exitCode": 0,
+          "command": [
+            "env",
+            "-u",
+            "TSX_TSCONFIG_PATH",
+            "node_modules/.bin/vitest",
+            "run",
+            "server/services/validation",
+            "--maxWorkers=2",
+            "--reporter=json",
+            "--outputFile=/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/loop99-records-validation-g2.json"
+          ],
+          "log": {
+            "receiptId": "loop99-records-validation-g2",
+            "bytes": 148,
+            "sha256": "a69640c24bab5316be8d429b5470a7b5480f6211b83101d1c745ee95a149ae14",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          }
+        }
+      },
+      {
+        "kind": "loop99-cli-after-prerequisite-g2",
+        "proof": {
+          "receipt": {
+            "receiptId": "loop99-cli-after-prerequisite-g2",
+            "bytes": 1184,
+            "sha256": "66511669a9fe338cfafbf274e4af167bee015760f7063eb2f7ba34122ef01e94",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          },
+          "actualStartedAt": "2026-10-05T01:04:38.604Z",
+          "actualFinishedAt": "2026-10-05T01:04:48.313Z",
+          "actualSourceBefore": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "actualSourceAfter": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "exitCode": 0,
+          "command": [
+            "env",
+            "-u",
+            "TSX_TSCONFIG_PATH",
+            "npm",
+            "run",
+            "test:cli",
+            "--",
+            "--maxWorkers=2"
+          ],
+          "log": {
+            "receiptId": "loop99-cli-after-prerequisite-g2",
+            "bytes": 2243,
+            "sha256": "aa9cfd3bf85c7d14b49f0fa63bb53e633740925bba4e23c8174eac51c79a91a3",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          }
+        }
+      },
+      {
+        "kind": "loop99-source-architecture-resume-g1",
+        "proof": {
+          "receipt": {
+            "receiptId": "loop99-source-architecture-resume-g1",
+            "bytes": 1191,
+            "sha256": "1d375e321e4a48025e2f9f7bd22acc8402cf586ea67a9ab15b8d95d5d8ccfede",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          },
+          "actualStartedAt": "2026-10-05T00:44:04.906Z",
+          "actualFinishedAt": "2026-10-05T00:44:57.921Z",
+          "actualSourceBefore": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "actualSourceAfter": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "exitCode": 0,
+          "command": [
+            "env",
+            "-u",
+            "TSX_TSCONFIG_PATH",
+            "node",
+            "/private/tmp/loop99-source-architecture-resume-g1.mjs"
+          ],
+          "log": {
+            "receiptId": "loop99-source-architecture-resume-g1",
+            "bytes": 6795,
+            "sha256": "f93a4d075b869c21c03b9319ca889ff87a176973eb88a2f26c4fdc1a0c707d9d",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          }
+        }
+      },
+      {
+        "kind": "loop98-built-package-g1",
+        "proof": {
+          "receipt": {
+            "receiptId": "loop98-built-package-g1",
+            "bytes": 1192,
+            "sha256": "ea22fb4035bf4b5b503ea4be9d768eb8e2e4600e8e666f820ad0eed87af2632a",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          },
+          "actualStartedAt": "2026-10-05T00:24:07.594Z",
+          "actualFinishedAt": "2026-10-05T00:24:28.859Z",
+          "actualSourceBefore": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "actualSourceAfter": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "exitCode": 0,
+          "command": [
+            "env",
+            "-u",
+            "TSX_TSCONFIG_PATH",
+            "node",
+            "/private/tmp/loop98-built-checks.mjs",
+            "loop98-built-package-g1"
+          ],
+          "log": {
+            "receiptId": "loop98-built-package-g1",
+            "bytes": 8295,
+            "sha256": "36653306c14194792045f55dd2d5bcef6746b2929302048ddbd974d0a300f04b",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          }
+        }
+      },
+      {
+        "kind": "loop99-oss-smoke-built-g1",
+        "proof": {
+          "receipt": {
+            "receiptId": "loop99-oss-smoke-built-g1",
+            "bytes": 1194,
+            "sha256": "a4e58ec074b6e2dbac2c4b724c06a9d070cc6d744de5e08d6bfafd08794ddaa5",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          },
+          "actualStartedAt": "2026-10-05T00:51:12.703Z",
+          "actualFinishedAt": "2026-10-05T00:51:53.040Z",
+          "actualSourceBefore": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "actualSourceAfter": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "exitCode": 0,
+          "command": [
+            "env",
+            "-u",
+            "TSX_TSCONFIG_PATH",
+            "npm_config_ignore_scripts=true",
+            "npm",
+            "run",
+            "oss:smoke-validator"
+          ],
+          "log": {
+            "receiptId": "loop99-oss-smoke-built-g1",
+            "bytes": 126,
+            "sha256": "8b38100fc9455f098a68950baa06d56457cb297e729cbfcbc0feacf0b157a961",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          }
+        }
+      },
+      {
+        "kind": "loop99-quality-defects-g1",
+        "proof": {
+          "receipt": {
+            "receiptId": "loop99-quality-defects-g1",
+            "bytes": 1213,
+            "sha256": "bbe48b8a2ace8ccea225a240616f8a0f5f5c4b4417124d8af9bc4092117ead99",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          },
+          "actualStartedAt": "2026-10-05T00:47:22.003Z",
+          "actualFinishedAt": "2026-10-05T00:48:35.979Z",
+          "actualSourceBefore": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "actualSourceAfter": "c5dca6ab328fde7182160064b40b119b864c02932a09472b4c4f26b476dd4f20",
+          "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "exitCode": 0,
+          "command": [
+            "env",
+            "TSX_TSCONFIG_PATH=/private/tmp/loop67-built-tsconfig.json",
+            "npm",
+            "run",
+            "quality:defects:gate",
+            "--",
+            "--stdout"
+          ],
+          "log": {
+            "receiptId": "loop99-quality-defects-g1",
+            "bytes": 24260,
+            "sha256": "bc14c4b0806b4cde2e5a74d5ca879bc0e761b76a10ba070bda09d54d0afe9424",
+            "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+          }
+        }
+      }
+    ],
+    "qualification": "Full-suite totals are historical at their exact retained source epochs, before moving one comparator test to its tooling owner; they are not current-tree remeasurements."
+  },
+  "otherUnchangedCleanLanes": {
+    "R4": "186/186",
+    "R5": "18/18",
+    "profiledR4": "178/179; original97%gate passed",
+    "profiledR5": "10/10",
+    "EHDS": "1/1; original100%gate passed",
+    "actualToolingSourceEpoch": "25f905ae1051789e461f2b98674692fffcc1003ceb30efd9153d2829bbc6aad6"
+  },
+  "originalComparisonsKeptOriginal": {
+    "conformance390": {
+      "passed": 386,
+      "failed": 1,
+      "existingSkipped": 3,
+      "errors": 0,
+      "actualSourceEpoch": "23ca2427260bfedbb65a6570f88916f7dfe54401631ce26bb649bfbaa1f5393a"
+    },
+    "original552": "68 complete/484 incomplete; belongs to original input hashes and factory context, not revised Clean mode",
+    "original552Report": {
+      "receiptId": "comparison-552",
+      "bytes": 45877417,
+      "sha256": "73b46967c6404c6fe9451363aad994d8f1851d1299f1f401c3522af0249711d7",
+      "retention": "immutable local measurement artifact; raw clinical input bodies are not included in this acceptance record"
+    },
+    "freshRevised552ReferenceComparisonClaimed": false
+  },
+  "continuity": {
+    "initialDocumentationReceipt": {
+      "receiptId": "receipt",
+      "bytes": 829916,
+      "sha256": "599a79388c159ac8a0bc5367915c139f1bf22d09ecd9abf64967230087a45587",
+      "retention": "immutable local metadata artifact; no clinical input body included here"
+    },
+    "finalDocumentationReceipt": {
+      "receiptId": "receipt",
+      "bytes": 3496,
+      "sha256": "c76385b443884e221dc5a6a33ad58727a34264b982eba07ff78b2a0ce5f2a7b9",
+      "retention": "immutable local metadata artifact; no clinical input body included here"
+    },
+    "testOwnerMoveReceipt": {
+      "receiptId": "receipt",
+      "bytes": 1457,
+      "sha256": "13203906120b6dd00de0778c30f1135a4fda9fc16dee7c56c6e41bba8e031689",
+      "retention": "immutable local metadata artifact; no clinical input body included here"
+    },
+    "onlyNonMarkdownPackageChangeDuringClosure": "one test-only owner correction; exact body/three expectations preserved, monorepo script import removed from exported package",
+    "allProductAndRuntimeImplementationBytesUnchangedDuringClosure": true,
+    "noRuntimeBuildOrPackageVersionChange": true
+  },
+  "publicSelectionQualification": "Existing loader checks this generic artifact path/SHA only. Current acceptance semantics are independently reviewed; archived measurement lanes, 24 original hashes and historical-only claimStatus stay unchanged. Final current-tree/raw-regression/export checks are joined by an excluded local closing checkpoint without repinning this immutable acceptance.",
+  "publicationPerformed": false,
+  "GitHubActionsUsed": false,
+  "supersedesIntermediateAcceptance": {
+    "receiptId": "validator-release-acceptance-2026-10-05",
+    "bytes": 32364,
+    "sha256": "14a751b6281dbc1d0a1ab26d2d0fcb47db8065609e7a19875b8f7eaeed044d4e",
+    "retention": "immutable local metadata artifact; no clinical input body included here"
+  },
+  "finalTestOwnerCorrection": {
+    "movedTests": 1,
+    "movedExpectations": 3,
+    "testBodyBytesUnchanged": true,
+    "runtimeSha256Unchanged": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+    "regressions": [
+      {
+        "kind": "loop103-package-boundary-regressions-g1",
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "report": {
+          "receiptId": "loop103-package-boundary-regressions-g1",
+          "bytes": 2692,
+          "sha256": "5f2fc47bcbfbf325386782c2b30848d1220617adb71ac7138d980e29802f6bfa",
+          "retention": "immutable local metadata artifact; no clinical input body included here"
+        },
+        "proof": {
+          "receipt": {
+            "receiptId": "loop103-package-boundary-regressions-g1-provenance",
+            "bytes": 1634,
+            "sha256": "b23fa53fda373b6927dcd58bae71b4d173be32ea5ba35cf7effb4eec56e2d953",
+            "retention": "immutable local metadata artifact; no clinical input body included here"
+          },
+          "actualStartedAt": "2026-10-05T04:59:59.872Z",
+          "actualFinishedAt": "2026-10-05T05:00:03.356Z",
+          "actualSourceBefore": "0812d2d2dca31343c78797ebf3acee60b16120b1efd63661ca04a0c6cc37462a",
+          "actualSourceAfter": "0812d2d2dca31343c78797ebf3acee60b16120b1efd63661ca04a0c6cc37462a",
+          "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "exitCode": 0,
+          "command": [
+            "env",
+            "-u",
+            "TSX_TSCONFIG_PATH",
+            "node",
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "--config",
+            "vitest.config.validator.ts",
+            "packages/validator/src/core/__tests__/release-review-regressions.test.ts",
+            "--maxWorkers=1",
+            "--reporter=json",
+            "--outputFile=.cache/review/parity-plan/loop103-package-boundary-regressions-g1.json"
+          ],
+          "log": {
+            "receiptId": "loop103-package-boundary-regressions-g1",
+            "bytes": 159,
+            "sha256": "66b89f6ccd2c29c927a6a00c0d15c0572b1187eac52e25bdc85b804d8659b08e",
+            "retention": "immutable local metadata artifact; no clinical input body included here"
+          }
+        }
+      },
+      {
+        "kind": "loop103-comparator-owner-regressions-g1",
+        "passed": 29,
+        "failed": 0,
+        "skipped": 0,
+        "report": {
+          "receiptId": "loop103-comparator-owner-regressions-g1",
+          "bytes": 10671,
+          "sha256": "1a9d380284612c3eb5bd2c71fb0890926cd3b6e683af4ff7f73899aed6db0cd9",
+          "retention": "immutable local metadata artifact; no clinical input body included here"
+        },
+        "proof": {
+          "receipt": {
+            "receiptId": "loop103-comparator-owner-regressions-g1-provenance",
+            "bytes": 1602,
+            "sha256": "f65040120ae3ea14bcbd24d247ab43d6eb5f804156e82b388e30603ac7080ac0",
+            "retention": "immutable local metadata artifact; no clinical input body included here"
+          },
+          "actualStartedAt": "2026-10-05T04:59:59.116Z",
+          "actualFinishedAt": "2026-10-05T05:00:06.762Z",
+          "actualSourceBefore": "0812d2d2dca31343c78797ebf3acee60b16120b1efd63661ca04a0c6cc37462a",
+          "actualSourceAfter": "0812d2d2dca31343c78797ebf3acee60b16120b1efd63661ca04a0c6cc37462a",
+          "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+          "exitCode": 0,
+          "command": [
+            "env",
+            "-u",
+            "TSX_TSCONFIG_PATH",
+            "node",
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "--config",
+            "vitest.config.tooling.ts",
+            "scripts/quality/public-parity-diff.test.ts",
+            "--maxWorkers=1",
+            "--reporter=json",
+            "--outputFile=.cache/review/parity-plan/loop103-comparator-owner-regressions-g1.json"
+          ],
+          "log": {
+            "receiptId": "loop103-comparator-owner-regressions-g1",
+            "bytes": 159,
+            "sha256": "32b079197df6fca08d6e2fee2b7b9cbde7bdb4ded5da8288999a8dcaef4f235f",
+            "retention": "immutable local metadata artifact; no clinical input body included here"
+          }
+        }
+      }
+    ],
+    "lint": {
+      "receipt": {
+        "receiptId": "loop103-moved-test-lint-g1-provenance",
+        "bytes": 1260,
+        "sha256": "cd60e138305a69683bc1b3e1cb3370590b64553945be750c47328657613af5fe",
+        "retention": "immutable local metadata artifact; no clinical input body included here"
+      },
+      "actualStartedAt": "2026-10-05T05:00:00.270Z",
+      "actualFinishedAt": "2026-10-05T05:00:02.658Z",
+      "actualSourceBefore": "0812d2d2dca31343c78797ebf3acee60b16120b1efd63661ca04a0c6cc37462a",
+      "actualSourceAfter": "0812d2d2dca31343c78797ebf3acee60b16120b1efd63661ca04a0c6cc37462a",
+      "runtimeBefore": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+      "runtimeAfter": "18ff1f781a478dcb81001ae9c6aa7204bcb593192443889db756e977ce2030d7",
+      "exitCode": 0,
+      "command": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "packages/validator/src/core/__tests__/release-review-regressions.test.ts",
+        "scripts/quality/public-parity-diff.test.ts",
+        "--quiet"
+      ],
+      "log": {
+        "receiptId": "loop103-moved-test-lint-g1",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "retention": "immutable local metadata artifact; no clinical input body included here"
+      }
+    },
+    "intermediateBoundaryFinding": {
+      "receipt": {
+        "receiptId": "loop103-export-boundary-g1-provenance",
+        "bytes": 1194,
+        "sha256": "f76519feef95073ea0332d257334247fef3dd8dd99ea7fc21e4c2581aafe3489",
+        "retention": "immutable local metadata artifact; no clinical input body included here"
+      },
+      "exitCode": 1,
+      "reason": "Exported package test imported a monorepo-only comparator script; final corrected export boundary is recorded by the closing audit."
+    }
+  }
+}

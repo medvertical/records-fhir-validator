@@ -1,8 +1,8 @@
 import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises';
-import { promises as fsPromises } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { observePackageFileReads } from './fixtures/package-file-read-observer';
 import { loadFromLocalCache } from '../sd-loader-filesystem';
 import { PackageProfileIndexCache } from '../sd-loader-package-profile-index';
 
@@ -53,18 +53,13 @@ describe('profile lookup reads the files the package index names', () => {
                 ],
             },
         );
-        const reads: string[] = [];
-        const readFile = fsPromises.readFile.bind(fsPromises);
-        vi.spyOn(fsPromises, 'readFile').mockImplementation(async (file: never, ...rest: never[]) => {
-            reads.push(path.basename(String(file)));
-            return readFile(file, ...rest);
-        });
+        const reads = observePackageFileReads();
 
         await expect(loadFromLocalCache(PROFILE_URL, [root], 'R4', {}, new PackageProfileIndexCache()))
             .resolves.toMatchObject({ url: PROFILE_URL, version: '2.0.0' });
 
-        expect(reads).toContain('StructureDefinition-Target.json');
-        expect(reads.filter(name => name.startsWith('StructureDefinition-noise'))).toEqual([]);
+        expect(reads.map(file => path.basename(file))).toContain('StructureDefinition-Target.json');
+        expect(reads.map(file => path.basename(file)).filter(name => name.startsWith('StructureDefinition-noise'))).toEqual([]);
     });
 
     // An index that omits a profile must not make it unreachable.

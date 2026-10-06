@@ -63,7 +63,7 @@ function dedupeEntryIssues(issues: ValidationIssue[]): ValidationIssue[] {
   const out: ValidationIssue[] = [];
 
   for (const issue of issues) {
-    const key = `${issue.code}|${issue.path}|${issue.message}`;
+    const key = `${issue.code}|${issue.path}|${issue.message}|${issue.profile ?? ''}|${issue.severity}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(issue);

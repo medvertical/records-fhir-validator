@@ -50,9 +50,11 @@ type BuiltIndex = {
 };
 
 export class PackageCanonicalIndex {
-  private signature: string | null = null;
-  private building: Promise<BuiltIndex | null> | null = null;
-  private index: BuiltIndex | null = null;
+  private current: {
+    signature: string;
+    building: Promise<BuiltIndex | null> | null;
+    index: BuiltIndex | null;
+  } | null = null;
 
   /**
    * The packages that may hold `canonical`, or null when no index could be
@@ -98,9 +100,7 @@ export class PackageCanonicalIndex {
   }
 
   clear(): void {
-    this.signature = null;
-    this.index = null;
-    this.building = null;
+    this.current = null;
   }
 
   /** Drops the stored copy as well, for a store that changed under the process. */
@@ -112,21 +112,29 @@ export class PackageCanonicalIndex {
   private async ensure(rootDirectories: readonly string[]): Promise<BuiltIndex | null> {
     const signature = await directorySetSignature(rootDirectories);
     if (signature === null) return null;
-    if (this.index && this.signature === signature) return this.index;
-    if (this.building && this.signature === signature) return this.building;
+    if (this.current?.signature === signature) {
+      if (this.current.building) return this.current.building;
+      if (this.current.index) return this.current.index;
+    }
 
-    this.signature = signature;
-    this.building = loadOrBuildIndex(rootDirectories).then(built => {
-      if (this.signature === signature) this.index = built;
+    const generation = { signature, building: null as Promise<BuiltIndex | null> | null, index: null as BuiltIndex | null };
+    this.current = generation;
+    generation.building = loadOrBuildIndex(rootDirectories, () => this.current === generation).then(built => {
+      // A clear or another build revokes this generation, even if the next
+      // stores have the same signature. Never relabel a foreign warm index.
+      if (this.current === generation) {
+        generation.index = built;
+        generation.building = null;
+      }
       return built;
     }).catch(error => {
       logger.debug('[PackageCanonicalIndex] Index build failed; falling back to a full scan', {
         errorType: error instanceof Error ? 'error' : typeof error,
       });
-      if (this.signature === signature) this.signature = null;
+      if (this.current === generation) this.current = null;
       return null;
     });
-    return this.building;
+    return generation.building;
   }
 }
 
@@ -166,7 +174,7 @@ function isPackageEntry(entry: Dirent): boolean {
  * reads 82 MB across every package, the file is 5.9 MB and parses in 14 ms.
  * Writing it back is best effort — a read-only store just rebuilds each start.
  */
-async function loadOrBuildIndex(rootDirectories: readonly string[]): Promise<BuiltIndex | null> {
+async function loadOrBuildIndex(rootDirectories: readonly string[], canPublish: () => boolean): Promise<BuiltIndex | null> {
   let fingerprint: CanonicalIndexFingerprint | null = null;
   try {
     fingerprint = await canonicalIndexFingerprint(rootDirectories);
@@ -179,7 +187,7 @@ async function loadOrBuildIndex(rootDirectories: readonly string[]): Promise<Bui
   }
 
   const built = await buildIndex(rootDirectories);
-  if (built && fingerprint) await writeCanonicalIndex(rootDirectories, fingerprint, built);
+  if (built && fingerprint) await writeCanonicalIndex(rootDirectories, fingerprint, built, canPublish);
   return built;
 }
 

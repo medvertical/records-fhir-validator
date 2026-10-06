@@ -6,6 +6,7 @@ import {
 import { validateExternalCodeSystems } from '../terminology-external-code-system-rules';
 import { setProfileSource } from '../../../persistence';
 import { ValueSetCache } from '../../../validators/valueset-cache';
+import { ValueSetValidator } from '../../../validators/valueset-validator';
 
 describe('terminology CodeSystem reference rules', () => {
   afterEach(() => {
@@ -59,6 +60,38 @@ describe('terminology CodeSystem reference rules', () => {
         path: 'Measure.subjectCodeableConcept.coding.system',
       }),
     );
+  });
+
+  it('rejects a Coding.system that resolves to a ValueSet', async () => {
+    const issues = await validateCodeSystemReference(
+      { system: 'http://hl7.org/fhir/ValueSet/communication-category', code: 'alert' },
+      'Communication.category[0].coding',
+      0,
+      true,
+      'syntax',
+      'R4',
+    );
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      severity: 'error',
+      code: 'terminology-coding-system-valueset',
+      path: 'Communication.category[0].coding[0].system',
+    }));
+  });
+
+  it('accepts a CodeSystem canonical that merely contains a ValueSet path segment', async () => {
+    // R4 core's formatcodes ValueSet includes exactly this IHE CodeSystem URL.
+    const coding = {
+      system: 'http://ihe.net/fhir/ValueSet/IHE.FormatCode.codesystem',
+      code: 'urn:ihe:iti:xds:2017:mimeTypeSufficient',
+    };
+
+    const issues = [
+      ...await validateCodeSystemReference(coding, 'DocumentReference.content[0].format', 0, false, 'syntax', 'R4'),
+      ...await validateCodeSystemReference(coding, 'DocumentReference.content[0].format', 0, false, 'not-found', 'R4'),
+    ];
+
+    expect(issues.filter(issue => issue.severity === 'error')).toEqual([]);
   });
 
   it('does not pass malformed Coding fields into CodeSystem resolution', async () => {
@@ -131,6 +164,9 @@ describe('terminology CodeSystem reference rules', () => {
   it('does not treat a trusted publisher namespace as CodeSystem resolution evidence', async () => {
     const hasCodeSystem = vi.fn().mockResolvedValue(false);
     setProfileSource({ hasCodeSystem });
+    const cache = new ValueSetCache();
+    const definitionLookup = new ValueSetValidator(cache, undefined, []).getDefinitionLookup();
+    expect(definitionLookup.packageLoader.getPackageDirectories()).toEqual([]);
     const issues = await validateCodeSystemReference(
       { system: 'http://fhir.de/CodeSystem/ask', code: '1234' },
       'Medication.ingredient.itemCodeableConcept.coding',
@@ -139,7 +175,9 @@ describe('terminology CodeSystem reference rules', () => {
       'not-found',
       'R4',
       { organizationId: 7, serverId: 314, fhirVersion: 'R4' },
-      new ValueSetCache(),
+      cache,
+      new CodeSystemReferenceLookupCache(),
+      definitionLookup,
     );
 
     expect(issues).toContainEqual(expect.objectContaining({

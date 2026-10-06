@@ -6,6 +6,7 @@
  * match wins, so preserve more-specific prefixes before generic families.
  */
 
+import { TERMINOLOGY_PREFIX_TO_HL7_ISSUE_TYPE } from './operation-outcome-issue-mapping-terminology.js';
 import { QUESTIONNAIRE_PREFIX_TO_HL7_ISSUE_TYPE } from './operation-outcome-issue-mapping-questionnaire.js';
 import { HL7_ISSUE_TYPES, type Hl7IssueType } from './operation-outcome-issue-types.js';
 
@@ -38,12 +39,16 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   // `invalid` while structural type mismatches remain `structure`.
   ['structural-invalid-format', 'invalid'],
   ['structural-invalid-id', 'invalid'],
-  ['structural-empty-array', 'invalid'],
-  ['structural-empty-object', 'invalid'],
+  // Empty arrays, objects and primitive values.
+  ['structural-empty', 'invalid'],
   ['structural-invalid-uri', 'invalid'],
+  ['structural-example-url', 'invalid'],
+  ['structural-url-unresolved', 'invalid'],
+  ['contained-unresolved-canonical', 'invalid'],
   // Java classifies malformed Attachment.data as a structural base64 error,
   // while other primitive lexical format failures remain `invalid`.
   ['structural-invalid-base64-format', 'structure'],
+  ['structural-base64-whitespace', 'invalid'],
   ['structural-bundle-fullurl-duplicate', 'business-rule'],
   ['structural-bundle-fullurl-', 'invalid'],
   // Java emits `structure` for Attachment size/data byte length mismatches,
@@ -61,6 +66,8 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   // Contained resource without an id — Java emits `invalid` ("Resource
   // requires an id, but none is present").
   ['structural-contained-id-missing', 'invalid'],
+  // A `#id` uri with no matching target — Java emits `invalid`.
+  ['structural-internal-uri-unresolved', 'invalid'],
   ['structural-', 'structure'],
 
   // Profile
@@ -79,7 +86,7 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   ['profile-extension-url-missing', 'structure'],
   // Versioned extension URL and its companion fixed-URL mismatch — map
   // to the same OperationOutcome codes Java emits (invalid / value).
-  ['profile-extension-url-versioned', 'invalid'],
+  ['profile-extension-url-version', 'invalid'],
   ['profile-extension-url-fixed-mismatch', 'value'],
   // Java emits `structure` for "definition allows for the types […] but
   // found type X" (see ips-htmlrefs-backwards baseline).
@@ -87,29 +94,27 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   // Extension used outside its declared contexts — Java emits `structure`
   // (see R4.ext-ctxt-bad-active-base baseline).
   ['profile-extension-context-wrong', 'structure'],
+  ['profile-extension-subextension-invalid', 'invalid'],
   ['profile-extension-', 'extension'],
   ['profile-slicing-', 'structure'],
   ['profile-mustsupport-', 'structure'],
   ['profile-not-resolved', 'structure'],
+  ['profile-canonical-alias', 'structure'],
   ['profile-not-found', 'structure'],
   ['profile-download', 'transient'],
   ['profile-load-error', 'transient'],
   ['profile-', 'invalid'],
 
-  // Terminology
-  ['terminology-codesystem-url-not-absolute', 'invalid'],
-  ['terminology-codesystem-unresolvable', 'not-found'],
-  ['terminology-display-mismatch', 'invalid'],
-  ['terminology-binding-', 'code-invalid'],
-  ['terminology-valueset-', 'code-invalid'],
-  ['terminology-', 'code-invalid'],
+  ...TERMINOLOGY_PREFIX_TO_HL7_ISSUE_TYPE,
 
   // Reference
   ['reference-empty', 'structure'],
+  ['reference-without-display', 'structure'],
   ['reference-invalid-', 'value'],
+  ['reference-path-prefixed', 'value'],
   ['reference-type-mismatch', 'value'],
   ['reference-type-unknown', 'value'],
-  ['reference-target-type-invalid', 'structure'],
+  ['reference-target-', 'structure'],
   ['reference-contained-unresolved', 'structure'],
   ['reference-ref1-invariant', 'invariant'],
   ['reference-contained-not-found', 'not-found'],
@@ -184,6 +189,7 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   // Reachability orphan diagnostic — Java emits these as `informational`
   // even though the severity is error.
   ['bundle-entry-not-reachable', 'informational'],
+  ['bundle-entry-reverse-link', 'invalid'],
   ['bundle-narrative-link-target-not-found', 'not-found'],
   ['bundle-narrative-link-target-ambiguous', 'invalid'],
   ['bundle-', 'business-rule'],
@@ -193,10 +199,9 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
 
   // Terminology resource business rules (CodeSystem/ValueSet canonical URLs,
   // caseSensitive, concept definitions, compose.include validation)
-  ['narrative-hyperlink-target-not-found', 'invalid'],
+  ['capabilitystatement-searchparam-type-mismatch', 'invalid'],
   ['ele-1-violation', 'invariant'],
   ['tx-codesystem-url-not-absolute', 'invalid'],
-  ['tx-codesystem-url-invalid-uuid', 'invalid'],
   ['tx-codesystem-missing-casesensitive', 'business-rule'],
   ['tx-codesystem-complete-no-concepts', 'business-rule'],
   ['tx-codesystem-supplement-content', 'business-rule'],
@@ -204,8 +209,8 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   ['tx-codesystem-property-no-uri', 'business-rule'],
   ['tx-codesystem-property-uri-unresolvable', 'invalid'],
   ['tx-valueset-url-not-absolute', 'invalid'],
-  ['tx-valueset-url-invalid-uuid', 'invalid'],
   ['tx-valueset-compose-system-fragment', 'invalid'],
+  ['tx-valueset-compose-system-oid', 'invalid'],
   // Compose filter validation (cluster 3: ValueSet filter property + op + value)
   ['tx-valueset-filter-op-invalid', 'invalid'],
   ['tx-valueset-filter-property-unknown', 'invalid'],
@@ -219,11 +224,12 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   ['tx-valueset-expansion-no-identifier', 'business-rule'],
   ['tx-valueset-expansion-system-no-version', 'invalid'],
   ['tx-valueset-expansion-extra-code', 'invalid'],
-  // ConceptMap target-display validation — see R5.cs-val-cm-base.
-  // The tx-only-source info uses `business-rule`; the target-display
-  // mismatch uses `required` (Java's category for "expected display").
+  ['tx-valueset-expansion-total-exceeded', 'invalid'],
+  // ConceptMap checks (see R5.cs-val-cm-base): Java files the tx-only notes as
+  // `business-rule` and every code, display and missing-system finding as `required`.
   ['tx-conceptmap-source-tx-only', 'business-rule'],
-  ['tx-conceptmap-target-display-invalid', 'required'],
+  ['tx-conceptmap-target-tx-only', 'business-rule'],
+  ['tx-conceptmap-', 'required'],
   // CodeSystem concept property Coding value refers to unknown code in another CS
   ['tx-codesystem-concept-property-code-invalid', 'code-invalid'],
 
@@ -231,13 +237,14 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   ['narrative-xxe-detected', 'structure'],
   ['narrative-malformed-xhtml', 'structure'],
   ['narrative-missing-xhtml-namespace', 'structure'],
-  ['narrative-invalid-root', 'invalid'],
   ['narrative-missing-xmllang', 'business-rule'],
   ['narrative-missing-htmllang', 'business-rule'],
   ['narrative-missing-lang', 'business-rule'],
   ['narrative-lang-mismatch', 'business-rule'],
-  // textLink extension diagnostics — Java emits each at a distinct
-  // category (see ips-link baseline).
+  ['narrative-duplicate-ids', 'business-rule'],
+  ['narrative-url-invalid', 'invalid'],
+  ['narrative-invalid-nesting', 'structure'],
+  // textLink diagnostics: Java emits each at its own category (ips-link baseline).
   ['narrative-textlink-htmlid-not-found', 'structure'],
   ['narrative-textlink-target-not-found', 'not-found'],
   ['narrative-textlink-uri-no-target', 'invalid'],
@@ -263,6 +270,8 @@ const PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   // tag through the displayLanguage plumbing as a `processing` error, but the
   // substance is an invalid coded value.
   ['language-code-invalid', 'code-invalid'],
+  // Java reports a non-URI urn:ietf:rfc:3986 identifier value as `code-invalid`.
+  ['identifier-uri-value-not-absolute', 'code-invalid'],
 
   // String lexical lints — Java emits its whitespace-padding, all-whitespace
   // and illegal-XML-character diagnostics as `invalid` (see params-ws and

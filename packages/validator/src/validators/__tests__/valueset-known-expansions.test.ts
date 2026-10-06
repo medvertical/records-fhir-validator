@@ -56,31 +56,20 @@ describe('bundled required-binding ValueSet expansions (P-3a)', () => {
     )).resolves.toHaveLength(0);
   });
 
-  it('accepts valid MIME type parameters on Attachment content types', async () => {
+  it('accepts Attachment content types the way the reference terminology server does', async () => {
     const validator = new ValueSetValidator();
     localOnly(validator);
+    const binding = { strength: 'required', valueSet: 'http://hl7.org/fhir/ValueSet/mimetypes|4.0.1' } as const;
+    const path = 'DocumentReference.content[0].attachment.contentType';
 
-    await expect(validator.validateBinding(
-      'text/plain; charset=utf-8',
-      { strength: 'required', valueSet: 'http://hl7.org/fhir/ValueSet/mimetypes|4.0.1' },
-      'DocumentReference.content[0].attachment.contentType',
-    )).resolves.toHaveLength(0);
-
-    await expect(validator.validateBinding(
-      'application/xml;charset=utf-8',
-      { strength: 'required', valueSet: 'http://hl7.org/fhir/ValueSet/mimetypes|4.0.1' },
-      'DocumentReference.content[0].attachment.contentType',
-    )).resolves.toHaveLength(0);
-
-    const invalidParameterIssues = await validator.validateBinding(
-      'text/plain; charset',
-      { strength: 'required', valueSet: 'http://hl7.org/fhir/ValueSet/mimetypes|4.0.1' },
-      'DocumentReference.content[0].attachment.contentType',
-    );
-    expect(invalidParameterIssues[0]).toEqual(expect.objectContaining({
-      code: 'terminology-binding-required-code',
-      path: 'DocumentReference.content[0].attachment.contentType',
-    }));
+    // tx.fhir.org checks type and subtype only and leaves parameters unparsed.
+    for (const accepted of ['text/plain; charset=utf-8', 'application/xml;charset=utf-8', 'text/plain;base64', 'text/plain; charset']) {
+      await expect(validator.validateBinding(accepted, binding, path), accepted).resolves.toHaveLength(0);
+    }
+    for (const rejected of ['text/', 'a/b/c', 'textplain', 'text/;charset=utf-8']) {
+      const issues = await validator.validateBinding(rejected, binding, path);
+      expect(issues[0], rejected).toEqual(expect.objectContaining({ code: 'terminology-binding-required-code', path }));
+    }
   });
 
   it('flags TestScript MIME shorthand codes that are not BCP13 media types', async () => {

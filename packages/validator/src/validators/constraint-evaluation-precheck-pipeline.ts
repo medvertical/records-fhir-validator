@@ -57,12 +57,14 @@ export class ConstraintEvaluationPrecheckPipeline {
       elementPath,
       resource.resourceType,
       profileUrl,
+      constraint.key,
     )) {
       return { handled: true, issues: htmlIssues };
     }
 
-    const resolvedContext = resolveConstraintContext(resource, elementPath, expression);
-    const simpleMemberOf = await this.memberOfPrechecks.evaluateSimple(
+    const resolvedContext = resolveConstraintContext(resource, elementPath, expression, state.fhirVersion);
+    // A configured resolver owns its package selection and terminology policy.
+    const simpleMemberOf = terminologyResolverConfigured ? null : await this.memberOfPrechecks.evaluateSimple(
       resolvedContext.expression,
       resolvedContext.context,
       resource.resourceType,
@@ -73,26 +75,19 @@ export class ConstraintEvaluationPrecheckPipeline {
       return this.outcome(simpleMemberOf, resource, elementPath, constraint, profileUrl, state);
     }
 
-    const trailingMemberOf = this.memberOfPrechecks.evaluateTrailing(
+    const cachedMemberOf = terminologyResolverConfigured ? null : await this.memberOfPrechecks.evaluateCached(
       resolvedContext.expression,
       resolvedContext.context,
       state.fhirVersion,
+      terminologyResolverConfigured,
     );
-    if (trailingMemberOf !== null) {
-      return this.outcome(trailingMemberOf, resource, elementPath, constraint, profileUrl, state);
+    if (cachedMemberOf !== null) {
+      return this.outcome(cachedMemberOf, resource, elementPath, constraint, profileUrl, state);
     }
 
     const resolvableExpression = terminologyResolverConfigured
       ? this.memberOfPrechecks.rewriteLegacyExpression(resolvedContext.expression)
       : resolvedContext.expression;
-    const optionalMemberOfUnion = this.memberOfPrechecks.evaluateOptional(
-      resolvableExpression,
-      resolvedContext.context,
-    );
-    if (optionalMemberOfUnion !== null) {
-      return this.outcome(optionalMemberOfUnion, resource, elementPath, constraint, profileUrl, state);
-    }
-
     const resolveExists = evaluateResolveExistsConstraint({
       expression: resolvedContext.expression,
       context: resolvedContext.context,

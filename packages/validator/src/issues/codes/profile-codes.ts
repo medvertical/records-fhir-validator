@@ -77,6 +77,21 @@ export const ProfileCodes = {
         severity: 'warning',
         description: 'Slice ordering violated',
     },
+    'profile-reference-unavailable': {
+        aspect: 'profile',
+        severity: 'information',
+        description: 'A required profile dependency could not be verified',
+    },
+    'profile-conformance-incomplete': {
+        aspect: 'profile',
+        severity: 'information',
+        description: 'Profile conformance could not be established',
+    },
+    'profile-slice-validation-incomplete': {
+        aspect: 'profile',
+        severity: 'warning',
+        description: 'Slice validation is incomplete',
+    },
     'profile-slice-validation-error': {
         aspect: 'profile',
         severity: 'warning',
@@ -97,6 +112,11 @@ export const ProfileCodes = {
         severity: 'error',
         description: 'Extension URL must be an absolute URL',
     },
+    'profile-extension-url-version-invalid': {
+        aspect: 'profile',
+        severity: 'error',
+        description: 'Cross-version extension URL names a FHIR release without cross-version definitions',
+    },
     'profile-extension-not-found': {
         aspect: 'profile',
         severity: 'warning',
@@ -111,6 +131,11 @@ export const ProfileCodes = {
         aspect: 'profile',
         severity: 'error',
         description: 'Extension used outside the contexts its StructureDefinition declares',
+    },
+    'profile-extension-subextension-invalid': {
+        aspect: 'profile',
+        severity: 'error',
+        description: 'Relative sub-extension url that the complex extension does not define',
     },
     'profile-extension-modifier-mismatch': {
         aspect: 'profile',
@@ -176,6 +201,11 @@ export const ProfileCodes = {
         aspect: 'profile',
         severity: 'info',
         description: 'Profile could not be loaded',
+    },
+    'profile-canonical-alias': {
+        aspect: 'profile',
+        severity: 'warning',
+        description: 'Declared profile canonical matches no published profile; resolved through a known alias',
     },
     'profile-downloading': {
         aspect: 'profile',

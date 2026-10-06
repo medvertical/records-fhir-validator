@@ -1,14 +1,14 @@
+import type { ProfileConformanceCheck } from '../../validators/sd-fhirpath-profile-conformance';
 import { describe, expect, it } from 'vitest';
-import { validateReferenceTargetProfileConformance } from '../multi-aspect-target-profile-conformance';
+import { collectExtensionTargetHits, targetProfileResolver, validateReferenceTargetProfileConformance } from '../multi-aspect-target-profile-conformance';
 import { ReferenceTargetValidator } from '../../validators/reference-target-validator';
 import type { StructureDefinition } from '../structure-definition-types';
-import type { ValidationIssue } from '@records-fhir/validation-types';
 
-const SPECIAL_PATIENT = 'http://example.org/StructureDefinition/special-patient';
+const SPECIAL_PATIENT = 'http://example.org/StructureDefinition/special-patient|1.0.0';
+const OTHER_PATIENT = 'http://example.org/StructureDefinition/not-this-patient';
+const CORE_PATIENT = 'http://hl7.org/fhir/StructureDefinition/Patient';
 
-// Observation.subject references a *profiled* Patient; Observation.performer
-// references a bare Practitioner (base type only — must NOT be enumerated).
-const profile: StructureDefinition = {
+const profileWithSubject = (targetProfile: string[]): StructureDefinition => ({
   resourceType: 'StructureDefinition',
   url: 'http://example.org/StructureDefinition/obs-profiled-subject',
   name: 'ObsProfiledSubject',
@@ -19,118 +19,141 @@ const profile: StructureDefinition = {
   snapshot: {
     element: [
       { id: 'Observation', path: 'Observation' },
-      { id: 'Observation.subject', path: 'Observation.subject', type: [{ code: 'Reference', targetProfile: [SPECIAL_PATIENT] }] } as any,
+      { id: 'Observation.subject', path: 'Observation.subject', type: [{ code: 'Reference', targetProfile }] } as any,
       { id: 'Observation.performer', path: 'Observation.performer', type: [{ code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/Practitioner'] }] } as any,
     ],
   },
-};
+});
 
 const validator = new ReferenceTargetValidator();
-const baseResource = (ref: string) => ({ resourceType: 'Observation', subject: { reference: ref } });
-const err = (): ValidationIssue[] => ([{ id: '1', aspect: 'profile', severity: 'error', code: 'profile-constraint-violation', message: 'x', path: 'Patient', timestamp: new Date() }]);
+const observation = { resourceType: 'Observation', subject: { reference: 'urn:uuid:p1' }, performer: [{ reference: 'urn:uuid:pr1' }] };
+const patient = { resourceType: 'Patient', id: 'p1' };
 
 describe('ReferenceTargetValidator.collectProfiledTargetHits', () => {
-  it('enumerates only profiled targetProfiles, not bare base types', () => {
-    const hits = validator.collectProfiledTargetHits(
-      { resourceType: 'Observation', subject: { reference: 'urn:uuid:p1' }, performer: [{ reference: 'urn:uuid:pr1' }] },
-      profile,
-    );
-    expect(hits).toHaveLength(1);
-    expect(hits[0]).toMatchObject({ path: 'Observation.subject', reference: 'urn:uuid:p1', profiles: [SPECIAL_PATIENT] });
+  it('enumerates references with profiled targetProfiles, keeping versions and every choice', () => {
+    const hits = validator.collectProfiledTargetHits(observation, profileWithSubject([SPECIAL_PATIENT, CORE_PATIENT]));
+    expect(hits).toEqual([{
+      path: 'Observation.subject',
+      reference: 'urn:uuid:p1',
+      profiles: [SPECIAL_PATIENT],
+      choices: [SPECIAL_PATIENT, CORE_PATIENT].sort(),
+    }]);
   });
 });
 
-describe('validateReferenceTargetProfileConformance (gap P-2)', () => {
-  const run = (opts: {
-    resolve?: (r: string) => any;
-    validateProfile: (target: any, profile: string) => Promise<ValidationIssue[]>;
-  }) => validateReferenceTargetProfileConformance({
-    resource: baseResource('urn:uuid:p1'),
-    structureDef: profile,
+describe('profiled target canonicals', () => {
+  // KBV names its profiles with underscores.
+  it('include names with underscores and dots', () => {
+    const kbvPatient = 'https://fhir.kbv.de/StructureDefinition/KBV_PR_MIO_Vaccination_Patient|1.1.0';
+    const hits = validator.collectProfiledTargetHits(observation, profileWithSubject([kbvPatient]));
+    expect(hits.map(hit => hit.profiles)).toEqual([[kbvPatient]]);
+  });
+});
+
+describe('validateReferenceTargetProfileConformance', () => {
+  const run = (
+    targetProfile: string[],
+    conformsTo: ProfileConformanceCheck | undefined,
+    resolve: ((reference: string) => unknown) | null = () => patient,
+  ) => validateReferenceTargetProfileConformance({
+    resource: observation,
+    structureDef: profileWithSubject(targetProfile),
     referenceTargetValidator: validator,
-    resolveReference: opts.resolve,
-    validateProfile: opts.validateProfile,
+    resolveReference: resolve as any,
+    conformsTo,
   });
 
-  it('warns when a resolvable target does not conform to the required profile', async () => {
-    const issues = await run({
-      resolve: () => ({ resourceType: 'Patient', id: 'p1' }),
-      validateProfile: async () => err(),
-    });
+  it('reports one error naming every choice when the target conforms to none', async () => {
+    const issues = await run([SPECIAL_PATIENT, OTHER_PATIENT], async () => false);
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
       code: 'reference-target-profile-noncompliant',
-      severity: 'warning',
+      severity: 'error',
+      aspect: 'reference',
       path: 'Observation.subject',
+      message: `Unable to find a profile match for urn:uuid:p1 among choices: ${OTHER_PATIENT}, ${SPECIAL_PATIENT}`,
     });
   });
 
-  it('stays silent when the target conforms', async () => {
-    const issues = await run({
-      resolve: () => ({ resourceType: 'Patient', id: 'p1' }),
-      validateProfile: async () => [],
-    });
-    expect(issues).toHaveLength(0);
+  it('treats the choices as alternatives', async () => {
+    const issues = await run([OTHER_PATIENT, SPECIAL_PATIENT], async (_target, profile) => profile === SPECIAL_PATIENT);
+    expect(issues).toEqual([]);
   });
 
-  it('treats multiple targetProfiles as alternatives, not cumulative requirements', async () => {
-    const multiProfile: StructureDefinition = {
-      ...profile,
-      snapshot: {
-        element: [
-          { id: 'Observation', path: 'Observation' },
-          {
-            id: 'Observation.subject',
-            path: 'Observation.subject',
-            type: [{
-              code: 'Reference',
-              targetProfile: [
-                'http://example.org/StructureDefinition/not-this-patient',
-                SPECIAL_PATIENT,
-              ],
-            }],
-          } as any,
-        ],
-      },
+  // The reference validator holds the target to the core definition too when
+  // it is a choice beside a profile (EU Lab's Composition|4.0.1).
+  it('accepts a target the core definition among the choices accepts', async () => {
+    expect(await run([SPECIAL_PATIENT, CORE_PATIENT], async (_target, profile) => profile === CORE_PATIENT)).toEqual([]);
+    expect(await run([SPECIAL_PATIENT, CORE_PATIENT], async () => false)).toHaveLength(1);
+  });
+
+  it('leaves a target to its own validation when no profiled choice is made for its type', async () => {
+    expect(await run([SPECIAL_PATIENT], async () => undefined)).toEqual([]);
+    expect(await run([SPECIAL_PATIENT, 'http://hl7.org/fhir/StructureDefinition/Resource'], async () => false)).toEqual([]);
+  });
+
+  it.each([undefined, 'throw'] as const)('keeps an unavailable OR alternative undecided (%s)', async unknown => {
+    expect(await run([SPECIAL_PATIENT, OTHER_PATIENT], async (_target, profile) => {
+      if (profile === SPECIAL_PATIENT) return false;
+      if (unknown === 'throw') throw new Error('unavailable');
+      return undefined;
+    })).toEqual([]);
+  });
+
+  it('can reject applicable profiles while ignoring profiles for another resource type', async () => {
+    expect(await run([SPECIAL_PATIENT, OTHER_PATIENT], async (_target, profile) =>
+      profile === SPECIAL_PATIENT ? false : 'not-applicable')).toHaveLength(1);
+  });
+
+  it('fails open on an unresolvable target, a missing resolver or check, and errors', async () => {
+    expect(await run([SPECIAL_PATIENT], async () => false, () => null)).toEqual([]);
+    expect(await run([SPECIAL_PATIENT], async () => false, null)).toEqual([]);
+    expect(await run([SPECIAL_PATIENT], undefined)).toEqual([]);
+    expect(await run([SPECIAL_PATIENT], async () => false, () => { throw new Error('resolver unavailable'); })).toEqual([]);
+    expect(await run([SPECIAL_PATIENT], async () => { throw new Error('engine'); })).toEqual([]);
+  });
+});
+
+describe('targetProfileResolver', () => {
+  const local = () => patient;
+  const all = () => patient;
+  const recursive = (overrides: Record<string, unknown>) => ({
+    recursiveReferenceValidation: { enabled: true, maxDepth: 3, validateExternal: false, validateContained: true, validateBundleEntries: true, ...overrides },
+  });
+
+  it('checks the targets the content holds by default, and fetched ones only on request', () => {
+    expect(targetProfileResolver(undefined, { local, all })).toBe(local);
+    expect(targetProfileResolver(recursive({}), { local, all })).toBe(local);
+    expect(targetProfileResolver(recursive({ validateTargetProfiles: true }), { local, all })).toBe(all);
+    expect(targetProfileResolver(recursive({ validateTargetProfiles: false }), { local, all })).toBeUndefined();
+    expect(targetProfileResolver(recursive({ enabled: false }), { local, all })).toBeUndefined();
+  });
+});
+
+describe('collectExtensionTargetHits', () => {
+  // VhDir's usage-restriction extension points at a contained vhdir-restriction Consent.
+  const RESTRICTION = 'http://hl7.org/fhir/uv/vhdir/StructureDefinition/vhdir-restriction';
+  const USAGE_RESTRICTION = 'http://hl7.org/fhir/uv/vhdir/StructureDefinition/usage-restriction';
+  const definition = {
+    resourceType: 'StructureDefinition',
+    url: USAGE_RESTRICTION,
+    type: 'Extension',
+    snapshot: { element: [{ id: 'Extension.value[x]', path: 'Extension.value[x]', type: [{ code: 'Reference', targetProfile: [RESTRICTION] }] }] },
+  } as unknown as StructureDefinition;
+  const restricted = { url: USAGE_RESTRICTION, valueReference: { reference: '#restrict' } };
+
+  it('holds a reference in an extension value to the targetProfiles its definition names', async () => {
+    const location = {
+      resourceType: 'Location',
+      telecom: [{ system: 'url' }, { system: 'phone', extension: [restricted] }],
+      _status: { extension: [restricted] },
+      contained: [{ resourceType: 'Consent', id: 'restrict', extension: [restricted] }],
     };
+    const hits = await collectExtensionTargetHits(location, async url => (url === USAGE_RESTRICTION ? definition : null));
 
-    const issues = await validateReferenceTargetProfileConformance({
-      resource: baseResource('urn:uuid:p1'),
-      structureDef: multiProfile,
-      referenceTargetValidator: validator,
-      resolveReference: () => ({ resourceType: 'Patient', id: 'p1' }),
-      validateProfile: async (_target, profileUrl) =>
-        profileUrl === SPECIAL_PATIENT ? [] : err(),
-    });
-
-    expect(issues).toHaveLength(0);
-  });
-
-  it('fails open when the required profile cannot be loaded', async () => {
-    const issues = await run({
-      resolve: () => ({ resourceType: 'Patient', id: 'p1' }),
-      validateProfile: async () => ([{ id: '1', aspect: 'profile', severity: 'error', code: 'profile-not-found', message: 'x', path: 'Patient', timestamp: new Date() }]),
-    });
-    expect(issues).toHaveLength(0);
-  });
-
-  it('fails open when the target cannot be resolved', async () => {
-    const issues = await run({ resolve: () => null, validateProfile: async () => err() });
-    expect(issues).toHaveLength(0);
-  });
-
-  it('does nothing without a resolver', async () => {
-    const issues = await run({ resolve: undefined, validateProfile: async () => err() });
-    expect(issues).toHaveLength(0);
-  });
-
-  it('fails open when the injected resolver throws', async () => {
-    const issues = await run({
-      resolve: () => {
-        throw new Error('resolver unavailable');
-      },
-      validateProfile: async () => err(),
-    });
-    expect(issues).toHaveLength(0);
+    expect(hits).toEqual([
+      { path: 'Location.telecom[1].extension[0].valueReference', reference: '#restrict', profiles: [RESTRICTION], choices: [RESTRICTION], referencingProfile: definition },
+      { path: 'Location.status.extension[0].valueReference', reference: '#restrict', profiles: [RESTRICTION], choices: [RESTRICTION], referencingProfile: definition },
+    ]);
   });
 });

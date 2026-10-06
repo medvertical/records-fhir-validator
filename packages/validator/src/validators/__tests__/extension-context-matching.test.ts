@@ -135,6 +135,25 @@ describe('checkExtensionContextUsage — element contexts', () => {
     )).toBe('indeterminate');
   });
 
+  it('decides element contexts below the root once the element\'s logical paths are known', () => {
+    const documentSite: ExtensionUsageSite = {
+      ...elementSite('PlanDefinition', 'PlanDefinition.action.documentation.document'),
+      logicalPaths: ['Attachment', 'Element', 'PlanDefinition.action.documentation.document', 'RelatedArtifact.document'],
+    };
+    const nestedActionSite: ExtensionUsageSite = {
+      ...elementSite('PlanDefinition', 'PlanDefinition.action.action'),
+      logicalPaths: ['BackboneElement', 'Element', 'PlanDefinition.action', 'PlanDefinition.action.action'],
+    };
+
+    expect(checkExtensionContextUsage([element('PlanDefinition.action')], documentSite)).toBe('violation');
+    expect(checkExtensionContextUsage([element('Attachment')], documentSite)).toBe('allowed');
+    expect(checkExtensionContextUsage([element('RelatedArtifact.document')], documentSite)).toBe('allowed');
+    expect(checkExtensionContextUsage([element('PlanDefinition.action')], nestedActionSite)).toBe('allowed');
+    // FHIRPath contexts may name a choice without [x]; they keep the literal comparison.
+    expect(checkExtensionContextUsage([{ type: 'fhirpath', expression: 'PlanDefinition.action' }], documentSite))
+      .toBe('indeterminate');
+  });
+
   it('stays indeterminate for abstract canonical bases and logical models', () => {
     expect(checkExtensionContextUsage([element('CanonicalResource')], rootSite('ValueSet')))
       .toBe('indeterminate');

@@ -18,7 +18,7 @@
  */
 
 const XVER_EXTENSION_URL_PATTERN =
-  /^https?:\/\/hl7\.org\/fhir\/(1\.0|1\.4|3\.0|4\.0|4\.3|5\.0|6\.0)\/StructureDefinition\/extension-([A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+(?:\[x\])?)+)$/;
+  /^https?:\/\/hl7\.org\/fhir\/(1\.0|1\.4|3\.0|4\.0|5\.0)\/StructureDefinition\/extension-([A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+(?:\[x\])?)+)$/;
 
 const XVER_MODIFIER_PATHS: Record<string, string> = {
   '1.0':
@@ -45,6 +45,20 @@ function modifierPathsFor(version: string): Set<string> {
     modifierPathSets.set(version, paths);
   }
   return paths;
+}
+
+/** The releases the xver-extensions dataset describes; its `other/xver-paths-<version>.json` files. */
+const XVER_DATASET_RELEASES = new Set(['1.0', '1.4', '3.0', '4.0', '5.0']);
+const XVER_URL_SHAPE = /^http:\/\/hl7\.org\/fhir\/(\d\.\d)\/StructureDefinition\/extension-./;
+
+/**
+ * The release a cross-version extension URL names when the dataset has no
+ * paths for it (`6.0`, `4.3`): the Java validator reports such a URL as
+ * invalid instead of looking for its definition.
+ */
+export function unsupportedCrossVersionRelease(url: string): string | undefined {
+  const release = XVER_URL_SHAPE.exec(url)?.[1];
+  return release && !XVER_DATASET_RELEASES.has(release) ? release : undefined;
 }
 
 export function isKnownCrossVersionExtensionUrl(

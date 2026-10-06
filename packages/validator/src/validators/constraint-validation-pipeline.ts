@@ -2,7 +2,6 @@ import { getValidationTargets } from '../business-rules/index.js';
 import { logger } from '../logger.js';
 import type { ElementDefinition } from '../core/structure-definition-types.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
-import { expressionStartsAtResourceRoot } from './constraint-choice-context.js';
 import type { ConstraintEvaluationEngine } from './constraint-evaluation-engine.js';
 import { buildUserInvocationTable } from './fhirpath-custom-functions.js';
 import { elementExistsInResource, hasEmptyBackboneElement } from './constraint-path-utils.js';
@@ -45,9 +44,11 @@ export class ConstraintValidationPipeline {
         options?.bundle,
         this.valueSetCache,
         this.operationCache,
+        options?.profileConformance,
       ),
       bundle: options?.bundle,
       rootResource,
+      focusResource: options?.focusResource,
     };
     const issues: ValidationIssue[] = [];
     const matchesSlice = createSliceDefinitionMatcher(elements);
@@ -68,18 +69,6 @@ export class ConstraintValidationPipeline {
 
       for (const candidate of element.constraint) {
         if (!isConstraint(candidate) || shouldSkipGenericConstraint(candidate.key)) continue;
-        if (expressionStartsAtResourceRoot(candidate.expression, resource.resourceType)) {
-          issues.push(...await this.evaluationEngine.evaluate(
-            resource,
-            element.path,
-            candidate,
-            profileUrl,
-            elementType,
-            state,
-          ));
-          continue;
-        }
-
         const targets = getElementValidationTargets();
         if (targets.length === 0) {
           issues.push(...await this.evaluationEngine.evaluate(

@@ -20,8 +20,12 @@ import {
 import { getValueAtPath } from './validation-utils.js';
 import type { ReferenceResolver } from '../validators/slicing-validator.js';
 import { TerminologyResourceValidator } from '../validators/terminology-resource-validator.js';
+import { loadConceptMapCodeSystems } from '../validators/conceptmap-resource-validator.js';
+import { validateValueSetIncludeSystemOids } from '../validators/valueset-include-oid-rule.js';
 import type { FhirResource } from './fhir-resource.js';
+import { recordPatientNarrativeOrigins, carryPatientNarrativeOrigins } from './patient-narrative-issue-reconciliation.js';
 import { shouldRunCustomRules } from './validation-settings-predicates.js';
+import type { SingleResourceProfileConformance } from './single-resource-profile-conformance.js';
 
 export interface ValidationOrchestratorContext {
   resource: FhirResource;
@@ -32,6 +36,8 @@ export interface ValidationOrchestratorContext {
   strictMode: boolean;
   settings?: ValidationSettings;
   referenceResolver?: ReferenceResolver | null;
+  enclosingBundle?: Record<string, unknown>;
+  conformance?: SingleResourceProfileConformance;
   contextQuestionnaire?: unknown;
   organizationId?: number;
   serverId?: number;
@@ -41,6 +47,24 @@ export interface ValidationOrchestratorContext {
  * Run all aspect validations and collect issues
  */
 export async function runAllAspectValidations(
+  context: ValidationOrchestratorContext,
+  structuralExecutor: StructuralExecutor,
+  profileExecutor: ProfileExecutor,
+  terminologyExecutor: TerminologyExecutor,
+  invariantExecutor: InvariantExecutor,
+  customRuleExecutor: CustomRuleExecutor,
+  metadataExecutor: MetadataExecutor,
+  referenceExecutor: ReferenceExecutor | undefined,
+  composedTerminologyResourceValidator: TerminologyResourceValidator,
+): Promise<ValidationIssue[]> {
+  const scoped = () => runAllAspectValidationsScoped(context, structuralExecutor, profileExecutor,
+    terminologyExecutor, invariantExecutor, customRuleExecutor, metadataExecutor,
+    referenceExecutor, composedTerminologyResourceValidator);
+  const sourceContext = { organizationId: context.organizationId, serverId: context.serverId, fhirVersion: context.fhirVersion };
+  return terminologyExecutor.withSourceContext?.(sourceContext, scoped) ?? scoped();
+}
+
+async function runAllAspectValidationsScoped(
   context: ValidationOrchestratorContext,
   structuralExecutor: StructuralExecutor,
   profileExecutor: ProfileExecutor,
@@ -71,6 +95,7 @@ export async function runAllAspectValidations(
         structureDef: context.structureDef,
         getValueAtPath,
         contextQuestionnaire: context.contextQuestionnaire,
+        enclosingBundle: context.enclosingBundle,
         settings: context.settings,
         referenceResolver: context.referenceResolver,
       }
@@ -90,8 +115,11 @@ export async function runAllAspectValidations(
       getValueAtPath,
       referenceResolver: context.referenceResolver,
       terminologyResolver: terminologyExecutor.getFHIRPathTerminologyResolver?.(),
+      enclosingBundle: context.enclosingBundle,
+      profileConformance: context.conformance?.profileConformance,
     });
-    issues.push(...profileIssues);
+    issues.push(...profileIssues, ...(context.conformance?.takeIncompleteIssues() ?? []));
+    recordPatientNarrativeOrigins(issues, { canonical: profileIssues });
   }
 
   // Terminology validation (value set bindings)
@@ -111,8 +139,9 @@ export async function runAllAspectValidations(
     const terminologyResourceIssues = composedTerminologyResourceValidator.validate(
       context.resource,
       context.fhirVersion,
+      await loadConceptMapCodeSystems(context.resource, context.fhirVersion),
     );
-    issues.push(...terminologyResourceIssues);
+    issues.push(...terminologyResourceIssues, ...await validateValueSetIncludeSystemOids(context.resource));
   }
 
   // Base-spec invariants (ele-1, pat-1, dom-2, obs-*). These are gated by the
@@ -153,6 +182,9 @@ export async function runAllAspectValidations(
       settings: context.settings
     });
     issues.push(...referenceIssues);
+    if (context.conformance) {
+      issues.push(...await context.conformance.validateReferenceTargets(), ...context.conformance.takeIncompleteIssues());
+    }
   }
 
   // Metadata validation
@@ -163,7 +195,7 @@ export async function runAllAspectValidations(
     issues.push(...metadataIssues);
   }
 
-  return issues.map(issue => attachAppliedProfile(issue, context.profileUrl));
+  return carryPatientNarrativeOrigins([issues], issues.map(issue => attachAppliedProfile(issue, context.profileUrl)));
 }
 
 function attachAppliedProfile(issue: ValidationIssue, appliedProfile: string): ValidationIssue {

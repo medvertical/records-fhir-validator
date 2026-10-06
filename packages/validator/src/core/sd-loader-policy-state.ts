@@ -59,6 +59,11 @@ export class StructureDefinitionLoaderPolicyState {
     return resolvePinnedCanonical(this.pinnedCanonicals, url);
   }
 
+  capturePinnedCanonicalResolver(): (url: string) => string {
+    const pinned = this.pinnedCanonicals && new Map(this.pinnedCanonicals);
+    return url => resolvePinnedCanonical(pinned, url);
+  }
+
   setPinnedCanonicals(pinned: ReadonlyMap<string, string>): void {
     const next = new Map(pinned);
     if (mapsEqual(this.pinnedCanonicals, next)) return;

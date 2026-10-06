@@ -81,7 +81,7 @@ export async function validateCodeAgainstRemoteValueSet(
 
   return runSingleFlight(
     context.pendingValidateCodeRequests,
-    cacheKey,
+    context.operationCache.contextKey?.(cacheKey) ?? cacheKey,
     () => logger.debug(
       '[TerminologyApiClient] validate-code in-flight hit',
       terminologyTargetMetadata(input.system, input.code, input.valueSetUrl),

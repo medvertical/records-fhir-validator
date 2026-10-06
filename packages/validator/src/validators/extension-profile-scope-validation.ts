@@ -1,4 +1,5 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
+import { getValidationTargets } from '../business-rules/index.js';
 import { isRecord, resourceTypeOf } from '../core/fhir-resource.js';
 import type { ExtensionDefinitionContext } from './extension-definition-extractor.js';
 import { normalizeExtensionUrlForMatching } from './extension-definition-extractor.js';
@@ -50,6 +51,7 @@ export async function validateProfileScopedExtensionInstances({
     }
 
     const parentGroups = getExtensionGroupsByParent(resource, elementPath, context.getValueAtPath);
+    const instancePaths = extensionInstancePaths(resource, elementPath);
     for (const extensions of parentGroups) {
       const counts = new Map<string, number>();
       for (const extensionValue of extensions) {
@@ -61,7 +63,8 @@ export async function validateProfileScopedExtensionInstances({
           ? 'modifierExtension'
           : 'extension';
         const definition = normalizedUrl ? definitionsByUrl.get(normalizedUrl) : undefined;
-        issues.push(...await validateInstance(extensionValue, definition, extensionType, elementPath));
+        const instancePath = instancePaths.get(extensionValue) ?? elementPath;
+        issues.push(...await validateInstance(extensionValue, definition, extensionType, instancePath));
         if (normalizedUrl) counts.set(normalizedUrl, (counts.get(normalizedUrl) || 0) + 1);
       }
 
@@ -83,6 +86,19 @@ export async function validateProfileScopedExtensionInstances({
     }));
   }
   return issues;
+}
+
+/**
+ * Where each extension of `elementPath` sits in the instance, up to its own
+ * position, which the url then names: `item[0].adjudication[1].extension`
+ * rather than the definition's `item.adjudication.extension`.
+ */
+function extensionInstancePaths(resource: unknown, elementPath: string): Map<unknown, string> {
+  const paths = new Map<unknown, string>();
+  for (const target of getValidationTargets(resource, elementPath)) {
+    if (isRecord(target.value)) paths.set(target.value, target.fullPath.replace(/\[\d+\]$/, ''));
+  }
+  return paths;
 }
 
 function collectSliceScopedCandidates(

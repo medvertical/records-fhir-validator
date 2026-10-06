@@ -1,6 +1,7 @@
-import { promises as fs } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import type { StructureDefinition } from './structure-definition-types.js';
+import { readStablePackageFile } from '../package/package-file-read-authority.js';
 import { reportUnreadablePackageResource } from '../package/package-store-diagnostics.js';
 
 export type IndexedProfile = {
@@ -25,7 +26,9 @@ export type PackageProfileIndex = {
 
 export async function loadCanonicalUrlsFromPackageIndex(indexPath: string): Promise<Map<string, string[]> | null> {
   try {
-    const parsed = JSON.parse(await fs.readFile(indexPath, 'utf8')) as { files?: unknown };
+    const result = await readStablePackageFile(path.dirname(indexPath), path.basename(indexPath), 8 * 1024 * 1024);
+    if (result.status !== 'read') return null;
+    const parsed = JSON.parse(result.bytes.toString('utf8')) as { files?: unknown };
     if (!Array.isArray(parsed.files)) return null;
 
     const urls = new Map<string, string[]>();
@@ -53,21 +56,34 @@ export function canonicalKeys(url: string): string[] {
   return separator < 0 ? [url] : [url, url.slice(0, separator)];
 }
 
-export async function readProfileFile(
-  packagePath: string,
-  filename: string,
-): Promise<StructureDefinition | null> {
+export type ProfileFileResult =
+  | { status: 'read'; profile: StructureDefinition; sha256: string }
+  | { status: 'not-profile' }
+  | { status: 'unavailable'; cause: 'unsafe-file' | 'resource-unreadable' | 'resource-too-large' | 'identity-mismatch' | 'source-changed' };
+
+export async function readProfileFileResult(packagePath: string, filename: string, expectedBoundary?: string): Promise<ProfileFileResult> {
   try {
-    const profile = JSON.parse(
-      await fs.readFile(path.join(packagePath, filename), 'utf-8'),
-    ) as StructureDefinition;
-    return profile?.resourceType === 'StructureDefinition' && typeof profile.url === 'string'
-      ? profile
-      : null;
-  } catch (error) {
+    const result = await readStablePackageFile(packagePath, filename, 32 * 1024 * 1024, expectedBoundary);
+    if (result.status === 'absent') return { status: 'unavailable', cause: 'resource-unreadable' };
+    if (result.status !== 'read') return result;
+    const bytes = result.bytes;
+    const profile = JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')) as StructureDefinition;
+    if (typeof profile?.resourceType !== 'string') return { status: 'unavailable', cause: 'identity-mismatch' };
+    if (profile.resourceType !== 'StructureDefinition') return { status: 'not-profile' };
+    if ((profile.version !== undefined && typeof profile.version !== 'string')
+      || (profile.fhirVersion !== undefined && typeof profile.fhirVersion !== 'string')) {
+      return { status: 'unavailable', cause: 'identity-mismatch' };
+    }
+    return typeof profile.url === 'string' ? { status: 'read', profile, sha256: createHash('sha256').update(bytes).digest('hex') } : { status: 'unavailable', cause: 'identity-mismatch' };
+  } catch (error: unknown) {
     reportUnreadablePackageResource('SDLoader', path.join(packagePath, filename), error);
-    return null;
+    return { status: 'unavailable', cause: 'resource-unreadable' };
   }
+}
+
+export async function readProfileFile(packagePath: string, filename: string): Promise<StructureDefinition | null> {
+  const result = await readProfileFileResult(packagePath, filename);
+  return result.status === 'read' ? result.profile : null;
 }
 
 export function addProfileToIndex(

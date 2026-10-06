@@ -36,6 +36,18 @@ describe('terminology server routing matrix', () => {
     });
   });
 
+  it.each([
+    ['R4', 'https://tx.fhir.org/r4'],
+    ['R5', 'https://tx.fhir.org/r5'],
+  ] as const)('routes a national SNOMED edition tx.fhir.org serves to its %s preset', (fhirVersion, url) => {
+    expect(resolveTerminologyServerForSystem(
+      { strategy: 'server-first', servers: DEFAULT_TERMINOLOGY_SERVERS },
+      'http://snomed.info/sct',
+      'http://snomed.info/sct/2011000195101/version/20230607',
+      fhirVersion,
+    )).toMatchObject({ url, authoritativeSnomedEdition: true });
+  });
+
   it('keeps general-purpose presets eligible for other systems after declaring SNOMED editions', () => {
     expect(resolveTerminologyServerForSystem(
       { strategy: 'server-first', serverUrl: 'https://tx.fhir.org/r5', servers: DEFAULT_TERMINOLOGY_SERVERS },

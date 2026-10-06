@@ -1,5 +1,5 @@
 import fhirpath from 'fhirpath';
-import { getFhirPathModel } from './fhirpath-model-resolver.js';
+import { getInvariantFhirPathModel } from '../core/fhirpath-context.js';
 import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite.js';
 import {
   VersionedExpressionCache,
@@ -9,7 +9,7 @@ import {
 function compileFHIRPathExpression(expression: string, fhirVersion: 'R4' | 'R5' | 'R6') {
   return fhirpath.compile(
     rewriteCollectionTypeOperators(expression),
-    getFhirPathModel(fhirVersion),
+    getInvariantFhirPathModel(fhirVersion),
     { async: false },
   );
 }

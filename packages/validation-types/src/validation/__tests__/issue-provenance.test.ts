@@ -33,6 +33,13 @@ describe('validation issue provenance', () => {
     }));
   });
 
+  it('verifies a missing Coding.system finding despite terminology wording in its message', () => {
+    expect(buildValidationIssueProvenance({
+      canonicalCode: 'terminology-coding-missing-system',
+      message: 'Coding has no system. A code with no system has no defined meaning, and it cannot be validated. A system should be provided',
+    })).toMatchObject({ verification: 'verified', confidence: 'high' });
+  });
+
   it('infers source executor from aspect before code heuristics', () => {
     expect(inferValidationIssueSourceExecutor({
       aspect: 'profile',

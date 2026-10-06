@@ -22,7 +22,7 @@ export async function tryExternalProfileSource(
     const profile = await settleWithin(fetchExternal(url), 20_000);
     if (!profile) return null;
     if (
-      !profileMatchesCanonical(profile, url)
+      !profileMatchesCanonical(profile, url, requestedFhirVersion)
       || !matchesRequestedFhirVersion(profile, requestedFhirVersion)
     ) {
       logger.warn('[SDLoader] Ignoring mismatched external profile', profileCanonicalMetadata(url));

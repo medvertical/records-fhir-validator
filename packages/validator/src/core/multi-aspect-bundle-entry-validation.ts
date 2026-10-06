@@ -2,6 +2,7 @@ import type { ValidationIssue } from '@records-fhir/validation-types';
 import type { StructureDefinition } from "./structure-definition-types.js";
 import {
   buildBundleDocumentContextIssues,
+  withoutSupersededSliceMinimums,
   type BundleDocumentContextChildResult,
 } from "./bundle-document-context.js";
 import type {
@@ -16,6 +17,7 @@ import { getDeclaredProfiles } from "./declared-profile-utils.js";
 import { mapBundleEntryIssues } from './bundle-entry-validation-output.js';
 import { awaitAllDrained } from '../utils/await-all-drained.js';
 import { validateBundleCompositionTargets } from './bundle-composition-target-validation.js';
+import { validateDeclaredProfiles } from './multi-aspect-embedded-profiles.js';
 
 const DEFAULT_BUNDLE_ENTRY_VALIDATION_CONCURRENCY = 16;
 const MAX_BUNDLE_ENTRY_VALIDATION_CONCURRENCY = 64;
@@ -102,7 +104,7 @@ export async function appendBundleEntryValidationResults(
       chunk.map(async (target) => {
         const result = await validateBundleEntryTarget(
           target,
-          validateOne,
+          (...args) => validateDeclaredProfiles(validateOne, shouldStop, ...args),
           fhirVersion,
           recursionDepth,
           bundle,
@@ -146,14 +148,15 @@ export async function appendBundleEntryValidationResults(
     bundle, childResults, parentAspects, validateOne, { fhirVersion, recursionDepth, shouldStop },
   );
   throwIfStopped(shouldStop);
-  const documentContextIssues = transformDocumentContextIssues(
-    buildBundleDocumentContextIssues(
-      bundle,
-      contextChildren,
-      parentStructureDef,
-    ),
-  );
-  appendIssuesToAspect(parentAspects, "profile", documentContextIssues);
+  const contextIssues = buildBundleDocumentContextIssues(bundle, contextChildren, parentStructureDef);
+  for (const aspect of parentAspects) {
+    const issues = withoutSupersededSliceMinimums(aspect.issues, contextIssues);
+    if (issues.length === aspect.issues.length) continue;
+    aspect.issues = issues;
+    if (aspect.evidenceIssues) aspect.evidenceIssues = withoutSupersededSliceMinimums(aspect.evidenceIssues, contextIssues);
+    aspect.isValid = issues.every(issue => issue.severity !== 'error' && issue.severity !== 'fatal');
+  }
+  appendIssuesToAspect(parentAspects, "profile", transformDocumentContextIssues(contextIssues));
 }
 
 async function appendCompositionTargetResults(

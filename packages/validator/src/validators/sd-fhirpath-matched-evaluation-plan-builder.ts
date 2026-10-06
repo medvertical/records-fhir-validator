@@ -1,6 +1,5 @@
 import type { Constraint } from '../core/structure-definition-types.js';
 import { isFhirResource } from '../core/fhir-resource.js';
-import { expressionStartsAtResourceRoot } from './constraint-choice-context.js';
 import {
   preprocessTypeLiterals,
   resolveElementType,
@@ -15,6 +14,8 @@ import {
 } from './sd-fhirpath-choice-utils.js';
 import type { SDFHIRPathEvaluationPlan } from './sd-fhirpath-evaluation-plan.js';
 import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope.js';
+import { fixKnownInvariantExpression } from './fhirpath-expression-fixer.js';
+import { focusResourceOf } from './sd-fhirpath-focus-resource.js';
 
 const EMPTY_PLAN: SDFHIRPathEvaluationPlan = {
   immediateIssues: [],
@@ -74,23 +75,19 @@ export class SDFHIRPathMatchedEvaluationPlanBuilder {
       declaredElementType,
     );
     const effectiveExpression = preprocessTypeLiterals(
-      constraint.expression,
+      fixKnownInvariantExpression(constraint.expression, constraint.key, scope.fhirVersion),
       typeLiteralContext,
     );
     const choiceCast = resolveChoiceTypeCast(effectiveExpression, matched);
     if (choiceCast.skip) return EMPTY_PLAN;
 
-    const evaluationContext = expressionStartsAtResourceRoot(
-      choiceCast.expression,
-      scope.resourceType,
-    ) ? scope.resource : matched.data;
-
     return {
       resolveTargets: () => [{
         constraint,
         expression: choiceCast.expression,
-        context: evaluationContext,
+        context: matched.data,
         rootResource: scope.rootResource,
+        focusResource: scope.focusResource ?? (scope.resource === scope.rootResource ? focusResourceOf(scope.resource, matched.resourcePath) : undefined),
         resolveRootResource: scope.resource,
         path: matched.resourcePath,
         resourceType: scope.resourceType,

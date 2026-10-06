@@ -76,13 +76,17 @@ async function runMultiAspectStructural(
 }
 
 describe('multi-aspect structural best-practice parity with the shared mapping', () => {
-  it('emits dom-6 at information for default settings', async () => {
-    const settings = { aspects: {} } as ValidationSettings;
+  // The reference validator reports dom-6 as a warning; Records does on request.
+  it('emits dom-6 at information for default settings, and at warning on request', async () => {
+    for (const [settings, severity] of [
+      [{ aspects: {} } as ValidationSettings, 'information'],
+      [{ aspects: {}, bestPracticeSeverity: 'warning' } as ValidationSettings, 'warning'],
+    ] as const) {
+      const structural = await runMultiAspectStructural(settings);
 
-    const structural = await runMultiAspectStructural(settings);
-
-    expect(signature(structural?.issues ?? [])).toEqual(signature(sharedHelperIssues(settings)));
-    expect(structural?.issues.find(issue => issue.code === 'dom-6')?.severity).toBe('information');
+      expect(signature(structural?.issues ?? [])).toEqual(signature(sharedHelperIssues(settings)));
+      expect(structural?.issues.find(issue => issue.code === 'dom-6')?.severity).toBe(severity);
+    }
   });
 
   it('emits dom-6 at warning for bestPracticeSeverity=warning', async () => {

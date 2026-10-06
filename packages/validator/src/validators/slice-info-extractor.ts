@@ -12,7 +12,9 @@ import type { SliceDefinition } from './slice-types.js';
 import {
   extractFixedFromElement,
   extractPatternFromElement,
+  getValueAtPath,
 } from './slice-utils.js';
+import { loadResolvedCodeDiscriminatorEvidence, type ResolvedCodeDefinitionResolver } from './slice-resolved-code-discriminator.js';
 import { inferChoiceSliceType } from './slice-choice-type-inference.js';
 import { logger } from '../logger.js';
 import {
@@ -50,7 +52,8 @@ export async function extractSlicingInfo(
   typeProfileResolver: TypeProfileResolverFn,
   valueSetLoader: ValueSetLoaderLike | null,
   slicingElementId?: string,
-): Promise<{ slicing: SlicingDefinition; slices: SliceDefinition[] } | null> {
+  resolveOwnedCodeDefinition?: ResolvedCodeDefinitionResolver,
+): Promise<{ slicing: SlicingDefinition; slices: SliceDefinition[]; selectedSlicingElementId?: string } | null> {
   const elements = getProfileElements(profileSD);
 
   const baseElement = slicingElementId
@@ -100,7 +103,7 @@ export async function extractSlicingInfo(
       type: getElementTypes(element),
     };
 
-    applyRootSliceConstraints(sliceDef, element);
+    applyRootSliceConstraints(sliceDef, element, elements);
 
     const slicePrefix = element.id
       ? `${element.id}.`
@@ -108,6 +111,7 @@ export async function extractSlicingInfo(
     const childPatterns = new Map<string, unknown>();
     const childFixed = new Map<string, unknown>();
     const childMin = new Map<string, number>();
+    const childMax = new Map<string, number>();
     const childTypes = new Map<string, Array<{ code: string; profile?: string[]; targetProfile?: string[] }>>();
     const childBindingValueSets = new Map<string, string>();
     const childBindingCodes = new Map<string, Set<string>>();
@@ -121,20 +125,15 @@ export async function extractSlicingInfo(
       if (childPattern !== undefined) childPatterns.set(relativePath, childPattern);
       const childFixedValue = extractFixedFromElement(candidate);
       if (childFixedValue !== undefined) childFixed.set(relativePath, childFixedValue);
-      if ((candidate.min ?? 0) > 0) {
-        childMin.set(relativePath, candidate.min!);
-      }
+      recordChildCardinality(candidate, relativePath, childMin, childMax);
       const candidateTypes = getElementTypes(candidate);
       if (candidateTypes.length > 0) {
         childTypes.set(relativePath, candidateTypes);
       }
-      const bindingValueSet = candidate.binding?.valueSet;
-      if (
-        bindingValueSet &&
-        valueSetLoader &&
-        childBindingAppliesToDiscriminatorPath(relativePath, childBindingDiscriminatorPaths)
-      ) {
+      const bindingValueSet = discriminatingBindingValueSet(candidate);
+      if (bindingValueSet && childBindingAppliesToDiscriminatorPath(relativePath, childBindingDiscriminatorPaths)) {
         childBindingValueSets.set(relativePath, bindingValueSet);
+        if (!valueSetLoader) continue;
         try {
           const codes = normalizeCodes(await valueSetLoader.loadValueSet(bindingValueSet));
           if (codes.length > 0) {
@@ -149,14 +148,8 @@ export async function extractSlicingInfo(
 
     await mergeProfiledTypeMetadata({ element, childTypes, childPatterns, childFixed, childMin, typeProfileResolver });
     await mergeAncestorTypeProfileSliceMetadata({
-      element,
-      elements,
-      elementPath,
-      sliceDef,
-      childPatterns,
-      childFixed,
-      childMin,
-      childTypes,
+      element, elements, elementPath, sliceDef,
+      childPatterns, childFixed, childMin, childTypes,
       resolver: typeProfileResolver,
     });
     inferChoiceSliceType(sliceDef, elementPath);
@@ -164,17 +157,22 @@ export async function extractSlicingInfo(
     if (childPatterns.size > 0) sliceDef.childPatterns = childPatterns;
     if (childFixed.size > 0) sliceDef.childFixed = childFixed;
     if (childMin.size > 0) sliceDef.childMin = childMin;
+    if (childMax.size > 0) sliceDef.childMax = childMax;
     if (childTypes.size > 0) sliceDef.childTypes = childTypes;
     if (childBindingValueSets.size > 0) sliceDef.childBindingValueSets = childBindingValueSets;
     if (childBindingCodes.size > 0) sliceDef.childBindingCodes = childBindingCodes;
 
     await mergeRootBindingCodes(sliceDef, element, valueSetLoader);
+    await loadResolvedCodeDiscriminatorEvidence(sliceDef, typeProfileResolver, element, profileSD, resolveOwnedCodeDefinition);
+    if (lacksDiscriminatingValue(profileSD, sliceDef, element)) sliceDef.undiscriminated = true;
 
     slices.push(sliceDef);
   }
 
   logSliceExtraction(slices.length, elementPath);
-  return { slicing: slicingDef, slices };
+  return { slicing: slicingDef, slices,
+    ...(baseElement?.slicing && getNonEmptyString(baseElement.id) ? { selectedSlicingElementId: baseElement.id } : {}),
+  };
 }
 
 async function mergeProfiledTypeMetadata(input: {
@@ -192,29 +190,65 @@ async function mergeProfiledTypeMetadata(input: {
   );
 }
 
+/**
+ * Only a required binding can stand in for a pattern discriminator, as in the
+ * reference validator: a code outside an extensible binding is still allowed,
+ * so such a binding cannot tell slices apart. A slice without a pattern, a
+ * fixed value or a required binding matches nothing.
+ */
+function discriminatingBindingValueSet(element: ElementDefinition): string | undefined {
+  return element.binding?.strength === 'required' ? element.binding.valueSet : undefined;
+}
+
+/** Only a snapshot is conclusive: a differential inherits discriminator values. */
+function lacksDiscriminatingValue(
+  profileSD: StructureDefinition,
+  sliceDef: SliceDefinition,
+  element: ElementDefinition,
+): boolean {
+  const discriminators = sliceDef.discriminator ?? [];
+  return (profileSD.snapshot?.element?.length ?? 0) > 0
+    && discriminators.length > 0
+    && discriminators.every(discriminator =>
+      (discriminator.type === 'pattern' || discriminator.type === 'value')
+      && (!discriminator.path || discriminator.path === '$this' || /^[A-Za-z]\w*$/.test(discriminator.path)))
+    && discriminators.some(({ path }) => {
+      if (!path || path === '$this') return sliceDef.pattern === undefined
+        && sliceDef.fixed === undefined && !discriminatingBindingValueSet(element);
+      const child = profileSD.snapshot?.element?.find(candidate => candidate.id === `${element.id}.${path}`);
+      // An omitted child may still inherit its assertion from an unresolved datatype profile.
+      if (!child || [element, child].some(candidate => getElementTypes(candidate).some(type => type.profile?.length))) return false;
+      return !sliceDef.childFixed?.has(path) && !sliceDef.childPatterns?.has(path)
+        && !sliceDef.childBindingValueSets?.has(path)
+        && getValueAtPath(sliceDef.fixed, path) === null
+        && getValueAtPath(sliceDef.pattern, path) === null;
+    });
+}
+
 async function mergeRootBindingCodes(
   sliceDef: SliceDefinition,
   element: ElementDefinition,
   valueSetLoader: ValueSetLoaderLike | null,
 ): Promise<void> {
+  const bindingValueSet = discriminatingBindingValueSet(element);
   if (
     sliceDef.pattern !== undefined
     || sliceDef.fixed !== undefined
-    || !element.binding?.valueSet
+    || !bindingValueSet
     || !valueSetLoader
   ) return;
 
-  sliceDef.bindingValueSet = element.binding.valueSet;
+  sliceDef.bindingValueSet = bindingValueSet;
   try {
     const codes = normalizeCodes(
-      await valueSetLoader.loadValueSet(element.binding.valueSet),
+      await valueSetLoader.loadValueSet(bindingValueSet),
     );
     if (codes.length > 0) {
       sliceDef.bindingCodes = new Set(codes);
       logRootBindingLoaded(codes.length, element.sliceName);
     }
   } catch {
-    logRootBindingLoadFailed(element.sliceName, element.binding.valueSet);
+    logRootBindingLoadFailed(element.sliceName, bindingValueSet);
   }
 }
 
@@ -255,4 +289,15 @@ function logRootBindingLoadFailed(sliceName: string | undefined, valueSet: strin
     ...sensitiveValueMetadata(sliceName),
     ...terminologyTargetMetadata(valueSet),
   });
+}
+
+function recordChildCardinality(
+  candidate: ElementDefinition,
+  relativePath: string,
+  childMin: Map<string, number>,
+  childMax: Map<string, number>,
+): void {
+  if ((candidate.min ?? 0) > 0) childMin.set(relativePath, candidate.min!);
+  const maximum = candidate.max === undefined || candidate.max === '*' ? NaN : Number(candidate.max);
+  if (Number.isInteger(maximum)) childMax.set(relativePath, maximum);
 }

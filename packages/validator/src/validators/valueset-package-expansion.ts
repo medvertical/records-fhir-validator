@@ -162,6 +162,44 @@ export async function collectUnenumerableSystemIncludes(
     return Array.from(systems);
 }
 
+/**
+ * The code systems a ValueSet's compose can draw codes from, or null when
+ * that cannot be known locally: an include names neither a system nor an
+ * available ValueSet, or the ValueSet has no compose. A coding whose system
+ * is not among them cannot be a member, whatever the expansion would hold.
+ */
+export async function collectComposeSystems(
+    valueSet: ValueSet,
+    resolver: ValueSetExpansionResolver,
+    visited: Set<string>,
+    depth: number,
+    preferredFhirMajor?: string,
+): Promise<Set<string> | null> {
+    if (depth >= MAX_COMPOSITION_DEPTH) return null;
+    if (valueSet.url && visited.has(valueSet.url)) return new Set();
+    if (valueSet.url) visited.add(valueSet.url);
+    const includes = valueSet.compose?.include ?? [];
+    if (includes.length === 0) return null;
+
+    const systems = new Set<string>();
+    for (const include of includes) {
+        const [system] = (include.system ?? '').split('|');
+        if (system) {
+            systems.add(system);
+            continue;
+        }
+        if (!include.valueSet?.length) return null;
+        for (const nestedUrl of include.valueSet) {
+            const nested = await resolver.loadValueSetResource(nestedUrl, fhirVersionForMajor(preferredFhirMajor));
+            if (!nested) return null;
+            const nestedSystems = await collectComposeSystems(nested, resolver, visited, depth + 1, preferredFhirMajor);
+            if (!nestedSystems) return null;
+            nestedSystems.forEach(nestedSystem => systems.add(nestedSystem));
+        }
+    }
+    return systems;
+}
+
 function isEnumerableCodeSystem(codeSystem: CodeSystem | null): boolean {
     if (!codeSystem) return false;
     // Non-complete content (fragment/example/not-present/supplement) means the

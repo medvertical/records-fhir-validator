@@ -38,15 +38,18 @@ describe('required binding with unenumerable whole-system includes', () => {
   interface PackageOptions {
     pinnedVersion?: string;
     pipedVersion?: string;
+    onlyUnenumerable?: boolean;
   }
 
   async function writePackage(root: string, options: PackageOptions): Promise<void> {
     const packagePath = path.join(root, 'example.pkg#1.0.0', 'package');
     await fs.mkdir(packagePath, { recursive: true });
-    const include: Array<Record<string, unknown>> = [
-      { system: LOCAL_SYSTEM, concept: [{ code: 'not-applicable' }] },
-      { system: MISSING_SYSTEM },
-    ];
+    const include: Array<Record<string, unknown>> = options.onlyUnenumerable
+      ? [{ system: MISSING_SYSTEM }]
+      : [
+        { system: LOCAL_SYSTEM, concept: [{ code: 'not-applicable' }] },
+        { system: MISSING_SYSTEM },
+      ];
     if (options.pinnedVersion) {
       include.push({ system: PINNED_SYSTEM, version: options.pinnedVersion });
     }
@@ -133,6 +136,26 @@ describe('required binding with unenumerable whole-system includes', () => {
 
     expect(outcome).toBe('unverified');
     expect(terminologyDiagnostics.unverifiedBindings.byReason['unenumerable-system-include']).toBe(1);
+  });
+
+  it('rejects a code from a system the compose never names, even without an expansion', async () => {
+    // The http:// twin of the https:// system the value set includes.
+    const otherSystem = MISSING_SYSTEM.replace('https://', 'http://');
+    const withLocalConcepts = await makeHarness();
+    const withoutExpansion = await makeHarness({ onlyUnenumerable: true });
+
+    await expect(resolveValueSetCodeBinding(
+      withLocalConcepts.deps, 'BB201', otherSystem, VALUE_SET_URL, 'required', 'R4',
+      'ExplanationOfBenefit.item[0].modifier[0]',
+    )).resolves.toBe('invalid');
+    await expect(resolveValueSetCodeBinding(
+      withoutExpansion.deps, 'BB201', otherSystem, VALUE_SET_URL, 'required', 'R4',
+      'ExplanationOfBenefit.item[0].modifier[0]',
+    )).resolves.toBe('invalid');
+    await expect(resolveValueSetCodeBinding(
+      withoutExpansion.deps, 'BB201', MISSING_SYSTEM, VALUE_SET_URL, 'required', 'R4',
+      'ExplanationOfBenefit.item[0].modifier[0]',
+    )).resolves.toBe('unverified');
   });
 
   it('keeps the authoritative error for a miss in a fully enumerated system', async () => {

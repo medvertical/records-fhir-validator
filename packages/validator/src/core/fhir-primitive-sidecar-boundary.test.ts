@@ -36,4 +36,14 @@ describe('FHIR primitive sidecar boundaries', () => {
     expect(isResolvedPrimitiveSidecarValue(sidecar)).toBe(false);
     expect(Reflect.ownKeys(sidecar)).toEqual(['extension']);
   });
+  it('preserves scalar values and resolves explicit null only with meaningful metadata', () => {
+    const sidecar = { extension: [{ url: 'data-absent-reason' }] };
+    for (const value of [false, 0, '']) {
+      expect(resolveFhirSegmentValue({ value, _value: sidecar }, 'value')).toBe(value);
+    }
+    expect(resolveFhirSegmentValue({ value: null }, 'value')).toBeNull();
+    expect(resolveFhirSegmentValue({ value: null, _value: {} }, 'value')).toBeNull();
+    expect(isResolvedPrimitiveSidecarValue(resolveFhirSegmentValue({ value: null, _value: sidecar }, 'value'))).toBe(true);
+  });
+
 });

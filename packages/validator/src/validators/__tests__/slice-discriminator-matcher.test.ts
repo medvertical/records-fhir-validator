@@ -169,6 +169,64 @@ describe('matchDiscriminator', () => {
     )).toBe(false);
   });
 
+  it('lets a required binding decide a $this pattern slice whatever its optional sub-extensions fix', () => {
+    // gematik Directory slices HealthcareService.characteristic by pattern on
+    // $this; physicalFeatures binds a value set and allows an optional note
+    // extension, whose fixed url holds only where the note is present.
+    const physicalFeatures: SliceDefinition = {
+      sliceName: 'physicalFeatures',
+      path: 'HealthcareService.characteristic',
+      min: 0,
+      max: '*',
+      bindingValueSet: 'https://gematik.de/fhir/directory/ValueSet/PhysicalFeaturesHealthCareServiceVS',
+      bindingCodes: new Set(['https://gematik.de/fhir/directory/CodeSystem/physicalFeatures|oepnv', 'oepnv']),
+      childFixed: new Map([
+        ['extension:additionalNote.url', 'https://gematik.de/fhir/directory/StructureDefinition/PhysicalFeaturesAdditionalNoteEX'],
+      ]),
+    };
+    const withoutNote = { coding: [{ system: 'https://gematik.de/fhir/directory/CodeSystem/physicalFeatures', code: 'oepnv' }] };
+
+    expect(matchDiscriminator(
+      withoutNote, physicalFeatures, { type: 'pattern', path: '$this' }, null, matchesPattern, codingMatchesBindingCodes,
+    )).toBe(true);
+  });
+
+  it('lets a fixed value pick out a pattern-discriminated slice as a pattern would', () => {
+    // Dental Data Exchange fixes the dental category on a slice of a slicing
+    // discriminated by pattern on $this; the problem-list category is not in it.
+    const dental: SliceDefinition = {
+      sliceName: 'dental', path: 'Condition.category', min: 1, max: '1',
+      fixed: { coding: [{ system: 'http://hl7.org/fhir/us/dental-data-exchange/CodeSystem/dental-category', code: 'dental', display: 'Dental' }] },
+    };
+    const byPattern = { type: 'pattern' as const, path: '$this' };
+    const problem = { coding: [{ system: 'http://terminology.hl7.org/CodeSystem/condition-category', code: 'problem-list-item' }], text: 'Problem' };
+    const category = { coding: [{ system: 'http://hl7.org/fhir/us/dental-data-exchange/CodeSystem/dental-category', code: 'dental', display: 'Dental' }] };
+
+    expect(matchDiscriminator(problem, dental, byPattern, null, matchesPattern, codingMatchesBindingCodes)).toBe(false);
+    expect(matchDiscriminator(category, dental, byPattern, null, matchesPattern, codingMatchesBindingCodes)).toBe(true);
+  });
+
+  it('types a Quantity-shaped choice value as the Quantity specialization a slice names', () => {
+    // MedMorph type-slices relatedAction.offset[x]; offsetDuration carries no type marker.
+    const offsetDuration: SliceDefinition = {
+      sliceName: 'offsetDuration', path: 'PlanDefinition.action.relatedAction.offset[x]', min: 0, max: '1', type: [{ code: 'Duration' }],
+    };
+    const duration = { value: 60, system: 'http://unitsofmeasure.org', code: 's' };
+
+    expect(matchDiscriminator(duration, offsetDuration, { type: 'type', path: '$this' }, null, matchesPattern, codingMatchesBindingCodes)).toBe(true);
+  });
+
+  it('tests a pathed type discriminator against the type of the child it names', () => {
+    // Radiation Dose Summary slices Observation.performer by type at `reference`,
+    // which the reference validator reads as `reference is string`.
+    const person: SliceDefinition = {
+      sliceName: 'irradiationAuthorizingPerson', path: 'Observation.performer', min: 1, max: '1',
+      type: [{ code: 'Reference', targetProfile: ['http://hl7.org/fhir/StructureDefinition/Practitioner'] }],
+    };
+
+    expect(matchDiscriminator({ reference: 'Practitioner/33' }, person, { type: 'type', path: 'reference' }, null, matchesPattern, codingMatchesBindingCodes, [person])).toBe(true);
+  });
+
   it('matches value $this slices by binding codes', () => {
     const element = {
       coding: [{
@@ -512,7 +570,7 @@ describe('matchDiscriminator', () => {
     )).toBe(false);
   });
 
-  it('matches resolve() value discriminators by resolved targetProfile when the slice has no direct child discriminator evidence', () => {
+  it('does not treat a target profile claim as resolve().code value evidence', () => {
     const targetProfile = 'https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-diagnostic-conclusion-grouper';
     const slice: SliceDefinition = {
       sliceName: 'diagnostic-conclusion',
@@ -535,7 +593,7 @@ describe('matchDiscriminator', () => {
       }),
       matchesPattern,
       codingMatchesBindingCodes,
-    )).toBe(true);
+    )).toBe(false);
   });
 
   it('does not match resolve() value discriminators by targetProfile when the resolved resource declares another profile', () => {

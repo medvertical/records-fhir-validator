@@ -1,6 +1,6 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import type { FhirResourceRecord } from '../reference/bundle-reference-types.js';
-import { getPrimaryDeclaredProfile } from './declared-profile-utils.js';
+import { getDeclaredProfiles } from './declared-profile-utils.js';
 import { awaitAllDrained } from '../utils/await-all-drained.js';
 
 export function rebaseContainedIssue(
@@ -32,15 +32,27 @@ export function rebaseContainedIssue(
   };
 }
 
+/**
+ * dom-6 asks the resource validated for narrative; the reference validator
+ * exempts a contained one (`(%rootResource != $this) or text.div.exists()`).
+ */
+export function isContainedNarrativeAdvice(issue: ValidationIssue): boolean {
+  return issue.code === 'dom-6';
+}
+
 export function isResolvedContainedReferenceIssue(
   issue: ValidationIssue,
   containingResource: unknown,
 ): boolean {
-  if (issue.code !== 'reference-contained-unresolved' && issue.code !== 'reference-ref1-invariant') return false;
-  const containedId = issue.details && typeof issue.details === 'object'
-    ? issue.details.containedId
-    : undefined;
-  if (typeof containedId !== 'string' || !isRecord(containingResource)) return false;
+  const details = issue.details && typeof issue.details === 'object' ? issue.details : undefined;
+  // A contained resource names its siblings with #id; only the container
+  // lists them.
+  const containedId = issue.code === 'contained-unresolved-canonical'
+    ? String(details?.reference ?? '').replace(/^#/, '')
+    : issue.code === 'reference-contained-unresolved' || issue.code === 'reference-ref1-invariant'
+      ? details?.containedId
+      : undefined;
+  if (typeof containedId !== 'string' || !containedId || !isRecord(containingResource)) return false;
   return Array.isArray(containingResource.contained) &&
     containingResource.contained.some(candidate =>
       isRecord(candidate) && candidate.id === containedId
@@ -75,12 +87,16 @@ export async function validateContainedResourceTree(
   const nested = await awaitAllDrained(resource.contained.map(async (candidate, index) => {
     if (!isRecord(candidate) || typeof candidate.resourceType !== 'string') return [];
 
-    const profileUrl = getPrimaryDeclaredProfile(candidate)
-      ?? `http://hl7.org/fhir/StructureDefinition/${candidate.resourceType}`;
-    const issues = await options.validate(candidate, profileUrl, options.recursionDepth + 1);
+    const declared = getDeclaredProfiles(candidate);
+    const profiles = declared.length ? declared : [`http://hl7.org/fhir/StructureDefinition/${candidate.resourceType}`];
+    const issues: ValidationIssue[] = [];
+    for (const profile of profiles) {
+      issues.push(...await options.validate(candidate, profile, options.recursionDepth + 1));
+    }
     return issues
       .filter(issue =>
         issue.aspect !== 'metadata' &&
+        !isContainedNarrativeAdvice(issue) &&
         !isResolvedContainedReferenceIssue(issue, resource)
       )
       .map(issue => rebaseContainedIssue(issue, parentResourceType, candidate, index));

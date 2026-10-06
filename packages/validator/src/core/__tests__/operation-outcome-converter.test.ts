@@ -309,10 +309,12 @@ describe('toOperationOutcome', () => {
     expect(outcome.issue[1].code).toBe('code-invalid');
   });
 
-  it('handles empty issue array', () => {
+  it('represents empty issue input as a neutral unverified finding', () => {
     const outcome = toOperationOutcome([]);
     expect(outcome.resourceType).toBe('OperationOutcome');
-    expect(outcome.issue).toEqual([]);
+    expect(outcome.issue).toHaveLength(1);
+    expect(outcome.issue[0]).toMatchObject({ severity: 'information', code: 'informational' });
+    expect(fromOperationOutcome(outcome)[0].details).toMatchObject({ validationComplete: false });
   });
 });
 
@@ -379,10 +381,12 @@ describe('fromOperationOutcome', () => {
     expect(issues[0].severity).toBe('info');
   });
 
-  it('handles empty/null outcome', () => {
-    expect(fromOperationOutcome({ resourceType: 'OperationOutcome', issue: [] })).toEqual([]);
-    expect(fromOperationOutcome(null as any)).toEqual([]);
-    expect(fromOperationOutcome(undefined as any)).toEqual([]);
+  it('keeps empty/null outcomes unverified', () => {
+    for (const outcome of [{ resourceType: 'OperationOutcome', issue: [] }, null, undefined]) {
+      const issues = fromOperationOutcome(outcome);
+      expect(issues).toHaveLength(1);
+      expect(issues[0]).toMatchObject({ severity: 'information', details: { validationComplete: false } });
+    }
   });
 
   it('uses location as path fallback when expression missing', () => {
@@ -457,18 +461,21 @@ describe('fromOperationOutcome', () => {
     });
   });
 
-  it('returns no findings for malformed OperationOutcome roots', () => {
-    expect(fromOperationOutcome({ issue: 'invalid' })).toEqual([]);
-    expect(fromOperationOutcome(42)).toEqual([]);
+  it('keeps malformed OperationOutcome roots unverified', () => {
+    for (const outcome of [{ issue: 'invalid' }, 42]) {
+      const issues = fromOperationOutcome(outcome);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].details).toMatchObject({ validationComplete: false });
+    }
   });
 });
 
 describe('detailedResultToOperationOutcome boundary', () => {
   it('ignores malformed result roots and issue entries', () => {
-    expect(detailedResultToOperationOutcome(null)).toEqual({
-      resourceType: 'OperationOutcome',
-      issue: [],
-    });
+    const unavailable = detailedResultToOperationOutcome(null);
+    expect(unavailable.issue).toHaveLength(1);
+    expect(unavailable.issue[0]).toMatchObject({ severity: 'information', code: 'informational' });
+    expect(fromOperationOutcome(unavailable)[0].details).toMatchObject({ validationComplete: false });
     expect(detailedResultToOperationOutcome({
       issues: [null, 'invalid', { severity: 'error', message: 'Failure' }],
     }).issue).toHaveLength(1);

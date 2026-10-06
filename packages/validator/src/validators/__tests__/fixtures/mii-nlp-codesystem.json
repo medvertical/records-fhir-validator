@@ -1,0 +1,137 @@
+{
+  "resourceType": "CodeSystem",
+  "status": "active",
+  "content": "complete",
+  "name": "MII_CS_Dokument_NLP_Processing_Status",
+  "id": "mii-cs-dokument-nlp-processing-status",
+  "title": "MII VS Dokument NLP Processing Status",
+  "description": "Status der NLP-Verarbeitung des referenzierten Dokuments",
+  "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-dokument/CodeSystem/mii-cs-dokument-nlp-processing-status",
+  "concept": [
+    {
+      "code": "unprocessed",
+      "display": "Original",
+      "definition": "Dokument im Original",
+      "designation": [
+        {
+          "language": "en",
+          "value": "Original document"
+        }
+      ]
+    },
+    {
+      "code": "preprocessed",
+      "display": "Vorverarbeitetes Dokument",
+      "definition": "Aufbereitung und Bearbeitung von Textinformation zur weiteren Verarbeitung",
+      "concept": [
+        {
+          "code": "format-change",
+          "display": "Formatänderung",
+          "definition": "Vorverarbeitung mit Transformation des Formats",
+          "designation": [
+            {
+              "language": "en",
+              "value": "Format changed"
+            }
+          ]
+        },
+        {
+          "code": "content-change",
+          "display": "Inhaltsänderung",
+          "definition": "Vorverarbeitung mit inhaltlicher Änderung, z.B. Headerentfernung",
+          "designation": [
+            {
+              "language": "en",
+              "value": "Content changed"
+            }
+          ]
+        }
+      ],
+      "designation": [
+        {
+          "language": "en",
+          "value": "Preprocessed document"
+        }
+      ]
+    },
+    {
+      "code": "annotated",
+      "display": "Annotiertes Dokument",
+      "definition": "Dokument mit Annotationen in Bezug auf deidentifizierende oder semantische Inhalte oder automatisierte Verfahren",
+      "concept": [
+        {
+          "code": "preanno",
+          "display": "Vorannotiertes Dokument",
+          "definition": "Maschinelle Vorannotation",
+          "designation": [
+            {
+              "language": "en",
+              "value": "Pre-annotated document"
+            }
+          ]
+        },
+        {
+          "code": "deid",
+          "display": "Deidentifiziertes Dokument",
+          "definition": "Annotationen zum Zwecke einer Deidentifizierung",
+          "designation": [
+            {
+              "language": "en",
+              "value": "De-identified document"
+            }
+          ]
+        },
+        {
+          "code": "semantic",
+          "display": "Semantisch annotiertes Dokument",
+          "definition": "Semantische Annotationen",
+          "designation": [
+            {
+              "language": "en",
+              "value": "Semantically annotated document"
+            }
+          ]
+        }
+      ],
+      "designation": [
+        {
+          "language": "en",
+          "value": "Annotated document"
+        }
+      ]
+    },
+    {
+      "code": "surrogated",
+      "display": "Surrogiertes Dokument",
+      "definition": "Ausgewählte Informationen des Dokuments wurden mit neuen Informationen ersetzt. In aller Regel im Zuge einer Pseudonymisierung. Zuvor annotierte Personal Identifier Konzepte wurden durch fiktive Konzepte irreversibel ersetzt. Das Dokument lässt keinen Rückschluss mehr auf die ersetzten Informationen zu.",
+      "designation": [
+        {
+          "language": "en",
+          "value": "Surrogated document"
+        }
+      ]
+    }
+  ],
+  "version": "2026.0.1",
+  "publisher": "Medizininformatik Initiative",
+  "contact": [
+    {
+      "telecom": [
+        {
+          "system": "url",
+          "value": "https://www.medizininformatik-initiative.de"
+        }
+      ]
+    }
+  ],
+  "experimental": false,
+  "language": "de-DE",
+  "caseSensitive": true,
+  "meta": {
+    "profile": [
+      "http://hl7.org/fhir/StructureDefinition/shareablecodesystem"
+    ]
+  },
+  "hierarchyMeaning": "is-a",
+  "count": 9
+}

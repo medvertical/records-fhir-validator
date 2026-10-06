@@ -84,7 +84,7 @@ runs:
           }
         '
         mkdir -p "${ACTION_PATH}/.runtime"
-        printf '%s\n' '{"private":true,"type":"module"}' > "${ACTION_PATH}/.runtime/package.json"
+        printf '%s\n' '{"private":true,"type":"module","overrides":{"@lhncbc/ucum-lhc":{"csv-parse":"7.0.2"}}}' > "${ACTION_PATH}/.runtime/package.json"
         npm install --prefix "${ACTION_PATH}/.runtime" --no-save --no-audit --no-fund \
           -- "@records-fhir/validator@${VALIDATOR_VERSION}"
         cp "${ACTION_PATH}/action-run.mjs" "${ACTION_PATH}/.runtime/action-run.mjs"

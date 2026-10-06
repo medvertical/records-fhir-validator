@@ -115,6 +115,7 @@ async function validateRequiredElement(
       profileUrl,
       structureDef,
       fhirVersion,
+      resource,
     );
   }
 
@@ -133,6 +134,7 @@ async function validateRequiredElement(
       profileUrl,
       structureDef,
       fhirVersion,
+      resource,
     ));
   }
   return issues;

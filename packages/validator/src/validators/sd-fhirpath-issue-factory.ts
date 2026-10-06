@@ -16,6 +16,7 @@ export function createConstraintViolation(
     profile: profileUrl,
     customMessage: constraint.human || `Constraint ${constraint.key} failed: ${constraint.expression}`,
     severityOverride: constraint.severity === 'error' ? 'error' : 'warning',
+    aspectOverride: 'profile',
     ruleId: constraint.key,
     details: {
       expression: constraint.expression,
@@ -42,6 +43,7 @@ export function createConstraintEvaluationError(
       `Constraint '${constraint.key}' could not be evaluated: ${message}. ` +
       'The underlying data was NOT checked against this constraint.',
     severityOverride: 'information',
+    aspectOverride: 'profile',
     ruleId: constraint.key,
     details: {
       expression: constraint.expression,
@@ -50,6 +52,7 @@ export function createConstraintEvaluationError(
       // The data was not checked, so the result is incomplete rather than
       // conformant; the quality lanes read this to tell the two apart.
       validationStatus: 'incomplete',
+      validationComplete: false,
     },
   });
 }

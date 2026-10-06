@@ -76,14 +76,13 @@ export function getBundleEntryRequiredProfile(
   const slicing = structureDef?.snapshot?.element.find(element =>
     element.path === 'Bundle.entry' && !element.sliceName,
   )?.slicing;
-  const permitsUnmatchedProfiles = slicing?.rules !== 'closed' &&
-    slicing?.discriminator?.some(discriminator =>
-      discriminator.type === 'profile' && discriminator.path === 'resource',
-    );
+  // A profile discriminator assigns members by conformance, not resource type
+  // or slice cardinality. Its minimum and closed rule belong to slicing.
+  if (slicing?.discriminator?.some(discriminator =>
+    discriminator.type === 'profile' && discriminator.path === 'resource',
+  )) return undefined;
   const profiles = new Set(
     getBundleEntrySliceDefinitions(structureDef)
-      // An open profile discriminator allows entries outside optional slices.
-      .filter(slice => !permitsUnmatchedProfiles || slice.min > 0)
       .filter(slice => childMatchesBundleEntrySliceCandidate(child, slice))
       .flatMap(slice => slice.profiles),
   );

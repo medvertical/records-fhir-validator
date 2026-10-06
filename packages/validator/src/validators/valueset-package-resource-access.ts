@@ -1,3 +1,6 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { TerminologySourceContexts } from './terminology-source-context.js';
+import { ValueSetPackagePublicationContexts } from './valueset-package-publication-context.js';
 /**
  * Boundary for resolving terminology resources from FHIR package stores: the
  * host's tenant-scoped packages first, then the filesystem stores.
@@ -7,6 +10,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveDefaultBundledProfilesPath } from '../core/sd-loader-bundled-path.js';
 import { logger } from '../logger.js';
+import { findInExampleFolders } from './valueset-package-example-folders.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import {
     getProfileSource,
@@ -28,12 +32,17 @@ import {
 interface CanonicalResource {
     url?: string;
     version?: string;
+    resourceType?: string;
 }
 
 export class ValueSetPackageResourceAccess {
+    private readonly lookupStatus = new AsyncLocalStorage<{ blocked: boolean }>();
     private readonly packageIndexCache = new ValueSetPackageIndexCache();
+    private readonly publicationContexts = new ValueSetPackagePublicationContexts();
     private readonly explicitPackageDirectories: string[] | null;
-    private sourceContext: ProfileSourceContext | undefined;
+    private sourceContexts = new TerminologySourceContexts();
+
+    bindSourceContexts(contexts: TerminologySourceContexts): void { this.sourceContexts = contexts; }
 
     constructor(packageDirectories?: string[]) {
         this.explicitPackageDirectories = packageDirectories ? [...packageDirectories] : null;
@@ -47,28 +56,43 @@ export class ValueSetPackageResourceAccess {
      */
     getPackageDirectories(): string[] {
         if (this.explicitPackageDirectories) return [...this.explicitPackageDirectories];
-        return resolveValueSetPackageDirectories();
+        const snapshot = this.sourceContexts.current();
+        return snapshot ? Array.from(new Set([...(snapshot.packageDirectories ?? []), ...defaultPackageDirectories()]))
+            : resolveValueSetPackageDirectories();
     }
 
     /**
      * Bind lookups to the host's tenant package scope. Without an organization
-     * the host tier stays off, so a runtime shared by embedders never answers
-     * one tenant's lookup from another tenant's packages. Returns true when
-     * the tenant changed, which invalidates misses recorded before.
+     * the host tier stays off. Every changed source-selection field invalidates
+     * misses recorded under the previous defaults.
      */
     setSourceContext(context: ProfileSourceContext | undefined): boolean {
-        const next = context?.organizationId === undefined ? undefined : { ...context };
-        const changed = next?.organizationId !== this.sourceContext?.organizationId;
-        this.sourceContext = next;
-        return changed;
+        return this.sourceContexts.set(context);
     }
 
     getSourceContext(): ProfileSourceContext | undefined {
-        return this.sourceContext ? { ...this.sourceContext } : undefined;
+        const context = this.sourceContexts.context();
+        return context ? { ...context } : undefined;
     }
 
     clear(): void {
         this.packageIndexCache.clear();
+    }
+
+    async findResourceWithStatus<T extends CanonicalResource>(
+        ...args: Parameters<ValueSetPackageResourceAccess['findResource']>
+    ): Promise<{ resource: T | null; blocked: boolean }> {
+        const status = { blocked: false };
+        return this.lookupStatus.run(status, async () => ({ resource: await this.findResource<T>(...args), blocked: status.blocked }));
+    }
+
+    private markLookupBlocked(): void {
+        const status = this.lookupStatus.getStore();
+        if (status) status.blocked = true;
+    }
+
+    getPublicationContext(resource: object) {
+        return this.publicationContexts.get(resource);
     }
 
     async findInPackages<T extends CanonicalResource>(
@@ -85,6 +109,7 @@ export class ValueSetPackageResourceAccess {
             preferredFhirMajor,
             requestedVersion,
             candidatePackages,
+            this.publicationContexts.observe,
         );
     }
 
@@ -101,6 +126,8 @@ export class ValueSetPackageResourceAccess {
             preferredFhirMajor,
             requestedVersion,
             this.packageIndexCache,
+            undefined,
+            this.publicationContexts.observe,
         );
     }
 
@@ -124,6 +151,11 @@ export class ValueSetPackageResourceAccess {
         const local = await this.findInLocalStores<T>(
             canonical, candidateFiles, resourceType, preferredFhirMajor, requestedVersion,
         );
+        // A package declaration cannot establish the kind of its selected body.
+        if (local && !isHostResource<T>(local, canonical, resourceType)) {
+            this.markLookupBlocked();
+            return null;
+        }
         if (local && (!requestedVersion || local.version === requestedVersion)) return local;
 
         if (requestedVersion) {
@@ -152,7 +184,9 @@ export class ValueSetPackageResourceAccess {
         // scan.
         const directories = this.getPackageDirectories();
         const candidatePackages = await packagesDeclaringCanonical(directories, filePrefix, canonical);
-        if (candidatePackages && candidatePackages.size === 0) return null;
+        if (candidatePackages && candidatePackages.size === 0) {
+            return findInExampleFolders<T>(directories, filePrefix, canonical, requestedVersion, () => this.markLookupBlocked());
+        }
 
         // When the index names the files, the best candidate is decided from it
         // and only that file is opened. Guessing well-known names instead read
@@ -161,8 +195,9 @@ export class ValueSetPackageResourceAccess {
             directories, filePrefix, canonical, preferredFhirMajor, requestedVersion,
         );
         if (declared) {
-            const fromIndex = await readDeclaredResource<T>(declared, canonical, requestedVersion);
+            const fromIndex = await readDeclaredResource<T>(declared, canonical, requestedVersion, this.publicationContexts.observe);
             if (fromIndex) return fromIndex;
+            if (declared.length) this.markLookupBlocked();
         }
 
         const named = await this.findInPackages<T>(
@@ -173,7 +208,7 @@ export class ValueSetPackageResourceAccess {
         const scanned = await this.findByCanonicalScan<T>(
             canonical, filePrefix, preferredFhirMajor, requestedVersion,
         );
-        if (!named) return scanned;
+        if (!named) return scanned ?? findInExampleFolders<T>(directories, filePrefix, canonical, requestedVersion, () => this.markLookupBlocked());
         return scanned?.version === requestedVersion ? scanned : named;
     }
 
@@ -182,15 +217,18 @@ export class ValueSetPackageResourceAccess {
         resourceType: string,
         requestedVersion: string | undefined,
     ): Promise<T | null> {
-        const context = this.sourceContext;
-        const source = getProfileSource();
-        if (!context || !source.findCanonicalResource) return null;
+        const context = this.sourceContexts.context();
+        const source = this.sourceContexts.current()?.source ?? getProfileSource();
+        if (context?.organizationId === undefined || !source.findCanonicalResource) return null;
         try {
             const resource = await source.findCanonicalResource(
                 canonical, resourceType, requestedVersion, context,
             );
+            if (resource !== null && resource !== undefined && !isHostResource<T>(resource, canonical, resourceType))
+                this.markLookupBlocked();
             return isHostResource<T>(resource, canonical, resourceType) ? resource : null;
         } catch (error) {
+            this.markLookupBlocked();
             logger.debug('[ValueSetPackageResourceAccess] Host package lookup failed', {
                 resourceType,
                 ...validationFailureMetadata(error),

@@ -8,6 +8,43 @@ import {
 import { validationIssue as issue } from "./validation-issue-test-builders";
 
 describe("validation issue dedupe regressions", () => {
+  it("reports one wrong display once whether its extension is named by position or by url", () => {
+    const display = (path: string, severity: "error" | "warning", aspect: "terminology" | "profile") => issue({
+      aspect,
+      code: "terminology-display-mismatch",
+      severity,
+      path,
+      resourceType: "Patient",
+      message: "Wrong Display Name 'Other' for urn:oid:2.16.840.1.113883.6.238#2135-2",
+      details: { fieldPath: path, system: "urn:oid:2.16.840.1.113883.6.238", code: "2135-2", display: "Other" },
+    });
+
+    expect(dedupeIssues([
+      display("Patient.extension[0].extension[0].valueCoding.display", "warning", "terminology"),
+      display("Patient.extension[0].extension[url='ombCategory'].valueCoding.display", "error", "profile"),
+    ]).map(finding => finding.severity)).toEqual(["error"]);
+  });
+
+  it("keeps the same invalid uri in two repeats as two findings", () => {
+    const invalidUri = (path: string) => issue({
+      aspect: "structural",
+      code: "structural-invalid-uri",
+      severity: "error",
+      path,
+      resourceType: "Patient",
+      message: "URI 'not a uri' contains whitespace and is not a valid absolute URI",
+      details: { fieldPath: path, value: "not a uri" },
+    });
+
+    expect(dedupeIssues([
+      invalidUri("Patient.identifier[0].system"),
+      invalidUri("Patient.identifier[1].system"),
+    ]).map(finding => finding.path)).toEqual([
+      "Patient.identifier[0].system",
+      "Patient.identifier[1].system",
+    ]);
+  });
+
   it("can remove exact child copies without re-running cross-code suppression", () => {
     const dom3 = issue({
       aspect: "profile",

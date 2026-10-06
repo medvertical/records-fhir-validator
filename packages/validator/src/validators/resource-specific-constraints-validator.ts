@@ -7,6 +7,7 @@ import { createValidationIssue } from '../issues/index.js';
 import { logger } from '../logger.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { validateCompositionConstraints } from './resource-specific-composition-constraints.js';
+import { validateMeasureDefinition } from './measure-definition-rules.js';
 import { validateGermanMedicationDosage } from './resource-specific-medication-dosage.js';
 import { validateObservationConstraints } from './resource-specific-observation-constraints.js';
 
@@ -78,6 +79,8 @@ export class ResourceSpecificConstraintsValidator {
         return validateCompositionConstraints(resource);
       case 'Observation':
         return validateObservationConstraints(resource);
+      case 'Measure':
+        return validateMeasureDefinition(resource);
       case 'MedicationRequest':
       case 'MedicationDispense':
       case 'MedicationStatement':

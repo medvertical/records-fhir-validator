@@ -5,10 +5,11 @@ import {
 } from './constraint-expression-cache.js';
 import { createMemberOfFunction } from './fhirpath-custom-functions.js';
 import { ValueSetCache } from './valueset-cache.js';
+import { FHIRPathTerminologyUnverifiedError } from './fhirpath-terminology-types.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 type ObjectRecord = Record<string, unknown>;
-type ValueSetLoader = Pick<ValueSetPackageLoader, 'loadValueSet'>;
+type ValueSetLoader = Pick<ValueSetPackageLoader, 'loadValueSet' | 'hasIncompleteExpansion'>;
 
 export type MemberOfPrecheckResult = boolean | null;
 
@@ -47,14 +48,60 @@ export async function evaluateSimpleMemberOfExists(
 
   const rawPath = stripResourcePrefix(match[1], resourceType);
   const valueSetUrl = match[2];
-  const codes = await loader.loadValueSet(valueSetUrl, fhirVersion);
-  if (!codes || codes.length === 0) return deferUnavailableTerminology ? null : true;
-
-  const acceptedCodes = new Set(codes);
   const values = getValuesAtPath(resource, rawPath);
   if (values.length === 0) return false;
 
-  return values.some(value => valueMatchesAcceptedCode(value, acceptedCodes));
+  const codes = await loader.loadValueSet(valueSetUrl, fhirVersion);
+  if (!codes || codes.length === 0) {
+    if (deferUnavailableTerminology) return null;
+    throw new FHIRPathTerminologyUnverifiedError(`ValueSet '${valueSetUrl}' membership could not be verified from local evidence`);
+  }
+
+  const acceptedCodes = new Set(codes);
+  if (values.some(value => valueMatchesAcceptedCode(value, acceptedCodes))) return true;
+  return verifyLocalMembershipMiss(false, [valueSetUrl], loader, fhirVersion, deferUnavailableTerminology);
+}
+
+/** Declared expansion totals must not turn a partial local miss into a clinical failure. */
+export async function evaluateCachedMemberOf(
+  expression: string,
+  context: unknown,
+  cache: ValueSetCache,
+  loader: ValueSetLoader,
+  fhirVersion: FhirVersion,
+  deferUnavailableTerminology: boolean,
+  expressionCache?: SynchronousFHIRPathExpressionCache,
+): Promise<MemberOfPrecheckResult> {
+  const result = evaluateTrailingMemberOf(expression, context, fhirVersion, cache, expressionCache)
+    ?? evaluateOptionalMemberOfUnion(expression, context, cache, fhirVersion, expressionCache);
+  const trailing = expression.match(TRAILING_MEMBER_OF_PATTERN);
+  const optional = parseOptionalMemberOfUnion(expression);
+  const valueSetUrls = trailing ? [trailing[2]] : optional?.valueSetUrls ?? [];
+  if (result === null && !deferUnavailableTerminology
+    && (trailing || optional)) {
+    throw new FHIRPathTerminologyUnverifiedError(
+      `ValueSet membership could not be verified from local evidence for ${valueSetUrls.join(', ')}`,
+    );
+  }
+  return verifyLocalMembershipMiss(result, valueSetUrls, loader, fhirVersion, deferUnavailableTerminology);
+}
+
+async function verifyLocalMembershipMiss(
+  result: MemberOfPrecheckResult,
+  valueSetUrls: string[],
+  loader: ValueSetLoader,
+  fhirVersion: FhirVersion,
+  deferUnavailableTerminology: boolean,
+): Promise<MemberOfPrecheckResult> {
+  if (result !== false) return result;
+  for (const valueSetUrl of valueSetUrls) {
+    if (!await loader.hasIncompleteExpansion(valueSetUrl, fhirVersion)) continue;
+    if (deferUnavailableTerminology) return null;
+    throw new FHIRPathTerminologyUnverifiedError(
+      `ValueSet '${valueSetUrl}' membership could not be verified from an incomplete local expansion`,
+    );
+  }
+  return false;
 }
 
 /**
@@ -71,23 +118,10 @@ export function rewriteLegacyValueSetInExists(expression: string): string {
 }
 
 /**
- * Evaluates a boolean constraint ending in `<prefix>.memberOf('<ValueSet>')`,
- * e.g. `address.where(country = 'XX').country.memberOf('.../iso3166-1-2')`.
- *
- * fhirpath.js only exposes `memberOf` as an async function, which our
- * synchronous compiled-expression path rejects ("asynchronous function is not
- * allowed"). So we split off the trailing `.memberOf(url)`, evaluate the prefix
- * synchronously via fhirpath.js (everything before `.memberOf` is ordinary
- * FHIRPath), and apply the shared synchronous `memberOfFunction` (ISO-3166
- * hardcoded sets + expanded-ValueSet cache) to each resulting value.
- *
- * Returns:
- *   - `true`  — every selected value is a member (or no values were selected,
- *               which FHIRPath treats as vacuously satisfied)
- *   - `false` — at least one selected value is a determinate non-member
- *   - `null`  — not a trailing-memberOf expression, or membership is
- *               undeterminable (no ISO match, no cached expansion) — caller
- *               falls back to its normal evaluation/skip path
+ * The synchronous expression cache cannot invoke fhirpath.js's async memberOf.
+ * Splitting its trailing call lets the FHIRPath model select the prefix values
+ * before local membership evaluation. Empty selections satisfy constraints;
+ * unknown membership remains null for the caller to defer or mark incomplete.
  */
 export function evaluateTrailingMemberOf(
   expression: string,
@@ -119,60 +153,86 @@ export function evaluateTrailingMemberOf(
   if (selectedValues.length === 0) return true;
 
   let sawDeterminate = false;
+  let sawUndetermined = false;
   for (const value of selectedValues) {
     const outcome = createMemberOfFunction(cache).fn([value], [valueSetUrl]);
-    // memberOfFunction returns [] when membership is undeterminable.
-    if (!Array.isArray(outcome) || outcome.length === 0) continue;
+    if (!Array.isArray(outcome) || outcome.length === 0) {
+      sawUndetermined = true;
+      continue;
+    }
     sawDeterminate = true;
     if (outcome[0] === false) return false;
   }
 
-  // If nothing was determinable, defer to the caller rather than asserting pass.
-  return sawDeterminate ? true : null;
+  return sawDeterminate && !sawUndetermined ? true : null;
 }
 
-/**
- * Evaluates optional element membership constraints of the form:
- *
- *   country.empty() or (
- *     country.memberOf('...iso3166-1-2') or
- *     country.memberOf('...iso3166-1-3')
- *   )
- *
- * These constraints are often attached to a complex element such as
- * `Patient.address`, so the caller must pass the already-resolved element
- * context, not the resource root.
- */
+/** Evaluate optional membership on the already resolved element context. */
 export function evaluateOptionalMemberOfUnion(
   expression: string,
   context: unknown,
   cache: ValueSetCache = new ValueSetCache(),
+  fhirVersion: FhirVersion = 'R4',
+  expressionCache: SynchronousFHIRPathExpressionCache = new ConstraintExpressionCache(),
 ): MemberOfPrecheckResult {
-  const parsed = parseOptionalMemberOfUnion(expression);
-  if (!parsed) return null;
-
-  const values = getValuesAtPath(context, parsed.path);
+  const selected = selectOptionalMemberOfUnion(expression, context, fhirVersion, expressionCache);
+  if (!selected) return null;
+  const { values, valueSetUrls } = selected;
   if (values.length === 0) return true;
 
+  let sawUndetermined = false;
   for (const value of values) {
-    let sawDeterminateMembership = false;
+    let unknownAlternative = false;
     let matchedAnyValueSet = false;
 
-    for (const valueSetUrl of parsed.valueSetUrls) {
+    for (const valueSetUrl of valueSetUrls) {
       const outcome = createMemberOfFunction(cache).fn([value], [valueSetUrl]);
-      if (!Array.isArray(outcome) || outcome.length === 0) continue;
-      sawDeterminateMembership = true;
+      if (!Array.isArray(outcome) || outcome.length === 0) {
+        unknownAlternative = true;
+        continue;
+      }
       if (outcome[0] === true) {
         matchedAnyValueSet = true;
         break;
       }
     }
 
-    if (!sawDeterminateMembership) return null;
-    if (!matchedAnyValueSet) return false;
+    if (matchedAnyValueSet) continue;
+    if (!unknownAlternative) return false;
+    sawUndetermined = true;
   }
 
-  return true;
+  return sawUndetermined ? null : true;
+}
+
+export function isOptionalMemberOfUnion(expression: string): boolean {
+  return parseOptionalMemberOfUnion(expression) !== null;
+}
+
+export function selectOptionalMemberOfUnion(
+  expression: string,
+  context: unknown,
+  fhirVersion: FhirVersion,
+  expressionCache: SynchronousFHIRPathExpressionCache = new ConstraintExpressionCache(),
+): { values: unknown[]; valueSetUrls: string[] } | null {
+  const parsed = parseOptionalMemberOfUnion(expression);
+  if (!parsed) return null;
+  // Indexers select FHIRPath collections, including singleton primitive values.
+  try {
+    const compiled = expressionCache.getOrCompile(parsed.path, fhirVersion);
+    if (!compiled) return null;
+    const selected = compiled(context, { resource: context, rootResource: context }, { traceFn: () => {} });
+    const values = Array.isArray(selected) ? selected : selected == null ? [] : [selected];
+    // The compiler's output drops primitive nodes without values. Defer to the
+    // whole expression when that would hide present metadata-only elements.
+    const count = expressionCache.getOrCompile(`(${parsed.path}).count()`, fhirVersion);
+    if (!count || count(context, { resource: context, rootResource: context }, { traceFn: () => {} })[0] !== values.length) {
+      return null;
+    }
+    return { values, valueSetUrls: parsed.valueSetUrls };
+  } catch {
+    return null;
+  }
 }
 
 function parseOptionalMemberOfUnion(
@@ -275,7 +335,7 @@ function codingMatchesAcceptedCode(coding: unknown, acceptedCodes: Set<string>):
   const systemCode = typeof coding.system === 'string'
     ? `${coding.system}|${coding.code}`
     : null;
-  return acceptedCodes.has(bareCode) || (systemCode !== null && acceptedCodes.has(systemCode));
+  return systemCode !== null ? acceptedCodes.has(systemCode) : acceptedCodes.has(bareCode);
 }
 
 function isObjectRecord(value: unknown): value is ObjectRecord {

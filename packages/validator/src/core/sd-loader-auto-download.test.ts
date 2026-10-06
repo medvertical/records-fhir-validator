@@ -90,12 +90,12 @@ describe('attemptAutoDownload package pins', () => {
     let registryCalls = 0;
 
     const result = await attemptAutoDownload(
-      'http://hl7.org/fhir/5.0/StructureDefinition/extension-Observation.value',
+      'http://hl7.org/fhir/5.0/StructureDefinition/vitalsigns',
       {
         registryClient: {
           detectPackageForProfile: async () => {
             registryCalls++;
-            return 'hl7.fhir.uv.xver-r5.r4.r4';
+            return 'hl7.fhir.r5.core';
           },
         } as any,
         packageDownloader: {
@@ -103,7 +103,7 @@ describe('attemptAutoDownload package pins', () => {
             throw new Error('should not download');
           },
         } as any,
-        allowedPackages: ['hl7.fhir.uv.xver-r5.r4.r4'],
+        allowedPackages: ['hl7.fhir.r5.core'],
         packageSources: ['/tmp/records-fhir-validator-test'],
         cache: new Map(),
         availableProfiles: new Set(),

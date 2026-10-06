@@ -123,7 +123,7 @@ describe('BundleValidator fullUrl enforcement', () => {
     ]);
   });
 
-  it('flags missing fullUrl as warning in collection Bundle', async () => {
+  it('flags missing fullUrl as error in collection Bundle', async () => {
     const bundle = {
       resourceType: 'Bundle',
       type: 'collection',
@@ -135,7 +135,28 @@ describe('BundleValidator fullUrl enforcement', () => {
     const issues = await validator.validateBundle(bundle);
     const fullUrlIssues = issues.filter(i => i.code === 'bundle-entry-missing-fullurl');
     expect(fullUrlIssues.length).toBe(1);
-    expect(fullUrlIssues[0].severity).toBe('warning');
+    expect(fullUrlIssues[0].severity).toBe('error');
+  });
+
+  // R5 exempts "the results of a search or history operation".
+  it.each(['searchset', 'history'])('only warns about a missing fullUrl in a %s Bundle', async (type) => {
+    const issues = await validator.validateBundle({
+      resourceType: 'Bundle',
+      type,
+      entry: [{ resource: { resourceType: 'Patient', id: 'p1' } }],
+    });
+
+    expect(issues.filter(i => i.code === 'bundle-entry-missing-fullurl').map(i => i.severity)).toEqual(['warning']);
+  });
+
+  it.each(['batch-response', 'transaction-response'])('requires no fullUrl in a %s Bundle', async (type) => {
+    const issues = await validator.validateBundle({
+      resourceType: 'Bundle',
+      type,
+      entry: [{ resource: { resourceType: 'Patient', id: 'p1' }, response: { status: '200 OK' } }],
+    });
+
+    expect(issues.filter(i => i.code === 'bundle-entry-missing-fullurl')).toEqual([]);
   });
 
   it('does not flag an empty searchset Bundle without entries', async () => {

@@ -65,7 +65,7 @@ describe('SnapshotGenerator', () => {
     });
     
     it('should cache generated snapshots', async () => {
-      vi.spyOn(sdLoader, 'loadProfile').mockResolvedValue({
+      vi.spyOn(sdLoader, 'loadReferencedProfile').mockResolvedValue({
         resourceType: 'StructureDefinition',
         url: 'http://hl7.org/fhir/StructureDefinition/Patient',
         name: 'Patient',
@@ -196,7 +196,7 @@ describe('SnapshotGenerator', () => {
         },
       };
 
-      vi.spyOn(sdLoader, 'loadProfile').mockImplementation(async (url: string) => {
+      vi.spyOn(sdLoader, 'loadReferencedProfile').mockImplementation(async (url: string) => {
         if (url === childProfile.baseDefinition) return baseProfile;
         if (url === baseProfile.baseDefinition) return observationCore;
         return null;
@@ -277,7 +277,7 @@ describe('SnapshotGenerator', () => {
         },
       };
 
-      vi.spyOn(sdLoader, 'loadProfile').mockResolvedValue(baseProfile);
+      vi.spyOn(sdLoader, 'loadReferencedProfile').mockResolvedValue(baseProfile);
 
       const snapshot = await generator.generateSnapshot(childProfile, { cacheResults: false });
       const systolicLoinc = snapshot.find(e => e.id === 'Observation.component:SystolicBP.code.coding:loinc');
@@ -323,7 +323,7 @@ describe('SnapshotGenerator', () => {
           ],
         },
       };
-      vi.spyOn(sdLoader, 'loadProfile').mockResolvedValue(baseProfile);
+      vi.spyOn(sdLoader, 'loadReferencedProfile').mockResolvedValue(baseProfile);
 
       const snapshot = await generator.generateSnapshot(profile, { cacheResults: false });
 
@@ -362,7 +362,7 @@ describe('SnapshotGenerator', () => {
           valueAlternatives: ['http://example.org/allowed-absence'],
         }] },
       } as StructureDefinition;
-      vi.spyOn(sdLoader, 'loadProfile').mockResolvedValue(baseProfile);
+      vi.spyOn(sdLoader, 'loadReferencedProfile').mockResolvedValue(baseProfile);
 
       const snapshot = await generator.generateSnapshot(profile, { cacheResults: false });
       const active = snapshot.find(element => element.path === 'Patient.active');
@@ -396,7 +396,7 @@ describe('SnapshotGenerator', () => {
         type: 'Patient',
         snapshot: { element: [{ id: 'Patient', path: 'Patient' } as ElementDefinition] },
       };
-      vi.spyOn(sdLoader, 'loadProfile').mockResolvedValue(baseProfile);
+      vi.spyOn(sdLoader, 'loadReferencedProfile').mockResolvedValue(baseProfile);
       const canonical = 'http://example.org/Profile/shared';
 
       await generator.generateSnapshot({

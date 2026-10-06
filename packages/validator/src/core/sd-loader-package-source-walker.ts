@@ -1,5 +1,7 @@
+import { readStablePackageFile } from '../package/package-file-read-authority.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { readProfileFileResult } from './sd-loader-package-profile-reader.js';
 import type { StructureDefinition } from './structure-definition-types.js';
 import { logger } from '../logger.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
@@ -7,7 +9,6 @@ import { packageTargetMetadata } from '../package/package-artifact-policy.js';
 import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
 import { selectPackageVersions } from './sd-loader-package-selection.js';
 
-const MAX_PACKAGE_PROFILE_BYTES = 32 * 1024 * 1024;
 const MAX_PACKAGE_INDEX_BYTES = 8 * 1024 * 1024;
 
 export interface PackageSourceWalkOptions {
@@ -55,18 +56,14 @@ export async function scanPackageDirectory(
     }
 
     for (const file of files) {
-      const filePath = path.join(packagePath, file.name);
-
       try {
-        const stats = await fs.stat(filePath);
-        if (stats.size > MAX_PACKAGE_PROFILE_BYTES) {
-          logger.warn('[SDLoader] Skipping oversized package profile file', {
-            size: stats.size,
-          });
+        const read = await readProfileFileResult(packagePath, file.name);
+        if (read.status === 'unavailable') {
+          logger.debug('[SDLoader] Package profile file is unavailable', { cause: read.cause });
           continue;
         }
-        const content = await fs.readFile(filePath, 'utf-8');
-        const sd = parsePackageJson(content) as StructureDefinition;
+        if (read.status !== 'read') continue;
+        const sd = read.profile;
 
         if (sd?.resourceType === 'StructureDefinition' && sd.url) {
           availableProfiles.add(sd.url);
@@ -92,10 +89,9 @@ export async function scanPackageDirectory(
 
 async function readIndexedProfiles(packagePath: string, files: string[]): Promise<Set<string> | null> {
   try {
-    const indexPath = path.join(packagePath, '.index.json');
-    const stats = await fs.stat(indexPath);
-    if (!stats.isFile() || stats.size > MAX_PACKAGE_INDEX_BYTES) return null;
-    const index = parsePackageJson(await fs.readFile(indexPath, 'utf-8'));
+    const read = await readStablePackageFile(packagePath, '.index.json', MAX_PACKAGE_INDEX_BYTES);
+    if (read.status !== 'read') return null;
+    const index = parsePackageJson(read.bytes.toString('utf8'));
     if (!index || typeof index !== 'object' || !('files' in index) || !Array.isArray(index.files)) return null;
 
     const indexedFiles = new Set<string>();
@@ -194,6 +190,25 @@ export async function walkPackageSource(
       }
     } catch {
       // A missing or inaccessible package subdirectory is not a scan failure.
+    }
+  }
+
+  // Deduplication keeps one release per package for the scan, but canonicals
+  // only an older installed release carries must stay discoverable so the
+  // loader, which searches every installed release, can reach them: one a
+  // newer release dropped (US Core 9 retired us-core-implantable-device), or a
+  // whole earlier IG line (ISiK's former …/isik/v2/Basismodul). Whatever such
+  // a profile references resolves at the releases its own package depends on
+  // (profile-reference-pins.ts), not at the newest ones. Pinned packages keep
+  // only their pinned release eligible.
+  for (const packageName of skippedPackages) {
+    const baseName = parsePackageName(packageName)?.baseName;
+    if (!baseName || Object.hasOwn(options.packageVersionPins, baseName)) continue;
+    const olderProfiles = new Set<string>();
+    await scanPackageDirectory(path.join(sourcePath, packageName, 'package'), olderProfiles);
+    for (const profileUrl of olderProfiles) {
+      sourceProfiles.add(profileUrl);
+      availableProfiles.add(profileUrl);
     }
   }
 

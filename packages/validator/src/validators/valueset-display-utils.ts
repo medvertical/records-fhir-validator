@@ -1,5 +1,3 @@
-import type { ValidationIssue } from '@records-fhir/validation-types';
-
 export type BindingStrength = 'required' | 'extensible' | 'preferred' | 'example';
 
 export interface CodeInfo {
@@ -8,14 +6,6 @@ export interface CodeInfo {
   version?: string;
   display?: string;
   codingIndex?: number;
-}
-
-export function displayMismatchSeverityForBinding(
-  bindingStrength?: BindingStrength,
-): ValidationIssue['severity'] {
-  if (bindingStrength === 'required') return 'error';
-  if (bindingStrength === 'preferred') return 'information';
-  return 'warning';
 }
 
 export function resourceTypeFromElementPath(elementPath: string): string {
@@ -35,17 +25,28 @@ export function displaysEquivalent(expected: string, actual: string): boolean {
   return normalizeDisplay(expected) === normalizeDisplay(actual);
 }
 
+/**
+ * LOINC and SNOMED CT carry more designations than this validator can
+ * enumerate; a terminology server confirms their displays, so formatting
+ * variants of a known designation are tolerated.
+ */
+const DESIGNATION_TOLERANT_SYSTEMS = new Set(['http://loinc.org', 'http://snomed.info/sct']);
+
+/**
+ * Every other code system is matched like the reference validator does: the
+ * display must equal the concept's display or a designation, ignoring case
+ * only — `Next of Kin` is not `Next-of-Kin`.
+ */
 export function displaysEquivalentForCodeInfo(
   expected: string,
   actual: string,
   codeInfo: Pick<CodeInfo, 'system' | 'code'>,
 ): boolean {
+  if (!DESIGNATION_TOLERANT_SYSTEMS.has(codeInfo.system ?? '')) {
+    return expected.toLocaleLowerCase() === actual.toLocaleLowerCase();
+  }
   if (displaysEquivalent(expected, actual)) return true;
   if (displayOperators(expected) !== displayOperators(actual)) return false;
-
-  if (codeInfo.system === 'http://terminology.hl7.org/CodeSystem/v2-0203') {
-    return stripIdentifierNumberSuffix(normalizeDisplay(expected)) === normalizeDisplay(actual);
-  }
 
   if (codeInfo.system === 'http://loinc.org') {
     return loincDisplaysCompatible(expected, actual);
@@ -102,10 +103,6 @@ function stripTrailingSemanticTag(display: string): string {
   return display
     .replace(new RegExp(String.raw`\s+\(${semanticTag}\)\s*$`, 'i'), '')
     .replace(new RegExp(String.raw`\s+\(${semanticTag}\s*$`, 'i'), '');
-}
-
-function stripIdentifierNumberSuffix(display: string): string {
-  return display.replace(/\s+number$/i, '');
 }
 
 const LOINC_STOPWORDS = new Set([

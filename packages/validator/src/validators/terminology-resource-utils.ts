@@ -28,8 +28,6 @@ export const HL7_KNOWN_CONCEPT_PROPERTIES = new Set<string>([
   'interface',
 ]);
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-
 export const ALLOWED_FILTER_OPS = new Set([
   '=',
   'is-a',
@@ -123,11 +121,6 @@ export function isHl7Url(url: string): boolean {
 
 export function isAbsoluteUri(uri: string): boolean {
   return /^https?:\/\//.test(uri) || /^urn:/.test(uri);
-}
-
-export function validateUrnUuid(urn: string): { valid: boolean; uuid: string } {
-  const uuid = urn.replace(/^urn:uuid:/, '');
-  return { valid: UUID_REGEX.test(uuid), uuid };
 }
 
 function findCodeSystemConcept(

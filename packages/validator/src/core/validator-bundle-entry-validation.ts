@@ -8,6 +8,7 @@ import { inferCodeBasedProfiles } from './code-inferred-profiles.js';
 import { getBundleEntryRequiredProfile } from './bundle-entry-slice-definitions.js';
 import { isFhirResource, type FhirResource } from './fhir-resource.js';
 import { validateBundleCompositionTargets } from './bundle-composition-target-validation.js';
+import { getDeclaredProfiles } from './declared-profile-utils.js';
 import {
   createBundleEntryValidationFailureIssue,
   mapBundleEntryIssues,
@@ -19,7 +20,8 @@ export interface BundleEntryValidationDeps {
   snapshotGenerator: SnapshotGenerator;
   maxDepth: number;
   structuralExecutor: {
-    validateResourceIdAndArrays(resource: FhirResource, contextQuestionnaire?: unknown): ValidationIssue[];
+    validateResourceIdAndArrays(resource: FhirResource, contextQuestionnaire?: unknown,
+      options?: { enclosingBundle?: Record<string, unknown> }): ValidationIssue[];
   };
   validateResource(
     resource: FhirResource,
@@ -70,8 +72,11 @@ export async function validateBundleEntryResources(
 
     let entryIssues: ValidationIssue[];
     try {
-      entryIssues = await deps.validateResource(entryResource, profileUrl, fhirVersion);
-      entryIssues.push(...deps.structuralExecutor.validateResourceIdAndArrays(entryResource));
+      entryIssues = [];
+      for (const profile of new Set([profileUrl, ...getDeclaredProfiles(entryResource)])) {
+        entryIssues.push(...await deps.validateResource(entryResource, profile, fhirVersion));
+      }
+      entryIssues.push(...deps.structuralExecutor.validateResourceIdAndArrays(entryResource, undefined, { enclosingBundle: bundle }));
       if (entryResource.resourceType === 'Bundle' && recursionDepth < deps.maxDepth) {
         entryIssues.push(...(await deps.validateNestedBundleEntries(entryResource, fhirVersion, recursionDepth + 1)));
       }

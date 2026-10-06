@@ -25,4 +25,6 @@ export type ValidateOneFn = (
   skipTargetProfileConformance?: boolean,
   /** Resource that owns the contained[] collection for sibling #reference resolution. */
   containingResource?: Record<string, unknown>,
+  /** Additional profiles reuse the primary profile's descendant validation. */
+  skipEmbeddedValidation?: boolean,
 ) => Promise<MultiAspectValidateResult>;

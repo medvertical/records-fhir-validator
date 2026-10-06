@@ -1,5 +1,7 @@
 import type { SlicingDiscriminator } from '../core/structure-definition-types.js';
 import type { SliceDefinition } from './slice-types.js';
+import { splitResolveDiscriminatorPath } from './slice-discriminator-path.js';
+import { resolvedCodeDiscriminatorHasEvidence } from './slice-resolved-code-discriminator.js';
 import { getValueAtPath, valuesMatch } from './slice-utils.js';
 import { getTypeSpecsForDiscriminator, stripCanonicalVersion } from './slice-type-discriminator.js';
 
@@ -17,6 +19,7 @@ export function sliceHasDiscriminatorEvidence(
     ));
   }
   if (discriminator.type === 'exists') {
+    if (!splitResolveDiscriminatorPath(path)) return getExistsDiscriminatorExpectation(slice, path) !== undefined;
     return candidateChildConstraintPaths(childPath).some(candidate => (
       slice.childMin?.has(candidate)
       || slice.childFixed?.has(candidate)
@@ -28,22 +31,39 @@ export function sliceHasDiscriminatorEvidence(
   return hasDirectDiscriminatorEvidence(slice, path);
 }
 
-/**
- * A `resolve()` discriminator names a property of the *referenced* resource, so
- * a slice cannot fix that value on itself — it identifies its members by the
- * target profile they must conform to. Counting `targetProfile` as evidence is
- * what lets `matchResolvedDiscriminator` reach its declared-profile fallback;
- * without it such slicing is never evaluated at all.
- */
 function hasResolvedTargetProfileEvidence(
   slice: SliceDefinition,
   discriminatorType: string,
   path: string,
 ): boolean {
   if (discriminatorType !== 'value' && discriminatorType !== 'pattern') return false;
+  const resolvedCodeEvidence = resolvedCodeDiscriminatorHasEvidence(slice, path);
+  if (resolvedCodeEvidence !== undefined) return resolvedCodeEvidence;
   if (!path.startsWith('resolve()')) return false;
   return getTypeSpecsForDiscriminator(slice, '$this')
     .some(spec => (spec.targetProfile?.length ?? 0) > 0);
+}
+
+/** Presence identifies a slice only when that exact element is required or prohibited. */
+export function getExistsDiscriminatorExpectation(
+  slice: SliceDefinition,
+  path: string,
+): boolean | undefined {
+  const childPath = normalizeChildConstraintPath(path);
+  const minimum = !childPath || childPath === '$this'
+    ? slice.min
+    : slice.childMin && getChildConstraint(slice.childMin, childPath);
+  const maximum = !childPath || childPath === '$this'
+    ? slice.max === '0' ? 0 : undefined
+    : slice.childMax && getChildConstraint(slice.childMax, childPath);
+  const required = typeof minimum === 'number' && Number.isInteger(minimum) && minimum >= 1;
+  const prohibited = maximum === 0;
+  return required === prohibited ? undefined : required;
+}
+
+export function usesDirectExistsDiscrimination(discriminators: SlicingDiscriminator[]): boolean {
+  return discriminators.some(discriminator => discriminator.type === 'exists'
+    && !splitResolveDiscriminatorPath(normalizeDiscriminatorPath(discriminator.path)));
 }
 
 export function normalizeDiscriminatorPath(path: string): string {
@@ -88,15 +108,21 @@ export function getChildConstraints(map: Map<string, unknown>, requestedPath: st
     .map(([, value]) => value);
 }
 
+/**
+ * A binding discriminates only through the codes its value set expands to. A
+ * value set with no local expansion (MDC clock types) leaves the slice
+ * unverifiable rather than unmatched; the reference validator accepts the
+ * element offline too.
+ */
 export function hasDirectDiscriminatorEvidence(slice: SliceDefinition, path: string): boolean {
   for (const candidate of candidateChildConstraintPaths(normalizeChildConstraintPath(path))) {
     if (slice.childFixed && getChildConstraints(slice.childFixed, candidate).length > 0) return true;
     if (slice.childPatterns && getChildConstraints(slice.childPatterns, candidate).length > 0) return true;
-    if (slice.childBindingCodes?.has(candidate) || slice.childBindingValueSets?.has(candidate)) return true;
+    if (slice.childBindingCodes?.has(candidate)) return true;
   }
   if (slice.fixed && getValueAtPath(slice.fixed, path) !== undefined) return true;
   if (slice.pattern && getValueAtPath(slice.pattern, path) !== undefined) return true;
-  return (slice.bindingCodes?.size ?? 0) > 0 || Boolean(slice.bindingValueSet);
+  return (slice.bindingCodes?.size ?? 0) > 0;
 }
 
 export function isProhibitedEmptyWholeElementSlice(

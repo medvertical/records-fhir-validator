@@ -1,0 +1,115 @@
+{
+  "scope": "Isolated us-core-1 constraint and local terminology; not full resource/profile validation.",
+  "origins": {
+    "sd": {
+      "package": "hl7.fhir.us.mcode#2.1.0",
+      "file": "StructureDefinition-mcode-primary-cancer-condition.json",
+      "sha256": "9d894b7290a0a5474cc54594ed5cb46864693634b16f5df7b8a4939d94c302de"
+    },
+    "vs": {
+      "package": "hl7.fhir.us.core#4.0.0",
+      "file": "ValueSet-us-core-condition-category.json",
+      "sha256": "c187cb4b0e750538c9bc77d4a4596362fa4b3707af0e215d5b3c8b9e20962990"
+    },
+    "cs": {
+      "package": "hl7.terminology.r4#7.2.0",
+      "file": "CodeSystem-condition-category.json",
+      "sha256": "8ec95bcebb940efc083466cdbbed153f6e50b37e1a5fb49cc41934257cbf5df5"
+    }
+  },
+  "definition": {
+    "resourceType": "StructureDefinition",
+    "url": "http://hl7.org/fhir/us/mcode/StructureDefinition/mcode-primary-cancer-condition",
+    "version": "2.1.0",
+    "name": "PrimaryCancerCondition",
+    "status": "active",
+    "kind": "resource",
+    "abstract": false,
+    "type": "Condition",
+    "snapshot": {
+      "element": [
+        {
+          "id": "Condition",
+          "path": "Condition",
+          "constraint": [
+            {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/elementdefinition-bestpractice",
+                  "valueBoolean": true
+                }
+              ],
+              "key": "us-core-1",
+              "severity": "warning",
+              "human": "A code in Condition.category SHOULD be from US Core Condition Category Codes value set.",
+              "expression": "where(category.memberOf('http://hl7.org/fhir/us/core/ValueSet/us-core-condition-category')).exists()",
+              "xpath": "(no xpath equivalent)",
+              "source": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "valueSet": {
+    "resourceType": "ValueSet",
+    "url": "http://hl7.org/fhir/us/core/ValueSet/us-core-condition-category",
+    "version": "4.0.0",
+    "status": "active",
+    "compose": {
+      "include": [
+        {
+          "system": "http://terminology.hl7.org/CodeSystem/condition-category"
+        },
+        {
+          "system": "http://hl7.org/fhir/us/core/CodeSystem/condition-category",
+          "concept": [
+            {
+              "code": "health-concern",
+              "display": "Health Concern"
+            }
+          ]
+        },
+        {
+          "system": "http://snomed.info/sct",
+          "concept": [
+            {
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/valueset-concept-definition",
+                  "valueString": "Death diagnosis, or cause of death is a contextual qualifier indicating the problem represented caused the patient's death."
+                }
+              ],
+              "code": "16100001",
+              "display": "Death diagnosis"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "codeSystem": {
+    "resourceType": "CodeSystem",
+    "url": "http://terminology.hl7.org/CodeSystem/condition-category",
+    "version": "2.0.0",
+    "status": "active",
+    "content": "complete",
+    "concept": [
+      {
+        "code": "problem-list-item",
+        "display": "Problem List Item",
+        "definition": "An item on a problem list that can be managed over time and can be expressed by a practitioner (e.g. physician, nurse), patient, or related person."
+      },
+      {
+        "code": "encounter-diagnosis",
+        "display": "Encounter Diagnosis",
+        "definition": "A point in time diagnosis (e.g. from a physician or nurse) in context of an encounter."
+      },
+      {
+        "code": "diagnostic-report-impression",
+        "display": "Diagnostic Report Impression",
+        "definition": "A diagnosis or differential diagnosis item that is expressed in a diagnostic report."
+      }
+    ]
+  }
+}

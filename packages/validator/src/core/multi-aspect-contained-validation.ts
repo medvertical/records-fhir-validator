@@ -5,6 +5,8 @@ import { BatchValidationAbortedError } from './batch-validator.js';
 import type { AspectResult, ValidateOneFn } from './multi-aspect-types.js';
 import { getPrimaryDeclaredProfile } from './declared-profile-utils.js';
 import { awaitAllDrained } from '../utils/await-all-drained.js';
+import { validateDeclaredProfiles } from './multi-aspect-embedded-profiles.js';
+import { isContainedNarrativeAdvice, isResolvedContainedReferenceIssue } from './validator-contained-issues.js';
 
 export function attachAppliedProfile(issue: ValidationIssue, appliedProfile: string): ValidationIssue {
   if (issue.profile || !appliedProfile) return issue;
@@ -58,7 +60,9 @@ export async function appendContainedResourceValidationResults(
 
   const results = await awaitAllDrained(targets.map(async target => {
     if (shouldStop?.()) throw new BatchValidationAbortedError();
-    const result = await validateOne(
+    const result = await validateDeclaredProfiles(
+      validateOne,
+      shouldStop,
       target.resource,
       target.profileUrl,
       fhirVersion,
@@ -92,7 +96,7 @@ function mergeContainedAspect(
 ): void {
   if (childAspect.aspect === 'metadata') return;
   const rewrite = (issues: ValidationIssue[]) => issues
-    .filter(issue => !isResolvedContainedReferenceIssue(issue, parentResource))
+    .filter(issue => !isContainedNarrativeAdvice(issue) && !isResolvedContainedReferenceIssue(issue, parentResource))
     .map(issue => rewriteContainedIssue(
       issue, target.prefix, target.parentResourceType, target.resourceType, target.resource,
     ));
@@ -150,17 +154,3 @@ function rewriteContainedIssue(
   return rewritten;
 }
 
-function isResolvedContainedReferenceIssue(
-  issue: ValidationIssue,
-  containingResource: Record<string, unknown>,
-): boolean {
-  if (issue.code !== 'reference-contained-unresolved' && issue.code !== 'reference-ref1-invariant') return false;
-  const containedId = issue.details && typeof issue.details === 'object'
-    ? issue.details.containedId
-    : undefined;
-  const containedResources = Array.isArray(containingResource.contained) ? containingResource.contained : [];
-  return typeof containedId === 'string' && containedResources.some(
-    candidate => !!candidate && typeof candidate === 'object'
-      && (candidate as Record<string, unknown>).id === containedId,
-  );
-}

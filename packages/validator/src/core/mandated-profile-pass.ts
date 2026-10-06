@@ -1,6 +1,9 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { matchCodeInferredProfile } from './code-inferred-profiles.js';
 import { dedupeExactIssues } from './validation-issue-dedupe.js';
+import type { StructureDefinition } from './structure-definition-types.js';
+
+const IMPOSE_PROFILE = 'http://hl7.org/fhir/StructureDefinition/structuredefinition-imposeProfile';
 
 /**
  * R4 mandates a core Observation profile whenever a vital-sign code is
@@ -25,6 +28,22 @@ export function mandatedProfileBeside(
   return canonicalWithoutVersion(appliedProfileUrl) === canonicalWithoutVersion(mandated.profileUrl)
     ? null
     : mandated.profileUrl;
+}
+
+/**
+ * A profile can impose others on every resource that conforms to it
+ * (Finland's kanta-document-metadata-profile imposes the agent roles of
+ * kanta-document-other-metadata-profile); the reference validator applies
+ * them beside it, as it does a mandated profile.
+ */
+export function imposedProfilesBeside(
+  structureDef: Pick<StructureDefinition, 'extension'> | undefined,
+  appliedProfileUrl: string | undefined,
+): string[] {
+  return (structureDef?.extension ?? [])
+    .filter(extension => extension.url === IMPOSE_PROFILE && typeof extension.valueCanonical === 'string')
+    .map(extension => extension.valueCanonical as string)
+    .filter(url => canonicalWithoutVersion(url) !== canonicalWithoutVersion(appliedProfileUrl ?? ''));
 }
 
 /**

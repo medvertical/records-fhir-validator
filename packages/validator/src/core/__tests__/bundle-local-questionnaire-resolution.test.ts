@@ -1,6 +1,7 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { ValidationIssue } from '@records-fhir/validation-types';
-import { RecordsValidator } from '../validator-engine';
+import type { RecordsValidator } from '../validator-engine.js';
+import { createIsolatedCoreValidationFixture, expectOwnCoreProfilesResolved } from './isolated-core-validation-fixture.js';
 
 const QUESTIONNAIRE_URN = 'urn:uuid:bc52dbf4-fd67-52e3-ba75-731a76805872';
 const BUNDLE_PROFILE = 'http://hl7.org/fhir/StructureDefinition/Bundle';
@@ -41,11 +42,13 @@ const transactionBundle = {
 };
 
 function expectItemsValidatedAgainstBundledQuestionnaire(issues: ValidationIssue[]): void {
+  expectOwnCoreProfilesResolved(issues);
   expect(issues.filter(issue => issue.code === 'questionnaire-reference-not-resolved')).toEqual([]);
   expect(issues).toEqual(expect.arrayContaining([
     expect.objectContaining({
       code: 'not-found',
-      path: expect.stringMatching(/^Bundle\.entry\[1\]\.resource.*item\[1\]\.linkId$/),
+      // Reported, as the reference validator does, at the level holding the stray item.
+      path: expect.stringMatching(/^Bundle\.entry\[1\]\.resource(?:\/\*[^*]*\*\/)?$/),
       message: expect.stringContaining("'stray'"),
     }),
   ]));
@@ -53,10 +56,13 @@ function expectItemsValidatedAgainstBundledQuestionnaire(issues: ValidationIssue
 
 describe('QuestionnaireResponse.questionnaire resolved inside the enclosing Bundle', () => {
   let validator: RecordsValidator;
+  let fixture: Awaited<ReturnType<typeof createIsolatedCoreValidationFixture>>;
+
+  afterAll(async () => { await fixture?.dispose(); });
 
   beforeAll(async () => {
-    validator = new RecordsValidator({ autoDownload: false, enableCaching: true, strictMode: false });
-    await validator.waitForInitialization();
+    fixture = await createIsolatedCoreValidationFixture({ enableCaching: true, strictMode: false });
+    validator = fixture.validator;
   }, 120_000);
 
   it('validates the response items against the bundled Questionnaire on the single-resource path', async () => {

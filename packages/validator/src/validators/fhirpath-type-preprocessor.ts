@@ -47,6 +47,8 @@ export interface PreprocessContext {
   resourceType: string;
   /** The outermost (non-contained) resource's type — `%rootResource`. */
   rootResourceType: string;
+  /** Release whose element types resolve paths below the context. */
+  fhirVersion?: 'R4' | 'R5' | 'R6';
 }
 
 /**
@@ -92,6 +94,7 @@ export function resolveTypeLiteralContext(
     elementType: concreteContextType,
     resourceType: containingResourceType,
     rootResourceType: rootResource.resourceType,
+    fhirVersion,
   };
 }
 
@@ -117,7 +120,66 @@ export function preprocessTypeLiterals(
   result = substituteMembership(result, RESOURCE_TYPE, ctx.resourceType);
   result = substituteMembership(result, ROOT_RESOURCE_TYPE, ctx.rootResourceType);
   result = substituteThisTypeTests(result, ctx.elementType);
+  result = substitutePrimitiveValue(result, ctx.elementType);
+  result = substituteNestedPrimitiveValue(result, ctx.elementType, ctx.fhirVersion);
   return result;
+}
+
+const FHIR_PRIMITIVE_TYPES = new Set([
+  'base64Binary', 'boolean', 'canonical', 'code', 'date', 'dateTime', 'decimal', 'id', 'instant', 'integer',
+  'integer64', 'markdown', 'oid', 'positiveInt', 'string', 'time', 'unsignedInt', 'uri', 'url', 'uuid',
+]);
+
+/**
+ * On a primitive element the reference validator reads `value` as the
+ * primitive's own value (Da Vinci RA's ra-3, `value.startsWith(…)` on a
+ * valueString). fhirpath.js knows no such child, so the invariant would yield
+ * nothing and count as failed; `$this` is that value.
+ */
+function substitutePrimitiveValue(expression: string, elementType: string | null): string {
+  if (elementType === null || !FHIR_PRIMITIVE_TYPES.has(elementType)) return expression;
+  return expression.split(/('(?:[^'\\]|\\.)*'|`[^`]*`)/).map((segment, index) => (index % 2 === 1
+    ? segment
+    : segment.replace(/\$this\.value\b/g, '$$this').replace(/(^|[^\w.$%])value\b(?!\s*\()/g, '$1$$this'))).join('');
+}
+
+/**
+ * The same holds for a path from the context that ends on a primitive (NO
+ * Basis' inv-1, `actor.type.value = 'Patient'` on a Reference's uri). Only a
+ * path outside function arguments starts at the context, so only there is
+ * its type known.
+ */
+function substituteNestedPrimitiveValue(expression: string, contextType: string | null, fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'): string {
+  if (contextType === null || !/\.value\b/.test(expression)) return expression;
+  const path2Type = getFhirPathModel(fhirVersion).path2Type as Record<string, string>;
+  const typeOf = (segments: string[]) => {
+    let owner = contextType;
+    let type: string | undefined = contextType;
+    for (const segment of segments) {
+      type = path2Type[`${owner}.${segment}`];
+      if (!type) return undefined;
+      owner = type === 'BackboneElement' || type === 'Element' ? `${owner}.${segment}` : type;
+    }
+    return type;
+  };
+  const masked = expression.replace(/'(?:[^'\\]|\\.)*'|`[^`]*`/g, literal => ' '.repeat(literal.length));
+  const removals: number[] = [];
+  for (const match of masked.matchAll(/(^|[^\w.$%])((?:[a-z][A-Za-z0-9]*\.)+)value\b(?!\s*\()/g)) {
+    const start = (match.index ?? 0) + match[1].length;
+    const chain = match[2].slice(0, -1);
+    const type = insideCallArguments(masked, start) ? undefined : typeOf(chain.split('.'));
+    if (type && FHIR_PRIMITIVE_TYPES.has(type)) removals.push(start + chain.length);
+  }
+  return removals.reverse().reduce((text, at) => text.slice(0, at) + text.slice(at + '.value'.length), expression);
+}
+
+function insideCallArguments(text: string, index: number): boolean {
+  const calls: boolean[] = [];
+  for (let position = 0; position < index; position += 1) {
+    if (text[position] === '(') calls.push(/\w\s*$/.test(text.slice(0, position)));
+    else if (text[position] === ')') calls.pop();
+  }
+  return calls.includes(true);
 }
 
 /**

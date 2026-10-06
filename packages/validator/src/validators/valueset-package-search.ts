@@ -1,6 +1,8 @@
+import type { PackageResourceReadObserver } from './valueset-package-publication-context.js';
 import { promises as fs, Dirent } from 'fs';
 import * as path from 'path';
 import {
+    ExactVersionMatch,
     isBetterPackageCandidate,
     isCanonicalAuthorityPackage,
     type PackageMatchCandidate,
@@ -8,6 +10,7 @@ import {
 import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
 import { PackageCanonicalIndex, type CanonicalDeclaration } from './valueset-package-canonical-index.js';
 import { reportUnreadablePackageStore } from '../package/package-store-diagnostics.js';
+import { pinnedCanonicalSourceDir } from '../package/canonical-pin-scope.js';
 
 interface PackageIndexFile {
     filename?: string;
@@ -115,8 +118,10 @@ export async function findResourceInPackages<T extends { url?: string; version?:
     preferredFhirMajor?: string,
     requestedVersion?: string,
     candidatePackages?: ReadonlySet<string> | null,
+    onRead?: PackageResourceReadObserver,
 ): Promise<T | null> {
     const best = new BestResourceMatch<T>(preferredFhirMajor, canonical);
+    const exact = new ExactVersionMatch<T>(pinnedCanonicalSourceDir(canonical, requestedVersion));
 
     for (const [storeRank, rootDir] of packageDirectories.entries()) {
         for (const entry of await readPackageEntries(rootDir)) {
@@ -127,8 +132,12 @@ export async function findResourceInPackages<T extends { url?: string; version?:
                 try {
                     const content = await fs.readFile(filePath, 'utf8');
                     const parsed = JSON.parse(content) as T;
+                    await onRead?.(parsed, filePath, content);
                     if (!isCanonicalMatch(parsed, canonical)) continue;
-                    if (requestedVersion && parsed.version === requestedVersion) return parsed;
+                    if (requestedVersion && parsed.version === requestedVersion) {
+                        if (exact.settles(parsed, entry.name)) return parsed;
+                        break;
+                    }
                     if (!isSameMajorFallback(parsed.version, requestedVersion)) break;
 
                     best.offer(parsed, entry.name, storeRank);
@@ -138,7 +147,7 @@ export async function findResourceInPackages<T extends { url?: string; version?:
         }
     }
 
-    return best.value;
+    return exact.value ?? best.value;
 }
 
 export async function findResourceByCanonicalScan<T extends { url?: string; version?: string }>(
@@ -149,8 +158,10 @@ export async function findResourceByCanonicalScan<T extends { url?: string; vers
     requestedVersion?: string,
     indexCache: ValueSetPackageIndexCache = new ValueSetPackageIndexCache(),
     canonicalIndex: PackageCanonicalIndex = sharedCanonicalIndex,
+    onRead?: PackageResourceReadObserver,
 ): Promise<T | null> {
     const best = new BestResourceMatch<T>(preferredFhirMajor, canonical);
+    const exact = new ExactVersionMatch<T>(pinnedCanonicalSourceDir(canonical, requestedVersion));
     // Names the packages that declare this canonical, so a canonical no store
     // holds costs one index lookup instead of a pass over every package. Null
     // means no index could be built and the search proceeds as it always did.
@@ -174,9 +185,12 @@ export async function findResourceByCanonicalScan<T extends { url?: string; vers
             );
             if (indexedFiles) {
                 for (const fileEntry of indexedFiles) {
-                    const parsed = await readPackageResource<T>(path.join(packagePath, fileEntry.filename!));
+                    const parsed = await readPackageResource<T>(path.join(packagePath, fileEntry.filename!), onRead);
                     if (!parsed || !isCanonicalMatch(parsed, canonical)) continue;
-                    if (requestedVersion && parsed.version === requestedVersion) return parsed;
+                    if (requestedVersion && parsed.version === requestedVersion) {
+                        if (exact.settles(parsed, entry.name)) return parsed;
+                        continue;
+                    }
                     if (!isSameMajorFallback(parsed.version, requestedVersion)) continue;
 
                     best.offer(parsed, entry.name, storeRank);
@@ -200,10 +214,15 @@ export async function findResourceByCanonicalScan<T extends { url?: string; vers
                 if (!fileEntry.name.startsWith(filePrefix) || !fileEntry.name.endsWith('.json')) continue;
 
                 try {
-                    const content = await fs.readFile(path.join(packagePath, fileEntry.name), 'utf8');
+                    const filePath = path.join(packagePath, fileEntry.name);
+                    const content = await fs.readFile(filePath, 'utf8');
                     const parsed = JSON.parse(content) as T;
+                    await onRead?.(parsed, filePath, content);
                     if (!isCanonicalMatch(parsed, canonical)) continue;
-                    if (requestedVersion && parsed.version === requestedVersion) return parsed;
+                    if (requestedVersion && parsed.version === requestedVersion) {
+                        if (exact.settles(parsed, entry.name)) return parsed;
+                        continue;
+                    }
                     if (!isSameMajorFallback(parsed.version, requestedVersion)) continue;
 
                     best.offer(parsed, entry.name, storeRank);
@@ -212,7 +231,7 @@ export async function findResourceByCanonicalScan<T extends { url?: string; vers
         }
     }
 
-    return best.value;
+    return exact.value ?? best.value;
 }
 
 // readdir order is filesystem-dependent; sorted iteration keeps tie
@@ -271,9 +290,12 @@ async function readPackageIndex(
     return await promise;
 }
 
-async function readPackageResource<T>(filePath: string): Promise<T | null> {
+async function readPackageResource<T>(filePath: string, onRead?: PackageResourceReadObserver): Promise<T | null> {
     try {
-        return JSON.parse(await fs.readFile(filePath, 'utf8')) as T;
+        const content = await fs.readFile(filePath, 'utf8');
+        const parsed = JSON.parse(content) as T;
+        if (parsed && typeof parsed === 'object') await onRead?.(parsed, filePath, content);
+        return parsed;
     } catch {
         return null;
     }

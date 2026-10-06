@@ -5,7 +5,7 @@ import { validateBundleFullUrlPresence } from '../bundle-type-rules';
 // matches this exact path — a drift here silently costs recall instead of
 // failing this suite.
 describe('validateBundleFullUrlPresence path contract', () => {
-  it('warns at Bundle.entry[i].fullUrl for a collection entry with a resource but no fullUrl', () => {
+  it('reports Bundle.entry[i].fullUrl for a collection entry with a resource but no fullUrl', () => {
     const bundle = {
       resourceType: 'Bundle',
       type: 'collection',
@@ -17,7 +17,7 @@ describe('validateBundleFullUrlPresence path contract', () => {
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
       code: 'bundle-entry-missing-fullurl',
-      severity: 'warning',
+      severity: 'error',
       path: 'Bundle.entry[0].fullUrl',
     });
   });
@@ -33,5 +33,37 @@ describe('validateBundleFullUrlPresence path contract', () => {
     };
 
     expect(validateBundleFullUrlPresence(bundle, 'collection')).toEqual([]);
+  });
+
+  it('reports a relative reference on the Bundle itself, outside any entry, but not in its signature', () => {
+    const bundle = {
+      resourceType: 'Bundle',
+      type: 'transaction',
+      identifier: { system: 'urn:ietf:rfc:3986', value: 'urn:uuid:1', assigner: { reference: 'Organization/1' } },
+      signature: [{ who: { reference: 'Practitioner/1' } }],
+      entry: [{ fullUrl: 'urn:uuid:2', resource: { resourceType: 'Patient', id: 'p1' }, request: { method: 'PUT', url: 'Patient/p1' } }],
+    };
+
+    expect(validateBundleFullUrlPresence(bundle, 'transaction')).toEqual([
+      expect.objectContaining({
+        code: 'bundle-entry-missing-fullurl-relative-ref',
+        severity: 'error',
+        path: 'Bundle.identifier.assigner',
+      }),
+    ]);
+    expect(validateBundleFullUrlPresence({ ...bundle, type: 'transaction-response' }, 'transaction-response')).toEqual([]);
+  });
+
+  it('reports a relative reference in a collection entry without fullUrl, as the reference validator does', () => {
+    const bundle = {
+      resourceType: 'Bundle',
+      type: 'collection',
+      entry: [{ resource: { resourceType: 'Condition', id: 'c1', subject: { reference: 'Patient/1' } } }],
+    };
+
+    expect(validateBundleFullUrlPresence(bundle, 'collection').map(issue => [issue.code, issue.path])).toEqual([
+      ['bundle-entry-missing-fullurl', 'Bundle.entry[0].fullUrl'],
+      ['bundle-entry-missing-fullurl-relative-ref', 'Bundle.entry[0].resource.subject'],
+    ]);
   });
 });

@@ -3,6 +3,11 @@ import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { isRelevantPackage, loadFromLocalCache } from '../sd-loader-filesystem';
+import {
+  normalizeVersionedCoreStructureDefinitionUrl,
+  normalizeKnownStructureDefinitionCanonicalUrl,
+  urlMatchesRequestedFhirVersion,
+} from '../sd-loader-version-utils';
 import { PackageProfileIndexCache } from '../sd-loader-package-profile-index';
 
 describe('sd-loader-filesystem', () => {
@@ -298,7 +303,7 @@ describe('sd-loader-filesystem', () => {
     ).resolves.toBeNull();
   });
 
-  it('resolves short canonical versions to equivalent published StructureDefinition versions', async () => {
+  it('keeps R4 author-managed short versions distinct from full editions', async () => {
     const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-'));
     tempDirs.push(source);
 
@@ -313,7 +318,8 @@ describe('sd-loader-filesystem', () => {
     );
 
     const sd = await loadFromLocalCache(`${profileUrl}|2.7`, [source], 'R4');
-    expect(sd?.version).toBe('2.7.0');
+    expect(sd).toBeNull();
+    await expect(loadFromLocalCache(`${profileUrl}|2.7.0`, [source], 'R4')).resolves.toMatchObject({ version: '2.7.0' });
   });
 
   it('resolves unversioned EPS canonicals to the only installed pre-release package', async () => {
@@ -399,6 +405,37 @@ describe('sd-loader-filesystem', () => {
       url: 'http://hl7.org/fhir/StructureDefinition/preferredTerminologyServer',
       type: 'Extension',
     });
+  });
+
+  it('resolves a cross-version extension from the xver package for the release that uses it', async () => {
+    const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-xver-'));
+    tempDirs.push(source);
+    const url = 'http://hl7.org/fhir/5.0/StructureDefinition/extension-AuditEvent.category';
+    await writeStructureDefinition(
+      source,
+      'hl7.fhir.uv.xver-r5.r4#0.1.0',
+      'StructureDefinition-ext-R5-AuditEvent.category.json',
+      url,
+      '0.1.0',
+      'Extension',
+    );
+
+    expect(isRelevantPackage('hl7.fhir.uv.xver-r5.r4#0.1.0', url, 'R4')).toBe(true);
+    expect(isRelevantPackage('hl7.fhir.uv.xver-r5.r4b#0.1.0', url, 'R4')).toBe(false);
+    expect(isRelevantPackage('hl7.fhir.uv.extensions.r4#5.3.0', url, 'R4')).toBe(false);
+    expect(urlMatchesRequestedFhirVersion(url, 'R4')).toBe(true);
+    expect(normalizeVersionedCoreStructureDefinitionUrl(url, 'R4')).toBe(url);
+    await expect(loadFromLocalCache(url, [source], 'R4')).resolves.toMatchObject({ url, version: '0.1.0' });
+  });
+
+  it('keeps spelling suggestions separate from core lookup normalization', () => {
+    const base = 'http://hl7.org/fhir/us/core/StructureDefinition/';
+    for (const id of ['us-core-Patient', 'us-core-genderIdentity', 'us-core-genderidentity|6.1.0']) {
+      expect(normalizeVersionedCoreStructureDefinitionUrl(`${base}${id}`, 'R4')).toBe(`${base}${id}`);
+    }
+    expect(normalizeKnownStructureDefinitionCanonicalUrl(`${base}us-core-Patient`)).toBe(`${base}us-core-patient`);
+    expect(normalizeKnownStructureDefinitionCanonicalUrl(`${base}us-core-genderidentity|6.1.0`))
+      .toBe(`${base}us-core-genderIdentity|6.1.0`);
   });
 
   it('routes HL7 UV canonicals only through their owning IG package', async () => {
@@ -616,5 +653,47 @@ describe('sd-loader-filesystem', () => {
       {},
       indexCache,
     )).resolves.toBeNull();
+  });
+
+  // de.fhir.medication publishes under ig.fhir.de, which the name routing
+  // sends to de.basisprofil; ePA Medication's examples use its extensions.
+  it('finds a canonical the package routing sends elsewhere in the package that declares it', async () => {
+    const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-routing-'));
+    tempDirs.push(source);
+    const extensionUrl = 'http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta';
+    const identifierUrl = 'http://fhir.de/StructureDefinition/identifier-iknr';
+    await writeStructureDefinition(source, 'de.basisprofil.r4#1.5.4', 'StructureDefinition-identifier-iknr.json', identifierUrl, '1.5.4', 'Identifier');
+    await writeStructureDefinition(source, 'de.fhir.medication#1.0.7', 'StructureDefinition-GeneratedDosageInstructionsMeta.json', extensionUrl, '1.0.7', 'Extension');
+    await writeStructureDefinition(source, 'de.fhir.medication#1.0.7', 'StructureDefinition-identifier-iknr.json', identifierUrl, '9.9.9', 'Identifier');
+
+    expect(isRelevantPackage('de.fhir.medication#1.0.7', extensionUrl, 'R4')).toBe(false);
+    await expect(loadFromLocalCache(extensionUrl, [source], 'R4')).resolves.toMatchObject({ url: extensionUrl, version: '1.0.7' });
+    // The package the routing prefers still wins where it declares the canonical.
+    await expect(loadFromLocalCache(identifierUrl, [source], 'R4')).resolves.toMatchObject({ version: '1.5.4' });
+  });
+
+  it('never takes a core canonical from a package other than the core package', async () => {
+    const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-core-owner-'));
+    tempDirs.push(source);
+    const coreUrl = 'http://hl7.org/fhir/StructureDefinition/Patient';
+    await writeStructureDefinition(source, 'example.copies#1.0.0', 'StructureDefinition-Patient.json', coreUrl, '4.0.1', 'Patient');
+
+    await expect(loadFromLocalCache(coreUrl, [source], 'R4')).resolves.toBeNull();
+  });
+
+  // ePA Medication's examples claim epa-medication-request|1.3.0; the package
+  // installs 1.3.2 of it.
+  it('leaves a missing explicit patch unresolved while retaining installed editions', async () => {
+    const source = await mkdtemp(path.join(tmpdir(), 'sd-loader-same-minor-'));
+    tempDirs.push(source);
+    const url = 'https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-request';
+    await writeStructureDefinition(source, 'de.gematik.epa.medication#1.3.4', 'StructureDefinition-epa-medication-request.json', url, '1.3.2', 'MedicationRequest');
+    await writeStructureDefinition(source, 'de.gematik.epa.medication#1.2.0', 'StructureDefinition-epa-medication-request.json', url, '1.2.0', 'MedicationRequest');
+
+    await expect(loadFromLocalCache(`${url}|1.3.0`, [source], 'R4')).resolves.toBeNull();
+    await expect(loadFromLocalCache(`${url}|1.3.2`, [source], 'R4')).resolves.toMatchObject({ version: '1.3.2' });
+    await expect(loadFromLocalCache(`${url}|1.2.0`, [source], 'R4')).resolves.toMatchObject({ version: '1.2.0' });
+    await expect(loadFromLocalCache(`${url}|1.4.0`, [source], 'R4')).resolves.toBeNull();
+    await expect(loadFromLocalCache(`${url}|1.3.0-ballot`, [source], 'R4')).resolves.toBeNull();
   });
 });

@@ -1,8 +1,10 @@
-import { getPrimitiveSidecar, resolveFhirSegmentValue } from '../fhir-primitive-sidecar.js';
+import { getPrimitiveSidecar, resolveFhirSegmentElement, resolveFhirSegmentValue } from '../fhir-primitive-sidecar.js';
 import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
 import { typeCodeMatchesValue } from '../../validators/slice-type-discriminator.js';
 import { inferType } from '../../validators/slice-value-type.js';
 import { excludeAmbiguousResliceItems } from './profile-nested-slice-ambiguity.js';
+import { bindingDiscriminatorPredicate } from './profile-nested-slice-bindings.js';
+import { enclosingSlices, findNestedSliceContext } from './profile-nested-slice-context.js';
 import {
   buildFunctionPathPredicate,
   extractFixed,
@@ -22,18 +24,30 @@ export function resolveNestedSliceParentItems(
   const context = findNestedSliceContext(elementDef, structureDef);
   if (!context) return null;
 
-  const sliceRootValue = getValueAtPath(resource, context.sliceElement.path);
-  const sliceRootItems = coerceToArray(sliceRootValue);
-  if (sliceRootItems.length === 0) return [];
+  // Every slice on the way scopes the items, not only the innermost: KBV's
+  // Mutterpass fixes the display of component:SystolicBP's coding, and the
+  // diastolic component's display must not be held to it.
+  // Where the innermost slice cannot tell its items apart, the outer ones
+  // still narrow the parents down before the child patterns do.
+  let items: unknown[] = [];
+  let itemsPath = '';
+  let outerScoped = false;
+  let innermostScoped = true;
+  for (const slice of enclosingSlices(elementDef, structureDef, context.sliceElement)) {
+    items = itemsPath
+      ? resolveRelativeParentItems(items, itemsPath, `${slice.path}.$item`)
+      : slicedElementNodes(resource, slice.path!, getValueAtPath);
+    itemsPath = slice.path!;
+    if (items.length === 0) return [];
+    const scoped = scopeItemsToSlice(items, slice, structureDef);
+    if (slice === context.sliceElement) innermostScoped = scoped !== null;
+    else outerScoped ||= scoped !== null;
+    items = scoped ?? items;
+  }
+  if (!innermostScoped && !outerScoped) return null;
 
-  const scopedRootItems = scopeItemsToSlice(sliceRootItems, context.sliceElement, structureDef);
-  if (scopedRootItems === null) return null;
-
-  return resolveRelativeParentItems(
-    scopedRootItems,
-    context.sliceElement.path,
-    elementDef.path!,
-  );
+  const parents = resolveRelativeParentItems(items, itemsPath, elementDef.path!);
+  return innermostScoped ? parents : scopeItemsToNestedChildPatterns(parents, elementDef, structureDef) ?? parents;
 }
 
 export function scopeParentItemsToNestedSlice(
@@ -46,35 +60,6 @@ export function scopeParentItemsToNestedSlice(
 
   return scopeItemsToSlice(parentItems, context.sliceElement, structureDef)
     ?? scopeItemsToNestedChildPatterns(parentItems, elementDef, structureDef);
-}
-
-function isSlicingNestedUnderSlice(elementDef: ElementDef): boolean {
-  const id = elementDef.id;
-  if (!id || !elementDef.path) return false;
-  const segments = id.split('.');
-  const pathDepth = elementDef.path.split('.').length;
-  return segments.length >= pathDepth && segments.slice(0, -1).some(segment => segment.includes(':'));
-}
-
-function findNestedSliceContext(
-  elementDef: ElementDef,
-  structureDef: StructureDefinition,
-): { sliceElement: ElementDefinition } | null {
-  const id = elementDef.id;
-  if (!id || !elementDef.path || !isSlicingNestedUnderSlice(elementDef)) return null;
-
-  const idParts = id.split('.');
-  for (let end = idParts.length - 1; end > 0; end -= 1) {
-    const candidateId = idParts.slice(0, end).join('.');
-    if (!candidateId.includes(':')) continue;
-
-    const candidate = structureDef.snapshot?.element?.find(e => e.id === candidateId);
-    if (candidate?.sliceName && candidate.path && elementDef.path.startsWith(candidate.path)) {
-      return { sliceElement: candidate };
-    }
-  }
-
-  return null;
 }
 
 function scopeItemsToSlice(
@@ -144,14 +129,17 @@ function buildDiscriminatorPredicate(
     discriminatorPath,
     structureDef,
   );
+  const candidates = constraintElements.length > 0 ? constraintElements : [parentSlice];
   // A discriminator path crossing a resliced repeat yields one constraint per
   // sub-slice; any of them identifies membership in the parent slice.
-  const expectedValues = (constraintElements.length > 0 ? constraintElements : [parentSlice])
+  const expectedValues = candidates
     .map(constraintElement => discriminator.type === 'pattern'
       ? extractPattern(constraintElement) ?? extractFixed(constraintElement)
       : extractFixed(constraintElement) ?? extractPattern(constraintElement))
     .filter(expected => expected !== undefined);
   if (expectedValues.length === 0) {
+    const byBinding = bindingDiscriminatorPredicate(structureDef, candidates, item => getPathValue(item, discriminatorPath));
+    if (byBinding) return byBinding;
     const inferredUrl = inferExtensionUrlFromSliceType(parentSlice, discriminatorPath);
     if (inferredUrl === undefined) return null;
     expectedValues.push(inferredUrl);
@@ -286,6 +274,23 @@ function resolvePathParts(
     index + 1,
     visitedArrays,
   );
+}
+
+/** A slice of primitives is read as their element nodes, whose extensions live in the sidecar. */
+function slicedElementNodes(
+  resource: unknown,
+  path: string,
+  getValueAtPath: (resource: unknown, path: string) => unknown,
+): unknown[] {
+  const values = coerceToArray(getValueAtPath(resource, path));
+  if (!values.some(isPrimitiveValue)) return values;
+  const segments = path.split('.').slice(1);
+  let containers: unknown[] = [resource];
+  for (const segment of segments.slice(0, -1)) {
+    containers = containers.flatMap(container => coerceToArray(resolveFhirSegmentValue(container, segment)));
+  }
+  const leaf = segments[segments.length - 1];
+  return leaf ? containers.flatMap(container => coerceToArray(resolveFhirSegmentElement(container, leaf))) : values;
 }
 
 function getTraversalSegmentValue(

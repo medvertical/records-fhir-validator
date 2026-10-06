@@ -29,7 +29,7 @@ export function matchValueDiscriminator(
   if (!path || path === '$this') {
     if (slice.fixed !== undefined) return valueCanIdentifyFixedSlice(value, slice.fixed, slice.fixedKind);
     if (slice.pattern !== undefined) return matchesPattern(value, slice.pattern);
-    const childMatch = matchWholeElementChildConstraints(value, slice, matchesPattern);
+    const childMatch = bindingDecides(slice) ? null : matchWholeElementChildConstraints(value, slice, matchesPattern);
     if (childMatch !== null) return childMatch;
   }
   if (path && path !== '$this') {
@@ -46,6 +46,17 @@ export function matchValueDiscriminator(
   const patternValue = slice.pattern ? getValueAtPath(slice.pattern, path) : null;
   if (patternValue !== null && patternValue !== undefined) return matchesPattern(value, patternValue);
   return slice.bindingCodes?.size ? matchesBinding(value, slice.bindingCodes) : false;
+}
+
+/**
+ * A slice with nothing fixed on itself but a required binding is told apart
+ * by that binding alone, as the reference validator tells it (`$this
+ * memberOf`): what its children fix, such as the url of an optional
+ * sub-extension (gematik Directory's physicalFeatures.additionalNote), holds
+ * only where that child occurs.
+ */
+function bindingDecides(slice: SliceDefinition): boolean {
+  return (slice.bindingCodes?.size ?? 0) > 0;
 }
 
 /**
@@ -76,7 +87,7 @@ export function matchPatternDiscriminator(
   if (isProhibitedEmptyWholeElementSlice(slice, 'pattern', path)) return false;
   const value = getValueAtPath(element, path);
   const childPath = normalizeChildConstraintPath(path);
-  if ((!path || path === '$this') && !slice.pattern && !slice.fixed) {
+  if ((!path || path === '$this') && !slice.pattern && !slice.fixed && !bindingDecides(slice)) {
     if (matchWholeElementChildConstraints(value, slice, matchesPattern) === false) return false;
   }
   if (path && path !== '$this') {
@@ -94,6 +105,11 @@ export function matchPatternDiscriminator(
         || canPatternCoreIdentifyCodingSlice(value, slice, pattern, allSlices, matchesPattern);
     }
   }
+  // A fixed value picks its slice out the way a pattern does (the reference
+  // validator's `coding.where(...).exists()` for Dental's fixed category);
+  // the exact value is then the slice's own rule.
+  const fixed = slice.fixed === undefined || path === '$this' || !path ? slice.fixed : getValueAtPath(slice.fixed, path);
+  if (fixed !== undefined && fixed !== null) return matchesPattern(value, fixed);
   if (slice.bindingCodes?.size) return matchesBinding(value, slice.bindingCodes);
   return !slice.bindingValueSet;
 }

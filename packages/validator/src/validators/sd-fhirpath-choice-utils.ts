@@ -2,6 +2,7 @@ import {
     isConcreteChoiceProperty,
     splitConcreteChoiceProperty,
 } from '../core/fhir-choice-property.js';
+import { getFhirPathModel } from '../core/fhirpath-context.js';
 
 /**
  * FHIR primitive type codes. Choice property names capitalise the first
@@ -133,13 +134,21 @@ function lastSegment(path: string): string {
     return dot >= 0 ? path.slice(dot + 1) : path;
 }
 
-export function prepareElementContext(context: unknown, expression: string): unknown {
-    return prepareElementContextValue(context, expression, new WeakMap<object, unknown>());
+/** Whether a property base names a choice element; undefined when unknown. */
+export type ChoiceElementLookup = (base: string) => boolean | undefined;
+
+export function prepareElementContext(
+    context: unknown,
+    expression: string,
+    isChoiceElement: ChoiceElementLookup = () => undefined,
+): unknown {
+    return prepareElementContextValue(context, expression, isChoiceElement, new WeakMap<object, unknown>());
 }
 
 function prepareElementContextValue(
     context: unknown,
     expression: string,
+    isChoiceElement: ChoiceElementLookup,
     visited: WeakMap<object, unknown>,
 ): unknown {
     if (Array.isArray(context)) {
@@ -149,7 +158,7 @@ function prepareElementContextValue(
         const normalizedItems: unknown[] = [];
         visited.set(context, normalizedItems);
         for (const item of context) {
-            normalizedItems.push(prepareElementContextValue(item, expression, visited));
+            normalizedItems.push(prepareElementContextValue(item, expression, isChoiceElement, visited));
         }
         return normalizedItems;
     }
@@ -169,9 +178,20 @@ function prepareElementContextValue(
     for (const { key: concreteKey, choice } of concreteChoices) {
         const base = choice.baseName;
         if (!new RegExp(`\\b${base}\\b`).test(expression)) continue;
-        if (context[base] !== undefined) continue;
+        if (context[base] !== undefined || isChoiceElement(base) === false) continue;
         normalized ??= { ...context };
         normalized[base] = context[concreteKey];
+    }
+    // A choice value can exist through its sidecar alone (`_valueBoolean`
+    // carrying a data-absent-reason); fhirpath.js reads `_value` as that.
+    for (const key of keys) {
+        const choice = key.startsWith('_') ? splitConcreteChoiceProperty(key.slice(1)) : null;
+        if (!choice) continue;
+        const base = choice.baseName;
+        if (!new RegExp(`\\b${base}\\b`).test(expression)) continue;
+        if (context[`_${base}`] !== undefined || isChoiceElement(base) === false) continue;
+        normalized ??= { ...context };
+        normalized[`_${base}`] = context[key];
     }
 
     return normalized ?? context;
@@ -201,3 +221,78 @@ function getElementPath(match: ChoiceMatchInput | null): string | undefined {
 function isObjectRecord(value: unknown): value is ObjectRecord {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+
+/**
+ * A complex datatype reached as raw JSON (`Questionnaire.useContext[0]`)
+ * carries no type for fhirpath.js, so a type test on one of its choices
+ * (sdc-uc-1: `value is CodeableConcept`) fails even when the JSON key says
+ * `valueCodeableConcept`. Named as a pseudo-resource of its datatype, the
+ * model types the choice again. Only a context whose datatype declares that
+ * choice is renamed; everything else keeps the plain normalization.
+ */
+export function typeChoiceContext(
+    context: unknown,
+    expression: string,
+    path: string,
+    fhirVersion: 'R4' | 'R5' | 'R6',
+): unknown {
+    if (!isObjectRecord(context) || typeof context.resourceType === 'string') return context;
+    const typedBases = Object.keys(context)
+        .map(key => splitConcreteChoiceProperty(key)?.baseName)
+        .filter((base): base is string => typeof base === 'string'
+            && new RegExp(`\\b${base}\\s+(?:is|as)\\s+[A-Za-z]|\\b${base}\\s*\\.\\s*(?:ofType|is|as)\\s*\\(`).test(expression));
+    if (typedBases.length === 0) return context;
+    const model = getFhirPathModel(fhirVersion);
+    const datatype = (model.path2Type as Record<string, string | undefined>)[definitionPathOf(path)];
+    const choices = model.choiceTypePaths as Record<string, string[] | undefined>;
+    if (!datatype || !typedBases.every(base => choices[`${datatype}.${base}`])) return context;
+    return { resourceType: datatype, ...context };
+}
+
+/**
+ * Which property bases of the element at `path` the FHIRPath model knows as
+ * choices. On a TestScript assert, `responseCode` is an element of its own,
+ * not `response[x]` typed code, so tst-5 must not count it twice. A path the
+ * model does not know (a slice, a nested item) keeps the lenient reading.
+ */
+export function choiceElementsAt(path: string, fhirVersion: 'R4' | 'R5' | 'R6'): ChoiceElementLookup {
+    const model = getFhirPathModel(fhirVersion);
+    const types = model.path2Type as Record<string, string | undefined>;
+    const choices = model.choiceTypePaths as Record<string, string[] | undefined>;
+    const definitionPath = followContentReferences(
+        definitionPathOf(path),
+        model.pathsDefinedElsewhere as Record<string, string | undefined>,
+    );
+    const owners = [definitionPath, types[definitionPath]].filter((owner): owner is string => Boolean(owner));
+    return base => {
+        if (owners.some(owner => choices[`${owner}.${base}`])) return true;
+        if (owners.some(owner => types[`${owner}.${base}`])) return false;
+        return undefined;
+    };
+}
+
+/**
+ * An element defined by content reference (`TestScript.test.action.assert` is
+ * `TestScript.setup.action.assert`) has its children only under the path it
+ * refers to; without following it, `response` looks undefined and takes
+ * `responseCode` as a choice alias.
+ */
+function followContentReferences(path: string, definedElsewhere: Record<string, string | undefined>): string {
+    let current = path;
+    for (let hop = 0; hop < 8; hop += 1) {
+        const segments = current.split('.');
+        const end = segments.findLastIndex((_, index) => definedElsewhere[segments.slice(0, index + 1).join('.')] !== undefined);
+        if (end < 0) return current;
+        current = [definedElsewhere[segments.slice(0, end + 1).join('.')], ...segments.slice(end + 1)].join('.');
+    }
+    return current;
+}
+
+// `Bundle.entry[0].resource/*Patient/p*/.address[0]` reads as `Patient.address`.
+function definitionPathOf(path: string): string {
+    const markers = [...path.matchAll(/\/\*([A-Za-z]+)(?:\/[^*]*)?\*\//g)];
+    const last = markers.at(-1);
+    const local = last?.index === undefined ? path : `${last[1]}${path.slice(last.index + last[0].length)}`;
+    return local.replace(/\[[^\]]*\]/g, '');
+}
+

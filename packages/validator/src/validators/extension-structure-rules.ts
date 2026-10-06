@@ -39,12 +39,30 @@ export function isAbsoluteExtensionUrl(url: string): boolean {
   return /^[a-z][a-z0-9+.-]*:\/\/.+/i.test(url);
 }
 
+/**
+ * Extensions the reference validator accepts without a package definition:
+ * its own tooling namespace, DICOM (nema.org), the definitions it builds in
+ * (SpecialExtensions in 6.10.0, such as the IG publisher's instance-name and
+ * instance-description) and one that predates the releases it is used with.
+ */
+const UNDEFINED_EXTENSIONS_ALLOWED = new Set([
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-expression',
+  'http://hl7.org/fhir/StructureDefinition/elementdefinition-type-must-support',
+  'http://hl7.org/fhir/StructureDefinition/instance-name',
+  'http://hl7.org/fhir/StructureDefinition/instance-description',
+  'http://hl7.org/fhir/build/StructureDefinition/definition',
+  'http://hl7.org/fhir/build/StructureDefinition/binding-definition',
+  'http://hl7.org/fhir/StructureDefinition/codesystem-properties-mode',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-rdf-type',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-conformance-derivedFrom',
+  'http://hl7.org/fhir/StructureDefinition/structuredefinition-fmm-support',
+]);
+
 export function shouldReportUnresolvableExtensionUrl(url: string): boolean {
   if (typeof url !== 'string') return false;
-  if (KNOWN_HL7_EXTENSION_URLS.has(url)) return false;
+  if (KNOWN_HL7_EXTENSION_URLS.has(url) || UNDEFINED_EXTENSIONS_ALLOWED.has(url)) return false;
   if (/^https?:\/\/([^/]+\.)?hl7\.org\/fhir\/(test|tools)\//i.test(url)) return false;
-  if (url.includes('/matchetype')) return false;
-  if (/^https?:\/\/(www\.)?example\.(org|net)\//i.test(url)) return false;
+  if (url.includes('/matchetype') || url.includes('nema.org')) return false;
   return true;
 }
 

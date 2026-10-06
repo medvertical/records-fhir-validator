@@ -31,6 +31,8 @@ import type { StructureDefinitionLoader } from '../structure-definition-loader.j
 import { createValidationIssue } from '../../issues/index.js';
 import { buildSnapshotIndex, type SnapshotIndex } from './unknown-property-snapshot-index.js';
 import { createProfileUnreadable } from '../../issues/profile-completeness-issues.js';
+import { singleValuedArrayIssue, specialElementArrayIssue } from './json-array-shape-rules.js';
+import { referencesWithoutDisplay } from './reference-display-rules.js';
 
 export { buildSnapshotIndex, type SnapshotIndex } from './unknown-property-snapshot-index.js';
 
@@ -139,8 +141,8 @@ async function walk(
   if (typeof value !== 'object' || value === null || visited.has(value)) return;
   visited.add(value);
   if (Array.isArray(value)) {
-    for (const item of value) {
-      await walk(item, pathPrefix, index, sdUrl, issues, false, deps, visited, schemaPathPrefix);
+    for (const [position, item] of value.entries()) {
+      await walk(item, `${pathPrefix}[${position}]`, index, sdUrl, issues, false, deps, visited, schemaPathPrefix);
     }
     return;
   }
@@ -149,7 +151,11 @@ async function walk(
   const allowedSpecial = isRoot ? SPECIAL_RESOURCE_KEYS : SPECIAL_BACKBONE_KEYS;
 
   for (const key of Object.keys(value)) {
-    if (allowedSpecial.has(key)) continue;
+    if (allowedSpecial.has(key)) {
+      const shapeIssue = specialElementArrayIssue(key, value[key], `${pathPrefix}.${key}`);
+      if (shapeIssue) issues.push(shapeIssue);
+      continue;
+    }
     if (key.startsWith('_')) {
       // The structural sanity pass already emits the canonical invalid
       // property diagnostic for an orphan primitive sidecar. Avoid adding a
@@ -191,6 +197,10 @@ async function walk(
     const info = index.byPath.get(schemaPath);
     const childValue = value[key];
 
+    if (info?.singleValued && Array.isArray(childValue)) {
+      issues.push(singleValuedArrayIssue(childPath, isPrimitiveTypeInfo(info.type ?? '')));
+    }
+    if (info?.type === 'Reference') issues.push(...referencesWithoutDisplay(childValue, childPath));
     if (!info?.type) continue;
     if (isPrimitiveTypeInfo(info.type)) continue;
     if (RESOURCE_LIKE_TYPES.has(info.type)) continue;

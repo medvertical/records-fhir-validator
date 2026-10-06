@@ -1,6 +1,8 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createTerminologyIssue } from '../../terminology/terminology-issue.js';
 import { normalizeDisplay } from '../../validators/valueset-display-utils.js';
+import { extractAcceptedDisplays } from '../../validators/valueset-display-evidence.js';
+export { extractAcceptedDisplays } from '../../validators/valueset-display-evidence.js';
 
 // Each LOINC code maps to accepted designations, not just the current
 // Long Common Name: per HL7 validator convention a resource without a language
@@ -161,20 +163,6 @@ export function anyDisplayEquivalent(expected: string[], actual: string | undefi
 
 export function extractExpectedDisplay(message: string | undefined): string | undefined {
   return extractAcceptedDisplays(message)[0];
-}
-
-export function extractAcceptedDisplays(message: string | undefined): string[] {
-  if (!message) return [];
-
-  const single = message.match(/Valid display is '(.+?)'(?:\s+\([^)]+\))?(?:\s+\(for the language\(s\)|$)/);
-  if (single?.[1]) return [single[1]];
-
-  const oneOf = message.match(/Valid display is one of \d+ choices:\s*(.+?)(?:\s*\(for the language\(s\)|$)/);
-  if (!oneOf?.[1]) return [];
-
-  return [...oneOf[1].matchAll(/'(.+?)'\s+\([^)]+\)(?:\s+or\s+|$)/g)]
-    .map(match => match[1])
-    .filter((display): display is string => Boolean(display));
 }
 
 export function uniqueAcceptedDisplays(displays: string[]): string[] {

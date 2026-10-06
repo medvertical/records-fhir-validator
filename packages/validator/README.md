@@ -12,16 +12,36 @@ This package is the open-source validator surface for `medvertical/records-fhir-
 
 ## Two-Minute Quickstart
 
+Before installing, add this override to your application's root `package.json`:
+
+```json
+{
+  "overrides": {
+    "@lhncbc/ucum-lhc": {
+      "csv-parse": "7.0.2"
+    }
+  }
+}
+```
+
+It pins the patched CSV parser in the transitive UCUM dependency. npm does not
+inherit library overrides into consuming applications. See [the dependency
+security note](./SECURITY.md#transitive-csv-parser) for the advisory and scope.
+
+```sh
+npm install @records-fhir/validator @records-fhir/validation-types
+```
+
 Run the CLI against a JSON, XML, or NDJSON input:
 
 ```sh
-npx -p @records-fhir/validator records-fhir-validator ./patient.json
+npx --no-install records-fhir-validator ./patient.json
 ```
 
 Validate a folder and fail CI on warnings:
 
 ```sh
-npx -p @records-fhir/validator records-fhir-validator ./fixtures --fail-on=warning
+npx --no-install records-fhir-validator ./fixtures --fail-on=warning
 ```
 
 Embed the TypeScript API:
@@ -136,13 +156,13 @@ Common options:
 Example JSON output:
 
 ```sh
-npx -p @records-fhir/validator records-fhir-validator ./patient.json --format=json
+npx --no-install records-fhir-validator ./patient.json --format=json
 ```
 
 Write a CI report while validating only selected files:
 
 ```sh
-npx -p @records-fhir/validator records-fhir-validator ./fixtures \
+npx --no-install records-fhir-validator ./fixtures \
   --include 'fixtures/**/*.json' \
   --exclude 'fixtures/drafts/**' \
   --format=json \
@@ -157,6 +177,12 @@ Exit codes are stable for CI:
 | `0` | Validation completed and did not meet the `--fail-on` threshold. |
 | `1` | Validation completed and met the `--fail-on` threshold. |
 | `2` | Invalid CLI input, unreadable paths, no matched FHIR input files, or output write failure. |
+
+### Explicit terminology default editions
+
+An integration that establishes an edition may set `defaultCodeSystemVersions` in `TerminologyResolutionConfig`, or `settings.terminologyResolution.defaultCodeSystemVersions` in a validation request. Map an exact CodeSystem URI to its own business version. For example, the SNOMED key `http://snomed.info/sct` can select `http://snomed.info/sct/900000000000207008/version/20250201`.
+
+The setting is optional and captured within the runtime scope. Explicit Coding and ValueSet compose versions retain precedence for their operations. Reconfiguration without the map clears previous defaults. Inputs are unchanged, and matching terminology evidence remains required. A verified whole named inventory can establish absence of a named identifier in its own edition; it does not establish ECL, postcoordination or expansion. The current versionless subsumption transport remains unknown for a system with a default edition. Result cache hashes include this setting.
 
 ### XML and NDJSON input adapters
 
@@ -474,10 +500,27 @@ SHC, DSIG, JSON5 harnesses, legacy STU3/DSTU versions, logical models, and
 site-level MII certification remain outside the current headline support scope
 unless called out by a dedicated conformance lane.
 
-## Conformance
+## Release acceptance — 5 October 2026
 
-Current HL7 `FHIR/fhir-test-cases` status: 100.0% of executable comparison
-tests passing. The latest local report was generated on 2026-07-23 from pinned
+The explicitly selected [current release contract](../../conformance-results/validator-current-release.json) binds the candidate package versions, built runtime, maintained measurement tools, dependency manifests and original corpora to SHA-256-pinned evidence. The release check recomputes every original R4 JSON comparison and each admitted reference contract from the captured SDK results. Replay after committing the measured content preserves the original measurement epoch; it is not a fresh validator measurement.
+
+The R4 scope contains 390 original cases: **390/390 accepted by the scoped acceptance policy**, comprising **387/390 unchanged raw passes** and three separately proved contracts. The original raw regression gate remains red, with zero skips and runtime errors. Unknown ASK/PZN membership, the declared Java message cap and the independently proved local ValueSet conflict remain explicitly qualified; independent clinical errors are preserved. This is not 100% diagnostic identity or universal HAPI/MII parity.
+
+The MII clean corpus records **442/442 clean fixtures with 110 existing exclusions**. Eleven ICU profile claims and one duplicated Laboratory business version were corrected to their own definitions; all other fixture fields remain unchanged. This is scoped clean-corpus precision, not complete terminology validation, reference parity or site certification. The Laboratory example retains an explicitly incomplete terminology check.
+
+Public release preparation verifies the current acceptance contract and the independently installed SDK/CLI tarballs. Historical public figures below retain their own source and measurement limits.
+
+## Historical Conformance Evidence
+
+The following subsections retain historical measurements and planning snapshots.
+Their headline figures and contexts differ; they do not certify the currently
+exported package. The public repository README and
+`release/validator-evidence.json` identify the explicitly selected reports,
+measurement dates, scope and provenance limits. A matching package version alone
+does not establish a matching source or runtime.
+
+An earlier HL7 `FHIR/fhir-test-cases` headline reported 100.0% of executable
+comparison tests passing. Its report was generated on 2026-07-23 from pinned
 upstream commit `8923095fc5e3750025f7dd71988c9e89083b1487`. The local artifact
 used for this update was
 `conformance-results/report-2026-07-23.json`.
@@ -501,7 +544,7 @@ The two failures are JSON resources whose profile source is an XML file. An
 earlier harness read every profile source as JSON, so those profiles silently
 failed to load and both cases validated against the base spec — they counted as
 passes because validation had not happened. Reading them correctly exposed real
-divergences, which are open. The superseded 536/536 headline included both.
+divergences at that measurement epoch. The superseded 536/536 headline included both.
 
 Reproduce the headline lane locally with:
 
@@ -528,8 +571,9 @@ The only undeclared-baseline entry is `(default)/zzz`, an upstream
 platform-specific teardown workaround rather than a validator comparison case.
 The upstream manifest now declares
 and resolves Java outcomes for the full 536-entry candidate set, so the former
-baseline-resolution workarounds are no longer used. All executable comparisons
-now match the normalized Java result.
+baseline-resolution workarounds were no longer used in that snapshot. Earlier
+documentation claimed all executable comparisons matched; the historical table
+above records two failures. Neither statement is a current release certificate.
 
 The historical 2026-05-03 `--include-baseline-backlog` discovery artifact is
 retained for provenance, but it was measured against an older upstream manifest
@@ -572,7 +616,7 @@ constraints measured by `quality:spec-coverage`.
 ### MII 2026 Reference Scope
 
 MII conformance is measured in a separate lane from the HL7
-`FHIR/fhir-test-cases` score. The current scoped MII-2026 reference run was
+`FHIR/fhir-test-cases` score. The historical scoped MII-2026 reference run was
 generated on 2026-07-23 against the official MII FHIR Validator container
 `mii-fhir-validator:0.0.1-alpha.7`. It matches the
 reference validator on 231/231 measured resources from the refreshed MII 2026

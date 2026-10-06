@@ -63,6 +63,49 @@ function validateWithPatient(gender: string) {
 }
 
 describe('validateSliceTypeProfileConstraints %resource binding', () => {
+  // Da Vinci DTR Parameters/QuestionnairePackageOutputParamsExample carries a
+  // collection Bundle in parameter:PackageBundle.resource.
+  it('binds %resource to a slice value that is a resource itself', async () => {
+    const bundleProfile = {
+      resourceType: 'StructureDefinition',
+      url: 'http://example.org/StructureDefinition/package-bundle',
+      type: 'Bundle',
+      snapshot: { element: [{
+        id: 'Bundle',
+        path: 'Bundle',
+        constraint: [{
+          key: 'bdl-3',
+          severity: 'error',
+          human: 'entry.request mandatory for batch/transaction/history, otherwise prohibited',
+          expression: "entry.all(request.exists() = (%resource.type = 'batch' or %resource.type = 'transaction' or %resource.type = 'history'))",
+        }],
+      }] },
+    } as unknown as StructureDefinition;
+    const parameterSlice: SliceDefinition = {
+      sliceName: 'PackageBundle',
+      path: 'Parameters.parameter',
+      min: 1,
+      max: '1',
+      childTypes: new Map([['resource', [{ code: 'Bundle', profile: [bundleProfile.url] }]]]),
+    };
+    const parameter = {
+      name: 'PackageBundle',
+      resource: { resourceType: 'Bundle', type: 'collection', entry: [{ resource: { resourceType: 'Patient', id: 'p' } }] },
+    };
+
+    const issues = await validateSliceTypeProfileConstraints(
+      parameter,
+      parameterSlice,
+      'Parameters.parameter[0]',
+      'R4',
+      async () => bundleProfile,
+      new ConstraintValidator(),
+      { resourceType: 'Parameters', parameter: [parameter] },
+    );
+
+    expect(issues.filter(issue => issue.ruleId === 'bdl-3')).toEqual([]);
+  });
+
   it('binds %resource to the containing resource, not the slice value', async () => {
     const issues = await validateWithPatient('other');
 
@@ -163,7 +206,7 @@ describe('validateSliceTypeProfileConstraints %resource binding', () => {
       severity: 'warning',
       path: 'Patient.generalPractitioner[0].identifier.value',
     }));
-    expect(issues.find(issue => issue.code === 'profile-slice-validation-error')).toBeUndefined();
+    expect(issues.find(issue => ['profile-slice-validation-error', 'profile-slice-validation-incomplete'].includes(issue.code ?? ''))).toBeUndefined();
     expect(issues.find(issue => issue.code === 'profile-slice-closed-unmatched')).toBeUndefined();
   });
 

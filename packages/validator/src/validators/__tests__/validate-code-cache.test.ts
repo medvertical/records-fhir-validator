@@ -440,7 +440,7 @@ describe('validate-code cache', () => {
     }
   });
 
-  it('fails open for direct CodeSystem validation when no terminology server is configured', async () => {
+  it('keeps fail-open acceptance with explicit unavailable evidence when no terminology server is configured', async () => {
     vi.resetModules();
     const get = vi.fn();
 
@@ -467,7 +467,11 @@ describe('validate-code cache', () => {
       'Weight-for-length Per age and sex',
     );
 
-    expect(result).toEqual({ valid: true });
+    expect(result).toEqual({
+      valid: true,
+      reason: 'no-server',
+      message: 'CodeSystem membership was not verified because no terminology server is configured.',
+    });
     expect(get).not.toHaveBeenCalled();
 
     vi.doUnmock('axios');

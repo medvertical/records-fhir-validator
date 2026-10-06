@@ -1,3 +1,4 @@
+import { ProfileReferenceUnavailableError, profileReferenceUnavailableIssue } from '../core/profile-reference-authority.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
 import { isRecord, resourceTypeOf } from '../core/fhir-resource.js';
@@ -9,8 +10,9 @@ import {
   validateExtensionStructure,
   validateKnownHl7ExtensionValueType,
 } from './extension-structure-rules.js';
+import { validateExampleUrl } from './example-url-rule.js';
 import type { ExtensionValidationContext } from './extension-types.js';
-import { isKnownCrossVersionExtensionUrl } from './extension-xver-urls.js';
+import { isKnownCrossVersionExtensionUrl, unsupportedCrossVersionRelease } from './extension-xver-urls.js';
 
 interface ValidateUniversalExtensionRulesParams {
   extension: unknown;
@@ -30,6 +32,16 @@ interface ValidateUniversalExtensionRulesParams {
     url: string,
     fhirVersion: 'R4' | 'R5' | 'R6',
   ) => Promise<NormalizedExtensionContext[] | null>;
+  resolveLogicalPaths?: (site: ExtensionUsageSite) => Promise<readonly string[] | null>;
+  /**
+   * Checks an extension the profile does not slice against its own
+   * definition (value, bindings, invariants), as the reference validator does.
+   */
+  validateAgainstDefinition?: (
+    extension: Record<string, unknown>,
+    url: string,
+    path: string,
+  ) => Promise<ValidationIssue[]>;
   site: ExtensionUsageSite;
 }
 
@@ -45,6 +57,8 @@ export async function validateUniversalExtensionRules({
   isNested = false,
   resolveExtensionUrl,
   getDeclaredContexts,
+  resolveLogicalPaths,
+  validateAgainstDefinition,
   site,
 }: ValidateUniversalExtensionRulesParams): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
@@ -52,7 +66,7 @@ export async function validateUniversalExtensionRules({
   if (!isRecord(extension)) return issues;
 
   const url = typeof extension.url === 'string' ? extension.url : undefined;
-  issues.push(...await validateExtensionUrlRules({
+  issues.push(...await retainUnavailableExtensionIssues(() => validateExtensionUrlRules({
     url,
     extensionType,
     path,
@@ -60,7 +74,7 @@ export async function validateUniversalExtensionRules({
     context,
     isNested,
     resolveExtensionUrl,
-  }));
+  }), path));
 
   if (url) {
     issues.push(...validateExtensionStructure(
@@ -69,14 +83,18 @@ export async function validateUniversalExtensionRules({
       path,
       resourceTypeOf(context.resource, 'Unknown'),
     ));
-    issues.push(...await validateExtensionContextUsage({
+    issues.push(...await retainUnavailableExtensionIssues(() => validateExtensionContextUsage({
       url,
       path,
       site,
       resourceType: resourceTypeOf(context.resource, 'Unknown'),
       fhirVersion: context.fhirVersion,
       getDeclaredContexts,
-    }));
+      resolveLogicalPaths,
+    }), path));
+    if (validateAgainstDefinition && !isNested && !knownUrls.has(url) && isAbsoluteExtensionUrl(url) && !url.includes('|')) {
+      issues.push(...await retainUnavailableExtensionIssues(() => validateAgainstDefinition(extension, url, path), path));
+    }
   }
 
   issues.push(...validateKnownHl7ExtensionValueType(
@@ -155,29 +173,33 @@ async function validateExtensionUrlRules({
     // the extension exists. Reporting it here would accuse a valid extension —
     // an error for a modifierExtension — on the strength of an outage.
     const resolution = await resolveExtensionUrl(url, context.fhirVersion);
+    const unsupportedRelease = resolution === 'unresolvable' ? unsupportedCrossVersionRelease(url) : undefined;
     const resolvable = resolution === 'resolvable'
       || isKnownCrossVersionExtensionUrl(url, extensionType);
-    if (!resolvable && resolution !== 'undetermined') {
+    if (unsupportedRelease) {
+      issues.push(createValidationIssue({
+        code: 'profile-extension-url-version-invalid',
+        path,
+        resourceType,
+        messageParams: { url, version: unsupportedRelease },
+      }));
+    } else if (!resolvable && resolution !== 'undetermined') {
       issues.push(createUnresolvedExtensionIssue(url, extensionType, path, resourceType));
     }
+  }
+  if (url && !isNested) {
+    const exampleUrlIssue = validateExampleUrl(url, 'uri', `${path}.url`, resourceType, context.profileUrl);
+    if (exampleUrlIssue) issues.push(exampleUrlIssue);
   }
 
   return issues;
 }
 
 /**
- * Canonical registry domains whose extension URLs are expected to resolve:
- * the HL7 reference validator errors on an unresolvable hl7.org / fhir.org
- * extension (see the fhir-test-cases bundle-ea-testcase Java baseline), so
- * these cannot drop below warning without losing conformance parity.
- */
-const REGISTRY_EXTENSION_URL = /^https?:\/\/([^/]+\.)?(hl7\.org|fhir\.org)\//i;
-
-/**
- * FHIR's open-world model allows unknown plain extensions from private
- * canonical spaces, so those only get a hint — but registry-domain URLs are
- * expected to resolve (warning), and an unrecognised modifierExtension
- * cannot be safely ignored and must fail validation.
+ * The HL7 reference validator rejects any extension it cannot resolve ("could
+ * not be found so is not allowed here"), whatever its domain, unless the
+ * caller explicitly allows unknown extensions. A modifierExtension carries its
+ * own message because it can never be safely ignored.
  */
 function createUnresolvedExtensionIssue(
   url: string,
@@ -186,13 +208,12 @@ function createUnresolvedExtensionIssue(
   resourceType: string,
 ): ValidationIssue {
   const isModifier = extensionType === 'modifierExtension';
-  const plainSeverity = REGISTRY_EXTENSION_URL.test(url) ? 'warning' : 'information';
   return createValidationIssue({
     code: 'profile-extension-not-found',
     path,
     resourceType,
     messageParams: { url },
-    severityOverride: isModifier ? 'error' : plainSeverity,
+    severityOverride: 'error',
     ...(isModifier && {
       customMessage: `The modifier extension ${url} could not be resolved; unrecognised modifier extensions cannot be safely ignored — verify its StructureDefinition or package availability`,
     }),
@@ -222,4 +243,12 @@ function createVersionedUrlIssues(
       details: { url },
     }),
   ];
+}
+
+async function retainUnavailableExtensionIssues(run: () => Promise<ValidationIssue[]>, path: string): Promise<ValidationIssue[]> {
+  try { return await run(); }
+  catch (error: unknown) {
+    if (!(error instanceof ProfileReferenceUnavailableError)) throw error;
+    return [profileReferenceUnavailableIssue(error, path)];
+  }
 }

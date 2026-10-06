@@ -1,6 +1,6 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import type { FhirResourceRecord } from '../reference/bundle-reference-types.js';
-import { getPrimaryDeclaredProfile } from './declared-profile-utils.js';
+import { getDeclaredProfiles, getPrimaryDeclaredProfile } from './declared-profile-utils.js';
 import { awaitAllDrained } from '../utils/await-all-drained.js';
 
 export interface ParametersEmbeddedResource {
@@ -100,11 +100,10 @@ export async function validateParametersResourceTree(
   if (embeddedResources.length === 0) return [];
 
   const nested = await awaitAllDrained(embeddedResources.map(async embedded => {
-    const issues = await options.validate(
-      embedded.resource,
-      embedded.profileUrl,
-      options.recursionDepth + 1,
-    );
+    const issues: ValidationIssue[] = [];
+    for (const profile of new Set([embedded.profileUrl, ...getDeclaredProfiles(embedded.resource)])) {
+      issues.push(...await options.validate(embedded.resource, profile, options.recursionDepth + 1));
+    }
     // Metadata expectations (missing-meta etc.) apply to the exchanged
     // Parameters envelope, not to each embedded payload resource.
     return issues

@@ -1,3 +1,4 @@
+import { versionedCacheKey } from '../valueset-package-utils.js';
 /**
  * ValueSet Package Loader — Deep Expansion Tests
  *
@@ -419,7 +420,7 @@ describe('ValueSetPackageLoader canonical package scan', () => {
         await fs.mkdir(packageDir, { recursive: true });
 
         const canonical = 'https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Section_Type';
-        const codeSystem: CodeSystem = {
+        const codeSystem: CodeSystem & { status: 'active' } = {
             resourceType: 'CodeSystem',
             url: canonical,
             status: 'active',
@@ -438,9 +439,9 @@ describe('ValueSetPackageLoader canonical package scan', () => {
         await expect(loader.loadCodeSystem(canonical, '4')).resolves.toMatchObject({
             url: canonical,
         });
-        expect(cache.getCodeSystem(`${canonical}|fhir4`)).toMatchObject({ url: canonical });
-        expect(cache.getCodeSystem(canonical)).toMatchObject({ url: canonical });
-        expect(cache.getCodeSystemFile(canonical)).toMatchObject({ url: canonical });
+        expect(cache.sourceContexts.run('R4', () => cache.getCodeSystem(versionedCacheKey(canonical, undefined, 'R4')))).toMatchObject({ url: canonical });
+        expect(cache.sourceContexts.run('R4', () => cache.getCodeSystem(canonical))).toMatchObject({ url: canonical });
+        expect(cache.sourceContexts.run('R4', () => cache.getCodeSystemFile(canonical))).toMatchObject({ url: canonical });
     });
 
     it('loads the current MII Onkologie CodeSystem through its predecessor canonical', async () => {
@@ -460,7 +461,7 @@ describe('ValueSetPackageLoader canonical package scan', () => {
                 status: 'active',
                 content: 'complete',
                 concept: [{ code: 'N', display: 'neoadjuvant' }],
-            } satisfies CodeSystem),
+            } satisfies CodeSystem & { status: 'active' }),
         );
 
         const cache = new ValueSetCache();
@@ -470,8 +471,8 @@ describe('ValueSetPackageLoader canonical package scan', () => {
             url: current,
             concept: [{ code: 'N', display: 'neoadjuvant' }],
         });
-        expect(cache.getCodeSystem(predecessor)).toMatchObject({ url: current });
-        expect(cache.getCodeSystem(current)).toMatchObject({ url: current });
+        expect(cache.sourceContexts.run('R4', () => cache.getCodeSystem(predecessor))).toMatchObject({ url: current });
+        expect(cache.sourceContexts.run('R4', () => cache.getCodeSystem(current))).toMatchObject({ url: current });
     });
 
     it('does not let a negative CodeSystem cache entry hide a later package match', async () => {
@@ -480,7 +481,7 @@ describe('ValueSetPackageLoader canonical package scan', () => {
         await fs.mkdir(packageDir, { recursive: true });
 
         const canonical = 'https://fhir.kbv.de/CodeSystem/KBV_CS_EAU_AU_Type';
-        const codeSystem: CodeSystem = {
+        const codeSystem: CodeSystem & { status: 'active' } = {
             resourceType: 'CodeSystem',
             url: canonical,
             status: 'active',
@@ -502,7 +503,7 @@ describe('ValueSetPackageLoader canonical package scan', () => {
             url: canonical,
             concept: [{ code: 'ERST' }],
         });
-        expect(cache.getCodeSystemFile(`${canonical}|fhir4`)).toMatchObject({ url: canonical });
+        expect(cache.sourceContexts.run('R4', () => cache.getCodeSystemFile(versionedCacheKey(canonical, undefined, 'R4')))).toMatchObject({ url: canonical });
     });
 
     it('single-flights concurrent misses and reuses its negative lookup', async () => {

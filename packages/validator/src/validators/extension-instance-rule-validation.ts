@@ -1,9 +1,11 @@
+import { ProfileReferenceUnavailableError, profileReferenceUnavailableIssue } from '../core/profile-reference-authority.js';
 import type { BoundedLruCache } from '../cache/bounded-lru-cache.js';
 import { resourceTypeOf } from '../core/fhir-resource.js';
 import type { StructureDefinition } from '../core/structure-definition-types.js';
 import type { StructureDefinitionLoader } from '../core/structure-definition-loader.js';
 import { createValidationIssue } from '../issues/index.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
+import { definitionReferencingProfile } from './extension-definition-extractor.js';
 import { validateAgainstExtensionProfile } from './extension-profile-validation.js';
 import {
   validateExtensionStructure,
@@ -112,6 +114,7 @@ async function validateDefinedExtension(
     }));
   }
   if (definition.profileUrl) {
+    try {
     issues.push(...await validateAgainstExtensionProfile({
       extension,
       profileUrl: definition.profileUrl,
@@ -123,7 +126,12 @@ async function validateDefinedExtension(
       elementRulesValidator: dependencies.elementRulesValidator,
       profileCache: dependencies.extensionProfileCache,
       sdFHIRPathExecutor: dependencies.sdFHIRPathExecutor,
+      referencingProfile: definitionReferencingProfile(definition, context.profileSD),
     }));
+    } catch (error: unknown) {
+      if (!(error instanceof ProfileReferenceUnavailableError)) throw error;
+      issues.push(profileReferenceUnavailableIssue(error, extensionPath));
+    }
   }
   return issues;
 }

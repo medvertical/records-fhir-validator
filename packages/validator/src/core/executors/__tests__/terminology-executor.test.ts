@@ -22,6 +22,8 @@ import {
 } from "../terminology-executor";
 import {
   createTerminologyValidationPortMock,
+  codeSystemServerResponse,
+  localCodeSystemUnverifiedIssue,
   type TerminologyValidationPortMock,
 } from "./terminology-validation-port.test-support";
 import {
@@ -273,7 +275,7 @@ describe("TerminologyExecutor", () => {
           strength: "required",
           valueSet: "http://hl7.org/fhir/ValueSet/data-absent-reason|4.0.1",
         }),
-        "Patient.identifier.value.extension.value[x]",
+        "Patient.identifier[0].value.extension[0].valueCode",
         expect.any(Object),
       );
     });
@@ -338,13 +340,23 @@ describe("TerminologyExecutor", () => {
     it("should handle missing snapshot elements", async () => {
       mockContext.structureDef.snapshot = undefined;
       const issues = await executor.validate(mockContext);
-      expect(issues).toEqual([]);
+      expect(issues).toEqual([
+        localCodeSystemUnverifiedIssue(
+          "33747-0", "http://loinc.org",
+          "Observation.code.coding[0].code", "Temperature",
+        ),
+      ]);
     });
 
     it("should handle empty snapshot elements", async () => {
       mockContext.structureDef.snapshot = { element: [] };
       const issues = await executor.validate(mockContext);
-      expect(issues).toEqual([]);
+      expect(issues).toEqual([
+        localCodeSystemUnverifiedIssue(
+          "33747-0", "http://loinc.org",
+          "Observation.code.coding[0].code", "Temperature",
+        ),
+      ]);
     });
 
     it("should aggregate issues from multiple bindings", async () => {
@@ -387,11 +399,16 @@ describe("TerminologyExecutor", () => {
       const issues = await executorWithMock.validate(mockContext);
 
       expect(issues.length).toBeGreaterThanOrEqual(2);
-      expect(issues).toEqual([...statusIssues, ...codeIssues]);
+      expect(issues).toEqual([...statusIssues, ...codeIssues,
+        localCodeSystemUnverifiedIssue(
+          "33747-0", "http://loinc.org",
+          "Observation.code.coding[0].code", "Temperature",
+        ),
+      ]);
       validateBindingSpy.mockRestore();
     });
 
-    it("keeps global CodeSystem display hygiene as a warning on the display path", async () => {
+    it("reports a display the terminology server rejects as an error on the display path", async () => {
       mockStructureDef.snapshot!.element = [
         {
           path: "Observation.code",
@@ -416,9 +433,8 @@ describe("TerminologyExecutor", () => {
         if (path === "Observation.code") return resource.code;
         return undefined;
       };
-      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
-        valid: false,
-        reason: "display-mismatch",
+      validatorInstance.validateCodeInCodeSystem.mockImplementation(codeSystemServerResponse({
+        result: false,
         message:
           "Wrong Display Name 'Urine microscopy (procedure)' for http://snomed.info/sct#394712000",
         issues: [
@@ -430,7 +446,7 @@ describe("TerminologyExecutor", () => {
             expression: ["display"],
           },
         ],
-      });
+      }));
 
       const issues = await executor.validate(mockContext);
 
@@ -443,7 +459,7 @@ describe("TerminologyExecutor", () => {
       expect(issues).toHaveLength(1);
       expect(issues[0]).toEqual(
         expect.objectContaining({
-          severity: "warning",
+          severity: "error",
           code: "terminology-display-mismatch",
           path: "Observation.code.coding[0].display",
         }),
@@ -527,9 +543,8 @@ describe("TerminologyExecutor", () => {
         if (path === "Encounter.type") return resource.type;
         return undefined;
       };
-      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
-        valid: false,
-        reason: "display-mismatch",
+      validatorInstance.validateCodeInCodeSystem.mockImplementation(codeSystemServerResponse({
+        result: false,
         display: "Emergency hospital admission",
         message:
           "Wrong Display Name 'Encounter Inpatient' for http://snomed.info/sct#183452005. " +
@@ -543,7 +558,7 @@ describe("TerminologyExecutor", () => {
               "Valid display is 'Emergency hospital admission'",
           },
         ],
-      });
+      }));
 
       const issues = await executor.validate(mockContext);
 
@@ -556,7 +571,7 @@ describe("TerminologyExecutor", () => {
       expect(issues).toHaveLength(1);
       expect(issues[0]).toEqual(
         expect.objectContaining({
-          severity: "warning",
+          severity: "error",
           code: "terminology-display-mismatch",
           path: "Encounter.type[0].coding[0].display",
         }),
@@ -630,7 +645,7 @@ describe("TerminologyExecutor", () => {
       );
     });
 
-    it("suppresses CodeSystem display mismatches that differ only by case or spacing", async () => {
+    it("retains authoritative warning: CodeSystem display mismatches that differ only by case or spacing", async () => {
       mockStructureDef.snapshot!.element = [
         {
           path: "MedicationRequest.medication[x]",
@@ -656,9 +671,8 @@ describe("TerminologyExecutor", () => {
           return resource.medicationCodeableConcept;
         return undefined;
       };
-      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
-        valid: false,
-        reason: "display-mismatch",
+      validatorInstance.validateCodeInCodeSystem.mockImplementation(codeSystemServerResponse({
+        result: false,
         display: "ibuprofen 100 MG Oral Tablet",
         message:
           "Wrong Display Name 'Ibuprofen 100 MG Oral Tablet' for http://www.nlm.nih.gov/research/umls/rxnorm#198405. " +
@@ -672,14 +686,14 @@ describe("TerminologyExecutor", () => {
               "Valid display is 'ibuprofen 100 MG Oral Tablet'",
           },
         ],
-      });
+      }));
 
       const issues = await executor.validate(mockContext);
 
-      expect(issues).toHaveLength(0);
+      expect(issues).toEqual([expect.objectContaining({ code: 'terminology-display-mismatch', severity: 'warning' })]);
     });
 
-    it("suppresses CodeSystem display mismatches when the server lists the display as an accepted choice", async () => {
+    it("retains authoritative warning: CodeSystem display mismatches when the server lists the display as an accepted choice", async () => {
       mockStructureDef.snapshot!.element = [
         {
           path: "Observation.code",
@@ -704,9 +718,8 @@ describe("TerminologyExecutor", () => {
         if (path === "Observation.code") return resource.code;
         return undefined;
       };
-      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
-        valid: false,
-        reason: "display-mismatch",
+      validatorInstance.validateCodeInCodeSystem.mockImplementation(codeSystemServerResponse({
+        result: false,
         message:
           "Wrong Display Name 'Respiratory Rate' for http://loinc.org#9279-1. " +
           "Valid display is one of 3 choices: 'Respiraciones:Sistema respiratorio :Punto temporal:NRat:Cuantitativo:' (es-MX) " +
@@ -721,14 +734,14 @@ describe("TerminologyExecutor", () => {
               "or 'Respiratory rate' (en) or 'Atemfrequenz' (de-DE) (for the language(s) '--')",
           },
         ],
-      });
+      }));
 
       const issues = await executor.validate(mockContext);
 
-      expect(issues).toHaveLength(0);
+      expect(issues).toEqual([expect.objectContaining({ code: 'terminology-display-mismatch', severity: 'warning' })]);
     });
 
-    it("suppresses SNOMED FSN semantic-tag display variants", async () => {
+    it("retains authoritative warning: SNOMED FSN semantic-tag display variants", async () => {
       mockStructureDef.snapshot!.element = [
         {
           path: "Procedure.code",
@@ -753,9 +766,9 @@ describe("TerminologyExecutor", () => {
         if (path === "Procedure.code") return resource.code;
         return undefined;
       };
-      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
-        valid: false,
-        reason: "display-mismatch",
+      validatorInstance.validateCodeInCodeSystem.mockImplementation(codeSystemServerResponse({
+        result: false,
+        display: 'Medication reconciliation',
         message:
           "Wrong Display Name 'Medication Reconciliation (procedure)' for http://snomed.info/sct#430193006. " +
           "Valid display is one of 4 choices: 'Medication reconciliation' (en-x-sctlang-90000000-00005090-07)",
@@ -768,14 +781,14 @@ describe("TerminologyExecutor", () => {
               "Valid display is one of 4 choices: 'Medication reconciliation' (en-x-sctlang-90000000-00005090-07)",
           },
         ],
-      });
+      }));
 
       const issues = await executor.validate(mockContext);
 
-      expect(issues).toHaveLength(0);
+      expect(issues).toEqual([expect.objectContaining({ code: 'terminology-display-mismatch', severity: 'warning' })]);
     });
 
-    it("suppresses SNOMED display punctuation and truncated semantic-tag variants", async () => {
+    it("retains authoritative warning: SNOMED display punctuation and truncated semantic-tag variants", async () => {
       mockStructureDef.snapshot!.element = [
         {
           path: "Procedure.code",
@@ -800,9 +813,8 @@ describe("TerminologyExecutor", () => {
         if (path === "Procedure.code") return resource.code;
         return undefined;
       };
-      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
-        valid: false,
-        reason: "display-mismatch",
+      validatorInstance.validateCodeInCodeSystem.mockImplementation(codeSystemServerResponse({
+        result: false,
         display: "Speech and language therapy regime",
         message:
           "Wrong Display Name 'Speech and language therapy regime (regime/therapy' for http://snomed.info/sct#311555007. " +
@@ -816,14 +828,14 @@ describe("TerminologyExecutor", () => {
               "Valid display is 'Speech and language therapy regime'",
           },
         ],
-      });
+      }));
 
       const issues = await executor.validate(mockContext);
 
-      expect(issues).toHaveLength(0);
+      expect(issues).toEqual([expect.objectContaining({ code: 'terminology-display-mismatch', severity: 'warning' })]);
     });
 
-    it("suppresses CodeSystem display mismatches that differ only by punctuation", async () => {
+    it("retains authoritative warning: CodeSystem display mismatches that differ only by punctuation", async () => {
       mockStructureDef.snapshot!.element = [
         {
           path: "Encounter.type",
@@ -850,9 +862,8 @@ describe("TerminologyExecutor", () => {
         if (path === "Encounter.type") return resource.type;
         return undefined;
       };
-      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
-        valid: false,
-        reason: "display-mismatch",
+      validatorInstance.validateCodeInCodeSystem.mockImplementation(codeSystemServerResponse({
+        result: false,
         display: "Encounter for check up",
         message:
           "Wrong Display Name 'Encounter for ''check-up''' for http://snomed.info/sct#185349003. " +
@@ -866,14 +877,14 @@ describe("TerminologyExecutor", () => {
               "Valid display is 'Encounter for check up'",
           },
         ],
-      });
+      }));
 
       const issues = await executor.validate(mockContext);
 
-      expect(issues).toHaveLength(0);
+      expect(issues).toEqual([expect.objectContaining({ code: 'terminology-display-mismatch', severity: 'warning' })]);
     });
 
-    it("keeps coded value display mismatches as warnings", async () => {
+    it("reports coded value display mismatches the server rejects as errors", async () => {
       mockStructureDef.snapshot!.element = [
         {
           path: "Observation.value[x]",
@@ -899,9 +910,8 @@ describe("TerminologyExecutor", () => {
           return resource.valueCodeableConcept;
         return undefined;
       };
-      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
-        valid: false,
-        reason: "display-mismatch",
+      validatorInstance.validateCodeInCodeSystem.mockImplementation(codeSystemServerResponse({
+        result: false,
         message:
           "Wrong Display Name 'Urine leukocyte test' for http://snomed.info/sct#394712000",
         issues: [
@@ -913,14 +923,14 @@ describe("TerminologyExecutor", () => {
             expression: ["display"],
           },
         ],
-      });
+      }));
 
       const issues = await executor.validate(mockContext);
 
       expect(issues).toHaveLength(1);
       expect(issues[0]).toEqual(
         expect.objectContaining({
-          severity: "warning",
+          severity: "error",
           code: "terminology-display-mismatch",
           path: "Observation.valueCodeableConcept.coding[0].display",
         }),
@@ -944,7 +954,12 @@ describe("TerminologyExecutor", () => {
 
       const issues = await executor.validate(mockContext);
 
-      expect(issues).toEqual([]);
+      expect(issues).toEqual([
+        localCodeSystemUnverifiedIssue(
+          "8716-3", "http://loinc.org",
+          "Observation.code.coding[0].code", "Vital signs",
+        ),
+      ]);
     });
 
     it("flags locally known LOINC display mismatches as errors (Java parity)", async () => {
@@ -964,7 +979,11 @@ describe("TerminologyExecutor", () => {
 
       const issues = await executor.validate(mockContext);
 
-      expect(issues).toHaveLength(1);
+      expect(issues).toHaveLength(2);
+      expect(issues[1]).toEqual(localCodeSystemUnverifiedIssue(
+        "8716-3", "http://loinc.org",
+        "Observation.code.coding[0].code", "Blood pressure",
+      ));
       expect(issues[0]).toEqual(
         expect.objectContaining({
           severity: "error",
@@ -1048,8 +1067,8 @@ describe("TerminologyExecutor", () => {
         if (path === "Condition.code") return resource.code;
         return undefined;
       };
-      validatorInstance.validateCodeInCodeSystem.mockResolvedValue({
-        valid: true,
+      validatorInstance.validateCodeInCodeSystem.mockImplementation(codeSystemServerResponse({
+        result: true,
         inactive: true,
         message:
           "The concept '15777000' has a status of inactive and its use should be reviewed",
@@ -1061,7 +1080,7 @@ describe("TerminologyExecutor", () => {
               "The concept '15777000' has a status of inactive and its use should be reviewed",
           },
         ],
-      });
+      }));
 
       const issues = await executor.validate(mockContext);
 
@@ -1082,7 +1101,11 @@ describe("TerminologyExecutor", () => {
 
       const issues = await executor.validate(mockContext);
 
-      expect(issues).toHaveLength(1);
+      expect(issues).toHaveLength(2);
+      expect(issues[1]).toEqual(localCodeSystemUnverifiedIssue(
+        "33747-0", "http://loinc.org",
+        "Observation.code.coding[0].code", "Temperature",
+      ));
       expect(issues[0].aspect).toBe("terminology");
       expect(issues[0].severity).toBe("error");
       expect(issues[0].code).toBe("validation-error");
@@ -1099,7 +1122,11 @@ describe("TerminologyExecutor", () => {
 
       const issues = await executor.validate(mockContext);
 
-      expect(issues).toHaveLength(1);
+      expect(issues).toHaveLength(2);
+      expect(issues[1]).toEqual(localCodeSystemUnverifiedIssue(
+        "33747-0", "http://loinc.org",
+        "Observation.code.coding[0].code", "Temperature",
+      ));
       expect(issues[0].message).not.toContain("String error");
     });
 
@@ -1293,7 +1320,7 @@ describe("TerminologyExecutor", () => {
         expect.objectContaining({
           valueSet: "http://example.org/fhir/ValueSet/loinc-only",
         }),
-        "Observation.code.coding",
+        "Observation.code.coding[0]",
         expect.any(Object),
       );
       validateBindingSpy.mockRestore();
@@ -1372,7 +1399,7 @@ describe("TerminologyExecutor", () => {
         expect.objectContaining({
           valueSet: "http://example.org/fhir/ValueSet/loinc-only",
         }),
-        "Observation.code.coding",
+        "Observation.code.coding[0]",
         expect.any(Object),
       );
       validateBindingSpy.mockRestore();
@@ -1639,7 +1666,7 @@ describe("TerminologyExecutor", () => {
           valueSet:
             "http://hl7.org/fhir/uv/genomics-reporting/ValueSet/hgvs-vs",
         }),
-        "Observation.component.value[x]",
+        "Observation.component[0].valueCodeableConcept",
         expect.any(Object),
       );
       validateBindingSpy.mockRestore();
@@ -1723,7 +1750,7 @@ describe("TerminologyExecutor", () => {
         expect.objectContaining({
           valueSet: "http://hl7.org/fhir/ValueSet/observation-category",
         }),
-        "Observation.category",
+        "Observation.category[0]",
         expect.any(Object),
       );
       expect(validateBindingSpy).toHaveBeenNthCalledWith(
@@ -1733,7 +1760,7 @@ describe("TerminologyExecutor", () => {
           valueSet:
             "http://example.org/fhir/ValueSet/patho-section-types-loinc",
         }),
-        "Observation.category",
+        "Observation.category[1]",
         expect.any(Object),
       );
       validateBindingSpy.mockRestore();

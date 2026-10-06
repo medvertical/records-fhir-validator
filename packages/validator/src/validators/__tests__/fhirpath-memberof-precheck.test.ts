@@ -57,6 +57,7 @@ describe('other memberOf prechecks', () => {
     cyclicCodings.push(cyclicCodings, { code: 'DE' });
     const loader = {
       loadValueSet: vi.fn().mockResolvedValue(['DE']),
+      hasIncompleteExpansion: vi.fn().mockResolvedValue(false),
     };
 
     await expect(evaluateSimpleMemberOfExists(

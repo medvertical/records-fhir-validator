@@ -98,11 +98,12 @@ function normalizeResponseAnswer(value: unknown): QuestionnaireResponseAnswer {
   };
 }
 
+/** A Coding is one whatever it carries: sIRB's populated answers name only a display. */
 function normalizeCoding(value: unknown): QuestionnaireResponseAnswer['valueCoding'] | undefined {
   const source = asRecord(value);
-  if (!source || typeof source.code !== 'string') return undefined;
+  if (!source) return undefined;
   return {
-    code: source.code,
+    ...(typeof source.code === 'string' ? { code: source.code } : {}),
     ...(typeof source.system === 'string' ? { system: source.system } : {}),
     ...(typeof source.display === 'string' ? { display: source.display } : {}),
   };

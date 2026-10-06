@@ -38,6 +38,7 @@ export function createValidatorExecutionComponents(
   const terminologyExecutor = new TerminologyExecutor(
     core.valuesetValidator,
     coreRuntime.terminologyCache,
+    (url, fhirVersion) => core.sdLoader.loadProfile(url, fhirVersion),
   );
 
   return {

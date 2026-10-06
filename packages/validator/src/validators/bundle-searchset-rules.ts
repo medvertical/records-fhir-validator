@@ -1,7 +1,6 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
-
-const RESOURCE_TYPE_PATTERN = /^[A-Z][A-Za-z]+$/;
+import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types.js';
 
 export function validateSearchsetBundle(bundle: unknown, entries: unknown[]): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
@@ -115,13 +114,14 @@ function parseSearchSelfLinkTypes(url: string): string[] {
   const path = queryIdx >= 0 ? url.slice(0, queryIdx) : url;
   const query = queryIdx >= 0 ? url.slice(queryIdx + 1) : '';
 
-  const types: string[] = [];
+  // As in the reference validator, the path names the searched type only when
+  // it ends in a resource type (`…/Bundle/MATCHOperationResponse` does not);
+  // otherwise `_type` may name it.
   const pathSegments = path.split('/').filter(Boolean);
   const last = pathSegments[pathSegments.length - 1];
-  if (last && RESOURCE_TYPE_PATTERN.test(last)) {
-    types.push(last);
-  }
+  if (last && KNOWN_FHIR_RESOURCE_TYPES.has(last)) return [last];
 
+  const types: string[] = [];
   for (const part of query.split('&')) {
     const eq = part.indexOf('=');
     if (eq < 0) continue;
@@ -130,7 +130,7 @@ function parseSearchSelfLinkTypes(url: string): string[] {
     const value = decodeURIComponent(part.slice(eq + 1));
     for (const t of value.split(',')) {
       const trimmed = t.trim();
-      if (RESOURCE_TYPE_PATTERN.test(trimmed) && !types.includes(trimmed)) {
+      if (KNOWN_FHIR_RESOURCE_TYPES.has(trimmed) && !types.includes(trimmed)) {
         types.push(trimmed);
       }
     }

@@ -64,6 +64,22 @@ describe('QuestionnaireValidator — QuestionnaireResponse', () => {
     }));
   });
 
+  // sIRB's populated responses answer a choice question with a Coding that
+  // names only a display.
+  it('types a Coding answer by its property whatever it carries', () => {
+    const issues = validator.validateQuestionnaireResponse({
+      resourceType: 'QuestionnaireResponse',
+      status: 'completed',
+      item: [{ linkId: 'site', answer: [{ valueCoding: { display: 'Central Campus Test University' } }] }],
+    }, {
+      resourceType: 'Questionnaire',
+      status: 'active',
+      item: [{ linkId: 'site', type: 'choice' }],
+    });
+
+    expect(issues.filter(issue => issue.code === 'qr-type-mismatch')).toEqual([]);
+  });
+
   it('validates nested QuestionnaireResponse items below answers', () => {
     const issues = validator.validateQuestionnaireResponse({
       resourceType: 'QuestionnaireResponse',
@@ -166,7 +182,7 @@ describe('QuestionnaireValidator — QuestionnaireResponse', () => {
     expect(issues).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: 'questionnaire-reference-not-resolved',
-        path: 'QuestionnaireResponse.questionnaire',
+        path: 'QuestionnaireResponse',
         severity: 'warning',
       }),
     ]));
@@ -248,6 +264,35 @@ describe('QuestionnaireValidator — QuestionnaireResponse', () => {
     const issues = validator.validateQuestionnaireResponse(qr, questionnaire);
 
     expect(issues.filter(i => i.code === 'questionnaire-sdc-maxdecimalplaces')).toHaveLength(2);
+  });
+
+  it('requires an echoed item text to be the question text', () => {
+    const questionnaire = {
+      resourceType: 'Questionnaire',
+      status: 'active',
+      item: [
+        { linkId: 'sleep', type: 'string', text: 'Trouble falling or staying asleep' },
+        { linkId: 'mood', type: 'string' },
+      ],
+    };
+    const qr = {
+      resourceType: 'QuestionnaireResponse',
+      status: 'completed',
+      item: [
+        { linkId: 'sleep', text: 'Trouble falling or staying asleep', answer: [{ valueString: 'no' }] },
+        { linkId: 'sleep', text: 'Trouble sleeping', answer: [{ valueString: 'no' }] },
+        { linkId: 'mood', text: 'Mood', answer: [{ valueString: 'fine' }] },
+        { linkId: 'mood', answer: [{ valueString: 'fine' }] },
+      ],
+    };
+
+    const issues = validator.validateQuestionnaireResponse(qr, questionnaire)
+      .filter(issue => issue.code === 'qr-item-text-mismatch');
+
+    expect(issues.map(issue => [issue.path, issue.severity, issue.message])).toEqual([
+      ['QuestionnaireResponse.item[1]', 'error', 'If text exists, it must match the questionnaire definition for linkId sleep'],
+      ['QuestionnaireResponse.item[2]', 'error', 'If text exists, it must match the questionnaire definition for linkId mood'],
+    ]);
   });
 
   it('skips non-QuestionnaireResponse resources', () => {

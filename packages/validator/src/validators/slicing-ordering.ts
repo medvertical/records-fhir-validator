@@ -7,6 +7,7 @@ import { resourceTypeFromPath } from './slicing-content-rules.js';
 interface SliceOrderingOptions {
   ordered?: boolean;
   rules?: SlicingDefinition['rules'];
+  knownNonmemberIndices?: ReadonlySet<number>;
 }
 
 export function validateSliceOrdering(
@@ -20,10 +21,10 @@ export function validateSliceOrdering(
   let lastSliceIndex = -1;
   let unmatchedElementSeen = false;
 
-  for (const element of elements) {
+  for (const [index, element] of elements.entries()) {
     const matchedSlice = matchElementToSlice(element);
     if (!matchedSlice) {
-      unmatchedElementSeen = true;
+      if (!options.knownNonmemberIndices || options.knownNonmemberIndices.has(index)) unmatchedElementSeen = true;
       continue;
     }
 

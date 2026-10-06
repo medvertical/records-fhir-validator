@@ -4,6 +4,8 @@ import { getProfileSource, type ProfileSourceContext } from '../persistence/inde
 import type { ValidationSettings } from '@records-fhir/validation-types';
 import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
+import { profileMatchesCanonical, sameProfileDefinition } from './sd-loader-profile-identity.js';
+import { parseProfileCanonical } from './sd-loader-version-utils.js';
 import { chunkArray } from './batch-resource-planning.js';
 import { warmupProfileCacheFromDatabase } from './profile-cache-warmup.js';
 import type { FhirClientLike } from './profile-loader-utils.js';
@@ -21,18 +23,6 @@ function isCoreStructureDefinition(url: string): boolean {
   return splitVersionedCanonical(url).canonicalUrl.startsWith(
     'http://hl7.org/fhir/StructureDefinition/',
   );
-}
-
-function profileMatchesRequest(
-  profile: StructureDefinition,
-  explicitVersion: string | undefined,
-  fhirVersion: 'R4' | 'R5' | 'R6',
-): boolean {
-  if (explicitVersion && (profile as { version?: string }).version !== explicitVersion) return false;
-  const profileFhirVersion = (profile as { fhirVersion?: string }).fhirVersion;
-  if (!profileFhirVersion) return true;
-  const expectedPrefix = fhirVersion === 'R4' ? '4.' : fhirVersion === 'R5' ? '5.' : '6.';
-  return profileFhirVersion.startsWith(expectedPrefix);
 }
 
 /** Preload requested profiles and generate missing snapshots for batch validation. */
@@ -64,11 +54,15 @@ export async function preloadProfiles(
   const loaderUrls = profileUrls.filter(url => !tenantUrlSet.has(url));
   const sdLoaderResults = await sdLoader.loadProfilesBatch(loaderUrls, fhirVersion);
 
-  for (const [url, sd] of sdLoaderResults.entries()) profilesMap.set(url, sd);
+  for (const [url, sd] of sdLoaderResults.entries()) {
+    const effectiveUrl = sdLoader.resolveProfileUrl ? sdLoader.resolveProfileUrl(url, fhirVersion) : url;
+    if (effectiveUrl && profileMatchesCanonical(sd, url, fhirVersion)
+      && profileMatchesCanonical(sd, effectiveUrl, fhirVersion)) profilesMap.set(url, sd);
+  }
 
   const urlsToResolve: string[] = [...tenantUrls];
   for (const url of profileUrls) {
-    if (!tenantUrlSet.has(url) && !sdLoaderResults.has(url) && !profilesMap.has(url)) {
+    if (!tenantUrlSet.has(url) && !profilesMap.has(url)) {
       urlsToResolve.push(url);
     }
   }
@@ -85,9 +79,12 @@ export async function preloadProfiles(
       for (const chunk of chunks) {
         await Promise.all(chunk.map(async (url) => {
           try {
-            const { canonicalUrl, version } = splitVersionedCanonical(url);
+            const effectiveUrl = sdLoader.resolveProfileUrl ? sdLoader.resolveProfileUrl(url, fhirVersion) : url;
+            const request = effectiveUrl ? parseProfileCanonical(effectiveUrl) : null;
+            if (!request) return;
+            const { canonical: canonicalUrl, version } = request;
             const profile = await resolveProfile(canonicalUrl, version, settings, scopedContext);
-            if (profile && profileMatchesRequest(profile, version, fhirVersion)) {
+            if (profile && profileMatchesCanonical(profile, url, fhirVersion) && profileMatchesCanonical(profile, effectiveUrl!, fhirVersion)) {
               profilesMap.set(url, profile);
               sdLoader.cacheProfile(url, profile, fhirVersion);
               resolvedCount++;
@@ -115,13 +112,14 @@ export async function preloadProfiles(
       const snapshotCacheKey = `${profileUrl}:${fhirVersion}:snapshot`;
       const cachedSnapshot = profileCache.get(snapshotCacheKey) as StructureDefinition | undefined;
 
-      if (cachedSnapshot?.snapshot) {
+      if (cachedSnapshot?.snapshot && sameProfileDefinition(cachedSnapshot, structureDef)) {
         logger.debug(
           '[RecordsValidator] Using cached snapshot',
           profileCanonicalMetadata(profileUrl),
         );
         structureDef.snapshot = cachedSnapshot.snapshot;
       } else {
+        if (cachedSnapshot) profileCache.delete(snapshotCacheKey);
         snapshotPromises.push((async () => {
           try {
             const elements = await snapshotGenerator.generateSnapshot(structureDef, { fhirVersion });
@@ -146,7 +144,7 @@ export async function preloadProfiles(
       }
     } else if (structureDef) {
       const cacheKey = `${profileUrl}:${fhirVersion}:snapshot`;
-      if (!profileCache.get(cacheKey)) profileCache.set(cacheKey, structureDef);
+      profileCache.set(cacheKey, structureDef);
     }
   }
 

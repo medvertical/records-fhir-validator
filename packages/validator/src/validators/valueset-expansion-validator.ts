@@ -46,8 +46,28 @@ export function validateValueSetExpansion(expansion: unknown, compose?: unknown)
   const contains = flattenContains(expansionRecord.contains);
   issues.push(...validateUnversionedExpansionSystems(contains, declaredUsedCodesystems));
   issues.push(...validateHierarchicalFilterExpansionConsistency(contains, compose));
+  issues.push(...validateExpansionTotal(expansionRecord, contains.length));
 
   return issues;
+}
+
+/**
+ * `total` counts every concept of the expansion, nested ones included; the
+ * page starting at `offset` cannot hold more of them than remain.
+ */
+function validateExpansionTotal(expansion: ObjectRecord, count: number): ValidationIssue[] {
+  const total = expansion.total;
+  if (typeof total !== 'number') return [];
+  const offset = typeof expansion.offset === 'number' ? expansion.offset : 0;
+  if (offset + count <= total) return [];
+  return [createValidationIssue({
+    code: 'tx-valueset-expansion-total-exceeded',
+    path: 'ValueSet.expansion',
+    resourceType: 'ValueSet',
+    customMessage: `The expansion offset (${offset}) + the count of items (${count}) is greater than the stated total (${total})`,
+    severityOverride: 'warning',
+    details: { offset, count, total },
+  })];
 }
 
 /**

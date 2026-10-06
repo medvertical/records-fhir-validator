@@ -1,5 +1,7 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import type { StructureDefinition, ElementDefinition } from '../structure-definition-types.js';
+import type { ProfileReferenceSource } from '../profile-reference-authority.js';
+import { prepareTargetProfileTypes } from '../../validators/reference-target-type-resolution.js';
 import type { CardinalityValidator } from '../../validators/cardinality-validator.js';
 import type { TypeValidator } from '../../validators/type-validator.js';
 import type { ElementRulesValidator } from '../../validators/element-rules-validator.js';
@@ -13,6 +15,8 @@ import { getValidationTargets, shouldValidateRequired } from '../../business-rul
 import {
   ContentReferenceElementsCache,
   expandContentReferenceElements,
+  instanceElementPaths,
+  loadContentReferenceSources,
 } from '../content-reference-elements.js';
 import {
   hasElementDefinitionRules,
@@ -43,6 +47,10 @@ interface StructuralSnapshotDeps {
   bundleValidator: BundleValidator;
   questionnaireValidator: QuestionnaireValidator;
   contentReferenceElementsCache?: ContentReferenceElementsCache;
+  /** Resolves the definitions absolute contentReferences name. */
+  loadStructureDefinition?(url: string, fhirVersion: FhirVersion): Promise<StructureDefinition | null>;
+  /** Resolves a target at the package definer of its actual declaration. */
+  loadReferencedProfile?(url: string, source: ProfileReferenceSource, fhirVersion: FhirVersion): Promise<StructureDefinition | null>;
   detectUnknownElements(
     resource: FhirResource,
     structureDef: StructureDefinition,
@@ -69,9 +77,14 @@ interface SnapshotElementParams extends StructuralSnapshotParams {
 export async function validateStructuralSnapshot(params: StructuralSnapshotParams): Promise<ValidationIssue[]> {
   const { resource, structureDef, effectiveProfileUrl, getValueAtPath, fhirVersion, deps, resolveReference } = params;
   const issues: ValidationIssue[] = [];
+  const loadDefinition = deps.loadStructureDefinition;
   const snapshotElements = expandContentReferenceElements(
     structureDef.snapshot?.element ?? [],
     deps.contentReferenceElementsCache,
+    instanceElementPaths(resource),
+    loadDefinition
+      ? await loadContentReferenceSources(structureDef, url => loadDefinition(url, fhirVersion))
+      : undefined,
   );
   const resourceType = typeof resource.resourceType === 'string'
     ? resource.resourceType
@@ -95,10 +108,17 @@ export async function validateStructuralSnapshot(params: StructuralSnapshotParam
   issues.push(...await validateMissedMustSupportElements(resource, structureDef, effectiveProfileUrl, getValueAtPath, deps, issues));
   issues.push(...await deps.detectUnknownElements(resource, structureDef, resourceType, fhirVersion));
   issues.push(...deps.referenceFormatValidator.validateAllReferences(resource, resourceType));
-  issues.push(...deps.referenceTargetValidator.validate(resource, structureDef, resolveReference));
+  const targetProfileTypeResolver = deps.loadReferencedProfile
+    ? await prepareTargetProfileTypes(structureDef, fhirVersion, deps.loadReferencedProfile)
+    : undefined;
+  if (!targetProfileTypeResolver && loadDefinition) {
+    await Promise.all(deps.referenceTargetValidator.untypedTargetProfiles(structureDef)
+      .map(url => loadDefinition(url, fhirVersion).catch(() => null)));
+  }
+  issues.push(...deps.referenceTargetValidator.validate(resource, structureDef, resolveReference, targetProfileTypeResolver));
 
   if (resourceType === 'Bundle') {
-    issues.push(...await deps.bundleValidator.validateBundle(resource));
+    issues.push(...await deps.bundleValidator.validateBundle(resource, undefined, fhirVersion));
   }
 
   if (resourceType === 'Questionnaire') {
@@ -135,6 +155,7 @@ async function validateElementWithoutTargets(params: SnapshotElementParams): Pro
   if (value !== undefined && value !== null) {
     issues.push(...await validateExistingValue({
       value,
+      resource,
       elementDef,
       path,
       effectiveProfileUrl,
@@ -232,6 +253,7 @@ async function validateSingleTarget(params: SnapshotElementParams, target: Valid
   const skipSiblingSliceRules = shouldSkipRulesForSiblingSliceTarget(elementDef, target.value, structureDef);
   return validateExistingValue({
     value: target.value,
+    resource,
     elementDef,
     path: target.fullPath,
     effectiveProfileUrl,
@@ -244,6 +266,7 @@ async function validateSingleTarget(params: SnapshotElementParams, target: Valid
 
 async function validateExistingValue(params: {
   value: unknown;
+  resource: FhirResource;
   elementDef: ElementDefinition;
   path: string;
   effectiveProfileUrl?: string;
@@ -252,10 +275,10 @@ async function validateExistingValue(params: {
   deps: StructuralSnapshotDeps;
   skipSiblingSliceRules: boolean;
 }): Promise<ValidationIssue[]> {
-  const { value, elementDef, path, effectiveProfileUrl, structureDef, fhirVersion, deps, skipSiblingSliceRules } = params;
+  const { value, resource, elementDef, path, effectiveProfileUrl, structureDef, fhirVersion, deps, skipSiblingSliceRules } = params;
   const profileUrl = effectiveProfileUrl || '';
   const issues = validatePrimitiveValuePresence(value, elementDef, path, profileUrl);
-  issues.push(...await deps.typeValidator.validate(value, elementDef.type || [], path, profileUrl));
+  issues.push(...await deps.typeValidator.validate(value, elementDef.type || [], path, profileUrl, fhirVersion));
 
   if (!skipSiblingSliceRules) {
     issues.push(...deps.elementRulesValidator.validate(value, elementDef, path, profileUrl));
@@ -268,6 +291,7 @@ async function validateExistingValue(params: {
     profileUrl,
     structureDef,
     fhirVersion,
+    resource,
   ));
 
   return issues;

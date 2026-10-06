@@ -51,6 +51,7 @@ export function createReferenceValidationIssue(params: {
   details?: Record<string, unknown>;
   resourceType?: string;
   schemaVersion?: string;
+  definitionProfile?: ValidationIssue['definitionProfile'];
 }): ValidationIssue {
   const issue = createValidationIssue({
     code: params.code,
@@ -66,6 +67,7 @@ export function createReferenceValidationIssue(params: {
     humanReadable: params.humanReadable,
     validationMethod: 'reference-validation',
     schemaVersion: params.schemaVersion ?? 'R4',
+    ...(params.definitionProfile ? { definitionProfile: params.definitionProfile } : {}),
   };
 }
 

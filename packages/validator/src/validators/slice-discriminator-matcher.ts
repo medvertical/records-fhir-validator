@@ -22,6 +22,7 @@ import {
 } from './slice-profile-discriminator-matcher.js';
 import { matchResolvedTypeDiscriminator, matchTypeDiscriminator } from './slice-type-discriminator.js';
 import { matchPatternDiscriminator, matchValueDiscriminator } from './slice-discriminator-value-matchers.js';
+import { matchResolvedCodeDiscriminator } from './slice-resolved-code-discriminator.js';
 import { getValueAtPath } from './slice-utils.js';
 
 export type { ReferenceResolverFn } from './slice-profile-discriminator-matcher.js';
@@ -55,7 +56,7 @@ export function matchDiscriminator(
     case 'pattern': return matchPatternDiscriminator(element, slice, path, matchesPattern, matchesBinding, allSlices);
     case 'type': return matchTypeDiscriminator(element, slice, path);
     case 'profile': return matchProfileDiscriminator(element, slice, path, referenceResolver, allSlices, matchesPattern);
-    case 'exists': return matchExistsDiscriminator(element, path);
+    case 'exists': return matchExistsDiscriminator(element, path, slice);
     default:
       logger.warn(`[SlicingValidator] Unsupported discriminator type: ${discriminator.type}`);
       return false;
@@ -120,6 +121,9 @@ function matchResolvedTarget(
   if (conformsTo) {
     const meta = isRecord(resolved) && isRecord(resolved.meta) ? resolved.meta : null;
     return profileListContains(toProfileArray(meta?.profile), conformsTo[1]);
+  }
+  if (remainder === 'code' || remainder === 'code.coding') {
+    return matchResolvedCodeDiscriminator(resolved, slice, referencePath, discriminator.type, matchesPattern, remainder);
   }
   const directMatch = discriminator.type === 'pattern'
     ? matchPatternDiscriminator(resolved, slice, remainder || '$this', matchesPattern, matchesBinding, allSlices)

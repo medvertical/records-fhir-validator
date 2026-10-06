@@ -39,7 +39,15 @@ describe('preprocessTypeLiterals $this-is substitution', () => {
   });
 
   it('treats zero-argument exists() as non-rebinding', () => {
+    // On a primitive `value` is the element's own value, which is `$this`.
     expect(preprocessTypeLiterals('value.exists() and $this is dateTime', ctx('dateTime')))
-      .toBe('value.exists() and true');
+      .toBe('$this.exists() and true');
+  });
+
+  // Da Vinci RA's ra-3 constrains a valueString by `value.startsWith(…)`.
+  it('reads value on a primitive element as the element itself', () => {
+    expect(preprocessTypeLiterals("value.startsWith('MeasureReport.group') and code.value = 'value'", ctx('string')))
+      .toBe("$this.startsWith('MeasureReport.group') and code.value = 'value'");
+    expect(preprocessTypeLiterals('value.exists()', ctx('Identifier'))).toBe('value.exists()');
   });
 });

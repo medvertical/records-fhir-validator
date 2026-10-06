@@ -1,3 +1,4 @@
+import { carryPatientNarrativeOrigins, reconcilePatientNarrativeIssues } from './patient-narrative-issue-reconciliation.js';
 import type { ProfileCache } from '../cache/profile-cache.js';
 import { logger } from '../logger.js';
 import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
@@ -23,6 +24,8 @@ import {
   type FhirClientLike,
 } from './single-resource-profile-preparation.js';
 import { collectSingleResourceValidationIssues } from './single-resource-validation.js';
+import { withoutSupersededSliceMinimums } from './bundle-document-context.js';
+import type { SingleResourceConformanceInput, SingleResourceProfileConformance } from './single-resource-profile-conformance.js';
 import type { SnapshotGenerator } from './snapshot-generator.js';
 import type { StructureDefinitionLoader } from './structure-definition-loader.js';
 import { createValidationErrorIssue, dedupeResourceTreeIssues } from './validation-utils.js';
@@ -35,11 +38,15 @@ export interface RecordsSingleResourceValidationInput {
   fhirClient?: FhirClientLike;
   referenceResolver?: ReferenceResolver | null;
   bundleCanonicalResolver?: BundleCanonicalResolver | null;
+  enclosingBundle?: Record<string, unknown>;
+  containingResource?: Record<string, unknown>;
   organizationId?: number;
   serverId?: number;
 }
 
 export interface RecordsSingleResourceValidationContext {
+  /** Settings-driven severities, applied before the final deduplication. */
+  governIssues?: (issues: ValidationIssue[]) => ValidationIssue[];
   sdLoader: StructureDefinitionLoader;
   profileCache: ProfileCache;
   snapshotGenerator: SnapshotGenerator;
@@ -54,6 +61,7 @@ export interface RecordsSingleResourceValidationContext {
   terminologyResourceValidator: TerminologyResourceValidator;
   questionnaireRegistry?: QuestionnaireContextRegistry;
   strictMode: boolean;
+  createProfileConformance?(input: SingleResourceConformanceInput): SingleResourceProfileConformance;
   validateBundleEntriesIfNeeded(
     resource: FhirResource,
     fhirVersion: 'R4' | 'R5' | 'R6',
@@ -95,17 +103,14 @@ export async function executeRecordsResourceValidation(
   // bundle-local references. A top-level single resource must not be the one
   // path where a resolve() discriminator counts its own contained targets as
   // unresolvable and the slicing goes unverified.
-  const effectiveReferenceResolver = combineReferenceResolvers(
-    createBundleReferenceResolver(
-      resource.resourceType === 'Bundle' ? resource : undefined,
-      resource,
-    ),
-    referenceResolver,
-  );
+  const enclosingBundle = resource.resourceType === 'Bundle' ? resource : input.enclosingBundle;
+  const localReferenceResolver = createBundleReferenceResolver(enclosingBundle, input.containingResource ?? resource);
+  const effectiveReferenceResolver = combineReferenceResolvers(localReferenceResolver, referenceResolver);
   const {
     declaredProfileUrl,
     structureDef,
     profileFallbackIssue,
+    profileLoadIssue,
     codeInferredProfile,
     contextQuestionnaire,
   } = await prepareSingleResourceProfile(
@@ -133,9 +138,17 @@ export async function executeRecordsResourceValidation(
       `Profile ${declaredProfileUrl} not found and base StructureDefinition for ${resource.resourceType} could not be loaded`,
       { profile: declaredProfileUrl },
       'meta.profile',
-    )];
+    ),
+    ...(profileFallbackIssue ? [profileFallbackIssue] : []),
+    ...(profileLoadIssue ? [profileLoadIssue] : []),
+    ];
   }
 
+  const conformance = context.createProfileConformance?.({
+    resource, structureDef, fhirVersion, settings, organizationId, serverId,
+    referenceResolver: effectiveReferenceResolver, localReferenceResolver, enclosingBundle,
+    containingResource: input.containingResource ?? resource,
+  });
   let issues = await collectSingleResourceValidationIssues(
     {
       resource,
@@ -148,6 +161,8 @@ export async function executeRecordsResourceValidation(
       codeInferredProfile,
       contextQuestionnaire,
       referenceResolver: effectiveReferenceResolver,
+      enclosingBundle,
+      conformance,
       organizationId,
       serverId,
     },
@@ -164,14 +179,22 @@ export async function executeRecordsResourceValidation(
       validateBundleEntriesIfNeeded: context.validateBundleEntriesIfNeeded,
     },
   );
+  if (profileLoadIssue) issues.push(profileLoadIssue);
   issues.push(...await context.validateContainedResourcesIfNeeded(resource));
   issues.push(...await context.validateParametersResourcesIfNeeded(resource));
   issues.push(...await collectMandatedProfileIssues(resource, declaredProfileUrl, fhirVersion, issues, context));
+  if (resource.resourceType === 'Bundle') {
+    // Nested Bundle consequences must not replace this Bundle's own slice minimum.
+    issues = carryPatientNarrativeOrigins([issues], withoutSupersededSliceMinimums(
+      issues, issues.filter(issue => issue.path === 'Bundle'),
+    ));
+  }
   // Contained resources are validated recursively after the parent issue
   // collection has already been deduplicated. Run the same canonical
   // deduplication once more at the complete-resource boundary so an issue
   // reported through both paths is returned exactly once.
-  issues = dedupeResourceTreeIssues(issues);
+  const governed = carryPatientNarrativeOrigins([issues], context.governIssues ? context.governIssues(issues) : issues);
+  issues = dedupeResourceTreeIssues(reconcilePatientNarrativeIssues(governed, structureDef, fhirVersion));
 
   const validationTime = Date.now() - startedAt;
   logger.debug(

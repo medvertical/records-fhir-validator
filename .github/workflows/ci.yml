@@ -15,8 +15,11 @@ jobs:
         with:
           node-version: '20'
           cache: npm
+      - name: Install repository npm toolchain
+        run: npm install --global npm@11.19.0
       - run: npm install
-      - run: npm run oss:audit-validator
+      - run: npm run oss:audit-validator:tests
+      - run: npm test
       - run: npm run typecheck
       - run: npm run build
       - run: npm run oss:smoke-validator

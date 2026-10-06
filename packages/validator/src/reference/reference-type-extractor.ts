@@ -17,7 +17,7 @@ import type {
   ReferenceParseResult,
   ReferenceTypeExtractionOptions,
 } from './reference-type-extractor-types.js';
-import { parseAbsoluteReference, parseCanonicalReference } from './reference-url-parser.js';
+import { isOtherSchemeAbsoluteUri, parseAbsoluteReference, parseCanonicalReference } from './reference-url-parser.js';
 
 export type {
   ReferenceParseResult,
@@ -148,6 +148,13 @@ export class ReferenceTypeExtractor {
    * Parse relative reference (ResourceType/id)
    */
   private parseRelativeReference(reference: string): ReferenceParseResult {
+    // Like the HL7 validator, read the type from the last segments of a
+    // relative URL with a path before them (`/fhir/Patient/1/_history/1`).
+    const prefixed = reference.match(/^\/?(?:[^/\s?#:]+\/)+?([A-Z][a-zA-Z]+\/[^/]+(?:\/_history\/[^/]+)?)$/);
+    if (prefixed && this.isValidResourceType(prefixed[1].split('/')[0])) {
+      return { ...this.parseRelativeReference(prefixed[1]), originalReference: reference };
+    }
+
     // Handle version suffix (ResourceType/id/_history/version)
     const historyMatch = reference.match(/^([^/]+)\/([^/]+)\/_history\/(.+)$/);
     if (historyMatch) {
@@ -202,7 +209,7 @@ export class ReferenceTypeExtractor {
    * Check if a string is an absolute URL
    */
   private isAbsoluteUrl(reference: string): boolean {
-    return /^https?:\/\//.test(reference) && !this.isCanonicalUrl(reference);
+    return (/^https?:\/\//.test(reference) || isOtherSchemeAbsoluteUri(reference)) && !this.isCanonicalUrl(reference);
   }
 
   /**

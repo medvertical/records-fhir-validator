@@ -1,6 +1,6 @@
 {
   "name": "@records-fhir/validation-types",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Validation-domain types and runtime schemas, settings policies and fix suggestions for the Records FHIR validator. No database coupling.",
   "type": "module",
   "license": "Apache-2.0",
@@ -46,6 +46,10 @@
     "./validation/enums": {
       "types": "./dist/validation/enums.d.ts",
       "import": "./dist/validation/enums.js"
+    },
+    "./validation/finding-verification": {
+      "types": "./dist/validation/finding-verification.d.ts",
+      "import": "./dist/validation/finding-verification.js"
     },
     "./validation/settings": {
       "types": "./dist/validation/settings.d.ts",

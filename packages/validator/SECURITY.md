@@ -86,3 +86,30 @@ publish details until the affected versions have a fix available. If
 you intend to publish your own write-up, please coordinate the
 timeline with us via the security email so existing consumers can
 upgrade first.
+
+## Transitive CSV parser
+
+The UCUM dependency used directly and through FHIRPath declares an older
+`csv-parse` dependency affected by [GHSA-8cw4-87c7-c6xx](https://github.com/advisories/GHSA-8cw4-87c7-c6xx).
+The advisory concerns CSV parsing with specific column options. The validator
+accepts FHIR JSON, XML and NDJSON and does not invoke this CSV API; the inspected
+UCUM 7.1.9 runtime sources contain no import of `csv-parse`.
+
+The Records repository, generated OSS repository, GitHub Action and packed
+consumer smoke test select the patched parser with this root override:
+
+```json
+{
+  "overrides": {
+    "@lhncbc/ucum-lhc": {
+      "csv-parse": "7.0.2"
+    }
+  }
+}
+```
+
+npm ignores overrides declared by dependencies. Applications installing the npm
+package must add the override to their own root manifest and refresh their lock
+file. A bare installation without it can still report this upstream advisory.
+The consumer smoke test audits the resulting production dependency graph as
+well as exercising the packaged validator.

@@ -20,9 +20,8 @@ interface SDFHIRPathEvaluationFailureInput {
 /**
  * Apply the operational failure policy for StructureDefinition FHIRPath.
  *
- * Explicit async-capability limitations remain skippable. Every other failure
- * becomes an informational unchecked diagnostic so callers cannot mistake an
- * evaluator failure for a successful constraint check.
+ * Capability limitations and other failures retain an unchecked diagnostic
+ * on the affected instance so callers cannot mistake them for successful checks.
  */
 export function handleSDFHIRPathEvaluationFailure(
   input: SDFHIRPathEvaluationFailureInput,
@@ -32,7 +31,13 @@ export function handleSDFHIRPathEvaluationFailure(
       '[SDFHIRPathExecutor] Skipping unsupported async function',
       sensitiveValueMetadata(input.constraint.key),
     );
-    return [];
+    return [createConstraintEvaluationError(
+      input.constraint,
+      input.path,
+      input.resourceType,
+      input.error,
+      input.profileUrl,
+    )];
   }
 
   const metadata = {

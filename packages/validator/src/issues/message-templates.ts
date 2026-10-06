@@ -1,6 +1,8 @@
 import { ValidationCode } from './message-catalog.js';
 
 export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
+    'narrative-textlink-target-unverified':
+        'The textLink data target could not be verified with the available resource context',
     'terminology-binding-required':
         "Code '{code}' from system '{system}' is not in value set '{valueSet}' (binding strength: required)",
     'terminology-binding-extensible':
@@ -15,6 +17,8 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
         "The System URI could not be determined for the code '{code}' in the ValueSet '{valueSet}'",
     'terminology-binding-required-code':
         "Code '{code}' is not in value set '{valueSet}' (binding strength: required)",
+    'terminology-binding-extensible-no-code':
+        "No code provided, and a code should be provided from the value set {valueSet}",
     'terminology-binding-extensible-code':
         "Code '{code}' is not in value set '{valueSet}' (binding strength: extensible)",
     'terminology-binding-preferred-code':
@@ -31,6 +35,8 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
         "Code '{code}' could not be checked against value set '{valueSet}' (binding strength: {strength}); no local expansion and the terminology servers did not answer",
     'terminology-valueset-unavailable':
         "Value set '{valueSet}' could not be resolved; validation of the {strength} binding is incomplete",
+    'terminology-snomed-syntax-unverified':
+        'SNOMED CT expression syntax could not be fully checked because the {syntaxLimitReason} was reached; syntax validation is incomplete.',
 
     'metadata-version-id-invalid-type':
         "versionId must be a string",
@@ -165,6 +171,8 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
     'metadata-invalid-meta-type':
         "meta must be an object",
 
+    'reference-without-display':
+        "A Reference without an actual reference or identifier should have a display",
     'reference-empty':
         "Reference is empty",
     'reference-invalid-contained':
@@ -248,6 +256,11 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
         "Element does not match any slice in closed slicing: {path}",
     'profile-slice-ordering-violation':
         "Slice ordering violated at {path}",
+    'profile-reference-unavailable': 'A required profile dependency could not be verified',
+    'profile-conformance-incomplete':
+        'Profile conformance validation could not be completed.',
+    'profile-slice-validation-incomplete':
+        'Slice validation is incomplete',
     'profile-slice-validation-error':
         "Slice validation failed: {error}",
     'profile-extension-invalid':
@@ -256,8 +269,10 @@ export const MessageTemplates: Partial<Record<ValidationCode, string>> = {
         "Extension is missing required url property",
     'profile-extension-url-not-absolute':
         "Extension.url must be an absolute URL (got '{url}')",
+    'profile-extension-url-version-invalid':
+        "Extension url '{url}' is not valid (invalid Version '{version}')",
     'profile-extension-not-found':
-        "The extension {url} could not be resolved; verify its StructureDefinition or package availability",
+        "The extension {url} could not be found so is not allowed here; verify its StructureDefinition or package availability",
     'profile-extension-not-in-profile':
         "Extension '{url}' is not defined in the profile",
     'profile-extension-modifier-mismatch':

@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  clearProfilePackageProvenance,
   recordProfilePackageProvenance,
 } from '../../package/canonical-pin-provenance';
 import { findResourceInPackages } from '../../validators/valueset-package-search';
@@ -23,7 +22,6 @@ describe('pinBindingToDependencyPins', () => {
   const tempDirs: string[] = [];
 
   afterEach(async () => {
-    clearProfilePackageProvenance();
     clearCanonicalPinCaches();
     vi.mocked(resolveValueSetPackageDirectories).mockReturnValue([]);
     await Promise.all(tempDirs.map(dir => rm(dir, { recursive: true, force: true })));
@@ -49,11 +47,12 @@ describe('pinBindingToDependencyPins', () => {
     await writeSourcePackage(store, { 'example.dep': '1.0.0' });
     await writeValueSetPackage(store, '1.0.0', '1.0.0');
     await writeValueSetPackage(store, '2.0.0', '2.0.0');
-    recordProfilePackageProvenance(PROFILE_URL, '1.0.0', 'example.igx#1.0.0');
+    const sourceProfile = { url: PROFILE_URL, version: '1.0.0' };
+    recordProfilePackageProvenance(sourceProfile, 'example.igx#1.0.0');
 
     await expect(pinBindingToDependencyPins(
       { strength: 'required', valueSet: VALUE_SET },
-      { url: PROFILE_URL, version: '1.0.0' }, 'R4',
+      sourceProfile, 'R4',
     )).resolves.toMatchObject({ valueSet: `${VALUE_SET}|1.0.0` });
   });
 
@@ -66,11 +65,12 @@ describe('pinBindingToDependencyPins', () => {
       'index-version': 2,
       files: [{ filename: 'ValueSet-own-codes.json', resourceType: 'ValueSet', url: valueSet, version: '3.2.0' }],
     }));
-    recordProfilePackageProvenance(PROFILE_URL, '2.1.0', 'example.igx#1.0.0');
+    const sourceProfile = { url: PROFILE_URL, version: '2.1.0' };
+    recordProfilePackageProvenance(sourceProfile, 'example.igx#1.0.0');
 
     await expect(pinBindingToDependencyPins(
       { strength: 'required', valueSet },
-      { url: PROFILE_URL, version: '2.1.0' }, 'R4',
+      sourceProfile, 'R4',
     )).resolves.toMatchObject({ valueSet: `${valueSet}|3.2.0` });
   });
 
@@ -82,6 +82,24 @@ describe('pinBindingToDependencyPins', () => {
     const binding = { strength: 'required' as const, valueSet };
     await expect(pinBindingToDependencyPins(binding, { url: PROFILE_URL, version: '1.0.0' }, 'R4'))
       .resolves.toBe(binding);
+  });
+
+  it('keeps bindings isolated for profiles with equal canonical and business version', async () => {
+    const store = await createStore();
+    await writeSourcePackage(store, { 'example.dep': '1.0.0' });
+    await writeSourcePackage(store, { 'example.dep': '2.0.0' }, '2.0.0');
+    await writeValueSetPackage(store, '1.0.0', '1.0.0');
+    await writeValueSetPackage(store, '2.0.0', '2.0.0');
+    const first = { url: PROFILE_URL, version: '1.0.0' };
+    const second = { ...first };
+    recordProfilePackageProvenance(first, 'example.igx#1.0.0');
+    recordProfilePackageProvenance(second, 'example.igx#2.0.0');
+    const binding = { strength: 'required' as const, valueSet: VALUE_SET };
+    for (let round = 0; round < 2; round++) {
+      const results = await Promise.all([first, second].map(profile => pinBindingToDependencyPins(binding, profile, 'R4')));
+      expect(results.map(result => result.valueSet)).toEqual([`${VALUE_SET}|1.0.0`, `${VALUE_SET}|2.0.0`]);
+    }
+    await expect(pinBindingToDependencyPins(binding, { url: PROFILE_URL, version: '1.0.0' }, 'R4')).resolves.toBe(binding);
   });
 
   it('lets the cross-major guard reject a pinned version with no same-major candidate', async () => {
@@ -119,12 +137,13 @@ describe('pinBindingToDependencyPins', () => {
   async function writeSourcePackage(
     store: string,
     dependencies: Record<string, string>,
+    packageVersion = '1.0.0',
   ): Promise<void> {
-    const packageDir = path.join(store, 'example.igx#1.0.0', 'package');
+    const packageDir = path.join(store, `example.igx#${packageVersion}`, 'package');
     await mkdir(packageDir, { recursive: true });
     await writeFile(path.join(packageDir, 'package.json'), JSON.stringify({
       name: 'example.igx',
-      version: '1.0.0',
+      version: packageVersion,
       canonical: 'http://example.org/fhir/igx',
       fhirVersions: ['4.0.1'],
       dependencies,

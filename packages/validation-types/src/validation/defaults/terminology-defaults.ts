@@ -10,6 +10,19 @@ import type { TerminologyServer, CircuitBreakerConfig } from '../settings.js';
  * 2. tx.fhir.org/r4 - Fallback for R4
  * 3. tx.fhir.org/r5 - Fallback for R5/R6
  */
+// The editions tx.fhir.org advertises through /metadata?mode=terminology on
+// both releases: International, Switzerland, Denmark, IPS, Netherlands, UK and
+// US. A SNOMED CT request for an edition missing here is never routed to it.
+const TX_FHIR_ORG_SNOMED_EDITIONS = [
+  '900000000000207008',
+  '2011000195101',
+  '554471000005108',
+  '827022005',
+  '11000146104',
+  '83821000000107',
+  '731000124108',
+];
+
 export const DEFAULT_TERMINOLOGY_SERVERS: TerminologyServer[] = [
   {
     id: 'csiro-ontoserver-r4',
@@ -58,8 +71,7 @@ export const DEFAULT_TERMINOLOGY_SERVERS: TerminologyServer[] = [
     circuitOpen: false,
     responseTimeAvg: 0,
     testScore: 98,
-    // Advertised by /metadata?mode=terminology; required for edition-specific routing.
-    snomedEditions: ['900000000000207008']
+    snomedEditions: [...TX_FHIR_ORG_SNOMED_EDITIONS]
   },
   {
     id: 'tx-fhir-org-r5',
@@ -72,7 +84,8 @@ export const DEFAULT_TERMINOLOGY_SERVERS: TerminologyServer[] = [
     lastFailureTime: null,
     circuitOpen: false,
     responseTimeAvg: 0,
-    testScore: 98
+    testScore: 98,
+    snomedEditions: [...TX_FHIR_ORG_SNOMED_EDITIONS]
   },
   // Health Samurai Termbox — public demo endpoint for SNOMED CT, LOINC,
   // RxNorm, ICD-10, CPT, UCUM. Added as an additional fallback option

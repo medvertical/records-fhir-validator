@@ -137,4 +137,35 @@ describe('validateBundleReachability', () => {
   it('ignores non-object bundle inputs', () => {
     expect(validateBundleReachability(null, 'document')).toEqual([]);
   });
+
+  describe('entries reached only by pointing back at the document', () => {
+    const document = {
+      resourceType: 'Bundle',
+      type: 'document',
+      entry: [
+        { fullUrl: 'urn:uuid:composition', resource: { resourceType: 'Composition', subject: { reference: 'urn:uuid:patient' } } },
+        { fullUrl: 'urn:uuid:patient', resource: { resourceType: 'Patient' } },
+        { fullUrl: 'urn:uuid:observation', resource: { resourceType: 'Observation', subject: { reference: 'urn:uuid:patient' }, performer: [{ reference: 'urn:uuid:practitioner' }] } },
+        { fullUrl: 'urn:uuid:practitioner', resource: { resourceType: 'Practitioner' } },
+        { fullUrl: 'urn:uuid:provenance', resource: { resourceType: 'Provenance', target: [{ reference: 'urn:uuid:composition' }] } },
+      ],
+    };
+
+    it('warns in R4 for the entry that points back, not for what it links onwards or for Provenance', () => {
+      const issues = validateBundleReachability(document, 'document', false, 'R4');
+
+      expect(issues.map(issue => [issue.code, issue.path, issue.severity])).toEqual([
+        ['bundle-entry-reverse-link', 'Bundle.entry[2]', 'warning'],
+      ]);
+      expect(issues[0].message).toContain('Only Provenance is approved to be used this way');
+    });
+
+    it('only notes it from R5 on, where the rule was relaxed', () => {
+      const issues = validateBundleReachability(document, 'document', false, 'R5');
+
+      expect(issues.map(issue => [issue.code, issue.severity])).toEqual([
+        ['bundle-entry-reverse-link', 'information'],
+      ]);
+    });
+  });
 });

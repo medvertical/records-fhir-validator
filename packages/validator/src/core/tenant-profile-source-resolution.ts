@@ -16,6 +16,17 @@ export function isTenantScopedProfileRequest(
     && !profileUrl.split('|')[0].startsWith('http://hl7.org/fhir/StructureDefinition/');
 }
 
+/** A host result must fulfill both the original request and its effective pin. */
+export function resolvedProfileMatchesRequest(
+  profile: StructureDefinition,
+  originalUrl: string,
+  fhirVersion: FhirVersion,
+  effectiveUrl: string = originalUrl,
+): boolean {
+  return profileMatchesCanonical(profile, originalUrl, fhirVersion)
+    && profileMatchesCanonical(profile, effectiveUrl, fhirVersion);
+}
+
 /**
  * Resolve a canonical-exact tenant profile through the host-provided source.
  * Callers retain their existing FHIR-release and failure-handling policies.
@@ -38,7 +49,7 @@ export async function resolveTenantProfileFromSource(
     settings,
     { ...context, fhirVersion },
   );
-  return profile && profileMatchesCanonical(profile, profileUrl)
+  return profile && resolvedProfileMatchesRequest(profile, profileUrl, fhirVersion)
     ? profile
     : null;
 }

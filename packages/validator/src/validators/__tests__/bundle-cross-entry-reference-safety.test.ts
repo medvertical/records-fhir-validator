@@ -82,3 +82,45 @@ describe('bundle cross-entry reference safety', () => {
     expect(validateBundleCrossEntryReferences({ entry: {} }, null)).toEqual([]);
   });
 });
+
+describe('closed bundle anchors', () => {
+  const messageBundle = {
+    resourceType: 'Bundle',
+    type: 'message',
+    entry: [
+      {
+        fullUrl: 'urn:uuid:118ee8fd-5e69-49b9-bc55-1826217ab907',
+        resource: {
+          resourceType: 'MessageHeader',
+          sender: { reference: 'https://server.example.test/Organization/PRV-123' },
+          focus: [{ reference: 'https://server.example.test/Claim/c1' }],
+        },
+      },
+      {
+        fullUrl: 'urn:uuid:f8bb1e7f-0ade-4230-b6f9-303784edad02',
+        resource: {
+          resourceType: 'Claim',
+          id: 'f8bb1e7f-0ade-4230-b6f9-303784edad02',
+          patient: { reference: 'https://server.example.test/Patient/1002003004' },
+          insurer: { reference: 'urn:uuid:00000000-0000-0000-0000-000000000001' },
+        },
+      },
+    ],
+  };
+
+  it('requires MessageHeader.focus in the bundle but lets other entries point at a server', () => {
+    const issues = validateBundleCrossEntryReferences(messageBundle, 'message');
+    const errors = issues.filter(issue => issue.severity === 'error');
+
+    expect(errors.map(issue => issue.path)).toEqual(['Bundle.entry[0].resource.focus[0]']);
+  });
+
+  it('reports an unresolved urn outside the anchors as a warning', () => {
+    const issues = validateBundleCrossEntryReferences(messageBundle, 'message');
+
+    expect(issues).toContainEqual(expect.objectContaining({
+      severity: 'warning',
+      path: 'Bundle.entry[1].resource.insurer',
+    }));
+  });
+});

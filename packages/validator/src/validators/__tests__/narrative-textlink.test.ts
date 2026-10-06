@@ -169,7 +169,7 @@ describe('NarrativeValidator textLink extension', () => {
     expect(htmlidIssue!.message).toContain("'anchor-MISSING'");
   });
 
-  it('flags a data target that is absent from the rendered xhtml', () => {
+  it('flags a data target absent from the structured resource without a duplicate URI error', () => {
     const resource = {
       ...COMPOSITION_BASE,
       contained: [{ resourceType: 'Patient', id: 'pat-1' }],
@@ -194,11 +194,10 @@ describe('NarrativeValidator textLink extension', () => {
     expect(targetIssue).toBeDefined();
     expect(targetIssue!.severity).toBe('error');
     expect(targetIssue!.message).toContain("'#unknown-target'");
-    expect(uriIssue).toBeDefined();
-    expect(uriIssue!.path).toBe('Composition.text.extension[0].extension[1].value.ofType(uri)');
+    expect(uriIssue).toBeUndefined();
   });
 
-  it('does not flag a textLink whose htmlid + data both resolve in the rendered xhtml', () => {
+  it('does not accept a textLink data target supplied only by the rendered xhtml', () => {
     const resource = {
       ...COMPOSITION_BASE,
       text: {
@@ -217,7 +216,7 @@ describe('NarrativeValidator textLink extension', () => {
     };
 
     const issues = validator.validateNarrative(resource, 'Composition');
-    expect(issues.filter(i => i.code?.startsWith('narrative-textlink-'))).toHaveLength(0);
+    expect(issues.filter(i => i.code?.startsWith('narrative-textlink-')).map(i => i.code)).toEqual(['narrative-textlink-target-not-found']);
   });
 
   it('ignores extensions that are not the textLink URL', () => {
@@ -239,7 +238,7 @@ describe('NarrativeValidator textLink extension', () => {
     expect(issues.filter(i => i.code?.startsWith('narrative-textlink-'))).toHaveLength(0);
   });
 
-  it('skips data-target check when valueUri is not a fragment reference', () => {
+  it('preserves incompleteness when an external data target cannot be checked', () => {
     const resource = {
       ...COMPOSITION_BASE,
       text: {
@@ -258,7 +257,7 @@ describe('NarrativeValidator textLink extension', () => {
     };
 
     const issues = validator.validateNarrative(resource, 'Composition');
-    expect(issues.filter(i => i.code?.startsWith('narrative-textlink-'))).toHaveLength(0);
+    expect(issues).toContainEqual(expect.objectContaining({ code: 'narrative-textlink-target-unverified', severity: 'information', details: expect.objectContaining({ validationComplete: false }) }));
   });
 
   it('does not resolve htmlids that only occur inside XHTML comments', () => {

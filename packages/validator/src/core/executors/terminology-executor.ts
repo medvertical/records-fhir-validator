@@ -16,6 +16,7 @@ import { logger } from '../../logger.js';
 import type { TerminologyValidationPort } from './terminology-validation-port.js';
 import {
   TerminologyValidationPipeline,
+  type StructureDefinitionLoad,
   type TerminologyValidationContext,
 } from './terminology-validation-pipeline.js';
 
@@ -28,11 +29,13 @@ export class TerminologyExecutor {
   constructor(
     valuesetValidator?: TerminologyValidationPort,
     valueSetCache: ValueSetCache = new ValueSetCache(),
+    loadStructureDefinition?: StructureDefinitionLoad,
   ) {
     this.valuesetValidator = valuesetValidator ?? new ValueSetValidator(valueSetCache);
     this.validationPipeline = new TerminologyValidationPipeline(
       this.valuesetValidator,
       valueSetCache,
+      loadStructureDefinition,
     );
   }
 
@@ -51,6 +54,11 @@ export class TerminologyExecutor {
    */
   setSourceContext(context: ProfileSourceContext | undefined): void {
     this.valuesetValidator.setSourceContext?.(context);
+  }
+
+  withSourceContext<T>(context: ProfileSourceContext | undefined, run: () => T): T {
+    return this.valuesetValidator.withSourceContext
+      ? this.valuesetValidator.withSourceContext(context, run) : run();
   }
 
   getFHIRPathTerminologyResolver(): FHIRPathTerminologyResolver {

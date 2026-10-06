@@ -1,3 +1,4 @@
+import { normalizePrimitiveConstraintExpression } from './fhirpath-primitive-expression.js';
 import { ConstraintExpressionCache } from './constraint-expression-cache.js';
 import type { ConstraintValidationState, FhirResource } from './constraint-validation-input.js';
 import {
@@ -17,12 +18,15 @@ export function evaluateConstraintFHIRPath(
   terminologyResolver?: FHIRPathTerminologyResolver,
   expressionCache: ConstraintExpressionCache = new ConstraintExpressionCache(),
   asyncExpressionCache: AsyncFHIRPathTerminologyCache = new AsyncFHIRPathTerminologyCache(),
+  focusResource?: FhirResource | null,
 ): unknown | Promise<unknown> {
+  expression = normalizePrimitiveConstraintExpression(expression, context);
   if (terminologyResolver && hasAsyncFHIRPathTerminology(expression)) {
     return evaluateAsyncFHIRPathTerminology({
       expression,
       context,
       rootResource,
+      ...(focusResource !== undefined ? { focusResource } : {}),
       fhirVersion,
       resolver: terminologyResolver,
       userInvocationTable,
@@ -33,7 +37,7 @@ export function evaluateConstraintFHIRPath(
   const invocationTable = toFHIRPathInvocationTable(userInvocationTable);
   return compiled(
     context,
-    { resource: rootResource, rootResource },
+    { ...(focusResource === null ? {} : { resource: focusResource ?? rootResource }), rootResource },
     {
       traceFn: () => {},
       ...(invocationTable ? { userInvocationTable: invocationTable } : {}),

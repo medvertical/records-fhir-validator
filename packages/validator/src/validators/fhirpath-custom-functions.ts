@@ -11,6 +11,8 @@ import { ValueSetCache } from './valueset-cache.js';
 import type { TerminologyOperationCache } from './terminology-operation-cache.js';
 import { makeSubsumesCacheSuffix } from './terminology-subsumes-cache.js';
 import { resolveFunction, type FHIRPathEvaluationContext } from './fhirpath-custom-resolve-function.js';
+import type { ProfileConformanceLookup } from './sd-fhirpath-profile-conformance.js';
+import { createConformsToFunction } from './fhirpath-conforms-to.js';
 
 export { resolveFunction, type FHIRPathEvaluationContext } from './fhirpath-custom-resolve-function.js';
 
@@ -70,81 +72,82 @@ export const extensionInvocationEntry = {
     arity: { 1: ['String'] },
 };
 
-export const conformsToFunction = {
-    fn: (inputs: unknown[], args: unknown) => {
-        // Empty input propagates to empty (vacuously satisfied constraint),
-        // matching the HL7 validator, instead of asserting non-conformance.
-        if (inputs.length === 0) return [];
-
-        const resource = unwrapFhirPathValue(inputs[0]);
-        if (!isObjectRecord(resource)) return [false];
-
-        const profileUrl = Array.isArray(args) ? args[0] : args;
-        if (typeof profileUrl !== 'string' || profileUrl.length === 0) return [false];
-
-        const meta = isObjectRecord(resource.meta) ? resource.meta : null;
-        const profiles = meta?.profile ?? [];
-        if (!Array.isArray(profiles)) return [false];
-
-        const matches = profiles.some(profile =>
-            typeof profile === 'string' &&
-            (profile === profileUrl || profile.startsWith(profileUrl + '|'))
-        );
-
-        return [matches];
-    },
-    arity: { 1: ['String'] }
-};
+export { conformsToFunction, createConformsToFunction } from './fhirpath-conforms-to.js';
 
 /**
- * memberOf() — Check if code is a member of a ValueSet.
- *
- * Resolution order:
- *   1. ISO-3166-1 Alpha-2 / Alpha-3 (hardcoded, no server needed)
- *   2. `valueSetCache.getExpandedCodes(url)` — every ValueSet previously
- *      expanded by the TerminologyExecutor is available here. Checks both
- *      `system|code` and bare `code` forms.
- *   3. `[]` (undetermined) — the constraint will log a
- *      `profile-constraint-evaluation-error` warning and skip.
+ * Missing local evidence stays unknown; any proved Coding member is sufficient.
  */
 export function createMemberOfFunction(cache: ValueSetCache) {
     return {
       fn: (inputs: unknown[], args: unknown) => {
-        if (inputs.length === 0) return [];
-
-        const value = inputs[0];
+        if (inputs.length !== 1) return [];
         const valueSetUrl = Array.isArray(args) ? args[0] : args;
+        if (typeof valueSetUrl !== 'string' || valueSetUrl.length === 0) return [];
 
-        const codeInfo = extractCodeForMemberOf(value);
-        if (!codeInfo) return [];
+        const isoCodes = valueSetUrl.includes('iso3166-1-2') ? ISO_3166_1_ALPHA2
+            : valueSetUrl.includes('iso3166-1-3') ? ISO_3166_1_ALPHA3 : undefined;
+        const expandedCodes = isoCodes ?? cache.getExpandedCodesForMembership(valueSetUrl);
+        if (!expandedCodes || expandedCodes.size === 0) return [];
 
-        if (typeof valueSetUrl === 'string' && valueSetUrl.includes('iso3166-1-2')) {
-            return ISO_3166_1_ALPHA2.has(codeInfo.code) ? [true] : [false];
-        }
-        if (typeof valueSetUrl === 'string' && valueSetUrl.includes('iso3166-1-3')) {
-            return ISO_3166_1_ALPHA3.has(codeInfo.code) ? [true] : [false];
-        }
-
-        if (typeof valueSetUrl === 'string' && valueSetUrl.length > 0) {
-            const baseUrl = valueSetUrl.split('|')[0];
-            const expandedCodes = cache.getExpandedCodes(baseUrl)
-                ?? cache.getExpandedCodes(valueSetUrl);
-
-            if (expandedCodes && expandedCodes.size > 0) {
-                const fullCode = codeInfo.system
-                    ? `${codeInfo.system}|${codeInfo.code}`
-                    : codeInfo.code;
-                if (expandedCodes.has(fullCode) || expandedCodes.has(codeInfo.code)) {
-                    return [true];
-                }
-                return [false];
+        let unknownCoding = false;
+        for (const coding of extractCodesForMemberOf(inputs[0])) {
+            if (!coding) {
+                unknownCoding = true;
+                continue;
             }
+            if (isoCodes && coding.system && coding.system !== 'urn:iso:std:iso:3166') continue;
+            const membershipKey = isoCodes || !coding.system ? coding.code : `${coding.system}|${coding.code}`;
+            if (expandedCodes.has(membershipKey)) return [true];
         }
-
-        return [];
+        return unknownCoding ? [] : [false];
       },
       arity: { 0: [], 1: ['String'] },
     };
+}
+
+type MemberOfCoding = { code: string; system?: string };
+
+function* extractCodesForMemberOf(rawValue: unknown): Generator<MemberOfCoding | null> {
+    try {
+        const value = unwrapMemberOfValue(rawValue);
+        if (typeof value === 'string') { yield { code: value }; return; }
+        if (!isObjectRecord(value)) { yield null; return; }
+        if (Object.getOwnPropertyDescriptor(value, 'code')) {
+            yield extractMemberOfCoding(value);
+            return;
+        }
+        const coding = Object.getOwnPropertyDescriptor(value, 'coding');
+        if (!coding || !('value' in coding) || !Array.isArray(coding.value) || coding.value.length === 0) {
+            yield null;
+            return;
+        }
+        // Do not inspect later entries once a member has already been proved.
+        for (let index = 0; index < coding.value.length; index++) {
+            const entry = Object.getOwnPropertyDescriptor(coding.value, String(index));
+            yield entry && 'value' in entry ? extractMemberOfCoding(entry.value) : null;
+        }
+    } catch { yield null; }
+}
+
+function extractMemberOfCoding(rawValue: unknown): MemberOfCoding | null {
+    try {
+        const value = unwrapMemberOfValue(rawValue);
+        if (!isObjectRecord(value)) return null;
+        const code = Object.getOwnPropertyDescriptor(value, 'code');
+        const system = Object.getOwnPropertyDescriptor(value, 'system');
+        if (!code || !('value' in code) || typeof code.value !== 'string') return null;
+        if (system && (!('value' in system) || typeof system.value !== 'string' || system.value.length === 0)) return null;
+        if (!system && 'system' in value) return null;
+        return { code: code.value, system: system?.value };
+    } catch { return null; }
+}
+
+function unwrapMemberOfValue(value: unknown): unknown {
+    if (!isObjectRecord(value)) return value;
+    const nodeType = Object.getOwnPropertyDescriptor(value, 'fhirNodeDataType');
+    const nodeValue = Object.getOwnPropertyDescriptor(value, 'data');
+    if (!nodeType || !nodeValue) return value;
+    return 'value' in nodeType && 'value' in nodeValue ? nodeValue.value : undefined;
 }
 
 /**
@@ -303,6 +306,7 @@ export function buildUserInvocationTable(
     bundle?: unknown,
     cache: ValueSetCache = new ValueSetCache(),
     operationCache?: TerminologyOperationCache,
+    profileConformance?: ProfileConformanceLookup,
 ) {
     const ctx: FHIRPathEvaluationContext = { rootResource, bundle };
     // Only functions fhirpath.js cannot provide itself (they need bundle
@@ -312,7 +316,7 @@ export function buildUserInvocationTable(
     return {
         resolve: resolveFunction(ctx),
         extension: extensionInvocationEntry,
-        conformsTo: conformsToFunction,
+        conformsTo: createConformsToFunction(profileConformance),
         memberOf: createMemberOfFunction(cache),
         subsumes: createSubsumesFunction(operationCache),
     };

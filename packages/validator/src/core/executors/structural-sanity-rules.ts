@@ -219,6 +219,7 @@ export function validateContainedResourcesReferenced(resource: unknown, resource
 }
 
 export {
+  validateEmptyPrimitives,
   validateIllegalXmlCharacterPrimitives,
   validateNoEmptyArrays,
   validateOrphanPrimitiveSidecars,

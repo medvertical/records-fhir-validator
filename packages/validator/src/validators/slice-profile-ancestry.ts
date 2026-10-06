@@ -1,9 +1,24 @@
+import { sliceInstanceEvidence } from './slice-instance-evidence.js';
 import type { SlicingDefinition } from '../core/structure-definition-types.js';
+import type { ProfileReferenceSource } from '../core/profile-reference-pins.js';
 import { getValueAtPath } from './slice-utils.js';
 import { normalizeDiscriminatorPath } from './slice-discriminator-constraints.js';
 import { stripCanonicalVersion } from './slice-type-discriminator.js';
 
-type ProfileResolverFn = (profileUrl: string) => Promise<{ baseDefinition?: string } | null>;
+interface ResolvedAncestor {
+  url?: string;
+  version?: string;
+  baseDefinition?: string;
+}
+
+/**
+ * `referencingProfile` null resolves a profile the instance itself declares;
+ * a base definition resolves in the context of the profile that names it.
+ */
+type ProfileResolverFn = (
+  profileUrl: string,
+  referencingProfile?: ProfileReferenceSource | null,
+) => Promise<ResolvedAncestor | null>;
 
 /**
  * A profile discriminator matches when the instance CONFORMS to the slice's
@@ -13,10 +28,8 @@ type ProfileResolverFn = (profileUrl: string) => Promise<{ baseDefinition?: stri
  * declared profile's baseDefinition chain is async, so this pre-pass walks
  * the chains up front and parks each value's ancestor set here, keyed weakly
  * by the instance object, instead of threading request state through every
- * matcher signature. Instance objects are parsed per request, so entries
- * cannot leak across requests or tenants.
+ * matcher signature. The owning slicing invocation supplies an isolated evidence scope.
  */
-const ancestryByValue = new WeakMap<object, ReadonlySet<string>>();
 
 /** Derivation chains in practice stay in single digits; bound against cycles. */
 const MAX_DERIVATION_DEPTH = 16;
@@ -49,7 +62,7 @@ export function declaredProfileAncestryContains(
   requiredProfiles: string[],
 ): boolean {
   if (typeof value !== 'object' || value === null) return false;
-  const ancestors = ancestryByValue.get(value);
+  const ancestors = sliceInstanceEvidence().ancestry.get(value);
   if (!ancestors?.size) return false;
   return requiredProfiles.some(profile => ancestors.has(stripCanonicalVersion(profile)));
 }
@@ -59,7 +72,7 @@ async function attachAncestry(
   resolveProfile: ProfileResolverFn,
   chainCache: Map<string, string[]>,
 ): Promise<void> {
-  if (!isRecord(candidate) || ancestryByValue.has(candidate)) return;
+  if (!isRecord(candidate) || sliceInstanceEvidence().ancestry.has(candidate)) return;
   const declared = declaredProfiles(candidate);
   if (declared.length === 0) return;
 
@@ -69,7 +82,7 @@ async function attachAncestry(
       ancestors.add(ancestor);
     }
   }
-  if (ancestors.size > 0) ancestryByValue.set(candidate, ancestors);
+  if (ancestors.size > 0) sliceInstanceEvidence().ancestry.set(candidate, ancestors);
 }
 
 async function resolveAncestorChain(
@@ -84,10 +97,11 @@ async function resolveAncestorChain(
   const chain: string[] = [];
   const seen = new Set<string>([declaredKey]);
   let current: string | undefined = declaredUrl;
+  let referencingProfile: ResolvedAncestor | null = null;
   for (let depth = 0; depth < MAX_DERIVATION_DEPTH && current; depth++) {
-    let resolved: { baseDefinition?: string } | null = null;
+    let resolved: ResolvedAncestor | null = null;
     try {
-      resolved = await resolveProfile(current);
+      resolved = await resolveProfile(current, referencingProfile);
     } catch {
       break;
     }
@@ -98,6 +112,7 @@ async function resolveAncestorChain(
     seen.add(baseKey);
     chain.push(baseKey);
     current = base;
+    referencingProfile = resolved;
   }
   chainCache.set(declaredKey, chain);
   return chain;

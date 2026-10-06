@@ -1,5 +1,6 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
-import type { Binding, ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
+import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
+import { getValidationTargets } from '../../business-rules/index.js';
 import { matchesPattern } from '../../validators/slice-utils.js';
 import { UCUM_BEARING_TYPES } from './terminology-ucum-rules.js';
 import { isResolvedPrimitiveSidecarValue } from '../fhir-primitive-sidecar.js';
@@ -9,21 +10,15 @@ import {
   elementMatchesOwnPattern,
   getPatternOrFixedValue,
 } from './terminology-binding-pattern-matching.js';
+import { valuesWithinEnclosingSlices } from './terminology-nested-slice-scope.js';
 import type { TerminologySlicePlanCache } from './terminology-slice-plan-cache.js';
-export function effectiveBindingForElement(
-  elementDef: Pick<ElementDefinition, 'binding' | 'type'>,
-): Binding | undefined {
-  const binding = elementDef.binding; // Quantity bindings are downgraded to HAPI-aligned extensible strength.
-  if (binding?.strength !== 'required') return binding;
-  const hasQuantityType = elementDef.type?.some(t => UCUM_BEARING_TYPES.has(t.code));
-  return hasQuantityType ? { ...binding, strength: 'extensible' as const } : binding;
-}
-
 export function shouldValidateBindingForValue(
   elementDef: { path?: string; type?: { code: string }[] },
   value: unknown,
 ): boolean {
   if (isResolvedPrimitiveSidecarValue(value)) return false;
+  // A malformed primitive cannot provide a Quantity's bound unit code.
+  if (isQuantityOnlyElement(elementDef) && (value === null || typeof value !== 'object')) return false;
   if (!elementDef.path?.endsWith('[x]')) return true;
   if (!value || typeof value !== 'object' || Array.isArray(value)) return true;
 
@@ -32,7 +27,13 @@ export function shouldValidateBindingForValue(
     typeof candidate.system === 'string' &&
     typeof candidate.code === 'string';
 
-  return !quantityLike;
+  return !quantityLike || isQuantityOnlyElement(elementDef);
+}
+
+function isQuantityOnlyElement(elementDef: Pick<ElementDefinition, 'type'>): boolean {
+  const types = elementDef.type;
+  // A quantity-specific binding restricts unit membership independently of UCUM syntax.
+  return Boolean(types?.length && types.every(type => UCUM_BEARING_TYPES.has(type.code)));
 }
 
 function getValueAtRelativePath(value: unknown, path: string): unknown {
@@ -100,22 +101,56 @@ function elementMatchesSlice(
   return false;
 }
 
+/**
+ * A slice on a choice element (`item.location[x]:locationCodeableConcept`)
+ * is discriminated by type, and the JSON key carries the type. Pattern and
+ * sibling matching never recognise such a value, so a binding declared on the
+ * type slice used to be skipped altogether.
+ */
+function selectChoiceTypeSliceValues(
+  resource: unknown,
+  sliceElement: ElementDefinition,
+  getValueAtPath: (resource: unknown, path: string) => unknown,
+): unknown[] | null {
+  if (!sliceElement.sliceName || !sliceElement.path?.endsWith('[x]')) return null;
+  const typeCodes = (sliceElement.type ?? [])
+    .map(type => type.code)
+    .filter((code): code is string => typeof code === 'string' && code.length > 0);
+  if (typeCodes.length === 0) return null;
+
+  const choiceBase = sliceElement.path.slice(0, -'[x]'.length);
+  return typeCodes.flatMap(code => {
+    const value = getValueAtPath(resource, `${choiceBase}${code.charAt(0).toUpperCase()}${code.slice(1)}`);
+    if (value === null || value === undefined) return [];
+    return Array.isArray(value) ? value : [value];
+  });
+}
+
+export interface SliceScopedSelection {
+  hasMatchingSliceElements: boolean;
+  values: unknown[];
+  /** Where each value sits in the instance, parallel to `values`; undefined where it cannot be told. */
+  paths: Array<string | undefined>;
+}
+
 export function selectSliceScopedValues(
   resource: unknown,
   elementDef: ElementDefinition,
   structureDef: StructureDefinition,
   getValueAtPath: (resource: unknown, path: string) => unknown,
   planCache: TerminologySlicePlanCache,
-): { hasMatchingSliceElements: boolean; values: unknown[] } | null {
+): SliceScopedSelection | null {
   const sliceElement = planCache.getOwningSliceElement(structureDef, elementDef);
   if (!sliceElement) return null;
 
-  const sliceParentValue = getValueAtPath(resource, sliceElement.path);
+  const enclosed = valuesWithinEnclosingSlices(resource, sliceElement, structureDef);
+  const sliceParentValue = enclosed ?? getValueAtPath(resource, sliceElement.path);
   const sliceParentValues = Array.isArray(sliceParentValue)
     ? sliceParentValue
     : sliceParentValue !== null && sliceParentValue !== undefined
       ? [sliceParentValue]
       : [];
+  const parentPaths = instancePathsByValue(resource, sliceElement.path);
 
   if (
     (sliceElement.min ?? 0) > 0 &&
@@ -126,24 +161,44 @@ export function selectSliceScopedValues(
     return {
       hasMatchingSliceElements: sliceParentValues.length > 0,
       values: sliceParentValues,
+      paths: sliceParentValues.map(value => parentPaths.get(value)),
     };
   }
 
-  const matchingSliceValues = sliceParentValues.filter(value =>
-    elementMatchesSlice(value, sliceElement, structureDef, planCache),
-  );
+  const typeSlice = Boolean(sliceElement.sliceName && sliceElement.path?.endsWith('[x]'));
+  const matchingSliceValues = (enclosed && typeSlice ? enclosed : selectChoiceTypeSliceValues(resource, sliceElement, getValueAtPath))
+    ?? sliceParentValues.filter(value =>
+      elementMatchesSlice(value, sliceElement, structureDef, planCache),
+    );
+  const hasMatchingSliceElements = matchingSliceValues.length > 0;
 
   const relativePath = getRelativePathWithinSlice(elementDef, sliceElement);
   if (!relativePath) {
-    return { hasMatchingSliceElements: matchingSliceValues.length > 0, values: matchingSliceValues };
+    return { hasMatchingSliceElements, values: matchingSliceValues, paths: matchingSliceValues.map(value => parentPaths.get(value)) };
   }
 
-  const values = matchingSliceValues
-    .map(value => getValueAtRelativePath(value, relativePath))
-    .filter(value => value !== null && value !== undefined)
-    .flatMap(value => Array.isArray(value) ? value : [value]);
+  const values: unknown[] = [];
+  const paths: Array<string | undefined> = [];
+  for (const sliceValue of matchingSliceValues) {
+    const nested = getValueAtRelativePath(sliceValue, relativePath);
+    const nestedValues = nested === null || nested === undefined ? [] : Array.isArray(nested) ? nested : [nested];
+    const parentPath = parentPaths.get(sliceValue);
+    const nestedTargets = parentPath ? getValidationTargets(sliceValue, relativePath).filter(target => target.value !== undefined) : [];
+    values.push(...nestedValues);
+    // Both walks list repeats in document order, so equal counts pair them up.
+    paths.push(...nestedValues.map((_, index) => nestedTargets.length === nestedValues.length
+      ? `${parentPath}.${nestedTargets[index].fullPath}`
+      : undefined));
+  }
+  return { hasMatchingSliceElements, values, paths };
+}
 
-  return { hasMatchingSliceElements: matchingSliceValues.length > 0, values };
+function instancePathsByValue(resource: unknown, path: string): Map<unknown, string> {
+  const paths = new Map<unknown, string>();
+  for (const target of getValidationTargets(resource, path)) {
+    if (target.value !== null && typeof target.value === 'object') paths.set(target.value, target.fullPath);
+  }
+  return paths;
 }
 
 export function shouldSuppressValueSetSliceMembershipIssue(

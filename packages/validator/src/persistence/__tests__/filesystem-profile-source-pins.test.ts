@@ -29,6 +29,9 @@ describe('request-owned filesystem package pins', () => {
     expect((await swiss.findByUrl!(canonical, 'R4'))?.version).toBe('2.0.0');
     expect((await international.findByUrl!(canonical, 'R4'))?.version).toBe('2.0.1');
     expect(await swiss.findByUrl!(`${canonical}|2.0.1`, 'R4')).toBeNull();
+    expect((await swiss.findByUrl!(`${canonical}|2.0.0`, 'R4'))?.version).toBe('2.0.0');
+    expect((await international.findByUrl!(`${canonical}|2.0.1`, 'R4'))?.version).toBe('2.0.1');
+    expect(await swiss.findByUrl!(`${canonical}|2.1.0`, 'R4')).toBeNull();
     const unavailable = createFilesystemProfileSource({ packageDirs: [root], packageVersionPins: { 'hl7.fhir.uv.ips': '1.0.0' } });
     expect(await unavailable.findByUrl!(canonical, 'R4')).toBeNull();
   });

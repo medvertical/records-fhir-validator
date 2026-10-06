@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   loadFromPersistentIndex,
+  PERSISTENT_INDEX_VERSION,
   saveToPersistentIndex,
 } from './sd-loader-persistent-index';
 
@@ -29,10 +30,10 @@ describe('sd-loader persistent index safety', () => {
   });
 
   it.each([
-    { version: 5, generatedAt: 1, packages: [], sourcePackages: [], profileUrls: [42] },
-    { version: 5, generatedAt: -1, packages: [], sourcePackages: [], profileUrls: [] },
-    { version: 5, generatedAt: 1, packages: [], sourcePackages: 'invalid', profileUrls: [] },
-    { version: 5, generatedAt: 1, packages: [{ name: 'x', profileCount: -1, manifestHash: null }], sourcePackages: [], profileUrls: [] },
+    { version: PERSISTENT_INDEX_VERSION, generatedAt: 1, packages: [], sourcePackages: [], profileUrls: [42] },
+    { version: PERSISTENT_INDEX_VERSION, generatedAt: -1, packages: [], sourcePackages: [], profileUrls: [] },
+    { version: PERSISTENT_INDEX_VERSION, generatedAt: 1, packages: [], sourcePackages: 'invalid', profileUrls: [] },
+    { version: PERSISTENT_INDEX_VERSION, generatedAt: 1, packages: [{ name: 'x', profileCount: -1, manifestHash: null }], sourcePackages: [], profileUrls: [] },
   ])('rejects a persistent index with an invalid schema', async invalidIndex => {
     const root = await createRoot();
     await writeFile(
@@ -48,7 +49,7 @@ describe('sd-loader persistent index safety', () => {
     await writeFile(
       path.join(root, 'sdloader-profile-index.json'),
       JSON.stringify({
-        version: 5,
+        version: PERSISTENT_INDEX_VERSION,
         generatedAt: Date.now(),
         options: { deduplicatePackages: true },
         packages: [],

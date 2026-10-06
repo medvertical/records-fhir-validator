@@ -75,6 +75,23 @@ describe('Composition target profile validation', () => {
     }));
   });
 
+  it('leaves an entry of a nested section to the base when the profile refers nested sections there', async () => {
+    const { bundle, children } = fixture([strict]);
+    const composition = children[0].entryResource as { section: unknown[] };
+    composition.section = [{ section: [{ entry: [{ reference: 'urn:uuid:obs' }] }] }];
+    children[0].structureDef!.snapshot!.element.push({
+      id: 'Composition.section.section',
+      path: 'Composition.section.section',
+      contentReference: 'http://hl7.org/fhir/StructureDefinition/Composition#Composition.section',
+    });
+    const validate = vi.fn(async () => ({ issues: [missingValue], resourceType: 'Observation', value: [missingValue] }));
+
+    await validateBundleCompositionTargets(bundle, children, validate);
+
+    expect(validate).not.toHaveBeenCalled();
+    expect(buildBundleDocumentContextIssues(bundle, children)).toEqual([]);
+  });
+
   it('checks a repeated reference once and does not impose profiles on unrelated entries', async () => {
     const { bundle, children } = fixture([strict]);
     const sections = children[0].entryResource.section as Array<{ entry: Array<{ reference: string }> }>;

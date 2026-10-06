@@ -6,6 +6,8 @@ import {
 } from './slice-type-discriminator.js';
 import { matchWholeElementChildConstraints } from './slice-discriminator-constraints.js';
 import { declaredProfileAncestryContains } from './slice-profile-ancestry.js';
+import { sliceTypedByProfile } from './slice-profile-types.js';
+import { datatypeConformingSlices } from './slice-datatype-conformance.js';
 import { logger } from '../logger.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
@@ -28,6 +30,13 @@ export function matchProfileDiscriminator(
 
   const value = getValueAtPath(element, path);
   const values = Array.isArray(value) ? value : [value];
+  // A profile discriminator on a primitive below the slice (eu.imaging slices
+  // ImagingStudy.identifier by profile at `system`) cannot be read off the
+  // primitive; the slice's datatype profile decides through its constraints.
+  if (path !== '$this' && matchesPattern && values.every(isPrimitiveValue)) {
+    const conforms = matchWholeElementChildConstraints(element, slice, matchesPattern);
+    if (conforms !== null) return conforms;
+  }
 
   const requiredProfiles: string[] = [];
   const allowedTypeCodes: string[] = [];
@@ -60,6 +69,11 @@ function matchProfileValue(
   matchesPattern: PatternMatcherFn = null,
 ): boolean {
   if (!isObjectRecord(value)) return false;
+  // Validation against the slice's profiles decides where it could, as in the reference validator.
+  const validated = slice.validatedProfileConformance?.(value, requiredProfiles);
+  if (validated !== undefined) return validated;
+  const conforming = datatypeConformingSlices(value);
+  if (conforming) return conforming.has(slice.sliceName);
 
   const meta = isObjectRecord(value.meta) ? value.meta : null;
   if (meta && requiredProfiles.length > 0) {
@@ -70,9 +84,11 @@ function matchProfileValue(
     if (declaredProfileAncestryContains(value, requiredProfiles)) return true;
   }
 
+  if (namesBaseDefinitionOf(requiredProfiles, value.resourceType)) return true;
   if (typeof value.reference === 'string' && referenceResolver && requiredProfiles.length > 0) {
     try {
       const referenced = referenceResolver(value.reference);
+      if (isObjectRecord(referenced) && namesBaseDefinitionOf(requiredProfiles, referenced.resourceType)) return true;
       const referencedMeta = isObjectRecord(referenced) && isObjectRecord(referenced.meta)
         ? referenced.meta
         : null;
@@ -94,6 +110,7 @@ function matchProfileValue(
       return true;
     }
   }
+  if (sliceTypedByProfile(value) === slice.sliceName) return true;
 
   // Datatype values (e.g. UsageContext) carry no meta.profile, so membership
   // in a datatype profile is decided by the profile's own pattern/fixed
@@ -104,6 +121,14 @@ function matchProfileValue(
   }
 
   return false;
+}
+
+const BASE_DEFINITION = /^http:\/\/hl7\.org\/fhir\/StructureDefinition\/([A-Z][A-Za-z]+)$/;
+
+/** Every resource conforms to its own base definition, declared or not (CH eMed author:device). */
+function namesBaseDefinitionOf(requiredProfiles: string[], resourceType: unknown): boolean {
+  return typeof resourceType === 'string'
+    && requiredProfiles.some(profile => profile.split('|')[0].match(BASE_DEFINITION)?.[1] === resourceType);
 }
 
 function typeCodesAreDistinguishing(
@@ -149,6 +174,10 @@ export function profileListContains(profiles: string[], requestedProfile: string
 
 function profilesMatch(left: string, right: string): boolean {
   return left === right || stripCanonicalVersion(left) === stripCanonicalVersion(right);
+}
+
+function isPrimitiveValue(value: unknown): boolean {
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {

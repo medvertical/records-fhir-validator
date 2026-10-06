@@ -165,6 +165,7 @@ export async function writeCanonicalIndex(
   rootDirectories: readonly string[],
   fingerprint: CanonicalIndexFingerprint,
   payload: CanonicalIndexPayload,
+  canPublish: () => boolean = () => true,
 ): Promise<void> {
   const packages: string[] = [];
   const packageIndices = new Map<string, number>();
@@ -197,14 +198,23 @@ export async function writeCanonicalIndex(
   // The first store may be absent or read-only; any of them will do, since the
   // file names the whole set it describes.
   for (const destination of writableDestinations(rootDirectories)) {
-    const temporaryPath = `${destination}.${process.pid}.${randomUUID()}.tmp`;
     try {
-      await fs.writeFile(temporaryPath, body, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
-      await fs.rename(temporaryPath, destination);
-      await removeLegacyIndexFiles(path.dirname(destination));
-      return;
+      if (!canPublish()) return;
+      const published = await withIndexFileOperation(destination, async () => {
+        if (!canPublish()) return false;
+        const temporaryPath = `${destination}.${process.pid}.${randomUUID()}.tmp`;
+        try {
+          await fs.writeFile(temporaryPath, body, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+          if (!canPublish()) return false;
+          await fs.rename(temporaryPath, destination);
+          await removeLegacyIndexFiles(path.dirname(destination));
+          return true;
+        } finally {
+          await fs.unlink(temporaryPath).catch(() => undefined);
+        }
+      });
+      if (published || !canPublish()) return;
     } catch (error) {
-      await fs.unlink(temporaryPath).catch(() => undefined);
       // The store path can carry a home directory or a tenant name, so it is
       // correlated by handle rather than printed.
       const failure = sensitiveValueMetadata(destination);
@@ -217,11 +227,28 @@ export async function writeCanonicalIndex(
   }
 }
 
+// A rename already submitted to the filesystem cannot be revoked. Queue
+// replacements and clears behind it so the next authorized publication wins.
+const indexFileOperations = new Map<string, Promise<void>>();
+async function withIndexFileOperation<T>(destination: string, operation: () => Promise<T>): Promise<T> {
+  const directory = await fs.realpath(path.dirname(destination)).catch(() => path.resolve(path.dirname(destination)));
+  const identity = path.join(directory, path.basename(destination));
+  const previous = indexFileOperations.get(identity) ?? Promise.resolve();
+  const pending = previous.then(operation);
+  const settled = pending.then(() => undefined, () => undefined);
+  indexFileOperations.set(identity, settled);
+  try { return await pending; } finally {
+    if (indexFileOperations.get(identity) === settled) indexFileOperations.delete(identity);
+  }
+}
+
 /** Removes the stored index, so the next lookup rebuilds it. */
 export async function clearCanonicalIndexFile(rootDirectories: readonly string[]): Promise<void> {
   for (const indexPath of indexPathsFor(rootDirectories)) {
-    await fs.unlink(indexPath).catch(() => undefined);
-    await removeLegacyIndexFiles(path.dirname(indexPath));
+    await withIndexFileOperation(indexPath, async () => {
+      await fs.unlink(indexPath).catch(() => undefined);
+      await removeLegacyIndexFiles(path.dirname(indexPath));
+    });
   }
 }
 

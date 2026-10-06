@@ -60,6 +60,8 @@ function validateResourceContainedReferences(
       humanReadable: `ref-1: contained resource '${containedId}' not found`,
       path,
       details: { reference, containedId, constraint: 'ref-1' },
+      // The compiled base rule does not inherit the host's applied profile.
+      definitionProfile: 'http://hl7.org/fhir/StructureDefinition/Reference',
       resourceType
     }));
   }

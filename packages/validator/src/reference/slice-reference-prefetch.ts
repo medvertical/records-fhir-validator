@@ -35,9 +35,10 @@ export interface SliceReferencePrefetchOptions {
 
 /**
  * Prefetching makes structural validation reach the server, which the shipped
- * defaults never do. `validateTargetProfiles` is the existing, deliberately
- * unset opt-in for dereferencing targets to check their profiles, so it also
- * governs this — enabling recursive reference validation alone is not consent.
+ * defaults never do. `validateTargetProfiles: true` is the explicit opt-in for
+ * dereferencing targets to check their profiles (unset, only the targets the
+ * content holds are checked), so it also governs this — enabling recursive
+ * reference validation alone is not consent.
  */
 export function sliceReferencePrefetchLimits(
   config: (Partial<RecursiveValidationConfig> & { validateTargetProfiles?: boolean }) | undefined,

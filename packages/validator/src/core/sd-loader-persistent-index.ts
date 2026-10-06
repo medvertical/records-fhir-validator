@@ -24,7 +24,7 @@ import {
     packageTargetMetadata,
 } from '../package/package-artifact-policy.js';
 
-const INDEX_VERSION = 5; // Bumped: v5 uses stable package-manifest fingerprints
+export const PERSISTENT_INDEX_VERSION = 8; // Bumped: v8 keeps canonicals of every older release discoverable
 const MAX_INDEX_BYTES = 64 * 1024 * 1024;
 const MAX_INDEX_PROFILES = 1_000_000;
 
@@ -103,7 +103,7 @@ async function getPackageManifestHashes(sourcePath: string): Promise<Map<string,
  */
 async function isIndexValid(index: ProfileIndex, sourcePath: string, options: PersistentIndexOptions): Promise<boolean> {
     // Check version
-    if (index.version !== INDEX_VERSION) {
+    if (index.version !== PERSISTENT_INDEX_VERSION) {
         logger.debug('[SDLoaderIndex] Index version mismatch, will rescan');
         return false;
     }
@@ -221,7 +221,7 @@ export async function saveToPersistentIndex(
             .sort((a, b) => a.name.localeCompare(b.name));
 
         const index: ProfileIndex = {
-            version: INDEX_VERSION,
+            version: PERSISTENT_INDEX_VERSION,
             generatedAt: Date.now(),
             options,
             packages,

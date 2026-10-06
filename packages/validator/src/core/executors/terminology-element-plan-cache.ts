@@ -1,6 +1,7 @@
 import {
   ContentReferenceElementsCache,
   expandContentReferenceElements,
+  type ContentReferenceSources,
 } from '../content-reference-elements.js';
 import type { ElementDefinition, StructureDefinition } from '../structure-definition-types.js';
 import {
@@ -10,20 +11,30 @@ import {
 import { UCUM_BEARING_TYPES } from './terminology-ucum-rules.js';
 
 export class TerminologyElementPlanCache {
-  private readonly plans = new WeakMap<StructureDefinition, ElementDefinition[]>();
+  private readonly usableElements = new WeakMap<StructureDefinition, ElementDefinition[]>();
+  private readonly plans = new WeakMap<ElementDefinition[], ElementDefinition[]>();
   private readonly contentReferenceElements = new ContentReferenceElementsCache();
 
-  get(structureDef: StructureDefinition): ElementDefinition[] {
-    const cached = this.plans.get(structureDef);
+  /** Elements with codes to check, recursive content expanded as deep as the instance goes. */
+  get(
+    structureDef: StructureDefinition,
+    instancePaths?: ReadonlySet<string>,
+    sources?: ContentReferenceSources,
+  ): ElementDefinition[] {
+    let usable = this.usableElements.get(structureDef);
+    if (!usable) {
+      usable = Array.isArray(structureDef.snapshot?.element)
+        ? structureDef.snapshot.element.filter(isUsableElementDefinition)
+        : [];
+      this.usableElements.set(structureDef, usable);
+    }
+    // Snapshot-level expansions are cached, so their plans are too; one that
+    // follows an instance deeper is built for that instance alone.
+    const expanded = expandContentReferenceElements(usable, this.contentReferenceElements, instancePaths, sources);
+    const cached = this.plans.get(expanded);
     if (cached) return cached;
 
-    const snapshotElements = Array.isArray(structureDef.snapshot?.element)
-      ? structureDef.snapshot.element.filter(isUsableElementDefinition)
-      : [];
-    const relevant = expandContentReferenceElements(
-      snapshotElements,
-      this.contentReferenceElements,
-    ).filter((elementDef) => {
+    const relevant = expanded.filter((elementDef) => {
       if (elementDef.binding) return true;
       const types = getElementTypeCodes(elementDef);
       return (
@@ -33,7 +44,7 @@ export class TerminologyElementPlanCache {
       );
     });
 
-    this.plans.set(structureDef, relevant);
+    this.plans.set(expanded, relevant);
     return relevant;
   }
 }

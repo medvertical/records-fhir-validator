@@ -15,19 +15,23 @@ import type { StructureDefinition } from './structure-definition-types.js';
 import type { ProfileSourcesConfig, ValidationSettings } from '@records-fhir/validation-types';
 import type { ProfileSourceContext } from '../persistence/index.js';
 import { loadFromLocalCache } from './sd-loader-filesystem.js';
+import { loadExampleFolderProfile } from './sd-loader-example-profiles.js';
 import { checkDatabaseCache } from './sd-loader-db-cache.js';
 import { attemptAutoDownload, isPublicProfile, type AutoDownloadState } from './sd-loader-auto-download.js';
 import {
   cacheKeyForProfile,
   normalizeVersionedCoreStructureDefinitionUrl,
+  resolveProfileRequest,
   urlMatchesRequestedFhirVersion,
 } from './sd-loader-version-utils.js';
 import { sanitizeProfile } from './sd-loader-profile-sanitizer.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import type { PackageProfileIndexCache } from './sd-loader-package-profile-index.js';
 import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
+import { ProfileReferenceUnavailableError } from './profile-reference-authority.js';
 import {
   isTenantScopedProfileRequest,
+  resolvedProfileMatchesRequest,
   resolveTenantProfileFromSource,
 } from './tenant-profile-source-resolution.js';
 
@@ -47,6 +51,11 @@ export interface LoadProfileContext {
   profileResolutionSettings?: ValidationSettings;
   resolvePinnedCanonical(url: string): string;
   canCache?(): boolean;
+  /** Unscoped references must read the host basis instead of borrowing a prior host result. */
+  refreshHostProfile?: boolean;
+  /** Legacy top-level loads keep null on failure; referenced definitions retain incomplete authority. */
+  retainUnavailableFailures?: boolean;
+  externalProfileCacheKeys?: ReadonlySet<string>;
   autoDownloadState: AutoDownloadState;
   packageProfileIndexCache?: PackageProfileIndexCache;
 }
@@ -75,7 +84,10 @@ export async function loadProfile(
     }
 
     const lookupUrl = normalizeVersionedCoreStructureDefinitionUrl(url, fhirVersion);
-    const resolvedUrl = ctx.resolvePinnedCanonical(lookupUrl);
+    const resolvedUrl = resolveProfileRequest(url, fhirVersion, ctx.resolvePinnedCanonical.bind(ctx));
+    if (!resolvedUrl) return null;
+    const matchesRequest = (profile: StructureDefinition) =>
+      resolvedProfileMatchesRequest(profile, url, fhirVersion, resolvedUrl);
 
     // Use version-specific cache key to avoid R4/R5 confusion
     const cacheKey = cacheKeyForProfile(resolvedUrl, fhirVersion);
@@ -90,7 +102,7 @@ export async function loadProfile(
       fhirVersion,
     );
     if (scopedProfile !== undefined) {
-      if (!scopedProfile) return null;
+      if (!scopedProfile || !matchesRequest(scopedProfile)) return null;
       const sanitized = sanitizeProfile(scopedProfile);
       if (policyAllowsCaching(ctx)) {
         ctx.cache.set(cacheKey, sanitized);
@@ -100,10 +112,12 @@ export async function loadProfile(
     }
 
     // Check in-memory cache first (version-specific)
-    if (ctx.cache.has(cacheKey)) {
+    const cached = policyAllowsCaching(ctx) ? ctx.cache.get(cacheKey) : undefined;
+    if (cached && matchesRequest(cached) && (!ctx.refreshHostProfile || ctx.externalProfileCacheKeys?.has(cacheKey))) {
       logger.debug('[SDLoader] Loading profile from in-memory cache', profileCanonicalMetadata(resolvedUrl));
-      return ctx.cache.get(cacheKey)!;
+      return cached;
     }
+    if (cached && policyAllowsCaching(ctx)) ctx.cache.delete(cacheKey);
 
     // Check database cache (from ProfileResolver downloads)
     const dbCachedProfile = await checkDatabaseCache(
@@ -111,7 +125,7 @@ export async function loadProfile(
       fhirVersion,
       ctx.profileSourceContext,
     );
-    if (dbCachedProfile) {
+    if (dbCachedProfile && matchesRequest(dbCachedProfile)) {
       // Cache it in memory with version-specific key
       const sanitized = sanitizeProfile(dbCachedProfile);
       if (policyAllowsCaching(ctx)) {
@@ -142,21 +156,26 @@ export async function loadProfile(
     // DB cache (2ms) + auto-download (20s timeout) is much faster
     logger.debug('[SDLoader] Filesystem scan skipped by policy', profileCanonicalMetadata(url));
 
-    const existingLoad = ctx.profileLoadPromises.get(cacheKey);
+    // A legacy load may resolve failure as null; it cannot own a reference's completeness receipt.
+    const pendingKey = ctx.retainUnavailableFailures ? `${cacheKey}:reference-authority` : cacheKey;
+    const existingLoad = policyAllowsCaching(ctx) ? ctx.profileLoadPromises.get(pendingKey) : undefined;
     if (existingLoad) {
-      return existingLoad;
+      const loaded = await existingLoad;
+      return loaded && matchesRequest(loaded) ? loaded : null;
     }
 
     const loadPromise = loadProfileFromKnownSources(ctx, url, lookupUrl, resolvedUrl, cacheKey, fhirVersion).finally(() => {
-      if (ctx.profileLoadPromises.get(cacheKey) === loadPromise) {
-        ctx.profileLoadPromises.delete(cacheKey);
+      if (ctx.profileLoadPromises.get(pendingKey) === loadPromise) {
+        ctx.profileLoadPromises.delete(pendingKey);
       }
     });
 
-    ctx.profileLoadPromises.set(cacheKey, loadPromise);
-    return loadPromise;
+    if (policyAllowsCaching(ctx)) ctx.profileLoadPromises.set(pendingKey, loadPromise);
+    const loaded = await loadPromise;
+    return loaded && matchesRequest(loaded) ? loaded : null;
 
   } catch (error: unknown) {
+    if (ctx.retainUnavailableFailures && error instanceof ProfileReferenceUnavailableError) throw error;
     logger.error(
       '[SDLoader] Profile load failed',
       validationFailureMetadata(error),
@@ -183,10 +202,7 @@ async function resolveScopedProfile(
     ctx.profileResolutionSettings,
   );
   if (!profile) return null;
-  const profileFhirVersion = (profile as { fhirVersion?: string }).fhirVersion;
-  if (!profileFhirVersion) return profile;
-  const expectedPrefix = fhirVersion === 'R4' ? '4.' : fhirVersion === 'R5' ? '5.' : '6.';
-  return profileFhirVersion.startsWith(expectedPrefix) ? profile : null;
+  return resolvedProfileMatchesRequest(profile, url, fhirVersion) ? profile : null;
 }
 
 function hasExplicitCanonicalVersion(url: string): boolean {
@@ -219,16 +235,20 @@ async function loadProfileFromKnownSources(
       ctx.selectedCorePackageId,
     );
 
-    if (sd) {
+    if (sd && resolvedProfileMatchesRequest(sd, url, fhirVersion, resolvedUrl)) {
       const sanitized = sanitizeProfile(sd);
       if (policyAllowsCaching(ctx)) ctx.cache.set(cacheKey, sanitized);
       return sanitized;
     }
 
     logger.warn('[SDLoader] Available profile failed to load', profileCanonicalMetadata(url));
-    if (!ctx.autoDownload) {
-      return null;
-    }
+  }
+
+  const exampleProfile = await loadExampleFolderProfile(resolvedUrl, ctx.packageSources, fhirVersion);
+  if (exampleProfile && resolvedProfileMatchesRequest(exampleProfile, url, fhirVersion, resolvedUrl)) {
+    const sanitized = sanitizeProfile(exampleProfile);
+    if (policyAllowsCaching(ctx)) ctx.cache.set(cacheKey, sanitized);
+    return sanitized;
   }
 
   if (ctx.autoDownload) {
@@ -245,10 +265,11 @@ async function loadProfileFromKnownSources(
       fhirVersion,
       canCache: ctx.canCache,
       autoDownloadState: ctx.autoDownloadState,
+      retainUnavailableFailures: ctx.retainUnavailableFailures,
       packageProfileIndexCache: ctx.packageProfileIndexCache,
     });
 
-    if (downloadedProfile) {
+    if (downloadedProfile && resolvedProfileMatchesRequest(downloadedProfile, url, fhirVersion, resolvedUrl)) {
       const sanitized = sanitizeProfile(downloadedProfile);
       if (policyAllowsCaching(ctx)) ctx.cache.set(cacheKey, sanitized);
       return sanitized;

@@ -1,13 +1,17 @@
+import { directProfileSliceStates } from './slice-profile-nonmember-proof.js';
+import { assessResolvedTypeElementMatch } from './slice-resolved-type-evidence.js';
 import type { SlicingDefinition, SlicingDiscriminator } from '../core/structure-definition-types.js';
 import { urlMatchesRequestedFhirVersion, type FhirVersionFamily } from '../core/sd-loader-version-utils.js';
 import {
   matchDiscriminator,
   sliceHasDiscriminatorEvidence,
 } from './slice-discriminator-matcher.js';
+import { usesDirectExistsDiscrimination } from './slice-discriminator-constraints.js';
 import { isRelaxedCodingIdentityCardinalityMatch } from './slicing-cardinality-relaxation.js';
 import { splitResolveDiscriminatorPath } from './slice-discriminator-path.js';
-import type { ReferenceResolver, SliceDefinition } from './slice-types.js';
+import type { ReferenceResolver, ResolvedCodeElementMatch, SliceDefinition } from './slice-types.js';
 import { codingMatchesBindingCodes, getValueAtPath, matchesPattern } from './slice-utils.js';
+import { assessResolvedCodeDiscriminator, requiredReferencePrecludesSlice, resolvedCodeDiscriminatorHasEvidence, usesResolvedCodeDiscrimination } from './slice-resolved-code-discriminator.js';
 
 export function matchElementToSlice(
   element: unknown,
@@ -15,6 +19,12 @@ export function matchElementToSlice(
   slicingDef: SlicingDefinition,
   resolver: ReferenceResolver | null,
 ): SliceDefinition | null {
+  const proof = assessDirectProfileElementMatch(element, slices, slicingDef, resolver)
+    ?? assessResolvedCodeElementMatch(element, slices, slicingDef, resolver)
+    ?? assessDirectExistsElementMatch(element, slices, slicingDef, resolver)
+    ?? assessResolvedTypeElementMatch(element, slices);
+  if (proof?.state === 'ambiguous') return proof.certainAncestorSlices[0] ?? null;
+  if (proof) return proof.slice;
   return slices.find(slice => elementMatchesSlice(
     element,
     slice,
@@ -22,6 +32,116 @@ export function matchElementToSlice(
     slices,
     resolver,
   )) ?? null;
+}
+
+/** Binding selection requires every competing slice to have a conclusive membership result. */
+export function assessElementSliceMembership(
+  element: unknown,
+  slices: SliceDefinition[],
+  slicing: SlicingDefinition,
+  resolver: ReferenceResolver | null,
+): ResolvedCodeElementMatch {
+  const profileProof = assessDirectProfileElementMatch(element, slices, slicing, resolver);
+  if (profileProof) return profileProof;
+  if (slicing.discriminator?.some(discriminator => discriminator.type === 'profile')) {
+    return { state: 'unknown', slice: null, hasUnresolvedCodeMetadata: false, unknownSlices: slices };
+  }
+  return assessDiscriminatorElementMatch(element, slices, slicing, resolver);
+}
+
+export type { ResolvedCodeElementMatch } from './slice-types.js';
+
+/** Only post-resolve code slicing uses complete per-occurrence identity evidence. */
+export function assessResolvedCodeElementMatch(
+  element: unknown,
+  slices: SliceDefinition[],
+  slicing: SlicingDefinition,
+  resolver: ReferenceResolver | null,
+): ResolvedCodeElementMatch | null {
+  if (!usesResolvedCodeDiscrimination(slicing.discriminator ?? [])) return null;
+  return assessDiscriminatorElementMatch(element, slices, slicing, resolver);
+}
+
+/** Exact direct exists metadata supplies the same positive, negative and unknown identity facts. */
+export function assessDirectExistsElementMatch(
+  element: unknown,
+  slices: SliceDefinition[],
+  slicing: SlicingDefinition,
+  resolver: ReferenceResolver | null,
+): ResolvedCodeElementMatch | null {
+  if (!usesDirectExistsDiscrimination(slicing.discriminator ?? [])) return null;
+  return assessDiscriminatorElementMatch(element, slices, slicing, resolver);
+}
+
+/** The same match policy consumes source-confirmed direct profile verdicts. */
+export function assessDirectProfileElementMatch(
+  element: unknown,
+  slices: SliceDefinition[],
+  slicing: SlicingDefinition,
+  resolver: ReferenceResolver | null,
+): ResolvedCodeElementMatch | null {
+  const states = directProfileSliceStates(element, slices, slicing);
+  if (!states) return null;
+  return assessDiscriminatorElementMatch(element, slices, slicing, resolver,
+    slice => states.get(slice) === true ? 'matched' : states.get(slice) === false ? 'nonmember' : 'unknown');
+}
+
+function assessDiscriminatorElementMatch(
+  element: unknown,
+  slices: SliceDefinition[],
+  slicing: SlicingDefinition,
+  resolver: ReferenceResolver | null,
+  preparedState?: (slice: SliceDefinition) => 'matched' | 'nonmember' | 'unknown',
+): ResolvedCodeElementMatch {
+  const discriminators = slicing.discriminator ?? [];
+  let unknown = false;
+  let hasUnresolvedCodeMetadata = false;
+  const possibleSlices: SliceDefinition[] = [];
+  const unknownSlices: SliceDefinition[] = [];
+  for (const slice of slices) {
+    const state = preparedState ? preparedState(slice)
+      : resolvedCodeSliceMatchState(element, slice, discriminators, slices, resolver);
+    if (state === 'matched') possibleSlices.push(slice);
+    if (state === 'unknown') {
+      unknown = true;
+      unknownSlices.push(slice);
+      hasUnresolvedCodeMetadata ||= discriminators.some(discriminator =>
+        (discriminator.type === 'value' || discriminator.type === 'pattern')
+        && resolvedCodeDiscriminatorHasEvidence(slice, discriminator.path) === false);
+    }
+  }
+  const conflictingSlices = possibleSlices.filter(slice => !possibleSlices.some(other =>
+    other !== slice && other.sliceName.startsWith(`${slice.sliceName}/`)));
+  if (conflictingSlices.length > 1) return {
+    state: 'ambiguous', slice: null, possibleSlices, conflictingSlices, hasUnresolvedCodeMetadata, unknownSlices,
+    certainAncestorSlices: possibleSlices.filter(slice => conflictingSlices.every(other =>
+      other.sliceName.startsWith(`${slice.sliceName}/`))),
+  };
+  if (possibleSlices.length > 0) return {
+    state: 'matched', slice: possibleSlices[0], matchedSlices: possibleSlices, hasUnresolvedCodeMetadata, unknownSlices,
+  };
+  return { state: unknown ? 'unknown' : 'nonmember', slice: null, hasUnresolvedCodeMetadata, unknownSlices };
+}
+
+function resolvedCodeSliceMatchState(
+  element: unknown,
+  slice: SliceDefinition,
+  discriminators: SlicingDiscriminator[],
+  allSlices: SliceDefinition[],
+  resolver: ReferenceResolver | null,
+): 'matched' | 'nonmember' | 'unknown' {
+  if (requiredReferencePrecludesSlice(element, slice)) return 'nonmember';
+  let unknown = discriminators.length === 0;
+  for (const discriminator of discriminators) {
+    const codeState = assessResolvedCodeDiscriminator(element, slice, discriminator, resolver, matchesPattern);
+    if (codeState === 'nonmember') return 'nonmember';
+    if (codeState === 'unknown') { unknown = true; continue; }
+    if (codeState === 'matched') continue;
+    if (!sliceHasDiscriminatorEvidence(slice, discriminator)
+      || referenceDiscriminatorCouldNotBeResolved(element, discriminator, resolver)) { unknown = true; continue; }
+    if (!matchDiscriminator(element, slice, discriminator, resolver, matchesPattern, codingMatchesBindingCodes, allSlices)) return 'nonmember';
+  }
+  return unknown ? 'unknown' : 'matched';
 }
 
 export function shouldSuppressUnresolvedBindingOnlyMin(
@@ -51,18 +171,27 @@ export function referenceDiscriminatorCouldNotBeResolved(
     ? element
     : getValueAtPath(element, referencePath);
   const candidates = Array.isArray(referenceValue) ? referenceValue : [referenceValue];
-  return candidates.some(candidate => referenceCannotBeResolved(candidate, resolver));
+  return candidates.some(candidate => referenceCannotBeResolved(candidate, resolver, Boolean(resolveStep)));
 }
 
 function referenceCannotBeResolved(
   referenceValue: unknown,
   resolver: ReferenceResolver | null,
+  resolvesTarget: boolean,
 ): boolean {
+  // A canonical names its target as a Reference does (MedMorph's
+  // relatedArtifact.resource.resolve()); one Records cannot read leaves the
+  // slice undecided rather than unmatched.
+  if (resolvesTarget && typeof referenceValue === 'string') return targetCannotBeResolved(referenceValue, resolver);
   if (!isRecord(referenceValue)) return false;
   const meta = isRecord(referenceValue.meta) ? referenceValue.meta : null;
   if (meta?.profile) return false;
   const reference = referenceValue.reference;
   if (typeof reference !== 'string') return false;
+  return targetCannotBeResolved(reference, resolver);
+}
+
+function targetCannotBeResolved(reference: string, resolver: ReferenceResolver | null): boolean {
   if (!resolver) return true;
   try { return resolver(reference) == null; } catch { return true; }
 }

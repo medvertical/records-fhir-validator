@@ -193,7 +193,7 @@ function describeAnswerValue(
 ): { typeName: string; displayValue: string } {
     if (answer.valueCoding) {
         const system = answer.valueCoding.system || '';
-        return { typeName: 'code', displayValue: `${system}::${answer.valueCoding.code}` };
+        return { typeName: 'code', displayValue: `${system}::${answer.valueCoding.code ?? ''}` };
     }
     if (answer.valueInteger !== undefined) return { typeName: 'integer', displayValue: String(answer.valueInteger) };
     if (answer.valueDate !== undefined) return { typeName: 'date', displayValue: answer.valueDate };
@@ -223,7 +223,7 @@ function validateExclusiveOptions(
         if (isExclusive) {
             const desc = describeAnswerValue(answer, getAnswerType(answer));
             const optionLabel = answer.valueCoding
-                ? `${answer.valueCoding.system || ''}#${answer.valueCoding.code}`
+                ? `${answer.valueCoding.system || ''}#${answer.valueCoding.code ?? ''}`
                 : desc.displayValue;
             issues.push(createValidationIssue({
                 code: 'qr-exclusive-option',

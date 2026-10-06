@@ -79,6 +79,17 @@ describe('terminology response boundaries', () => {
       .toMatchObject({ valid: false, reason: 'system-unresolvable' });
   });
 
+  it('keeps the server\'s account of a CodeSystem release it does not hold', () => {
+    const message = "A definition for CodeSystem 'http://snomed.info/sct' version "
+      + "'http://snomed.info/sct/900000000000207008/version/20230731' could not be found, so the code cannot be validated. "
+      + 'Valid versions: http://snomed.info/sct/900000000000207008/version/20250201';
+    expect(parseCodeSystemValidationParameters({ resourceType: 'Parameters', parameter: [
+      { name: 'result', valueBoolean: false },
+      { name: 'message', valueString: message },
+      { name: 'issues', resource: { resourceType: 'OperationOutcome', issue: [{ severity: 'error', code: 'not-found' }] } },
+    ] }, '38266002', 'http://snomed.info/sct')).toEqual({ valid: false, reason: 'system-unresolvable', message });
+  });
+
   it('distinguishes an unknown CodeSystem from a rejected code', () => {
     expect(operationOutcomeToCodeSystemResult({ resourceType: 'OperationOutcome',
       issue: [{ code: 'not-found' }] }, 'code', 'http://example.com/system'))

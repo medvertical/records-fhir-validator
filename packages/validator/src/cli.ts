@@ -5,7 +5,7 @@ import { parseArgs, usage } from './cli-args.js';
 import { renderCliOutput } from './cli-renderer.js';
 import { findInputFiles, runValidation } from './cli-runner.js';
 import type { CliOptions } from './cli-types.js';
-import { setEngineLogger } from './index.js';
+import { setEngineLogger } from './logger.js';
 
 setEngineLogger({
   debug: () => {},

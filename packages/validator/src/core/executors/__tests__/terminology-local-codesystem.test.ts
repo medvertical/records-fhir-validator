@@ -70,7 +70,7 @@ describe('TerminologyExecutor local CodeSystem validation', () => {
     expect(issues).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: 'terminology-display-mismatch',
-        severity: 'warning',
+        severity: 'error',
         path: 'CoverageEligibilityResponse.insurance[0].item[0].benefit[0].type.coding[0].display',
       }),
       expect.objectContaining({

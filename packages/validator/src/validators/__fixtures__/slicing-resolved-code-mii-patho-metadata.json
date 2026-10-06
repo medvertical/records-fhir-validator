@@ -1,0 +1,390 @@
+{
+  "kind": "Original MII Patho resolve().code StructureDefinition metadata projection only",
+  "packageSource": {
+    "directory": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package",
+    "manifestFile": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/package.json",
+    "manifestSha256": "436183138e6d6a80dc64bcd064266ed9f047a3171f4dfe6e21e830879033b6ec",
+    "name": "de.medizininformatikinitiative.kerndatensatz.patho",
+    "version": "2026.0.0",
+    "directoryFileCount": 32,
+    "directoryInventorySha256": "eacc6dc4506afb4ea2ed069bf55eed1fc45c3704b793f15ccc8b1b7979bb19e3",
+    "archiveSha256": "unverified; directory inventory is not a tgz SHA"
+  },
+  "originalSources": [
+    {
+      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-report.json",
+      "sha256": "fbdaf8a57d9fc7ffae4bb01ee0b156c764e59ed4c902ae64b26d7875ff67a650",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-report",
+      "version": "2026.0.0"
+    },
+    {
+      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-intraoperative-grouper.json",
+      "sha256": "25f9021e935256931de7f97807259c3e6b134cf239b79c70f8b0076c067a0664",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-intraoperative-grouper",
+      "version": "2026.0.0"
+    },
+    {
+      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-macroscopic-grouper.json",
+      "sha256": "3441d1a0046f5ae2984e6597467f532825b7e83cbd95321cbbb1dd31ed29a286",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-macroscopic-grouper",
+      "version": "2026.0.0"
+    },
+    {
+      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-microscopic-grouper.json",
+      "sha256": "69cda786a72166b0d7e36c1f5de4733cbc614298a9b171cbaf1be13bcae9dd5a",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-microscopic-grouper",
+      "version": "2026.0.0"
+    },
+    {
+      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-additional-specified-grouper.json",
+      "sha256": "141f579e0b10333c49c632bbf2e9570a1f646a0c90d290e6f37e01b6634e5ac9",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-additional-specified-grouper",
+      "version": "2026.0.0"
+    },
+    {
+      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-diagnostic-conclusion-grouper.json",
+      "sha256": "0f66e0b787e7eca5890e984ab252b0574d5477a4980a78cd2bdbd17cb435526c",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-diagnostic-conclusion-grouper",
+      "version": "2026.0.0"
+    }
+  ],
+  "report": {
+    "resourceType": "StructureDefinition",
+    "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-report",
+    "version": "2026.0.0",
+    "name": "MII_PR_Patho_Report",
+    "status": "active",
+    "kind": "resource",
+    "abstract": false,
+    "type": "DiagnosticReport",
+    "snapshot": {
+      "element": [
+        {
+          "id": "DiagnosticReport.result",
+          "path": "DiagnosticReport.result",
+          "min": 1,
+          "max": "*",
+          "type": [
+            {
+              "code": "Reference",
+              "targetProfile": [
+                "http://hl7.org/fhir/StructureDefinition/Observation"
+              ]
+            }
+          ],
+          "slicing": {
+            "discriminator": [
+              {
+                "type": "value",
+                "path": "resolve().code"
+              }
+            ],
+            "ordered": true,
+            "rules": "closed"
+          }
+        },
+        {
+          "id": "DiagnosticReport.result:intraoperative-observations",
+          "path": "DiagnosticReport.result",
+          "sliceName": "intraoperative-observations",
+          "min": 0,
+          "max": "1",
+          "type": [
+            {
+              "code": "Reference",
+              "targetProfile": [
+                "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-intraoperative-grouper"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "DiagnosticReport.result:intraoperative-observations.reference",
+          "path": "DiagnosticReport.result.reference",
+          "min": 1,
+          "max": "1",
+          "type": [
+            {
+              "code": "string"
+            }
+          ]
+        },
+        {
+          "id": "DiagnosticReport.result:macroscopic-observations",
+          "path": "DiagnosticReport.result",
+          "sliceName": "macroscopic-observations",
+          "min": 0,
+          "max": "1",
+          "type": [
+            {
+              "code": "Reference",
+              "targetProfile": [
+                "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-macroscopic-grouper"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "DiagnosticReport.result:macroscopic-observations.reference",
+          "path": "DiagnosticReport.result.reference",
+          "min": 1,
+          "max": "1",
+          "type": [
+            {
+              "code": "string"
+            }
+          ]
+        },
+        {
+          "id": "DiagnosticReport.result:microscopic-observations",
+          "path": "DiagnosticReport.result",
+          "sliceName": "microscopic-observations",
+          "min": 0,
+          "max": "1",
+          "type": [
+            {
+              "code": "Reference",
+              "targetProfile": [
+                "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-microscopic-grouper"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "DiagnosticReport.result:microscopic-observations.reference",
+          "path": "DiagnosticReport.result.reference",
+          "min": 1,
+          "max": "1",
+          "type": [
+            {
+              "code": "string"
+            }
+          ]
+        },
+        {
+          "id": "DiagnosticReport.result:additional-observations",
+          "path": "DiagnosticReport.result",
+          "sliceName": "additional-observations",
+          "min": 0,
+          "max": "1",
+          "type": [
+            {
+              "code": "Reference",
+              "targetProfile": [
+                "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-additional-specified-grouper"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "DiagnosticReport.result:additional-observations.reference",
+          "path": "DiagnosticReport.result.reference",
+          "min": 1,
+          "max": "1",
+          "type": [
+            {
+              "code": "string"
+            }
+          ]
+        },
+        {
+          "id": "DiagnosticReport.result:diagnostic-conclusion",
+          "path": "DiagnosticReport.result",
+          "sliceName": "diagnostic-conclusion",
+          "min": 1,
+          "max": "1",
+          "type": [
+            {
+              "code": "Reference",
+              "targetProfile": [
+                "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-diagnostic-conclusion-grouper"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "DiagnosticReport.result:diagnostic-conclusion.reference",
+          "path": "DiagnosticReport.result.reference",
+          "min": 1,
+          "max": "1",
+          "type": [
+            {
+              "code": "string"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "targets": [
+    {
+      "resourceType": "StructureDefinition",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-intraoperative-grouper",
+      "version": "2026.0.0",
+      "name": "MII_PR_Patho_Intraoperative_Grouper",
+      "status": "active",
+      "kind": "resource",
+      "abstract": false,
+      "type": "Observation",
+      "snapshot": {
+        "element": [
+          {
+            "id": "Observation.code",
+            "path": "Observation.code",
+            "min": 1,
+            "max": "1",
+            "type": [
+              {
+                "code": "CodeableConcept"
+              }
+            ],
+            "patternCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "83321-0"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resourceType": "StructureDefinition",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-macroscopic-grouper",
+      "version": "2026.0.0",
+      "name": "MII_PR_Patho_Macroscopic_Grouper",
+      "status": "active",
+      "kind": "resource",
+      "abstract": false,
+      "type": "Observation",
+      "snapshot": {
+        "element": [
+          {
+            "id": "Observation.code",
+            "path": "Observation.code",
+            "min": 1,
+            "max": "1",
+            "type": [
+              {
+                "code": "CodeableConcept"
+              }
+            ],
+            "patternCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "22634-0"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resourceType": "StructureDefinition",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-microscopic-grouper",
+      "version": "2026.0.0",
+      "name": "MII_PR_Patho_Microscopic_Grouper",
+      "status": "active",
+      "kind": "resource",
+      "abstract": false,
+      "type": "Observation",
+      "snapshot": {
+        "element": [
+          {
+            "id": "Observation.code",
+            "path": "Observation.code",
+            "min": 1,
+            "max": "1",
+            "type": [
+              {
+                "code": "CodeableConcept"
+              }
+            ],
+            "patternCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "22635-7"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resourceType": "StructureDefinition",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-additional-specified-grouper",
+      "version": "2026.0.0",
+      "name": "MII_PR_Patho_Additional_Specified_Grouper",
+      "status": "active",
+      "kind": "resource",
+      "abstract": false,
+      "type": "Observation",
+      "snapshot": {
+        "element": [
+          {
+            "id": "Observation.code",
+            "path": "Observation.code",
+            "min": 1,
+            "max": "1",
+            "type": [
+              {
+                "code": "CodeableConcept"
+              }
+            ],
+            "patternCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "100969-5"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "resourceType": "StructureDefinition",
+      "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-diagnostic-conclusion-grouper",
+      "version": "2026.0.0",
+      "name": "MII_PR_Patho_Diagnostic_Conclusion_Grouper",
+      "status": "active",
+      "kind": "resource",
+      "abstract": false,
+      "type": "Observation",
+      "snapshot": {
+        "element": [
+          {
+            "id": "Observation.code",
+            "path": "Observation.code",
+            "min": 1,
+            "max": "1",
+            "type": [
+              {
+                "code": "CodeableConcept"
+              }
+            ],
+            "patternCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "22637-3"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "limits": [
+    "Definition metadata only, no clinical resource fixtures.",
+    "This exact metadata is explicitly supplied to the isolated Records resolver; production/SDK selection is not attested."
+  ]
+}

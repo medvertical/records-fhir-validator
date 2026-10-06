@@ -1,12 +1,17 @@
 import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types.js';
+import type { ReferenceResolver } from './slice-types.js';
+import type { ProfileConformanceCheck } from './sd-fhirpath-profile-conformance.js';
 
 export interface ExtensionValidationContext {
   resource: unknown;
+  rootResource?: unknown;
   profileSD: StructureDefinition;
   strictMode: boolean;
   fhirVersion: 'R4' | 'R5' | 'R6';
   profileUrl: string;
   getValueAtPath: (resource: unknown, path: string) => unknown;
+  referenceResolver?: ReferenceResolver | null;
+  profileConformance?: ProfileConformanceCheck;
 }
 
 export interface ExtensionDefinition {
@@ -25,6 +30,11 @@ export interface ExtensionDefinition {
    * live on `Extension.extension:slice.value[x]` in the parent profile.
    */
   inlineValueElement?: ElementDefinition;
+  /**
+   * The extension definition that declares this nested slice. It names the
+   * slice's own profile, so its package decides that profile's release.
+   */
   ownerProfileUrl?: string;
+  ownerProfileVersion?: string;
   sliceName?: string;
 }

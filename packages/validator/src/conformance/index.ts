@@ -9,6 +9,7 @@
 export { RecordsValidator } from '../core/validator-engine.js';
 export type { RecordsValidatorConfig, ValidationContext } from '../core/validator-engine.js';
 export {
+  fromOperationOutcome,
   issueToOperationOutcomeIssue,
   toOperationOutcome,
 } from '../core/operation-outcome-converter.js';

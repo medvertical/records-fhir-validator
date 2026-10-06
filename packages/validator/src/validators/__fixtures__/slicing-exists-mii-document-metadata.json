@@ -1,0 +1,448 @@
+{
+  "scope": "Exact selected content slicing/cardinality/type metadata projected from immutable actual full official SD; not a replacement for native full definition evaluation.",
+  "canonical": "https://www.medizininformatik-initiative.de/fhir/ext/modul-dokument/StructureDefinition/mii-pr-dokument-dokument",
+  "version": "2026.0.1",
+  "sourceSha256": "8563cf5354c303d9c3a7e94c0114928e1f2a6b7fa997c015b65ba0d50c6ddb5b",
+  "element": [
+    {
+      "id": "DocumentReference.content",
+      "path": "DocumentReference.content",
+      "min": 1,
+      "max": "*",
+      "type": [
+        {
+          "code": "BackboneElement"
+        }
+      ],
+      "slicing": {
+        "discriminator": [
+          {
+            "type": "exists",
+            "path": "attachment.url"
+          }
+        ],
+        "description": "Slice f\u00fcr ein Dokument, dessen Lokalisation verlinkt ist",
+        "ordered": false,
+        "rules": "open"
+      }
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten",
+      "path": "DocumentReference.content",
+      "min": 0,
+      "max": "*",
+      "sliceName": "Binaerdaten",
+      "type": [
+        {
+          "code": "BackboneElement"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.id",
+      "path": "DocumentReference.content.id",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type",
+              "valueUrl": "string"
+            }
+          ],
+          "code": "http://hl7.org/fhirpath/System.String"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.extension",
+      "path": "DocumentReference.content.extension",
+      "min": 0,
+      "max": "*",
+      "type": [
+        {
+          "code": "Extension"
+        }
+      ],
+      "slicing": {
+        "discriminator": [
+          {
+            "type": "value",
+            "path": "url"
+          }
+        ],
+        "description": "Extensions are always sliced by (at least) url",
+        "rules": "open"
+      }
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.modifierExtension",
+      "path": "DocumentReference.content.modifierExtension",
+      "min": 0,
+      "max": "*",
+      "type": [
+        {
+          "code": "Extension"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment",
+      "path": "DocumentReference.content.attachment",
+      "min": 1,
+      "max": "1",
+      "type": [
+        {
+          "code": "Attachment"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment.id",
+      "path": "DocumentReference.content.attachment.id",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type",
+              "valueUrl": "string"
+            }
+          ],
+          "code": "http://hl7.org/fhirpath/System.String"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment.extension",
+      "path": "DocumentReference.content.attachment.extension",
+      "min": 0,
+      "max": "*",
+      "type": [
+        {
+          "code": "Extension"
+        }
+      ],
+      "slicing": {
+        "discriminator": [
+          {
+            "type": "value",
+            "path": "url"
+          }
+        ],
+        "description": "Extensions are always sliced by (at least) url",
+        "rules": "open"
+      }
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment.contentType",
+      "path": "DocumentReference.content.attachment.contentType",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "code"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment.language",
+      "path": "DocumentReference.content.attachment.language",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "code"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment.data",
+      "path": "DocumentReference.content.attachment.data",
+      "min": 1,
+      "max": "1",
+      "type": [
+        {
+          "code": "base64Binary"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment.url",
+      "path": "DocumentReference.content.attachment.url",
+      "min": 0,
+      "max": "0",
+      "type": [
+        {
+          "code": "url"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment.size",
+      "path": "DocumentReference.content.attachment.size",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "unsignedInt"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment.hash",
+      "path": "DocumentReference.content.attachment.hash",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "base64Binary"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment.title",
+      "path": "DocumentReference.content.attachment.title",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "string"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.attachment.creation",
+      "path": "DocumentReference.content.attachment.creation",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "dateTime"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Binaerdaten.format",
+      "path": "DocumentReference.content.format",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "Coding"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis",
+      "path": "DocumentReference.content",
+      "min": 0,
+      "max": "*",
+      "sliceName": "Verweis",
+      "type": [
+        {
+          "code": "BackboneElement"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.id",
+      "path": "DocumentReference.content.id",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type",
+              "valueUrl": "string"
+            }
+          ],
+          "code": "http://hl7.org/fhirpath/System.String"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.extension",
+      "path": "DocumentReference.content.extension",
+      "min": 0,
+      "max": "*",
+      "type": [
+        {
+          "code": "Extension"
+        }
+      ],
+      "slicing": {
+        "discriminator": [
+          {
+            "type": "value",
+            "path": "url"
+          }
+        ],
+        "description": "Extensions are always sliced by (at least) url",
+        "rules": "open"
+      }
+    },
+    {
+      "id": "DocumentReference.content:Verweis.modifierExtension",
+      "path": "DocumentReference.content.modifierExtension",
+      "min": 0,
+      "max": "*",
+      "type": [
+        {
+          "code": "Extension"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment",
+      "path": "DocumentReference.content.attachment",
+      "min": 1,
+      "max": "1",
+      "type": [
+        {
+          "code": "Attachment"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment.id",
+      "path": "DocumentReference.content.attachment.id",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/structuredefinition-fhir-type",
+              "valueUrl": "string"
+            }
+          ],
+          "code": "http://hl7.org/fhirpath/System.String"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment.extension",
+      "path": "DocumentReference.content.attachment.extension",
+      "min": 0,
+      "max": "*",
+      "type": [
+        {
+          "code": "Extension"
+        }
+      ],
+      "slicing": {
+        "discriminator": [
+          {
+            "type": "value",
+            "path": "url"
+          }
+        ],
+        "description": "Extensions are always sliced by (at least) url",
+        "rules": "open"
+      }
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment.contentType",
+      "path": "DocumentReference.content.attachment.contentType",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "code"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment.language",
+      "path": "DocumentReference.content.attachment.language",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "code"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment.data",
+      "path": "DocumentReference.content.attachment.data",
+      "min": 0,
+      "max": "0",
+      "type": [
+        {
+          "code": "base64Binary"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment.url",
+      "path": "DocumentReference.content.attachment.url",
+      "min": 1,
+      "max": "1",
+      "type": [
+        {
+          "code": "url"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment.size",
+      "path": "DocumentReference.content.attachment.size",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "unsignedInt"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment.hash",
+      "path": "DocumentReference.content.attachment.hash",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "base64Binary"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment.title",
+      "path": "DocumentReference.content.attachment.title",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "string"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.attachment.creation",
+      "path": "DocumentReference.content.attachment.creation",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "dateTime"
+        }
+      ]
+    },
+    {
+      "id": "DocumentReference.content:Verweis.format",
+      "path": "DocumentReference.content.format",
+      "min": 0,
+      "max": "1",
+      "type": [
+        {
+          "code": "Coding"
+        }
+      ]
+    }
+  ]
+}

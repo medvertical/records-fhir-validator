@@ -373,7 +373,7 @@ describe('ProfileExecutor', () => {
         expect.anything(),
         undefined,
         'PractitionerRole.extension:qualification.extension',
-        'R4', expect.anything(),
+        'R4', expect.anything(), 'PractitionerRole.extension[2].extension',
       );
     });
 
@@ -546,7 +546,7 @@ describe('ProfileExecutor', () => {
         expect.anything(),
         undefined,
         'Condition.extension:Festgestellt_am.value[x]',
-        'R4', expect.anything(),
+        'R4', expect.anything(), 'Condition.extension[1].value[x]',
       );
       expect(validateSlicingSpy).toHaveBeenCalledWith(
         [dueToExtension.valueCodeableConcept],
@@ -554,7 +554,7 @@ describe('ProfileExecutor', () => {
         expect.anything(),
         undefined,
         'Condition.extension:Ursache.value[x]',
-        'R4', expect.anything(),
+        'R4', expect.anything(), 'Condition.extension[0].value[x]',
       );
     });
 
@@ -622,7 +622,7 @@ describe('ProfileExecutor', () => {
       expect.anything(),
       undefined,
       'Practitioner.name:name.family.extension',
-      'R4', expect.anything(),
+      'R4', expect.anything(), 'Practitioner.name.family.extension',
     );
   });
 
@@ -690,7 +690,7 @@ describe('ProfileExecutor', () => {
       expect.anything(),
       undefined,
       'Practitioner.name:name.prefix.extension',
-      'R4', expect.anything(),
+      'R4', expect.anything(), 'Practitioner.name.prefix.extension',
     );
   });
 
@@ -995,7 +995,7 @@ describe('ProfileExecutor', () => {
         expect.anything(),
         undefined,
         'Observation.component.value[x]',
-        'R4', expect.anything()
+        'R4', expect.anything(), 'Observation.component[0].value[x]'
       );
       expect(validateSlicingSpy).toHaveBeenNthCalledWith(
         2,
@@ -1004,7 +1004,7 @@ describe('ProfileExecutor', () => {
         expect.anything(),
         undefined,
         'Observation.component.value[x]',
-        'R4', expect.anything()
+        'R4', expect.anything(), 'Observation.component[1].value[x]'
       );
     });
 
@@ -1059,7 +1059,7 @@ describe('ProfileExecutor', () => {
         expect.anything(),
         undefined,
         'Medication.ingredient.item[x].coding',
-        'R4', expect.anything()
+        'R4', expect.anything(), 'Medication.ingredient[0].itemCodeableConcept.coding'
       );
       expect(validateSlicingSpy).toHaveBeenNthCalledWith(
         2,
@@ -1068,7 +1068,7 @@ describe('ProfileExecutor', () => {
         expect.anything(),
         undefined,
         'Medication.ingredient.item[x].coding',
-        'R4', expect.anything()
+        'R4', expect.anything(), 'Medication.ingredient[1].itemCodeableConcept.coding'
       );
     });
 

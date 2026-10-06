@@ -14,6 +14,7 @@ import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
 import { logger } from '../logger.js';
 import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types.js';
+import { isOtherSchemeAbsoluteUri } from '../reference/reference-url-parser.js';
 import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
 
 // ============================================================================
@@ -57,6 +58,12 @@ const REFERENCE_PATTERNS = {
     // 'UKCore-Location-...-Example'). Mirrors isBareRelativeReference in
     // reference/reference-format-validator.ts.
     relativeOpaque: /^[A-Za-z0-9\-._~%]+$/,
+
+    // A path before ResourceType/id (`/fhir/Patient/1/_history/1`) still makes
+    // a valid relative URL; the HL7 validator reads the type from the last
+    // segments and accepts it. It only resolves where the service base ends in
+    // that path, which is worth a warning, not an error.
+    pathPrefixed: /^\/?(?:[^/\s?#:]+\/)+?([A-Z][a-zA-Z]+)\/[A-Za-z0-9\-.]{1,64}(?:\/_history\/[A-Za-z0-9\-.]{1,64})?$/,
 };
 
 // ============================================================================
@@ -91,12 +98,13 @@ export class ReferenceFormatValidator {
             !ref.toLowerCase().startsWith('urn:uuid:');
         const isConditional = REFERENCE_PATTERNS.conditional.test(ref);
         const isRelativeOpaque = REFERENCE_PATTERNS.relativeOpaque.test(ref);
+        const isAbsoluteUri = isOtherSchemeAbsoluteUri(ref);
 
         const isValid = isRelative || isAbsolute || isContained || isUrnUuid || isUrnOid ||
-            isUrnGeneral || isConditional || isRelativeOpaque;
+            isUrnGeneral || isConditional || isRelativeOpaque || isAbsoluteUri;
 
         const onlyOpaqueMatched = isRelativeOpaque &&
-            !(isRelative || isAbsolute || isContained || isUrnUuid || isUrnOid || isUrnGeneral || isConditional);
+            !(isRelative || isAbsolute || isContained || isUrnUuid || isUrnOid || isUrnGeneral || isConditional || isAbsoluteUri);
         if (onlyOpaqueMatched && isInsideBundleEntryResource(path)) {
             // Java parity: a bare single-segment token is a valid relative URL
             // on a standalone resource, but inside a Bundle entry it can never
@@ -113,7 +121,17 @@ export class ReferenceFormatValidator {
             }));
         }
 
-        if (!isValid) {
+        const pathPrefixedType = isValid ? undefined : ref.match(REFERENCE_PATTERNS.pathPrefixed)?.[1];
+        if (pathPrefixedType && KNOWN_FHIR_RESOURCE_TYPES.has(pathPrefixedType)) {
+            issues.push(createValidationIssue({
+                code: 'reference-path-prefixed',
+                severityOverride: 'warning',
+                path: `${path}.reference`,
+                resourceType,
+                customMessage: `Reference '${ref}' puts a path before ${pathPrefixedType}/[id]; a relative reference resolves against the service base, so this one only resolves where that base ends in the same path.`,
+                details: { reference: ref, referencedResourceType: pathPrefixedType },
+            }));
+        } else if (!isValid) {
             const isNonCanonicalUuidUrn = ref.toLowerCase().startsWith('urn:uuid:') && REFERENCE_PATTERNS.urnGeneral.test(ref);
             const severity = isNonCanonicalUuidUrn ? 'warning' : 'error';
             logger.debug(

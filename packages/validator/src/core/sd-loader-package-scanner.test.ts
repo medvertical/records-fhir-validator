@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, symlink, truncate, writeFile } from 'fs/promises';
+import { mkdtemp, mkdir, readFile, rm, symlink, truncate, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -16,6 +16,12 @@ describe('scanCacheDirectory package version pins', () => {
     await Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true })));
     tempDirs.length = 0;
   });
+
+  /** Package releases the scan selected, as opposed to older ones it only indexes. */
+  async function selectedPackages(root: string): Promise<string[]> {
+    const index = JSON.parse(await readFile(join(root, 'sdloader-profile-index.json'), 'utf-8'));
+    return index.packages.map((pkg: { name: string }) => pkg.name);
+  }
 
   async function addPackage(root: string, packageName: string, profileUrl: string): Promise<void> {
     const packageDir = join(root, packageName, 'package');
@@ -91,7 +97,7 @@ describe('scanCacheDirectory package version pins', () => {
 
     expect(compareVersions('1.0.0-beta.10', '1.0.0-beta.2')).toBeGreaterThan(0);
     expect(availableProfiles.has('http://example.org/beta-10')).toBe(true);
-    expect(availableProfiles.has('http://example.org/beta-2')).toBe(false);
+    await expect(selectedPackages(root)).resolves.toEqual(['example.fhir#1.0.0-beta.10']);
   });
 
   it('does not treat inherited object properties as package pins', async () => {
@@ -105,7 +111,7 @@ describe('scanCacheDirectory package version pins', () => {
     await scanCacheDirectory(root, availableProfiles, { packageVersionPins: inheritedPins });
 
     expect(availableProfiles.has('http://example.org/latest')).toBe(true);
-    expect(availableProfiles.has('http://example.org/old')).toBe(false);
+    await expect(selectedPackages(root)).resolves.toEqual(['example.fhir#2.0.0']);
   });
 
   it('rejects malformed package names and ignores oversized files and symlinks', async () => {

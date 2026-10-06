@@ -132,6 +132,68 @@
     {
       "path": "conformance-results/report-2026-08-24.json",
       "sha256": "4edc2aa43d2f94e032d660eaa4cf83ffb2f05514a2b140f84f36b9ce95abd3e3"
+    },
+    {
+      "path": "conformance-results/mii-clean-triage-2026-09-30.json",
+      "sha256": "6a5ab966758fdea8489b92e9d01f512b0928ff708b8f18c538951dde5e2e59d4"
+    },
+    {
+      "path": "conformance-results/public-parity-2026-09-30.json",
+      "sha256": "89a90ce4e4fafa7ca4fa9abce7f75ad8fb1a419566dce3dc3f0a22ed6835e878"
+    },
+    {
+      "path": "conformance-results/public-parity-triage-2026-09-30.json",
+      "sha256": "b227700e60241448a4311787695be487148468e27f03dca5893b4c68ff3d363e"
+    },
+    {
+      "path": "conformance-results/validator-release-acceptance-2026-10-05-g2.json",
+      "sha256": "072e8789747576dbb7fb692b4fa5029784992772455f614bd9fa353b35bce620"
+    },
+    {
+      "path": "conformance-results/validator-release-acceptance-2026-10-05-g3.json",
+      "sha256": "1c2a1e2fbc4809d34463917bc2960a026bb3a1be860dcb6dd8519d21b5285058"
+    },
+    {
+      "path": "conformance-results/validator-current-release.json",
+      "sha256": "5098fe9c3e47818dea0ae06b06cc0e18ad8d7fc501dfb082af493a1f71602d1e"
+    },
+    {
+      "path": "conformance-results/validator-release-inventory-loop111-g1-2026-10-05.json",
+      "sha256": "cd9b977d53009eee937efa0154f7d5ad8b8bf334aa2d013f956c1cf931235167"
+    },
+    {
+      "path": "conformance-results/validator-r4-raw-loop111-g1-2026-10-05.json.gz",
+      "sha256": "b1dce811a42fb3329318f4deb0d1129f05756ec2d8ec7d041b7a1f7ca82048d4"
+    },
+    {
+      "path": "conformance-results/validator-r4-receipts-loop111-g1-2026-10-05.json.gz",
+      "sha256": "2631aac491cfe626d8b7509c1cb44eededbe16ecc4a290a58ae09d6a43c1c914"
+    },
+    {
+      "path": "conformance-results/validator-r4-acceptance-loop111-g1-2026-10-05.json",
+      "sha256": "806192e0dd2013748127f0ee786ac5c2d91077f9535da19ea85458a9bab9b187"
+    },
+    {
+      "path": "conformance-results/validator-r4-measurement-origin-loop111-g1-2026-10-05.json",
+      "sha256": "5f656c8b2b2be147983bc1c3d681271a0a18041cfcb17961263af7be9d173dbc"
+    },
+    {
+      "path": "conformance-results/validator-mii-clean-loop111-g1-2026-10-05.json",
+      "sha256": "e3ec3f408a7c75bb008cd37ef045e17ecdd5b51049aad0b548191797af31644f"
+    },
+    {
+      "path": "conformance-results/validator-mii-measurement-origin-loop111-g1-2026-10-05.json",
+      "sha256": "09c5cb6c28458d2ff1c7e50827ba96720343b9561d1c49f65763b4ff439219a4"
     }
-  ]
+  ],
+  "measurements": {
+    "publicParity": {
+      "artifact": "conformance-results/public-parity-2026-09-30.json",
+      "scope": "Current validator 0.8.0 compared with the SHA-verified HAPI 6.10.4 reference on the explicitly inventoried offline R4/R5 package stores."
+    },
+    "currentRelease": {
+      "path": "conformance-results/validator-current-release.json",
+      "sha256": "5098fe9c3e47818dea0ae06b06cc0e18ad8d7fc501dfb082af493a1f71602d1e"
+    }
+  }
 }

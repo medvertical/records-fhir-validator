@@ -35,7 +35,7 @@ export interface AnswerOption {
     valueDate?: string;
     valueTime?: string;
     valueString?: string;
-    valueCoding?: { system?: string; code: string; display?: string };
+    valueCoding?: { system?: string; version?: string; code: string; display?: string };
     valueReference?: { reference: string };
     extension?: Array<{ url: string; valueBoolean?: boolean }>;
 }
@@ -73,7 +73,7 @@ export interface QuestionnaireResponseAnswer {
     valueString?: string;
     valueUri?: string;
     valueAttachment?: unknown;
-    valueCoding?: { system?: string; code: string; display?: string };
+    valueCoding?: { system?: string; version?: string; code?: string; display?: string };
     valueQuantity?: QuestionnaireQuantity;
     valueReference?: { reference: string };
     /** Raw nested items are normalized by the iterative traversal boundary. */

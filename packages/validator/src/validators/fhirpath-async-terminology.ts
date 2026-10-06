@@ -1,10 +1,13 @@
 import fhirpath from 'fhirpath';
 
-import { getFhirPathModel } from './fhirpath-model-resolver.js';
+import { getInvariantFhirPathModel } from '../core/fhirpath-context.js';
 import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite.js';
 import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
-import { buildAsyncTerminologyInvocationTable } from './fhirpath-terminology-invocations.js';
+import { buildAsyncTerminologyInvocationTable, resolveMemberOfInvocation } from './fhirpath-terminology-invocations.js';
 import { rewriteFHIRPathTerminologyFunctions } from './fhirpath-terminology-rewrite.js';
+import { ConstraintExpressionCache } from './constraint-expression-cache.js';
+import { selectOptionalMemberOfUnion } from './fhirpath-memberof-precheck.js';
+import { FHIRPathTerminologyUnverifiedError } from './fhirpath-terminology-types.js';
 import type {
   FHIRPathInvocationTable as InvocationTable,
   FHIRPathTerminologyResolver,
@@ -24,6 +27,7 @@ export interface AsyncFHIRPathTerminologyEvaluation {
   expression: string;
   context: unknown;
   rootResource: unknown;
+  focusResource?: unknown;
   fhirVersion: FhirVersion;
   resolver: FHIRPathTerminologyResolver;
   userInvocationTable?: unknown;
@@ -31,6 +35,7 @@ export interface AsyncFHIRPathTerminologyEvaluation {
 }
 
 export class AsyncFHIRPathTerminologyCache {
+  readonly selectionCache = new ConstraintExpressionCache();
   private readonly resolverCaches = new WeakMap<
     FHIRPathTerminologyResolver,
     BoundedLruCache<string, CompiledExpression>
@@ -72,6 +77,29 @@ export async function evaluateAsyncFHIRPathTerminology(
     throw new Error('FHIRPath expression does not contain an asynchronous terminology function');
   }
 
+  const selected = selectOptionalMemberOfUnion(
+    input.expression, input.context, input.fhirVersion, input.expressionCache?.selectionCache,
+  );
+  if (selected?.values.length === 0) return [true];
+  if (selected?.values.length === 1) {
+    // A proved OR alternative settles membership without claiming the other
+    // ValueSet was verified. Preserve unexpected resolver failures as failures.
+    let unverified: FHIRPathTerminologyUnverifiedError | undefined;
+    let sawEmpty = false;
+    for (const url of selected.valueSetUrls) {
+      try {
+        const outcome = await resolveMemberOfInvocation(selected.values, url, input.resolver, input.fhirVersion);
+        if (outcome[0] === true) return [true];
+        if (outcome.length === 0) sawEmpty = true;
+      } catch (error) {
+        if (!(error instanceof FHIRPathTerminologyUnverifiedError)) throw error;
+        unverified ??= error;
+      }
+    }
+    if (unverified) throw unverified;
+    return sawEmpty ? [] : [false];
+  }
+
   const compiled = getOrCompile(
     input.resolver,
     rewritten.expression,
@@ -82,7 +110,7 @@ export async function evaluateAsyncFHIRPathTerminology(
   return compiled(
     input.context,
     {
-      resource: input.rootResource,
+      ...(input.focusResource === null ? {} : { resource: input.focusResource ?? input.rootResource }),
       rootResource: input.rootResource,
     },
     { traceFn: () => {} },
@@ -120,7 +148,7 @@ function compileAsyncTerminologyExpression(
 ): CompiledExpression {
   return fhirpath.compile(
     rewriteCollectionTypeOperators(expression),
-    getFhirPathModel(fhirVersion),
+    getInvariantFhirPathModel(fhirVersion),
     {
       async: 'always',
       userInvocationTable: {

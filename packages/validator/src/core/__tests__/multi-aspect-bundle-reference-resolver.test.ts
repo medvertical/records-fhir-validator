@@ -16,6 +16,22 @@ describe('multi-aspect bundle reference resolver', () => {
     expect(resolver?.('#')).toBe(containingResource);
   });
 
+  // Da Vinci RA submits a MeasureReport whose subject is the Patient beside it.
+  it('resolves between the resources a Parameters groups', () => {
+    const patient = { resourceType: 'Patient', id: 'ra-patient01' };
+    const parameters = {
+      resourceType: 'Parameters',
+      parameter: [
+        { name: 'MeasureReport', resource: { resourceType: 'MeasureReport', id: 'm1', subject: { reference: 'Patient/ra-patient01' } } },
+        { name: 'resource', part: [{ name: 'item', resource: patient }] },
+      ],
+    };
+    const resolver = createBundleReferenceResolver(undefined, parameters);
+
+    expect(resolver?.('Patient/ra-patient01')).toBe(patient);
+    expect(resolver?.('Patient/elsewhere')).toBeNull();
+  });
+
   it('resolves exact fullUrl references before relative fallbacks', () => {
     const exactTarget = {
       resourceType: 'Patient',

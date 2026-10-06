@@ -1,3 +1,4 @@
+import { ProfileReferenceUnavailableError, profileReferenceUnavailableIssue } from '../core/profile-reference-authority.js';
 import { createValidationIssue } from '../issues/index.js';
 import { logger } from '../logger.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
@@ -12,6 +13,7 @@ export function handleSlicingValidationFailure(
   error: unknown,
   elementPath: string,
 ): ValidationIssue {
+  if (error instanceof ProfileReferenceUnavailableError) return profileReferenceUnavailableIssue(error, elementPath);
   logger.error(
     '[SlicingValidator] Slicing validation failed',
     validationFailureMetadata(error),

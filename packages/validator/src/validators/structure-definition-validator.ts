@@ -14,10 +14,6 @@ import { createValidationIssue } from '../issues/index.js';
 import {
   R4_ELEMENT_DEFINITION_ELEMENTS, R4_ELEMENT_DEFINITION_NESTED_CONTEXT_ELEMENTS,
 } from './sd-wg-mappings.js';
-import {
-  validateStructureDefinitionStatusConsistency,
-  validateStructureDefinitionWgConsistency,
-} from './structure-definition-metadata-rules.js';
 import type {
   ElementDefinition,
   StructureDefinition,
@@ -38,8 +34,6 @@ export class StructureDefinitionValidator {
     const sd = resource as StructureDefinition;
 
     const issues: ValidationIssue[] = [];
-    issues.push(...validateStructureDefinitionWgConsistency(sd));
-    issues.push(...validateStructureDefinitionStatusConsistency(sd));
     issues.push(...this.validateExtensionFixedUrl(sd));
     issues.push(...this.validateContextValidity(sd));
     issues.push(...this.validateExtensionContextType(sd));

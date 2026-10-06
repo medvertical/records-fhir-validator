@@ -93,6 +93,11 @@ export const TerminologyResolutionSchema = z.object({
     mode: z.enum(['shadow', 'enforce']),
     logMismatches: z.boolean().optional(),
   }).optional(),
+  // An explicit edition pin can establish authority for an unversioned code query.
+  defaultCodeSystemVersions: z.record(
+    z.string().max(2048).regex(/^[a-z][a-z0-9+.-]*:[^\s|]+$/i).regex(/^[\x21-\x7e]+$/),
+    z.string().min(1).max(512).regex(/^[\x21-\x7e]+$/).refine(value => !value.includes('|')),
+  ).refine(value => Object.keys(value).length <= 64).optional(),
   unknownCodeBehavior: z.enum(['required-closed', 'all-open', 'all-closed']).optional(),
   reportUnverifiedBindings: z.boolean().optional(),
   strictUnverifiedRequiredBindings: z.boolean().optional(),

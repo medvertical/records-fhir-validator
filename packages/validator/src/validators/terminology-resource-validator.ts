@@ -23,14 +23,10 @@
  *   `system(|version)#code` format and the code must exist in the referenced
  *   sub-CodeSystem
  * - For `regex` filters, value must compile as a valid JS RegExp
- *
- * UUID validation:
- * - urn:uuid: values must contain valid, lowercase UUIDs
  */
 
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
-import { validateUrnUuid } from './terminology-resource-utils.js';
 import {
   validateCodeSystemResource,
   validateContainedCodeSystemResource,
@@ -39,6 +35,7 @@ import { validateConceptMapResource } from './conceptmap-resource-validator.js';
 import { validateValueSetComposeFilters } from './valueset-compose-filter-validator.js';
 import { validateValueSetExpansion } from './valueset-expansion-validator.js';
 import { ValueSetCache } from './valueset-cache.js';
+import type { CodeSystem } from './valueset-types.js';
 
 // ============================================================================
 // Constants
@@ -57,7 +54,13 @@ export class TerminologyResourceValidator {
   validate(
     resource: unknown,
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+    /** CodeSystems read ahead for a ConceptMap (`loadConceptMapCodeSystems`). */
+    codeSystems?: ReadonlyMap<string, CodeSystem>,
   ): ValidationIssue[] {
+    return this.cache.sourceContexts.run(fhirVersion, () => this.validateScoped(resource, fhirVersion, codeSystems));
+  }
+
+  private validateScoped(resource: unknown, fhirVersion: 'R4' | 'R5' | 'R6', codeSystems?: ReadonlyMap<string, CodeSystem>): ValidationIssue[] {
     const resourceRecord = asRecord(resource);
     if (!resourceRecord) return [];
 
@@ -67,7 +70,7 @@ export class TerminologyResourceValidator {
       case 'ValueSet':
         return this.validateValueSet(resourceRecord);
       case 'ConceptMap':
-        return validateConceptMapResource(resourceRecord, this.cache);
+        return validateConceptMapResource(resourceRecord, this.cache, codeSystems);
       default:
         return [];
     }
@@ -79,25 +82,10 @@ export class TerminologyResourceValidator {
 
   private validateValueSet(vs: Record<string, unknown>): ValidationIssue[] {
     const issues: ValidationIssue[] = [];
-    const url = typeof vs.url === 'string' ? vs.url : '';
 
-    // NOTE: Top-level URL absoluteness is already checked by the
-    // structural executor's uri-format-validator, so we skip it here
-    // to avoid duplicate errors in the OperationOutcome.
-
-    // --- urn:uuid: must be valid ---
-    if (url.startsWith('urn:uuid:')) {
-      const { valid, uuid } = validateUrnUuid(url);
-      if (!valid) {
-        issues.push(createValidationIssue({
-          code: 'tx-valueset-url-invalid-uuid',
-          path: 'ValueSet.url',
-          resourceType: 'ValueSet',
-          customMessage: `UUIDs must be valid and lowercase (${uuid})`,
-          severityOverride: 'error',
-        }));
-      }
-    }
+    // NOTE: Top-level URL absoluteness and urn:uuid validity are already
+    // checked by the structural executor's uri-format-validator, so we skip
+    // them here to avoid duplicate errors in the OperationOutcome.
 
     // --- Contained CodeSystem checks ---
     if (Array.isArray(vs.contained)) {

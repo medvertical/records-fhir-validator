@@ -1,3 +1,4 @@
+import { recordPatientNarrativeOrigins, carryPatientNarrativeOrigins } from './patient-narrative-issue-reconciliation.js';
 import { universalConstraintsValidator } from '../validators/universal-constraints-validator.js';
 import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import { BestPracticeValidator, validateBestPractices } from '../validators/best-practice-validator.js';
@@ -25,6 +26,7 @@ import { aggregateRemoteCodeSystemBudgetIssues, dedupeIssues, suppressRedundantB
 import type { ReferenceResolver } from '../validators/slicing-validator.js';
 import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator.js';
 import type { FhirResource } from './fhir-resource.js';
+import type { SingleResourceProfileConformance } from './single-resource-profile-conformance.js';
 import {
   shouldRunCustomRules,
   shouldValidateBestPractices,
@@ -42,6 +44,8 @@ export interface SingleResourceValidationInput {
   codeInferredProfile?: CodeInferredProfileMatch | null;
   contextQuestionnaire?: unknown;
   referenceResolver?: ReferenceResolver | null;
+  enclosingBundle?: Record<string, unknown>;
+  conformance?: SingleResourceProfileConformance;
   organizationId?: number;
   serverId?: number;
 }
@@ -74,6 +78,8 @@ export async function collectSingleResourceValidationIssues(
       settings: input.settings,
       contextQuestionnaire: input.contextQuestionnaire,
       referenceResolver: input.referenceResolver,
+      enclosingBundle: input.enclosingBundle,
+      conformance: input.conformance,
       organizationId: input.organizationId,
       serverId: input.serverId,
     },
@@ -109,13 +115,17 @@ export async function collectSingleResourceValidationIssues(
     ? await deps.validateBundleEntriesIfNeeded(input.resource, input.fhirVersion)
     : [];
 
-  return aggregateRemoteCodeSystemBudgetIssues(suppressRedundantBindingWarnings(dedupeIssues([
+  const combined = carryPatientNarrativeOrigins([aspectIssues], [
     ...(input.profileFallbackIssue ? [input.profileFallbackIssue] : []),
     ...attributedAspectIssues,
     ...universalConstraintIssues,
     ...bestPracticeIssues,
     ...bundleEntryIssues,
-  ])));
+  ]);
+  recordPatientNarrativeOrigins(combined, { generated: bestPracticeIssues });
+  return carryPatientNarrativeOrigins([combined], aggregateRemoteCodeSystemBudgetIssues(
+    suppressRedundantBindingWarnings(dedupeIssues(combined)),
+  ));
 }
 
 /**

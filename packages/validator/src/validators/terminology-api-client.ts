@@ -138,9 +138,14 @@ export class TerminologyApiClient {
     display?: string,
     override?: TerminologyServerOverride,
     codeSystemVersion?: string,
+    displayLanguage?: string,
   ): Promise<CodeSystemValidationResult> {
     markValidationDependencyUnattested('Online terminology does not attest an immutable dataset for this comparison.');
-    if (!canDelegateCodeValidation(this.runtime.getConfig())) return { valid: true };
+    if (!canDelegateCodeValidation(this.runtime.getConfig())) return {
+      valid: true,
+      reason: 'delegation-disabled',
+      message: 'CodeSystem membership was not verified because terminology code validation delegation is disabled.',
+    };
     return validateCodeSystemRemotely(
       this.runtime.codeSystemValidationContext(),
       code,
@@ -148,6 +153,7 @@ export class TerminologyApiClient {
       display,
       override,
       codeSystemVersion,
+      displayLanguage,
     );
   }
 

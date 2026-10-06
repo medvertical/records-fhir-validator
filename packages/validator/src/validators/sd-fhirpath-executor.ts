@@ -15,6 +15,7 @@ import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology.j
 import { ValueSetCache } from './valueset-cache.js';
 import { SDFHIRPathConstraintRunner } from './sd-fhirpath-constraint-runner.js';
 import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope.js';
+import type { ProfileConformanceLookup } from './sd-fhirpath-profile-conformance.js';
 
 export { evaluateSpecialisedRootConstraint } from './sd-fhirpath-specialised-root-constraints.js';
 
@@ -28,10 +29,17 @@ export interface SDFHIRPathContext {
      * example an Extension profile attached to Patient.gender.
      */
     rootResource?: unknown;
+    /**
+     * FHIRPath `%resource` when `resource` stands in for a datatype: the
+     * resource that contains the validated Extension, not the Bundle around it.
+     */
+    focusResource?: unknown;
     bundle?: FHIRPathBundleInput;
     bundleResources?: Map<string, unknown>; // Map of fullUrl/id to resource
     fhirVersion?: 'R4' | 'R5' | 'R6';
     terminologyResolver?: FHIRPathTerminologyResolver;
+    /** Conformance to the profiles conformsTo() names, established beforehand. */
+    profileConformance?: ProfileConformanceLookup;
 }
 
 export class SDFHIRPathExecutor {
@@ -76,6 +84,7 @@ export class SDFHIRPathExecutor {
             rootResource,
             bundleResources ?? bundle,
             this.valueSetCache,
+            context.profileConformance,
         );
         const userInvocationTable = createSDFHIRPathInvocationTable(fhirPathContext);
         const evaluationScope: SDFHIRPathEvaluationScope = {
@@ -85,6 +94,7 @@ export class SDFHIRPathExecutor {
             resource,
             resourceType,
             rootResource,
+            focusResource: context.focusResource,
             terminologyResolver,
             userInvocationTable,
         };

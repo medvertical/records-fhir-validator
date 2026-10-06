@@ -315,11 +315,12 @@ describe('Records validator runtime scope registry', () => {
 
   it('reads a registered questionnaire from its R4B runtime scope', async () => {
     const runtimeScopeKey = '51:10:r4b-questionnaire';
-    const questionnaire = {
+    const questionnaire: { resourceType: string; id: string; item?: unknown } = {
       resourceType: 'Questionnaire',
       id: 'r4b-questionnaire',
     };
     await recordsValidator.registerQuestionnaire(questionnaire, 'R4B', runtimeScopeKey);
+    expect(mocks.prewarmQuestionnaireAnswerValueSets).toHaveBeenCalledWith(questionnaire, 'R4');
     const constructorsAfterRegistration = mocks.constructor.mock.calls.length;
 
     await expect(recordsValidator.getQuestionnaire(

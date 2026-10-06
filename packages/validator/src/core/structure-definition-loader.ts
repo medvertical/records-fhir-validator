@@ -1,5 +1,10 @@
+import { isPinExemptCanonical } from '../package/canonical-pin-context.js';
 /** Loads and caches FHIR StructureDefinitions from bundled, local, and remote sources. */
 
+import { profileDefinitionSourceKey, ProfileReferenceUnavailableError, resolveProfileReferenceAuthority, rethrowProfileReferenceCaptureFailure, profileReferenceHasPackageAuthority, selectedProfileLookup } from './profile-reference-authority.js';
+import { withProfileSourceSnapshot } from '../persistence/profile-source.js';
+import { copyProfilePackageProvenance, lookupProfilePackageDirectory, lookupProfilePackageProvenance } from '../package/canonical-pin-provenance.js';
+import { isDeepStrictEqual } from 'node:util';
 import type { StructureDefinition } from './structure-definition-types.js';
 import type { ProfileSourcesConfig, ValidationSettings } from '@records-fhir/validation-types';
 import type { ProfileSourceContext } from '../persistence/index.js';
@@ -14,9 +19,13 @@ import {
   StructureDefinitionLoaderRuntime,
   type StructureDefinitionLoaderOptions,
 } from './sd-loader-runtime.js';
+import { pinProfileReference, type ProfileReferenceSource } from './profile-reference-pins.js';
+import { resolveProfileRequest } from './sd-loader-version-utils.js';
+import { isTenantScopedProfileRequest } from './tenant-profile-source-resolution.js';
 export { normalizeKnownStructureDefinitionCanonicalUrl } from './sd-loader-version-utils.js';
 
 export type { Binding, Constraint, ElementDefinition, ElementType, StructureDefinition } from './structure-definition-types.js';
+export type { ProfileReferenceSource } from './profile-reference-pins.js';
 
 export class StructureDefinitionLoader {
   private readonly runtime: StructureDefinitionLoaderRuntime;
@@ -88,8 +97,11 @@ export class StructureDefinitionLoader {
     context?: ProfileSourceContext,
     settings?: ValidationSettings,
   ): void {
-    this.profileSourceContext = context;
-    this.profileResolutionSettings = settings;
+    if (isDeepStrictEqual(this.profileSourceContext, context)
+      && isDeepStrictEqual(this.profileResolutionSettings, settings)) return;
+    this.profileSourceContext = context && structuredClone(context);
+    this.profileResolutionSettings = settings && structuredClone(settings);
+    this.runtime.policy.invalidate(false);
   }
 
   getProfileResolutionContext(): ProfileSourceContext | undefined {
@@ -98,17 +110,103 @@ export class StructureDefinitionLoader {
       : undefined;
   }
 
+  /** Private reuse identity; it does not attest package or host content. */
+  getDependencyCaptureScope(): object {
+    return this.runtime.getDependencyCaptureScope();
+  }
+
+  /** The current effective request, before any profile source or cache lookup. */
+  resolveProfileUrl(url: string, fhirVersion: 'R4' | 'R5' | 'R6'): string | null {
+    if (selectedProfileLookup(url, fhirVersion)) return url;
+    return resolveProfileRequest(url, fhirVersion, canonical => this.runtime.policy.resolvePinnedCanonical(canonical));
+  }
+
   loadProfile(
     url: string,
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
   ): Promise<StructureDefinition | null> {
+    const selected = selectedProfileLookup(url, fhirVersion);
+    const captureScope = this.getDependencyCaptureScope();
+    const context = this.profileSourceContext, settings = this.profileResolutionSettings;
     return captureValidationDependency('profile', 'load-profile',
-      [url, fhirVersion, this.profileSourceContext, this.profileResolutionSettings], () => this.runtime.loadProfile(
+      [url, fhirVersion, context, settings, selected?.key], () => selected ? Promise.resolve(selected.profile) : this.runtime.loadProfile(
       url,
       fhirVersion,
-      this.profileSourceContext,
-      this.profileResolutionSettings,
-    ));
+      context,
+      settings,
+    ), captureScope, () => this.getDependencyCaptureScope());
+  }
+
+  /**
+   * Version an unversioned canonical that `source` references to the release
+   * its package's dependencies declare, before it reaches any URL-keyed cache.
+   * A tenant resolves profiles through its own source, which the installed
+   * package graph says nothing about.
+   */
+  pinProfileReference(
+    url: string,
+    source: ProfileReferenceSource | null | undefined,
+    fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+  ): Promise<string> {
+    if (isTenantScopedProfileRequest(url, this.profileSourceContext)) return Promise.resolve(url);
+    return pinProfileReference(url, source, {
+      storeDirs: this.runtime.packageSources,
+      packageVersionPins: this.runtime.policy.packagePins,
+    }, fhirVersion, { reuseScope: this.getDependencyCaptureScope(), currentScope: () => this.getDependencyCaptureScope() });
+  }
+
+  /**
+   * Load a canonical that `source` references, at its dependency-pinned
+   * package. An unavailable dependency cannot be replaced by a global profile.
+   */
+  async loadReferencedProfile(
+    url: string,
+    source: ProfileReferenceSource | null | undefined,
+    fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+  ): Promise<StructureDefinition | null> {
+    const captureScope = this.getDependencyCaptureScope();
+    const context = this.profileSourceContext && structuredClone(this.profileSourceContext);
+    const settings = this.profileResolutionSettings && structuredClone(this.profileResolutionSettings);
+    // Reference authority depends on issued package provenance and identity, not the referrer's full definition.
+    const copiedSource = source && { url: source.url, version: source.version };
+    copyProfilePackageProvenance(source, copiedSource);
+    const scope = { storeDirs: [...this.runtime.packageSources], packageVersionPins: this.runtime.policy.getPackageVersionPins() };
+    const inventoryEligible = !isTenantScopedProfileRequest(url, context) && profileReferenceHasPackageAuthority(url, copiedSource);
+    const fallback = this.runtime.captureProfileResolver(context, settings, {
+      refreshHostProfile: !isPinExemptCanonical(url.split('|')[0]), retainUnavailableFailures: true,
+    });
+    return captureValidationDependency('profile', 'load-referenced-profile',
+      [url, fhirVersion, context, settings, copiedSource, copiedSource && lookupProfilePackageProvenance(copiedSource),
+        copiedSource && lookupProfilePackageDirectory(copiedSource)], () => withProfileSourceSnapshot(async () => {
+        const authority = isTenantScopedProfileRequest(url, context)
+          ? { status: 'unscoped' as const } : await resolveProfileReferenceAuthority(url, copiedSource, scope, fhirVersion,
+            { reuseScope: captureScope, currentScope: () => this.getDependencyCaptureScope() });
+        if (authority.status === 'unavailable') throw new ProfileReferenceUnavailableError(authority.receipt);
+        if (authority.status === 'selected') {
+          if (captureScope === this.getDependencyCaptureScope()) {
+            const profile = structuredClone(authority.profile); copyProfilePackageProvenance(authority.profile, profile);
+            this.runtime.cache.set(`${profile.url}|${profile.version ?? 'unversioned'}:${fhirVersion}@${profileDefinitionSourceKey(profile)}`, profile);
+            this.runtime.pruneProfileCache();
+          }
+          return authority.profile;
+        }
+        return fallback(url, fhirVersion);
+       }), captureScope, () => this.getDependencyCaptureScope(), inventoryEligible)
+      .catch(error => rethrowProfileReferenceCaptureFailure(error, url, copiedSource));
+  }
+
+  /**
+   * The canonical `loadReferencedProfile` would load, for a caller that hands
+   * the reference on rather than the profile: the dependency-pinned release
+   * when it loads, the unversioned canonical otherwise.
+   */
+  async referencedProfileUrl(
+    url: string,
+    source: ProfileReferenceSource | null | undefined,
+    fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+  ): Promise<string> {
+    const profile = await this.loadReferencedProfile(url, source, fhirVersion);
+    return profile?.version && !url.includes('|') ? `${url}|${profile.version}` : url;
   }
 
   async hasBaseProfiles(): Promise<boolean> {
@@ -121,6 +219,10 @@ export class StructureDefinitionLoader {
    * Returns null if the profile is not in the in-memory cache.
    */
   getBaseResourceType(canonicalUrl: string): string | null {
+    for (const family of ['R4', 'R5', 'R6'] as const) {
+      const selected = selectedProfileLookup(canonicalUrl, family);
+      if (selected?.profile.type) return selected.profile.type;
+    }
     return getCachedBaseResourceType(this.runtime.cache, canonicalUrl);
   }
 
@@ -203,36 +305,41 @@ export class StructureDefinitionLoader {
   }
 
   cacheProfile(url: string, profile: StructureDefinition, fhirVersion?: 'R4' | 'R5' | 'R6'): void {
-    storeExternalProfile({
+    const stored = storeExternalProfile({
       url, profile, fhirVersion,
       cache: this.runtime.cache,
       externalProfileCacheKeys: this.runtime.externalProfileCacheKeys,
       availableProfiles: this.runtime.availableProfiles,
       profileLoadPromises: this.runtime.profileLoadPromises,
     });
+    if (stored) this.runtime.policy.invalidate(false);
   }
 
   registerExternalProfile(
     sd: StructureDefinition,
-    fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
+    fhirVersion?: 'R4' | 'R5' | 'R6'
   ): boolean {
-    return storeExternalProfile({
+    const stored = storeExternalProfile({
       url: sd?.url, profile: sd, fhirVersion,
       cache: this.runtime.cache,
       externalProfileCacheKeys: this.runtime.externalProfileCacheKeys,
       availableProfiles: this.runtime.availableProfiles,
       profileLoadPromises: this.runtime.profileLoadPromises,
     });
+    if (stored) this.runtime.policy.invalidate(false);
+    return stored;
   }
 
   /** Drop externally registered profiles only. Returns how many were removed. */
   clearExternalProfiles(): number {
-    return clearExternalProfiles({
+    const removed = clearExternalProfiles({
       cache: this.runtime.cache,
       externalProfileCacheKeys: this.runtime.externalProfileCacheKeys,
       availableProfiles: this.runtime.availableProfiles,
       profileLoadPromises: this.runtime.profileLoadPromises,
     });
+    if (removed) this.runtime.policy.invalidate(false);
+    return removed;
   }
 
   clearCache(): void {

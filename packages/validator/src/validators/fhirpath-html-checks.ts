@@ -11,6 +11,7 @@ export function evaluateHtmlChecksConstraint(
   path: string,
   resourceType: string,
   profileUrl?: string,
+  ruleId?: string,
 ): ValidationIssue[] | null {
   if (!isHtmlChecksExpression(expression)) return null;
 
@@ -19,13 +20,14 @@ export function evaluateHtmlChecksConstraint(
 
   // Narrative.div carries the full narrative contract (root div, txt-2);
   // htmlChecks() on any other string element — e.g. the rendering-xhtml
-  // extension's valueString — validates an xhtml fragment instead.
+  // extension's valueString — validates an xhtml fragment instead, whose
+  // findings are that constraint's (xhtml-ext-1).
   const narrativeContext = pathTargetsNarrativeDiv(path) || contextCarriesNarrativeDiv(context);
   const basePath = narrativeBasePath(path);
   return divValues.flatMap(div =>
     (narrativeContext
       ? validateNarrativeDiv(div, basePath, resourceType)
-      : validateXhtmlFragment(div, path, resourceType))
+      : validateXhtmlFragment(div, path, resourceType).map(issue => ({ ...issue, ruleId: issue.ruleId ?? ruleId })))
       .map(issue => ({
         ...issue,
         profile: issue.profile ?? profileUrl,
@@ -40,8 +42,9 @@ export function appendHtmlChecksConstraintIssues(
   path: string,
   resourceType: string,
   profileUrl?: string,
+  ruleId?: string,
 ): boolean {
-  const htmlCheckIssues = evaluateHtmlChecksConstraint(expression, context, path, resourceType, profileUrl);
+  const htmlCheckIssues = evaluateHtmlChecksConstraint(expression, context, path, resourceType, profileUrl, ruleId);
   if (htmlCheckIssues === null) return false;
   issues.push(...htmlCheckIssues);
   return true;

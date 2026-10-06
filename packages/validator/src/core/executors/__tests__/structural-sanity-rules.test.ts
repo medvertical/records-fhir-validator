@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   validateContainedResourceIdsPresent,
   validateContainedResourcesReferenced,
+  validateEmptyPrimitives,
   validateIllegalXmlCharacterPrimitives,
   validateNoEmptyArrays,
   validateOrphanPrimitiveSidecars,
@@ -12,6 +13,28 @@ import {
 } from '../structural-sanity-rules';
 
 describe('structural sanity rules', () => {
+  // Finland's blood pressure example leaves its note text as "".
+  it('reports a primitive written as an empty string unless its sidecar carries extensions', () => {
+    const issues = validateEmptyPrimitives({
+      resourceType: 'Observation',
+      note: [{ text: '' }],
+      identifier: [{ system: 'urn:x', value: 'v', _value: { id: 'only-an-id' } }],
+      category: [{ text: '', _text: { extension: [{ url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason', valueCode: 'unknown' }] } }],
+      component: [{ code: { coding: [{ code: 'x' }] }, valueString: ' ' }],
+      focus: [{ display: 'x' }],
+    }, 'Observation');
+
+    expect(issues.map(issue => [issue.code, issue.path, issue.severity])).toEqual([
+      ['structural-empty-value', 'Observation.note[0].text', 'error'],
+    ]);
+  });
+
+  it('reports each empty entry of a repeating primitive', () => {
+    const issues = validateEmptyPrimitives({ resourceType: 'Patient', name: [{ given: ['', 'Anna', ''], _given: [null, null, { id: 'g' }] }] }, 'Patient');
+
+    expect(issues.map(issue => issue.path)).toEqual(['Patient.name[0].given[0]', 'Patient.name[0].given[2]']);
+  });
+
   it('rejects primitive sidecar entries beyond the value array', () => {
     const issues = validatePrimitiveSidecarArrayAlignment({
       resourceType: 'Patient',

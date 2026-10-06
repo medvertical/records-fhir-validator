@@ -24,17 +24,23 @@ export interface CodeSystemValidationIssue {
 }
 
 export interface CodeSystemValidationResult {
+    /** Compatibility acceptance: true may also represent a skipped check; inspect reason. */
     valid: boolean;
     message?: string;
     reason?:
+        | 'delegation-disabled'
+        | 'no-server'
+        | 'circuit-open'
         | 'code-unknown'
         | 'system-unresolvable'
         | 'display-mismatch'
+        | 'display-unverified'
         | 'remote-budget-exhausted'
         | 'national-extension-unverified';
     issues?: CodeSystemValidationIssue[];
     inactive?: boolean;
     display?: string;
-    /** The local CodeSystem declares content=fragment, so absence is not proof. */
+    displayLanguage?: string;
+    /** The local CodeSystem does not declare complete content, so absence is not proof. */
     incompleteCodeSystem?: boolean;
 }

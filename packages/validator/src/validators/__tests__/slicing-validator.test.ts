@@ -1861,7 +1861,7 @@ describe("SlicingValidator", () => {
 
       // Should have issue about fixed value mismatch (warning severity for structural issues)
       const fixedValueErrors = issues.filter((i) =>
-        i.code.includes("fixed-value"),
+        i.code?.includes("fixed-value"),
       );
       expect(fixedValueErrors.length).toBeGreaterThan(0);
       expect(fixedValueErrors[0].code).toBe(
@@ -2172,7 +2172,7 @@ describe("SlicingValidator", () => {
 
       // Should have no fixed value errors
       const fixedValueErrors = issues.filter((i) =>
-        i.code.includes("fixed-value"),
+        i.code?.includes("fixed-value"),
       );
       expect(fixedValueErrors).toHaveLength(0);
     });
@@ -2419,7 +2419,7 @@ describe("SlicingValidator", () => {
       ).resolves.toBeDefined();
     });
 
-    it("does not turn an unavailable reference target into a missing profile slice", async () => {
+    it("warns rather than reporting a missing profile slice for an unavailable reference target", async () => {
       const validator = new SlicingValidator();
       validator.setReferenceResolver(() => null);
 
@@ -2434,8 +2434,8 @@ describe("SlicingValidator", () => {
       ).toHaveLength(0);
       expect(issues).toContainEqual(
         expect.objectContaining({
-          code: "profile-slice-validation-error",
-          severity: "information",
+          code: "profile-slice-validation-incomplete",
+          severity: "warning",
           details: expect.objectContaining({
             reason: "unresolved-reference-discriminator",
           }),

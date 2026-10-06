@@ -49,6 +49,7 @@ export function buildTerminologyResolutionConfig(settings: ValidationSettings): 
       ? (settings.terminologyResolution?.strategy || 'local-first')
       : 'local-only',
     serverUrl: primaryTerminologyServer?.url,
+    defaultCodeSystemVersions: settings.terminologyResolution?.defaultCodeSystemVersions,
     auth: primaryTerminologyServer?.authConfig,
     servers: (settings.terminologyServers || []).map(server => ({
       id: server.id,

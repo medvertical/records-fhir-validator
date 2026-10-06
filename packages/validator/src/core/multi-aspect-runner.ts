@@ -1,9 +1,11 @@
+import { carryPatientNarrativeOrigins } from './patient-narrative-issue-reconciliation.js';
 import { applyAdvisorRules, type AdvisorRule } from '../advisor/index.js';
 import {
+  applyBestPracticeSeverity,
   applyPublicationEscalation,
   applyStrictnessByIssueAspect,
 } from '../strictness/index.js';
-import type { ValidationIssue } from '@records-fhir/validation-types';
+import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import { BatchValidationAbortedError } from './batch-validator.js';
 import { withIssuesSchemaVersion } from './issue-schema-version.js';
 import { attachAppliedProfile } from './multi-aspect-contained-validation.js';
@@ -14,6 +16,7 @@ interface MultiAspectRunnerOptions {
   advisorRules: AdvisorRule[];
   attributeIssues?: (issues: ValidationIssue[], executor: string) => ValidationIssue[];
   aspectSeverityFor: Parameters<typeof applyStrictnessByIssueAspect>[2];
+  bestPracticeSeverity: ValidationSettings['bestPracticeSeverity'];
   collectedAspects: AspectResult[];
   fhirVersion: 'R4' | 'R5' | 'R6';
   forPublication: boolean;
@@ -29,6 +32,7 @@ export function createMultiAspectRunner(options: MultiAspectRunnerOptions) {
       advisorRules,
       attributeIssues,
       aspectSeverityFor,
+      bestPracticeSeverity,
       collectedAspects,
       fhirVersion,
       forPublication,
@@ -39,9 +43,10 @@ export function createMultiAspectRunner(options: MultiAspectRunnerOptions) {
     throwIfStopped();
     const aspectStart = Date.now();
     try {
-      const validated = (await validate()).map(issue => attachAppliedProfile(issue, profileUrl));
+      const returned = await validate();
+      const validated = returned.map(issue => attachAppliedProfile(issue, profileUrl));
       const attributed = attributeIssues ? attributeIssues(validated, name) : validated;
-      const rawIssues = attributed.map(issue => ({
+      const rawIssues = applyBestPracticeSeverity(attributed, bestPracticeSeverity).map(issue => ({
         ...issue,
         rawSeverity: issue.rawSeverity ?? issue.severity,
         rawMessage: issue.rawMessage ?? issue.message,
@@ -59,6 +64,7 @@ export function createMultiAspectRunner(options: MultiAspectRunnerOptions) {
         fhirVersion,
       );
       throwIfStopped();
+      carryPatientNarrativeOrigins([returned], issues);
       collectedAspects.push({
         aspect: name,
         issues,

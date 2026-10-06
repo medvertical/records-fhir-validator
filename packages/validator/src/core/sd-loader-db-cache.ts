@@ -18,14 +18,6 @@ import { profileMatchesCanonical } from './sd-loader-profile-identity.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 
-function matchesFhirVersion(sd: StructureDefinition, fhirVersion: 'R4' | 'R5' | 'R6'): boolean {
-  const sdFhirVersion = (sd as { fhirVersion?: string }).fhirVersion;
-  if (!sdFhirVersion) return true;
-
-  const expectedPrefix = fhirVersion === 'R4' ? '4.' : fhirVersion === 'R5' ? '5.' : '6.';
-  return sdFhirVersion.startsWith(expectedPrefix);
-}
-
 /**
  * Look up a profile in the embedder-provided ProfileSource.
  * @param url - Profile canonical URL
@@ -48,11 +40,7 @@ export async function checkDatabaseCache(
   try {
     const sd = await source.findByUrl(url, fhirVersion, context);
     if (sd) {
-      if (!matchesFhirVersion(sd, fhirVersion)) {
-        logger.debug('[SDLoader] ProfileSource result has wrong FHIR version', profileCanonicalMetadata(url));
-        return null;
-      }
-      if (!profileMatchesCanonical(sd, url)) {
+      if (!profileMatchesCanonical(sd, url, fhirVersion)) {
         logger.debug('[SDLoader] ProfileSource result has mismatched canonical', profileCanonicalMetadata(url));
         return null;
       }

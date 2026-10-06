@@ -1,6 +1,5 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
-  normalizeNarrativeTextPath,
   normalizeRequiredElementPath,
 } from './validation-issue-dedupe-utils.js';
 
@@ -15,9 +14,7 @@ export function isRedundantNarrativeRequiredElementIssue(
 
 export function isRedundantDom6Issue(
   issue: ValidationIssue,
-  narrativeMissingDivTextPaths: Set<string>,
+  redundantGeneratedNarrativeAdvice: Set<ValidationIssue>,
 ): boolean {
-  if (narrativeMissingDivTextPaths.size === 0) return false;
-  if (issue.code !== 'dom-6') return false;
-  return narrativeMissingDivTextPaths.has(normalizeNarrativeTextPath(issue));
+  return redundantGeneratedNarrativeAdvice.has(issue);
 }

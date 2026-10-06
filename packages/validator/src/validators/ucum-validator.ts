@@ -32,6 +32,9 @@ export const UCUM_SYSTEM_URL = 'http://unitsofmeasure.org';
 
 export interface UcumValidationResult {
   valid: boolean;
+  /** Compatibility acceptance does not attest a skipped parser check. */
+  validationComplete?: false;
+  reason?: 'parser-unavailable' | 'parser-error' | 'invalid-parser-response';
   message?: string;
   /**
    * Correction suggested by ucum-lhc's own engine for an invalid code
@@ -62,33 +65,35 @@ export class UcumCodeValidator {
 
   validate(code: string | undefined | null): UcumValidationResult {
     if (code === undefined || code === null || code === '') return { valid: true };
+    // UCUM's 7-bit requirement is provable even when its parser is unavailable.
+    if ([...code].some(character => character.charCodeAt(0) > 127)) return {
+      valid: false, message: 'UCUM expressions must use only 7-bit US-ASCII characters.',
+    };
     const cached = this.codeCache.get(code);
     if (cached) return cached;
 
     const utils = this.getUcumUtils();
-    if (!utils) {
-      const result = { valid: true };
-      this.codeCache.set(code, result);
-      return result;
-    }
+    if (!utils) return unverifiedUcumResult('parser-unavailable');
 
     let result: UcumValidationResult;
     try {
       const parsed = asRecord(utils.validateUnitString(normalizeAnnotationSpaces(code), true));
       if (parsed?.status === 'valid') {
         result = { valid: true };
-      } else {
-        const msg = Array.isArray(parsed?.msg) && typeof parsed.msg[0] === 'string'
+      } else if (parsed?.status === 'invalid') {
+        const msg = Array.isArray(parsed.msg) && typeof parsed.msg[0] === 'string'
           ? parsed.msg[0]
           : `'${code}' is not a valid UCUM expression`;
         result = { valid: false, message: msg, suggestion: extractUcumLhcSuggestion(parsed, code, utils) };
+      } else {
+        return unverifiedUcumResult(parsed?.status === 'error' ? 'parser-error' : 'invalid-parser-response');
       }
     } catch (err) {
       logger.debug('[UcumValidator] validateUnitString threw', {
         codeLength: code.length,
         ...validationFailureMetadata(err),
       });
-      result = { valid: true };
+      return unverifiedUcumResult('parser-error');
     }
 
     this.codeCache.set(code, result);
@@ -123,6 +128,12 @@ export class UcumCodeValidator {
       return null;
     }
   }
+}
+
+function unverifiedUcumResult(reason: NonNullable<UcumValidationResult['reason']>): UcumValidationResult {
+  // Transient parser failures must not become a cached successful validation.
+  return { valid: true, validationComplete: false, reason,
+    message: 'UCUM code could not be verified because the unit parser was unavailable or did not provide a validation result.' };
 }
 
 /**

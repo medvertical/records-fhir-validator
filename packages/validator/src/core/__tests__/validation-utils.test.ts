@@ -330,8 +330,8 @@ describe("dedupeIssues", () => {
     expect(deduped[0].code).toBe("dom-6");
   });
 
-  it("dedupes duplicate dom-6 issues with different internal rule metadata on the same path", () => {
-    const deduped = dedupeIssues([
+  it("preserves dom-6 findings with different rule metadata without actual owner receipts", () => {
+    const findings = [
       issue({
         code: "dom-6",
         severity: "info",
@@ -349,10 +349,30 @@ describe("dedupeIssues", () => {
         message: "A resource should have narrative for robust management",
         tags: ["best-practice", "narrative"],
       }),
-    ]);
+    ];
+    const before = JSON.stringify(findings);
+    const deduped = dedupeIssues(findings);
+
+    expect(deduped).toHaveLength(2);
+    expect(deduped[0]).toBe(findings[0]);
+    expect(deduped[1]).toBe(findings[1]);
+    expect(JSON.stringify(findings)).toBe(before);
+  });
+
+  it("dedupes exact dom-6 repeats while retaining the first whole finding", () => {
+    const first = issue({
+      code: "dom-6", severity: "information", path: "Patient.text",
+      resourceType: "Patient", profile: "http://hl7.org/fhir/StructureDefinition/Patient",
+      message: "A resource should have narrative for robust management",
+      ruleId: "dom-6", details: { constraintKey: "dom-6", expression: "text.`div`.exists()" },
+    });
+    const repeated = { ...structuredClone(first), id: "repeated-dom6" };
+    const before = JSON.stringify([first, repeated]);
+    const deduped = dedupeIssues([first, repeated]);
 
     expect(deduped).toHaveLength(1);
-    expect(deduped[0].code).toBe("dom-6");
+    expect(deduped[0]).toBe(first);
+    expect(JSON.stringify([first, repeated])).toBe(before);
   });
 
   it("keeps generic dom-6 warnings for distinct bundle entries", () => {
@@ -706,7 +726,7 @@ describe("dedupeIssues", () => {
     expect(deduped[0].code).toBe("narrative-missing-div");
   });
 
-  it("keeps narrative missing div over redundant dom-6 on the same text node", () => {
+  it("retains an independent unowned dom-6 beside narrative missing div", () => {
     const deduped = dedupeIssues([
       issue({
         aspect: "profile",
@@ -727,8 +747,7 @@ describe("dedupeIssues", () => {
       }),
     ]);
 
-    expect(deduped).toHaveLength(1);
-    expect(deduped[0].code).toBe("narrative-missing-div");
+    expect(deduped.map(row => row.code)).toEqual(["dom-6", "narrative-missing-div"]);
   });
 
   it("suppresses best-practice presence hints when cardinality min owns the same path", () => {
@@ -1114,7 +1133,7 @@ describe("dedupeIssues", () => {
     ]);
     expect(
       deduped.map((i) =>
-        i.details && "reference" in i.details ? i.details.reference : undefined,
+        i.details && typeof i.details === "object" && "reference" in i.details ? i.details.reference : undefined,
       ),
     ).toEqual([malformedReference, validMissingReference]);
   });

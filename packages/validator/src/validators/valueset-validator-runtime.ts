@@ -1,3 +1,4 @@
+import { getScopedExpansionCacheKey } from './valueset-server-routing.js';
 import { logger } from '../logger.js';
 import type { ProfileSourceContext } from '../persistence/index.js';
 import type { TerminologyApiClient } from './terminology-api-client.js';
@@ -33,13 +34,19 @@ export class ValueSetValidatorRuntime {
   constructor(
     cache: ValueSetCache = new ValueSetCache(),
     operationCache: TerminologyOperationCache = new TerminologyOperationCache(),
+    packageDirectories?: string[],
   ) {
     this.cache = cache;
     this.operationCache = operationCache;
+    this.operationCache.bindSourceContexts(cache.sourceContexts);
+    this.cache.setExpansionKeyResolver(url => getScopedExpansionCacheKey(
+      url, this.resolutionConfig, this.cache.sourceContexts.context()?.fhirVersion,
+    ));
     const components = createValueSetValidatorComponents(
       cache,
       operationCache,
       () => this.state.resolutionConfig,
+      packageDirectories,
     );
     this.apiClient = components.apiClient;
     this.packageLoader = components.packageLoader;
@@ -81,9 +88,9 @@ export class ValueSetValidatorRuntime {
   }
 
   /**
-   * Bind package lookups to the host tenant scope. A tenant change discards
-   * every miss and in-flight binding decision taken without that scope;
-   * positive entries and externally registered resources survive.
+   * Bind package lookups to the host tenant scope. A changed selection discards
+   * misses and in-flight binding decisions. Positive entries remain confined
+   * to their original request identity; registration belongs to this runtime.
    */
   setSourceContext(context: ProfileSourceContext | undefined): void {
     if (!this.packageLoader.setSourceContext(context)) return;

@@ -1,3 +1,4 @@
+import { ProfileReferenceUnavailableError, profileReferenceUnavailableIssue } from '../core/profile-reference-authority.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
 import { resourceTypeOf } from '../core/fhir-resource.js';
@@ -43,6 +44,10 @@ export class ExtensionValidator {
   ): Promise<ValidationIssue[]> {
     const result = await this.runtime.validate(resource, profileSD, context);
     if (result.status === 'completed') return result.issues;
+    if (result.error instanceof ProfileReferenceUnavailableError) {
+      result.issues.push(profileReferenceUnavailableIssue(result.error, `${resourceTypeOf(resource, 'Unknown')}.extension`));
+      return result.issues;
+    }
 
     logger.error(
       '[ExtensionValidator] Extension validation failed',

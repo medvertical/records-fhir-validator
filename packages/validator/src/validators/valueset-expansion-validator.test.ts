@@ -81,4 +81,22 @@ describe('ValueSet expansion validation', () => {
       'tx-valueset-expansion-no-identifier',
     ]);
   });
+
+  it('warns when the page holds more concepts, nested ones included, than the stated total leaves', () => {
+    const concept = (code: string, contains?: unknown[]) => ({ system: 'http://example.com/cs', code, contains });
+    const expansion = {
+      identifier: 'urn:uuid:expansion',
+      parameter: [{ name: 'offset', valueInteger: 0 }],
+      total: 3,
+      contains: [concept('a', [concept('a1'), concept('a2')]), concept('b')],
+    };
+
+    expect(validateValueSetExpansion(expansion).filter(issue => issue.code === 'tx-valueset-expansion-total-exceeded'))
+      .toEqual([expect.objectContaining({
+        severity: 'warning',
+        message: 'The expansion offset (0) + the count of items (4) is greater than the stated total (3)',
+      })]);
+    expect(validateValueSetExpansion({ ...expansion, total: 4 })
+      .some(issue => issue.code === 'tx-valueset-expansion-total-exceeded')).toBe(false);
+  });
 });

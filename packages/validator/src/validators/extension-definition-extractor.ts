@@ -1,6 +1,9 @@
+import type { ProfileReferenceSource } from '../core/profile-reference-pins.js';
 import type { ElementDefinition, StructureDefinition } from '../core/structure-definition-types.js';
 import { logger } from '../logger.js';
 import type { ExtensionDefinition } from './extension-types.js';
+
+const nestedDefinitionOwners = new WeakMap<ExtensionDefinition, StructureDefinition>();
 
 export interface ExtensionDefinitionContext {
   byUrl: Map<string, ExtensionDefinition>;
@@ -16,7 +19,7 @@ export function extractExtensionDefinitions(
   const elements = profileSD.snapshot?.element || profileSD.differential?.element || [];
 
   for (const element of elements) {
-    if (!element.path || !element.path.endsWith('.extension')) {
+    if (!element.path || (!element.path.endsWith('.extension') && !element.path.endsWith('.modifierExtension'))) {
       continue;
     }
 
@@ -70,7 +73,7 @@ export function extractSubExtensionDefinitions(
       ? elements.find(candidate => candidate.id === `${element.id}.value[x]`)
       : undefined;
 
-    result.set(url, {
+    const definition: ExtensionDefinition = {
       url,
       path: element.path,
       ...(element.id ? { elementId: element.id } : {}),
@@ -81,11 +84,22 @@ export function extractSubExtensionDefinitions(
       profileUrl: extractExtensionProfileUrl(element),
       ...(inlineValueElement ? { inlineValueElement } : {}),
       ...(parentSD.url ? { ownerProfileUrl: parentSD.url } : {}),
+      ...(parentSD.url && parentSD.version ? { ownerProfileVersion: parentSD.version } : {}),
       sliceName: element.sliceName,
-    });
+    };
+    nestedDefinitionOwners.set(definition, parentSD);
+    result.set(url, definition);
   }
 
   return result;
+}
+
+/** A nested slice keeps the actual definition that declared it. */
+export function definitionReferencingProfile(
+  definition: ExtensionDefinition | undefined,
+  validatedProfile: ProfileReferenceSource,
+): ProfileReferenceSource {
+  return (definition && nestedDefinitionOwners.get(definition)) ?? validatedProfile;
 }
 
 function identifySubExtensionUrl(

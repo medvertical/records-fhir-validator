@@ -35,13 +35,70 @@ function isAttachmentTypedKey(key: string): boolean {
         || (key.length > ATTACHMENT_CHOICE_SUFFIX.length && key.endsWith(ATTACHMENT_CHOICE_SUFFIX));
 }
 
-// `{extension: [...]}`-only attachments (e.g. data-absent-reason) and empty
-// objects are legitimate absence patterns handled by other rules; only an
-// attachment carrying real element keys should be told it lacks content.
-function hasPlainElementKeys(obj: Record<string, unknown>): boolean {
-    return Object.keys(obj).some(
-        key => key !== 'id' && key !== 'extension' && !key.startsWith('_'),
-    );
+const DATA_ABSENT_REASON = 'http://hl7.org/fhir/StructureDefinition/data-absent-reason';
+const CONTENT_ELEMENTS = ['data', 'url', 'contentType', 'language'];
+
+/**
+ * TYPE_SPECIFIC_CHECKS_DT_ATT_NO_CONTENT: an Attachment without `data` and
+ * `url` should at least carry `contentType` and/or `language`. An empty
+ * attachment is ele-1's to report, and one whose data-absent-reason says why
+ * the content is missing already answers what the warning asks.
+ */
+export function checkAttachmentHasContent(
+    attachment: Record<string, unknown>,
+    path: string,
+): ValidationIssue | null {
+    // A primitive carried only by its extensions (`_contentType`) is present.
+    if (CONTENT_ELEMENTS.some(name => attachment[name] !== undefined || attachment[`_${name}`] !== undefined)) {
+        return null;
+    }
+    if (Object.keys(attachment).length === 0 || statesAbsentReason(attachment)) return null;
+    return createValidationIssue({
+        code: 'attachment-no-content',
+        path,
+        resourceType: path.split('.')[0],
+        customMessage:
+            'Attachment has no data and no url: attachments should have data and/or url, or else at least a contentType and/or language',
+        severityOverride: 'warning',
+        details: {
+            fieldPath: path,
+            fixHint: 'Provide Attachment.data or Attachment.url, or describe the referenced content with contentType and/or language.',
+        },
+    });
+}
+
+function statesAbsentReason(attachment: Record<string, unknown>): boolean {
+    return Array.isArray(attachment.extension) && attachment.extension.some(extension =>
+        typeof extension === 'object' && extension !== null
+        && (extension as Record<string, unknown>).url === DATA_ABSENT_REASON);
+}
+
+const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/;
+
+/**
+ * The reference validator decodes an Attachment's data and hash as RFC 4648
+ * has it, without whitespace: a value wrapped into lines fails there even
+ * where the base64Binary type itself only discourages the whitespace (R4).
+ * Other malformed values are the base64Binary check's to report.
+ */
+function checkStrictBase64(attachment: Record<string, unknown>, path: string): ValidationIssue[] {
+    // Binary carries data and contentType as well, but is no Attachment.
+    if (typeof attachment.resourceType === 'string') return [];
+    return (['data', 'hash'] as const).flatMap(element => {
+        const value = attachment[element];
+        if (typeof value !== 'string' || !/\s/.test(value)) return [];
+        const compact = value.replace(/\s/g, '');
+        if (compact.length === 0 || compact.length % 4 !== 0 || !BASE64.test(compact)) return [];
+        return [createValidationIssue({
+            code: 'structural-invalid-base64-format',
+            path,
+            resourceType: path.split('.')[0],
+            customMessage: `The base64 content in the ${element} element is not valid base64: `
+                + 'whitespace is not part of the base64 alphabet (RFC 4648)',
+            severityOverride: 'error',
+            details: { fieldPath: `${path}.${element}` },
+        })];
+    });
 }
 
 export class AttachmentValidator {
@@ -84,6 +141,7 @@ export class AttachmentValidator {
         // content-less attachments the shape gate cannot see.
         if (inAttachmentSlot || this.looksLikeAttachment(record)) {
             issues.push(...this.checkContentPresence(record, path));
+            issues.push(...checkStrictBase64(record, path));
             issues.push(...this.checkDataIntegrity(record, path));
         }
 
@@ -105,10 +163,9 @@ export class AttachmentValidator {
     }
 
     /**
-     * Content-presence rules mirrored from the Java validator:
-     * - invariant att-1: if `data` is present, `contentType` SHALL be present.
-     * - TYPE_SPECIFIC_CHECKS_DT_ATT_NO_CONTENT: an Attachment without `data`
-     *   and `url` should at least carry `contentType` and/or `language`.
+     * Content-presence rules mirrored from the Java validator: invariant
+     * att-1 (if `data` is present, `contentType` SHALL be present) and
+     * TYPE_SPECIFIC_CHECKS_DT_ATT_NO_CONTENT.
      */
     private checkContentPresence(
         attachment: Record<string, unknown>,
@@ -116,9 +173,7 @@ export class AttachmentValidator {
     ): ValidationIssue[] {
         const issues: ValidationIssue[] = [];
         const hasData = typeof attachment.data === 'string';
-        const hasUrl = typeof attachment.url === 'string';
         const hasContentType = typeof attachment.contentType === 'string';
-        const hasLanguage = typeof attachment.language === 'string';
 
         if (hasData && !hasContentType) {
             issues.push(createValidationIssue({
@@ -136,20 +191,8 @@ export class AttachmentValidator {
             }));
         }
 
-        if (!hasData && !hasUrl && !hasContentType && !hasLanguage && hasPlainElementKeys(attachment)) {
-            issues.push(createValidationIssue({
-                code: 'attachment-no-content',
-                path,
-                resourceType: path.split('.')[0],
-                customMessage:
-                    'Attachment has no data and no url: attachments should have data and/or url, or else at least a contentType and/or language',
-                severityOverride: 'warning',
-                details: {
-                    fieldPath: path,
-                    fixHint: 'Provide Attachment.data or Attachment.url, or describe the referenced content with contentType and/or language.',
-                },
-            }));
-        }
+        const noContentIssue = checkAttachmentHasContent(attachment, path);
+        if (noContentIssue) issues.push(noContentIssue);
 
         return issues;
     }

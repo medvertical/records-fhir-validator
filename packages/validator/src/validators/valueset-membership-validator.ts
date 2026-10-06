@@ -13,6 +13,7 @@ import type {
 import { codeSystemCanonicalCandidates } from './code-system-canonical-aliases.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
+import { resolveUnversionedLocalFilteredBinding } from './valueset-filtered-local-binding.js';
 import { tryValidateValueSetMembershipViaServer } from './valueset-membership-server-delegation.js';
 
 interface ValueSetMembershipValidationDeps {
@@ -60,6 +61,19 @@ export async function validateValueSetMembership(
       return twoPhaseShadow.finish(twoPhaseLookup, enforcedTwoPhaseResult, context);
     }
 
+    const filtered = await resolveUnversionedLocalFilteredBinding(packageLoader, code, system, valueSetUrl, fhirVersion);
+    if (filtered.kind === 'evaluated') {
+      if (resolutionConfig.strategy !== 'server-first' && filtered.outcome !== 'unverified') {
+        return twoPhaseShadow.finish(twoPhaseLookup, filtered.outcome === 'valid', context);
+      }
+      const remote = await tryValidateValueSetMembershipViaServer(deps, {
+        code, system, valueSetUrl, fhirVersion, localExpansionIsEmpty: true,
+      });
+      if (remote !== 'unverified') return twoPhaseShadow.finish(twoPhaseLookup, remote === 'valid', context);
+      if (filtered.outcome === 'unverified') recordTerminologyReason(terminologyDiagnostics.failOpenMembershipChecks, filtered.reason);
+      return twoPhaseShadow.finish(twoPhaseLookup, filtered.outcome !== 'invalid', context);
+    }
+
     const expandedCodes = await getExpandedValueSet(valueSetUrl, fhirVersion);
     const fullCodes = system
       ? codeSystemCanonicalCandidates(system).map(candidate => `${candidate}|${code}`)
@@ -68,7 +82,7 @@ export async function validateValueSetMembership(
       return twoPhaseShadow.finish(twoPhaseLookup, true, context);
     }
 
-    const isValidOnServer = await tryValidateValueSetMembershipViaServer({
+    const serverOutcome = await tryValidateValueSetMembershipViaServer({
       apiClient,
       packageLoader,
       resolutionConfig,
@@ -80,8 +94,8 @@ export async function validateValueSetMembership(
       localExpansionIsEmpty: expandedCodes.size === 0,
       fhirVersion,
     });
-    if (isValidOnServer) {
-      return twoPhaseShadow.finish(twoPhaseLookup, true, context);
+    if (serverOutcome !== 'unverified') {
+      return twoPhaseShadow.finish(twoPhaseLookup, serverOutcome === 'valid', context);
     }
 
     const filteredIncludes = await packageLoader.getIncludeConceptFilters(
@@ -92,7 +106,7 @@ export async function validateValueSetMembership(
       system,
       code,
       filteredIncludes,
-    );
+    ) ?? (await packageLoader.hasIncompleteExpansion(valueSetUrl, fhirVersion) ? 'incomplete-expansion' : undefined);
     if (unverifiableReason) {
       logger.debug('[ValueSetValidator] ValueSet membership cannot be verified locally', {
         ...terminologyTargetMetadata(system, code, valueSetUrl),

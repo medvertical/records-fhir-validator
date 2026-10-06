@@ -218,7 +218,7 @@ describe('StructureDefinitionLoader versioned cache', () => {
     }
   });
 
-  it('resolves known US Core case aliases to package canonical casing', async () => {
+  it('does not attest US Core casing aliases while retaining the published canonical', async () => {
     const { loader, dir } = await makeLoader();
     try {
       const sd = makeUsCoreCoverageSd();
@@ -226,16 +226,17 @@ describe('StructureDefinitionLoader versioned cache', () => {
 
       await expect(
         loader.loadProfile(US_CORE_COVERAGE_ALIAS_URL, 'R4')
-      ).resolves.toBe(sd);
+      ).resolves.toBeNull();
 
       const batch = await loader.loadProfilesBatch([US_CORE_COVERAGE_ALIAS_URL], 'R4');
-      expect(batch.get(US_CORE_COVERAGE_ALIAS_URL)).toBe(sd);
+      expect(batch.has(US_CORE_COVERAGE_ALIAS_URL)).toBe(false);
+      await expect(loader.loadProfile(sd.url, 'R4')).resolves.toBe(sd);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
   });
 
-  it('resolves known Da Vinci CRD DeviceRequest legacy aliases to the published canonical', async () => {
+  it('does not attest Da Vinci spelling aliases while retaining the published canonical', async () => {
     const { loader, dir } = await makeLoader();
     try {
       const sd = makeCrdDeviceRequestSd();
@@ -243,19 +244,20 @@ describe('StructureDefinitionLoader versioned cache', () => {
 
       await expect(
         loader.loadProfile(CRD_DEVICE_REQUEST_R4_ALIAS_URL, 'R4')
-      ).resolves.toBe(sd);
+      ).resolves.toBeNull();
       await expect(
         loader.loadProfile(CRD_DEVICE_REQUEST_LEGACY_ALIAS_URL, 'R4')
-      ).resolves.toBe(sd);
+      ).resolves.toBeNull();
 
       const batch = await loader.loadProfilesBatch([CRD_DEVICE_REQUEST_R4_ALIAS_URL], 'R4');
-      expect(batch.get(CRD_DEVICE_REQUEST_R4_ALIAS_URL)).toBe(sd);
+      expect(batch.has(CRD_DEVICE_REQUEST_R4_ALIAS_URL)).toBe(false);
+      await expect(loader.loadProfile(sd.url, 'R4')).resolves.toBe(sd);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
   });
 
-  it('resolves known MII package canonical aliases to their published package canonicals', async () => {
+  it('does not attest MII spelling aliases while retaining every published canonical', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'records-sd-loader-'));
     try {
       await writePackageProfile(
@@ -319,34 +321,24 @@ describe('StructureDefinitionLoader versioned cache', () => {
 
       await expect(
         loader.loadProfile(MII_MOLGEN_GENOMIC_STUDY_ANALYSIS_ALIAS_URL, 'R4')
-      ).resolves.toMatchObject({
-        url: MII_MOLGEN_GENOMIC_STUDY_ANALYSIS_URL,
-        version: '2026.0.4',
-      });
+      ).resolves.toBeNull();
+      await expect(loader.loadProfile(MII_MOLGEN_GENOMIC_STUDY_ANALYSIS_URL, 'R4')).resolves.toMatchObject({ url: MII_MOLGEN_GENOMIC_STUDY_ANALYSIS_URL, version: '2026.0.4' });
       await expect(
         loader.loadProfile(MII_ICU_ECT_EXTRACORPOREAL_PROCEDURE_ALIAS_URL, 'R4')
-      ).resolves.toMatchObject({
-        url: MII_ICU_EXTRACORPOREAL_PROCEDURE_URL,
-        version: '2026.0.2',
-      });
+      ).resolves.toBeNull();
+      await expect(loader.loadProfile(MII_ICU_EXTRACORPOREAL_PROCEDURE_URL, 'R4')).resolves.toMatchObject({ url: MII_ICU_EXTRACORPOREAL_PROCEDURE_URL, version: '2026.0.2' });
       await expect(
         loader.loadProfile(MII_MTB_IN_SITU_HYBRIDIZATION_ALIAS_URL, 'R4')
-      ).resolves.toMatchObject({
-        url: MII_MTB_IN_SITU_HYBRIDIZATION_URL,
-        version: '2026.0.1',
-      });
+      ).resolves.toBeNull();
+      await expect(loader.loadProfile(MII_MTB_IN_SITU_HYBRIDIZATION_URL, 'R4')).resolves.toMatchObject({ url: MII_MTB_IN_SITU_HYBRIDIZATION_URL, version: '2026.0.1' });
       await expect(
         loader.loadProfile(MII_MTB_MSI_ALIAS_URL, 'R4')
-      ).resolves.toMatchObject({
-        url: MII_MTB_MSI_URL,
-        version: '2026.0.1',
-      });
+      ).resolves.toBeNull();
+      await expect(loader.loadProfile(MII_MTB_MSI_URL, 'R4')).resolves.toMatchObject({ url: MII_MTB_MSI_URL, version: '2026.0.1' });
       await expect(
         loader.loadProfile(MII_MTB_SYSTEMIC_THERAPY_MEDICATION_ALIAS_URL, 'R4')
-      ).resolves.toMatchObject({
-        url: MII_MTB_SYSTEMIC_THERAPY_MEDICATION_URL,
-        version: '2026.0.1',
-      });
+      ).resolves.toBeNull();
+      await expect(loader.loadProfile(MII_MTB_SYSTEMIC_THERAPY_MEDICATION_URL, 'R4')).resolves.toMatchObject({ url: MII_MTB_SYSTEMIC_THERAPY_MEDICATION_URL, version: '2026.0.1' });
 
       const batch = await loader.loadProfilesBatch([
         MII_MOLGEN_GENOMIC_STUDY_ANALYSIS_ALIAS_URL,
@@ -355,16 +347,11 @@ describe('StructureDefinitionLoader versioned cache', () => {
         MII_MTB_MSI_ALIAS_URL,
         MII_MTB_SYSTEMIC_THERAPY_MEDICATION_ALIAS_URL,
       ], 'R4');
-      expect(batch.get(MII_MOLGEN_GENOMIC_STUDY_ANALYSIS_ALIAS_URL)?.url)
-        .toBe(MII_MOLGEN_GENOMIC_STUDY_ANALYSIS_URL);
-      expect(batch.get(MII_ICU_ECT_EXTRACORPOREAL_PROCEDURE_ALIAS_URL)?.url)
-        .toBe(MII_ICU_EXTRACORPOREAL_PROCEDURE_URL);
-      expect(batch.get(MII_MTB_IN_SITU_HYBRIDIZATION_ALIAS_URL)?.url)
-        .toBe(MII_MTB_IN_SITU_HYBRIDIZATION_URL);
-      expect(batch.get(MII_MTB_MSI_ALIAS_URL)?.url)
-        .toBe(MII_MTB_MSI_URL);
-      expect(batch.get(MII_MTB_SYSTEMIC_THERAPY_MEDICATION_ALIAS_URL)?.url)
-        .toBe(MII_MTB_SYSTEMIC_THERAPY_MEDICATION_URL);
+      expect(batch.has(MII_MOLGEN_GENOMIC_STUDY_ANALYSIS_ALIAS_URL)).toBe(false);
+      expect(batch.has(MII_ICU_ECT_EXTRACORPOREAL_PROCEDURE_ALIAS_URL)).toBe(false);
+      expect(batch.has(MII_MTB_IN_SITU_HYBRIDIZATION_ALIAS_URL)).toBe(false);
+      expect(batch.has(MII_MTB_MSI_ALIAS_URL)).toBe(false);
+      expect(batch.has(MII_MTB_SYSTEMIC_THERAPY_MEDICATION_ALIAS_URL)).toBe(false);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

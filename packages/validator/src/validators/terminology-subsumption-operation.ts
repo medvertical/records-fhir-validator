@@ -57,7 +57,7 @@ export async function executeRemoteSubsumption(
 
   return runSingleFlight(
     context.pendingRequests,
-    cacheKey,
+    context.operationCache.contextKey?.(cacheKey) ?? cacheKey,
     () => logger.debug(
       '[TerminologyApiClient] $subsumes in-flight hit',
       terminologyTargetMetadata(input.system, input.codeA, input.codeB),

@@ -1,3 +1,4 @@
+import { reconcileInvocationDisplayUnknowns } from './terminology-validation-evidence-port.js';
 import { computeValidationIssueId } from '@records-fhir/validation-types';
 import { getValidationTargets, shouldValidateRequired } from '../../business-rules/index.js';
 import type { ProfileSourceContext } from '../../persistence/index.js';
@@ -8,7 +9,6 @@ import { additionalBindingsForElement } from './terminology-additional-bindings.
 import { pinBindingToDependencyPins } from './terminology-binding-dependency-pins.js';
 import {
   applyValueSetSliceMembershipPolicy,
-  effectiveBindingForElement,
   selectSliceScopedValues,
   selectValuesForBinding,
   shouldSuppressNonRequiredBindingForOwnFixedPattern,
@@ -54,6 +54,8 @@ export async function validateTerminologyElement(
     ? await validateElementBinding(params, deps.valueSetValidator, deps.slicePlanCache)
     : [];
   const path = elementDef.path;
+  const language = asRecord(resource)?.language;
+  const displayLanguage = typeof language === 'string' && language ? language : undefined;
   const elementTypes = getElementTypeCodes(elementDef);
 
   if (elementTypes.includes('CodeableConcept')) {
@@ -73,6 +75,7 @@ export async function validateTerminologyElement(
           deps.valueSetCache,
           deps.codeSystemReferenceLookupCache,
           deps.ucumValidator,
+          displayLanguage,
         )),
       );
     }
@@ -91,6 +94,7 @@ export async function validateTerminologyElement(
           deps.valueSetCache,
           deps.codeSystemReferenceLookupCache,
           deps.ucumValidator,
+          displayLanguage,
         )),
       );
     }
@@ -99,7 +103,7 @@ export async function validateTerminologyElement(
   if (elementTypes.some((type) => UCUM_BEARING_TYPES.has(type))) {
     issues.push(...validateUcumAtPath(resource, elementDef, path, deps.ucumValidator));
   }
-  return issues;
+  return reconcileInvocationDisplayUnknowns(deps.valueSetValidator, issues, fhirVersion, displayLanguage);
 }
 
 async function validateElementBinding(
@@ -109,6 +113,7 @@ async function validateElementBinding(
 ): Promise<ValidationIssue[]> {
   const { resource, elementDef, structureDef, getValueAtPath } = params;
   const path = elementDef.path;
+  if (discriminatesItsSliceByBinding(elementDef, structureDef)) return [];
   const sliceSelection = selectSliceScopedValues(resource, elementDef, structureDef, getValueAtPath, slicePlanCache);
   if (sliceSelection && !sliceSelection.hasMatchingSliceElements) return [];
   const targets = sliceSelection
@@ -129,7 +134,7 @@ async function validateElementBinding(
       targets.length === 0 &&
       (value === null || value === undefined) &&
       shouldValidateRequired(resource, path) &&
-      (Boolean(sliceSelection) || isDirectResourceElementPath(path, getResourceType(resource, structureDef)));
+      (sliceSelection ? isChildOfSlice(elementDef.id) : isDirectResourceElementPath(path, getResourceType(resource, structureDef)));
     if (missing) return [createMissingRequiredBindingIssue(params)];
   }
 
@@ -154,9 +159,15 @@ async function validateElementBinding(
   if (value === null || value === undefined || !shouldValidateBindingForValue(elementDef, value)) return [];
 
   const perCandidateIssues: ValidationIssue[][] = [];
-  for (const candidate of selectValuesForBinding(elementDef, value, structureDef, slicePlanCache)) {
-    if (shouldSuppressNonRequiredBindingForOwnFixedPattern(elementDef, candidate)) continue;
-    perCandidateIssues.push(await validateCandidate(candidate, path));
+  const located = sliceSelection
+    ? sliceSelection.values.map((sliceValue, index) => ({ value: sliceValue, path: sliceSelection.paths[index] ?? path }))
+    : [{ value, path }];
+  for (const target of located) {
+    if (!shouldValidateBindingForValue(elementDef, target.value)) continue;
+    for (const candidate of selectValuesForBinding(elementDef, target.value, structureDef, slicePlanCache)) {
+      if (shouldSuppressNonRequiredBindingForOwnFixedPattern(elementDef, candidate)) continue;
+      perCandidateIssues.push(await validateCandidate(candidate, target.path));
+    }
   }
   issues.push(
     ...applyValueSetSliceMembershipPolicy(elementDef, structureDef, perCandidateIssues, slicePlanCache),
@@ -170,15 +181,18 @@ async function createCandidateBindingValidator(
   slicePlanCache: TerminologySlicePlanCache,
 ): Promise<(candidate: unknown, path: string) => Promise<ValidationIssue[]>> {
   const { elementDef, structureDef, profileUrl, fhirVersion } = params;
+  const language = asRecord(params.resource)?.language;
+  const displayLanguage = typeof language === 'string' && language ? language : undefined;
   // The owning package and its dependencies pin actual ValueSet resource versions.
-  const effectiveBinding = await pinBindingToDependencyPins(
-    effectiveBindingForElement(elementDef),
+  const pinBinding = valueSetValidator.pinBindingToProfile?.bind(valueSetValidator) ?? pinBindingToDependencyPins;
+  const effectiveBinding = await pinBinding(
+    elementDef.binding,
     structureDef,
     fhirVersion,
   );
   const additionalBindings = await Promise.all(
     additionalBindingsForElement(elementDef)
-      .map(binding => pinBindingToDependencyPins(
+      .map(binding => pinBinding(
         binding,
         structureDef,
         fhirVersion,
@@ -189,6 +203,7 @@ async function createCandidateBindingValidator(
     const primary = await valueSetValidator.validateBinding(candidate, effectiveBinding, path, {
       profileUrl,
       fhirVersion,
+      displayLanguage,
     });
     if (!shouldSuppressValueSetSliceMembershipIssue(elementDef, structureDef, primary, slicePlanCache)) {
       issues.push(...primary);
@@ -199,11 +214,44 @@ async function createCandidateBindingValidator(
           profileUrl,
           fhirVersion,
           unverifiedSeverity: 'warning',
+          displayLanguage,
         })),
       );
     }
     return issues;
   };
+}
+
+/**
+ * An optional slice told apart by this element's own required binding
+ * (BALP's agent:user by its type) holds exactly the instances whose code is
+ * in the value set, so the binding cannot fail inside the slice, and the
+ * reference validator never applies it to the instances outside. A required
+ * slice keeps the binding check, which stands in for the missing slice.
+ */
+function discriminatesItsSliceByBinding(elementDef: ElementDefinition, structureDef: StructureDefinition): boolean {
+  if (elementDef.binding?.strength !== 'required') return false;
+  if (Object.keys(elementDef).some(key => key.startsWith('fixed') || key.startsWith('pattern'))) return false;
+  const segments = elementDef.id?.split('.') ?? [];
+  const sliceIndex = segments.findLastIndex(segment => segment.includes(':'));
+  if (sliceIndex < 1) return false;
+  const sliceId = segments.slice(0, sliceIndex + 1).join('.');
+  const elements = structureDef.snapshot?.element ?? [];
+  if ((elements.find(element => element.id === sliceId)?.min ?? 0) > 0) return false;
+  const baseId = sliceId.slice(0, sliceId.lastIndexOf(':'));
+  const relative = segments.slice(sliceIndex + 1).map(segment => segment.split(':')[0]).join('.') || '$this';
+  const discriminators = elements.find(element => element.id === baseId)?.slicing?.discriminator ?? [];
+  return discriminators.some(({ type, path }) => (type === 'value' || type === 'pattern') && (path || '$this') === relative);
+}
+
+/**
+ * Inside a slice the element is missing only where its parent is the slice
+ * itself: a deeper parent (CCRR's nested action's condition, for `kind`) may
+ * be absent from every instance of the slice, and then nothing is missing.
+ */
+function isChildOfSlice(id: string | undefined): boolean {
+  const segments = id?.split('.') ?? [];
+  return segments.length >= 2 && segments[segments.length - 2].includes(':');
 }
 
 function createMissingRequiredBindingIssue(params: TerminologyElementValidationParams): ValidationIssue {

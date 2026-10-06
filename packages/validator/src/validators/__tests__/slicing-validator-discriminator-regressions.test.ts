@@ -394,11 +394,11 @@ describe("SlicingValidator discriminator regressions", () => {
       expect.arrayContaining([
         expect.objectContaining({
           code: "structural-cardinality-min",
-          path: "Observation.value[x][0].unit",
+          path: "Observation.valueQuantity.unit",
         }),
         expect.objectContaining({
           code: "profile-slice-fixed-value-mismatch",
-          path: "Observation.value[x][0].code",
+          path: "Observation.valueQuantity.code",
         }),
       ]),
     );
@@ -453,7 +453,7 @@ describe("SlicingValidator discriminator regressions", () => {
 
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
-      code: "profile-slice-validation-error",
+      code: "profile-slice-validation-incomplete",
       severity: "information",
       details: { reason: "unresolved-discriminator-metadata" },
     });
@@ -544,7 +544,7 @@ describe("SlicingValidator discriminator regressions", () => {
     ).toBeUndefined();
     expect(issues).toContainEqual(
       expect.objectContaining({
-        code: "profile-slice-validation-error",
+        code: "profile-slice-validation-incomplete",
         severity: "information",
         details: expect.objectContaining({
           reason: "unresolved-slice-discriminator-metadata",
@@ -754,7 +754,7 @@ describe("SlicingValidator discriminator regressions", () => {
               {
                 code: "Extension",
                 profile: [
-                  "http://hl7.org/fhir/5.0/StructureDefinition/extension-Procedure.recorded",
+                  "http://hl7.org/fhir/5.0/StructureDefinition/procedure-recorded",
                 ],
               },
             ],

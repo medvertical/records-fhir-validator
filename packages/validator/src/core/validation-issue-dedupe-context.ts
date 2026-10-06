@@ -1,3 +1,4 @@
+import { redundantGeneratedPatientNarrativeAdvice } from './patient-narrative-issue-reconciliation.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import {
   getConstraintDedupeKeys,
@@ -28,7 +29,6 @@ import {
   isSliceSpecificMustSupportIssue,
   normalizeBundleRequestPath,
   normalizeNarrativeMissingDivPath,
-  normalizeNarrativeTextPath,
   normalizeRequiredElementPath,
 } from './validation-issue-dedupe-utils.js';
 import {
@@ -61,7 +61,7 @@ export interface DedupeContext {
   terminologyRequiredBindingKeys: Set<string>;
   extensionNoValuePaths: Set<string>;
   narrativeMissingDivPaths: Set<string>;
-  narrativeMissingDivTextPaths: Set<string>;
+  redundantGeneratedNarrativeAdvice: Set<ValidationIssue>;
   structuralDom3ContainedKeys: Set<string>;
   structuralInvalidReferenceValues: Set<string>;
   structuralReferenceTargetValues: Set<string>;
@@ -114,7 +114,7 @@ function createDedupeContext(issues: ValidationIssue[]): DedupeContext {
     terminologyRequiredBindingKeys: new Set(),
     extensionNoValuePaths: new Set(),
     narrativeMissingDivPaths: new Set(),
-    narrativeMissingDivTextPaths: new Set(),
+    redundantGeneratedNarrativeAdvice: redundantGeneratedPatientNarrativeAdvice(issues),
     structuralDom3ContainedKeys: new Set(),
     structuralInvalidReferenceValues: new Set(),
     structuralReferenceTargetValues: new Set(),
@@ -237,7 +237,6 @@ function indexCanonicalAndContentIssues(context: DedupeContext, issue: Validatio
   }
   if (issue.code === 'narrative-missing-div') {
     context.narrativeMissingDivPaths.add(normalizeNarrativeMissingDivPath(issue));
-    context.narrativeMissingDivTextPaths.add(normalizeNarrativeTextPath(issue));
   }
   const dom3Key = getStructuralDom3ContainedIssueKey(issue);
   if (dom3Key) context.structuralDom3ContainedKeys.add(dom3Key);

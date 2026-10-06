@@ -20,6 +20,8 @@ export interface RecordsValidatorConfig {
   profileCacheMaxEntries?: number;
   /** Skip eager database profile loading for short-lived scoped validators. */
   prewarmProfileSource?: boolean;
+  /** Instance-local filesystem stores for ValueSet/CodeSystem package resolution; [] disables default stores. */
+  terminologyPackageDirectories?: string[];
 }
 
 const DEFAULT_PROFILE_CACHE_MAX_ENTRIES = 192;
@@ -47,6 +49,7 @@ export function resolveRecordsValidatorConfig(config: RecordsValidatorConfig): R
       DEFAULT_PROFILE_CACHE_MAX_ENTRIES,
     ),
     prewarmProfileSource: config.prewarmProfileSource !== false,
+    terminologyPackageDirectories: config.terminologyPackageDirectories ? [...config.terminologyPackageDirectories] : undefined,
     bundledProfilesPath: config.bundledProfilesPath !== undefined
       ? config.bundledProfilesPath
       : process.env.RECORDS_BUNDLED_PROFILES_PATH,

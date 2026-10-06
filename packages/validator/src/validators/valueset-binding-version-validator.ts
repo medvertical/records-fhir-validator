@@ -29,15 +29,14 @@ export async function validateCodeSystemVersions(
     const systemIncludes = includes.filter((include) =>
       codeSystemCanonicalsEquivalent(include.system, codeInfo.system),
     );
+    const includeVersions = systemIncludes.map((include) => include.version ?? implicitCoreVersion(valueSet, include.system));
     const constrainedVersions = [...new Set(
-      systemIncludes
-        .map((include) => include.version)
-        .filter((version): version is string => Boolean(version) && version !== '*'),
+      includeVersions.filter((version): version is string => Boolean(version) && version !== '*'),
     )];
     if (
       constrainedVersions.length === 0
-      || constrainedVersions.includes(codeInfo.version!)
-      || systemIncludes.some((include) => !include.version)
+      || constrainedVersions.some((version) => codeInfo.version === version || codeInfo.version!.startsWith(`${version}.`))
+      || includeVersions.some((version) => !version)
     ) continue;
 
     const coding = asRecord(rawCode)?.coding;
@@ -54,6 +53,21 @@ export async function validateCodeSystemVersions(
     ));
   }
   return issues;
+}
+
+/**
+ * A value set of the FHIR specification includes the specification's own
+ * code systems at its release, and the reference validator pins such a
+ * versionless include to it (study-design in R5 at 5.0.0).
+ */
+function implicitCoreVersion(
+  valueSet: { url?: string; version?: string } | null | undefined,
+  system: string | undefined,
+): string | undefined {
+  if (!valueSet?.version || !system || !valueSet.url?.startsWith('http://hl7.org/fhir/ValueSet/')) return undefined;
+  return system.startsWith('http://hl7.org/fhir/') && !system.startsWith('http://hl7.org/fhir/sid/')
+    ? valueSet.version
+    : undefined;
 }
 
 function createBindingVersionMismatch(

@@ -26,4 +26,41 @@ describe('TerminologySlicePlanCache', () => {
 
     expect(cache.getSiblingSlicePatterns(structureDef, slice)).toHaveLength(1);
   });
+
+  it('does not sort by value set the slices that fix the discriminator value', () => {
+    const base = 'Observation.code.coding';
+    const slice = (name: string, system: string, valueSet: string): ElementDefinition[] => [
+      { id: `${base}:${name}`, path: base, sliceName: name, binding: { strength: 'required', valueSet } },
+      { id: `${base}:${name}.system`, path: `${base}.system`, fixedUri: system } as ElementDefinition,
+    ];
+    const [loinc, ...loincChildren] = slice('loinc', 'http://loinc.org', 'https://example.test/ValueSet/loinc-tests');
+    const structureDef = {
+      resourceType: 'StructureDefinition',
+      snapshot: { element: [
+        { id: base, path: base, slicing: { discriminator: [{ type: 'value', path: 'system' }], rules: 'closed' } },
+        loinc, ...loincChildren,
+        ...slice('snomedCT', 'http://snomed.info/sct', 'https://example.test/ValueSet/snomed-tests'),
+      ] },
+    } as StructureDefinition;
+
+    expect(new TerminologySlicePlanCache().isValueSetDiscriminatedSliceRoot(loinc, structureDef)).toBe(false);
+  });
+
+  it('sorts by value set the slices told apart by their bindings alone', () => {
+    const base = 'Condition.category';
+    const usCore: ElementDefinition = { id: `${base}:us-core`, path: base, sliceName: 'us-core',
+      binding: { strength: 'required', valueSet: 'http://hl7.org/fhir/us/core/ValueSet/us-core-problem-or-health-concern' } };
+    const structureDef = {
+      resourceType: 'StructureDefinition',
+      snapshot: { element: [
+        { id: base, path: base, slicing: { discriminator: [{ type: 'pattern', path: '$this' }], rules: 'open' } },
+        usCore,
+        { id: `${base}:screening-assessment`, path: base, sliceName: 'screening-assessment',
+          binding: { strength: 'required', valueSet: 'http://hl7.org/fhir/us/core/ValueSet/us-core-screening-assessment-condition-category' } },
+      ] },
+    } as StructureDefinition;
+
+    expect(new TerminologySlicePlanCache().isValueSetDiscriminatedSliceRoot(usCore, structureDef)).toBe(true);
+  });
 });
+

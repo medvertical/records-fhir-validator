@@ -1,31 +1,37 @@
 ---
 type: product-contract
-status: current
+status: archived
 owner: validation
 audience:
   - integrator
   - developer
   - internal
-last_reviewed: 2026-08-21
+last_reviewed: 2026-10-05
 source: manual
 ---
 
-# FHIR Conformance Scope Roadmap
+# Historical FHIR Conformance Scope Roadmap
 
 **Status:** 2026-07-30
 **Scope owner:** validator engine / HL7 `FHIR/fhir-test-cases` lane
 **Repository boundary:** public `medvertical/records-fhir-validator` package scope
-**Current headline:** 100.0% on executable JSON resource comparison cases
+**Evidence status:** historical planning snapshots; no current package certification
 
-This document defines what the validator conformance number means, why the
+This historical record retains July/August 2026 planning snapshots, including
+conflicting headline totals and references to the then-current harness. These
+figures do not certify the currently exported package. The exported repository
+README and `release/validator-evidence.json` identify explicitly selected reports,
+measurement dates and provenance limits. No historical count is restamped here.
+
+This document recorded what the validator conformance number meant, why the
 HL7 manifest has more entries than the current score counts, and which test
 classes should be added next.
 
-This is the source of truth for the HL7 `FHIR/fhir-test-cases` lane. MII
+This preserves the historical scope discussion for the HL7 `FHIR/fhir-test-cases` lane. MII
 reference parity is a separate lane defined in
 [MII Conformance Scope](./mii-conformance-scope.md).
 
-## Current Measurement
+## Historical Measurement
 
 The current conformance harness measures one thing:
 
@@ -262,6 +268,12 @@ system. Deciding it changes MII output as well as this lane, so it needs its own
 measured change rather than being folded into a parity fix.
 
 ### The display-severity split: attempted, measured, reverted
+
+**Decided 2026-09-28:** a display the code system confirms wrong is an error,
+as the reference validator reports it — on the binding path at any strength
+and on the server path unless the server itself answers with a warning. A
+display the offline designation tables cannot refute stays a warning. The
+history below explains why the first attempt was reverted.
 
 `ips-link` disagrees with the reference only in severity — Records reports the
 same wrong-display finding as a warning there and as an error in `ips-nz-pj`.
@@ -517,9 +529,10 @@ target — contained, bundled, or referenced — and nothing in the validator re
 it. Six fixtures depend on it (`aggregation-apart-*`, `aggregation-bundle-*`).
 
 The rule is simple; the placement is not. `ReferenceTargetValidator` looks like
-the natural home but only runs when
-`settings.recursiveReferenceValidation.validateTargetProfiles` is set, which the
-conformance lane does not set. `deep-profile-validator` does run, but a check
+the natural home, but its target-profile pass reaches only the targets the
+content holds (Bundle entries, contained resources) unless
+`settings.recursiveReferenceValidation.validateTargetProfiles` asks for fetched
+ones as well. `deep-profile-validator` does run, but a check
 placed there never fired for these fixtures, so the element carrying the
 aggregation is not reaching that walk. Closing this means first establishing
 which path sees a materialised profile element for an external differential-only

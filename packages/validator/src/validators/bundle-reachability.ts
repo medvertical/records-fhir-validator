@@ -6,6 +6,7 @@ export function validateBundleReachability(
     bundle: unknown,
     bundleType: string,
     strictRefs = false,
+    fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
 ): ValidationIssue[] {
     const issues: ValidationIssue[] = [];
     const bundleRecord = asRecord(bundle);
@@ -19,6 +20,7 @@ export function validateBundleReachability(
     const { fullUrlIndex, versionedFullUrlIndex } = buildFullUrlIndexes(entries);
     const forward = buildBundleForwardGraph(entries, fullUrlIndex, versionedFullUrlIndex);
     const reachable = bfsBundleGraph(entries.length, forward);
+    issues.push(...reverseLinkedEntryIssues(entries, forward, bundleType, fhirVersion));
 
     const rootResourceLabel = bundleType === 'document' ? 'Composition' : 'MessageHeader';
     for (let i = 1; i < entries.length; i++) {
@@ -41,6 +43,71 @@ export function validateBundleReachability(
     }
 
     return issues;
+}
+
+/**
+ * The reference validator walks forward from the Composition or
+ * MessageHeader, then admits an entry that points at something already
+ * reached. Up to R4B a document may be entered that way only by Provenance;
+ * R5 and messages merely note it.
+ */
+function reverseLinkedEntryIssues(
+    entries: unknown[],
+    forward: Set<number>[],
+    bundleType: string,
+    fhirVersion: 'R4' | 'R5' | 'R6',
+): ValidationIssue[] {
+    const issues: ValidationIssue[] = [];
+    const visited = new Set<number>();
+    visitForward(0, forward, visited);
+    let admitted = true;
+    while (admitted) {
+        admitted = false;
+        for (let i = 1; i < entries.length; i++) {
+            if (visited.has(i) || ![...forward[i]].some(target => visited.has(target))) continue;
+            admitted = true;
+            visitForward(i, forward, visited);
+            const entry = asRecord(entries[i]);
+            if (asRecord(entry?.resource)?.resourceType === 'Provenance') continue;
+            issues.push(reverseLinkedEntryIssue(i, entry?.fullUrl, bundleType, fhirVersion));
+        }
+    }
+    return issues;
+}
+
+function reverseLinkedEntryIssue(
+    index: number,
+    fullUrl: unknown,
+    bundleType: string,
+    fhirVersion: 'R4' | 'R5' | 'R6',
+): ValidationIssue {
+    const label = typeof fullUrl === 'string' ? `'${fullUrl}'` : `entry[${index}]`;
+    const document = bundleType === 'document';
+    const guidance = !document
+        ? 'Check that this is meant to be included (needed to process the message)'
+        : fhirVersion === 'R4'
+            ? 'Only Provenance is approved to be used this way (R4 section 3.3.1)'
+            : "Check whether this should be linked directly from the composition if it's a source of narrative content";
+    return createValidationIssue({
+        code: 'bundle-entry-reverse-link',
+        path: `Bundle.entry[${index}]`,
+        resourceType: 'Bundle',
+        customMessage: `Entry ${label} isn't reachable by traversing forwards from the `
+            + `${document ? 'Composition' : 'MessageHeader'}. ${guidance}`,
+        severityOverride: document && fhirVersion === 'R4' ? 'warning' : 'information',
+    });
+}
+
+function visitForward(start: number, forward: Set<number>[], visited: Set<number>): void {
+    const queue = [start];
+    visited.add(start);
+    while (queue.length > 0) {
+        for (const next of forward[queue.shift()!]) {
+            if (visited.has(next)) continue;
+            visited.add(next);
+            queue.push(next);
+        }
+    }
 }
 
 function isWellFormedFullUrl(value: unknown): boolean {

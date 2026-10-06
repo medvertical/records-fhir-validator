@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateCodeInCodeSystemWithFallbacks } from '../valueset-code-system-validator';
 import type { CodeSystemValidationResult } from '../terminology-api-types';
+import { parseCodeSystemValidationParameters } from '../terminology-code-system-result.js';
 
 const mismatch: CodeSystemValidationResult = {
   valid: false, reason: 'display-mismatch',
@@ -38,9 +39,12 @@ describe('display validation after a CodeSystem coverage fallback', () => {
   );
 
   it('allows a later eligible server to confirm the submitted designation', async () => {
+    const positive = parseCodeSystemValidationParameters({ resourceType: 'Parameters', parameter: [
+      { name: 'result', valueBoolean: true },
+    ] }, '322236009', 'http://snomed.info/sct');
     const call = vi.fn().mockResolvedValueOnce({ valid: false, reason: 'code-unknown' })
-      .mockResolvedValueOnce(mismatch).mockResolvedValueOnce({ valid: true });
-    expect(await validate(call, 2)).toEqual({ valid: true });
+      .mockResolvedValueOnce(mismatch).mockResolvedValueOnce(positive);
+    expect(await validate(call, 2)).toEqual(positive);
     expect(call).toHaveBeenCalledTimes(3);
   });
 

@@ -1,3 +1,5 @@
+import { carryPatientNarrativeOrigins, reconcilePatientNarrativeIssues } from './patient-narrative-issue-reconciliation.js';
+import type { StructureDefinition } from './structure-definition-types.js';
 import type { AspectResult } from './multi-aspect-types.js';
 import {
   aggregateRemoteCodeSystemBudgetIssues,
@@ -5,9 +7,12 @@ import {
   suppressRedundantBindingWarnings,
 } from './validation-utils.js';
 
-export function normalizeIssuesByAspect(aspects: AspectResult[]): AspectResult[] {
+export function normalizeIssuesByAspect(
+  aspects: AspectResult[], definition?: StructureDefinition, fhirVersion?: 'R4' | 'R5' | 'R6',
+): AspectResult[] {
+  const combined = carryPatientNarrativeOrigins(aspects.map(aspect => aspect.issues), aspects.flatMap(aspect => aspect.issues));
   const suppressedIssues = suppressRedundantBindingWarnings(
-    dedupeIssues(aspects.flatMap(aspect => aspect.issues)),
+    dedupeIssues(reconcilePatientNarrativeIssues(combined, definition, fhirVersion)),
   );
   const keepIssues = new Set(suppressedIssues);
 

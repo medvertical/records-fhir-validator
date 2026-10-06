@@ -48,7 +48,7 @@ jobs:
 For production CI, pin an immutable patch tag:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.7.0
+- uses: medvertical/records-fhir-validator@v0.8.0
   with:
     paths: resources/**/*.json
     profile-url: http://hl7.org/fhir/StructureDefinition/Patient
@@ -61,7 +61,7 @@ Action pinning:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Latest stable in current major | `medvertical/records-fhir-validator@v0` | Floating tag, force-moved on stable releases only |
-| Exact released version | `medvertical/records-fhir-validator@v0.7.0` | Immutable consumer tag |
+| Exact released version | `medvertical/records-fhir-validator@v0.8.0` | Immutable consumer tag |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | Best for audit and forensics |
 
 The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
@@ -69,17 +69,33 @@ The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
 
 ### npm Package
 
+Add the following to your application's root package.json before installing.
+It selects the patched CSV parser required by the transitive UCUM dependency
+([GHSA-8cw4-87c7-c6xx](https://github.com/advisories/GHSA-8cw4-87c7-c6xx)).
+The exported repository includes this override. npm does not inherit a library's
+overrides into a consuming application; consumers must set it at their root.
+
+```json
+{
+  "overrides": {
+    "@lhncbc/ucum-lhc": {
+      "csv-parse": "7.0.2"
+    }
+  }
+}
+```
+
 ```sh
-npm install @records-fhir/validator@0.7.0 @records-fhir/validation-types@0.1.12
+npm install @records-fhir/validator@0.8.0 @records-fhir/validation-types@0.1.13
 ```
 
 Run the CLI against one file or a folder:
 
 ```sh
-npx -p @records-fhir/validator records-fhir-validator ./patient.json
-npx -p @records-fhir/validator records-fhir-validator ./fixtures --fail-on=warning
-npx -p @records-fhir/validator records-fhir-validator ./patient.json --format=json
-npx -p @records-fhir/validator records-fhir-validator ./fixtures --summary-only --output validation-report.json
+npx --no-install records-fhir-validator ./patient.json
+npx --no-install records-fhir-validator ./fixtures --fail-on=warning
+npx --no-install records-fhir-validator ./patient.json --format=json
+npx --no-install records-fhir-validator ./fixtures --summary-only --output validation-report.json
 ```
 
 Useful CLI options:
@@ -140,8 +156,8 @@ includes `file`, `resourceType`, `profileUrl`, and `issues`. With
 
 ## What Is Included
 
-- `@records-fhir/validator` 0.7.0 - Apache-2.0 validation engine.
-- `@records-fhir/validation-types` 0.1.12 - Apache-2.0 validation-domain types.
+- `@records-fhir/validator` 0.8.0 - Apache-2.0 validation engine.
+- `@records-fhir/validation-types` 0.1.13 - Apache-2.0 validation-domain types.
 - Composite GitHub Action at repository root.
 - Standalone examples under `packages/validator/examples/`.
 - Boundary audit and smoke-test scripts.
@@ -191,6 +207,31 @@ Historical evidence set: `validator-archived-evidence-2026-09-09`. Explicitly pi
 The explicit report selection and SHA-256 hashes are in [`release/validator-evidence.json`](./release/validator-evidence.json).
 The exporting package versions are listed above. They are not the measured versions of these historical runs.
 
+### Current candidate release acceptance
+
+Candidate validator 0.8.0; validation-types 0.1.13.
+Scoped R4 JSON acceptance: **390/390**; unchanged raw criterion: **387/390**, 3 raw failures, 0 skips, 0 runtime errors.
+MII clean precision: **442/442**, with **110 explicit exclusions**. This is clean-corpus precision, not reference parity or site certification.
+Selection and authenticated report inputs: [`conformance-results/validator-current-release.json`](./conformance-results/validator-current-release.json).
+Export verification authenticates the selected artifacts against the maintained repository sources and retained input archives. It does not verify a built runtime or installed profile packages, replay validation, or create a fresh measurement.
+The mandatory release check recomputes the saved SDK outcomes and all separate reference contracts under an identical candidate content inventory. It retains the original measurement epoch and explicitly reports freshlyMeasured=false. Live R4 profile caches and imported terminology are not reloaded or claimed identical by the replay; Unknown membership remains unknown.
+The release check is maintained in the Records source repository; the public export contains the pinned output evidence and portable package tests. Bundled profiles and clinical corpora remain outside the default export.
+
+### Public-server comparison
+
+Measured 2026-09-30T11:26:58.922Z against HAPI 6.10.4; Records validator 0.8.0, validation-types 0.1.13.
+Tested source revision: `2031e8ae3fd7aad4548c379398c7824482928bb4`; built runtime SHA-256: `9f795033ad596c1f4653aeaa9a8364c183615a12ff5a9f531b2b4ca63d8c1024`.
+Current validator 0.8.0 compared with the SHA-verified HAPI 6.10.4 reference on the explicitly inventoried offline R4/R5 package stores. Public R4/R5 JSON resource validations with per-run profile modes and offline terminology. The base-mode run repeats resources also measured with declared profiles; counts are validation attempts, not unique resources. Unverifiable terminology boundaries are omitted before both verdict and error comparison; explicit semantic rule identities match findings one-to-one. Explanation/policy-adjusted agreement is not used as parity.
+
+- All 24429 resource validation attempts across 60 comparison runs: 23906 matching error/no-error verdicts under the declared comparison rules; 16327 matching error comparisons under the declared comparison rules.
+- base mode: 441 attempts in 1 runs; 438 matching error/no-error verdicts under the declared comparison rules; 328 matching error comparisons.
+- declared mode: 23988 attempts in 59 runs; 23468 matching error/no-error verdicts under the declared comparison rules; 15999 matching error comparisons.
+- Reference profiles incomplete: 2799; Records validation incomplete: 2322 (may overlap); resources without reference outcomes after execution failure: 0; Records runtime exceptions: 0.
+- Comparable subset: 21566; matching verdicts: 21247; matching error comparisons: 15050.
+
+These counts do not assert identical diagnostics, online terminology coverage, or 100% parity. Missing reference profiles remain visible in the full denominator.
+Report, per-corpus input/package hashes and limitations: [`conformance-results/public-parity-2026-09-30.json`](./conformance-results/public-parity-2026-09-30.json).
+
 HL7 JSON measurement: 2026-08-25T09:29:45.985Z; recorded Records application version: 0.10.1.
 
 - Upstream manifest entries: 969; pre-filtered: 433; candidates: 536.
@@ -238,7 +279,7 @@ Report: [`conformance-results/fhir-schema-dual-path-all-2026-07-23.json`](./conf
 Legacy reports do not record the npm validator/validation-types package versions or tested source revision; null means unknown and must not be filled from the exporting checkout.
 Oracle identities are declared per lane; unrecorded executable versions remain unknown. The artifact snapshot revision identifies stored files, not the tested runtime revision.
 
-<details><summary>Explicitly selected historical artifacts</summary>
+<details><summary>Explicitly selected evidence artifacts</summary>
 
 - [`conformance-results/baseline-passing.json`](./conformance-results/baseline-passing.json)
 - [`conformance-results/baseline-backlog-discovery-2026-05-03.json`](./conformance-results/baseline-backlog-discovery-2026-05-03.json)
@@ -261,6 +302,19 @@ Oracle identities are declared per lane; unrecorded executable versions remain u
 - [`conformance-results/validator-claims-2026-07-23.json`](./conformance-results/validator-claims-2026-07-23.json)
 - [`conformance-results/validator-claims-2026-07-23.md`](./conformance-results/validator-claims-2026-07-23.md)
 - [`conformance-results/report-2026-08-24.json`](./conformance-results/report-2026-08-24.json)
+- [`conformance-results/mii-clean-triage-2026-09-30.json`](./conformance-results/mii-clean-triage-2026-09-30.json)
+- [`conformance-results/public-parity-2026-09-30.json`](./conformance-results/public-parity-2026-09-30.json)
+- [`conformance-results/public-parity-triage-2026-09-30.json`](./conformance-results/public-parity-triage-2026-09-30.json)
+- [`conformance-results/validator-release-acceptance-2026-10-05-g2.json`](./conformance-results/validator-release-acceptance-2026-10-05-g2.json)
+- [`conformance-results/validator-release-acceptance-2026-10-05-g3.json`](./conformance-results/validator-release-acceptance-2026-10-05-g3.json)
+- [`conformance-results/validator-current-release.json`](./conformance-results/validator-current-release.json)
+- [`conformance-results/validator-release-inventory-loop111-g1-2026-10-05.json`](./conformance-results/validator-release-inventory-loop111-g1-2026-10-05.json)
+- [`conformance-results/validator-r4-raw-loop111-g1-2026-10-05.json.gz`](./conformance-results/validator-r4-raw-loop111-g1-2026-10-05.json.gz)
+- [`conformance-results/validator-r4-receipts-loop111-g1-2026-10-05.json.gz`](./conformance-results/validator-r4-receipts-loop111-g1-2026-10-05.json.gz)
+- [`conformance-results/validator-r4-acceptance-loop111-g1-2026-10-05.json`](./conformance-results/validator-r4-acceptance-loop111-g1-2026-10-05.json)
+- [`conformance-results/validator-r4-measurement-origin-loop111-g1-2026-10-05.json`](./conformance-results/validator-r4-measurement-origin-loop111-g1-2026-10-05.json)
+- [`conformance-results/validator-mii-clean-loop111-g1-2026-10-05.json`](./conformance-results/validator-mii-clean-loop111-g1-2026-10-05.json)
+- [`conformance-results/validator-mii-measurement-origin-loop111-g1-2026-10-05.json`](./conformance-results/validator-mii-measurement-origin-loop111-g1-2026-10-05.json)
 
 </details>
 
@@ -293,3 +347,19 @@ npm run oss:smoke-validator
 ## License
 
 Apache-2.0 for the validator packages unless a package-level notice states otherwise. Bundled third-party FHIR artifacts retain their upstream licenses and notices.
+
+
+## Running the exported tests
+
+Repository development uses Node.js 20.19 or later in the current Node 20 LTS line and `npm@11.19.0`. CI installs the same npm version before resolving the workspaces.
+
+```bash
+npm install --global npm@11.19.0
+npm install
+npm test
+```
+
+These commands execute every portable package unit test against the workspace source.
+The published SDK and CLI retain their declared Node.js 20.0 minimum.
+The exact test scope is recorded in [tests/test-scope.json](./tests/test-scope.json).
+The explicitly listed profile integration tests remain in the Records monorepo's existing profile-contract lane, with their original assertions and fixture identities. They require the licensed profile catalog or private corpus and are not exported. Synthetic package controls separately cover Quantity bindings, filesystem lookup, issue anchors and expression cache behavior. No private corpus is bundled with this repository.

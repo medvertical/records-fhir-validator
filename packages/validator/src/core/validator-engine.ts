@@ -1,3 +1,4 @@
+import { withProfileReferenceInventorySnapshot } from '../validation-dependency-snapshot.js';
 import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import type { StructureDefinitionLoader } from './structure-definition-loader.js';
 
@@ -17,14 +18,11 @@ import {
   createRecordsBatchValidationContext,
   type RecordsBatchValidationContext,
 } from './validator-batch-validation.js';
-import { validateRecordsResource } from './validator-single-resource-validation.js';
+import { createSingleResourceRecursiveValidation, validateRecordsResource } from './validator-single-resource-validation.js';
 import type { RecordsSingleResourceValidationInput } from './validator-single-resource-pipeline.js';
+import { createSingleResourceConformanceSession, type SingleResourceConformanceFactory } from './single-resource-profile-conformance.js';
 import { checkRecordsValidatorAvailability } from './validator-initialization.js';
 import type { ReferenceResolver } from '../validators/slicing-validator.js';
-import {
-  validateContainedResourceTree,
-} from './validator-contained-issues.js';
-import { validateParametersResourceTree } from './parameters-resource-validation.js';
 import type { FhirResourceRecord } from '../reference/bundle-reference-types.js';
 import { isFhirResource, type FhirResource } from './fhir-resource.js';
 import type { MultiAspectValidateResult } from './multi-aspect-types.js';
@@ -81,16 +79,19 @@ export class RecordsValidator {
     Map<unknown, ValidationIssue[]> |
     Map<unknown, MultiAspectValidateResult>
   > {
+    return this.components.valuesetValidator.withSourceContext({ organizationId: options.organizationId, serverId: options.serverId, fhirVersion: options.fhirVersion ?? 'R4' }, async () => {
     await this.waitForInitialization();
     this.runtimeControls.applySettings(options.settings as ValidationSettings | undefined);
 
     return validateRecordsBatch(resources, options, this.createBatchValidationContext());
+    });
   }
 
   async validateAspects(
     resource: unknown,
     options: BatchValidationOptions,
   ): Promise<MultiAspectValidateResult> {
+    return this.components.valuesetValidator.withSourceContext({ organizationId: options.organizationId, serverId: options.serverId, fhirVersion: options.fhirVersion ?? 'R4' }, async () => {
     await this.waitForInitialization();
     this.runtimeControls.applySettings(options.settings as ValidationSettings | undefined);
     return validateRecordsAspects(
@@ -98,6 +99,7 @@ export class RecordsValidator {
       options,
       this.createBatchValidationContext(),
     );
+    });
   }
 
   private createBatchValidationContext(): RecordsBatchValidationContext {
@@ -121,21 +123,25 @@ export class RecordsValidator {
     serverId?: number,
     recursionDepth: number = 0,
   ): Promise<ValidationIssue[]> {
+    return withProfileReferenceInventorySnapshot(() => this.components.valuesetValidator.withSourceContext({ organizationId, serverId, fhirVersion }, async () => {
     return this.validateWithInput(
       { resource, profileUrl, fhirVersion, settings, fhirClient, referenceResolver, organizationId, serverId },
       recursionDepth,
     );
+    }));
   }
 
   private async validateWithInput(
     input: RecordsSingleResourceValidationInput,
     recursionDepth: number,
+    conformanceSession?: SingleResourceConformanceFactory,
   ): Promise<ValidationIssue[]> {
     await this.waitForInitialization();
     this.runtimeControls.applySettings(input.settings);
 
-    const validateEmbeddedResource = (embedded: FhirResourceRecord, embeddedProfile: string, nextDepth: number) =>
-      this.validateWithInput({ ...input, resource: embedded, profileUrl: embeddedProfile }, nextDepth);
+    const conformance = conformanceSession ?? createSingleResourceConformanceSession(
+      { ...this.components, fhirClient: input.fhirClient, strictMode: this.config.strictMode || false }, input,
+    );
 
     return validateRecordsResource(input, {
       sdLoader: this.components.sdLoader,
@@ -152,33 +158,26 @@ export class RecordsValidator {
       terminologyResourceValidator: this.components.terminologyResourceValidator,
       questionnaireRegistry: this.components.questionnaireRegistry,
       strictMode: this.config.strictMode || false,
+      createProfileConformance: conformanceInput => conformance(conformanceInput, recursionDepth),
       validateBundleEntriesIfNeeded: (target, version) =>
-        this.validateBundleEntriesIfNeeded(target, version),
-      validateContainedResourcesIfNeeded: (target) =>
-        validateContainedResourceTree(target, {
-          recursionDepth,
-          maxDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
-          validate: validateEmbeddedResource,
-        }),
-      validateParametersResourcesIfNeeded: (target) =>
-        validateParametersResourceTree(target, {
-          recursionDepth,
-          maxDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
-          validate: validateEmbeddedResource,
-        }),
-      validateAgainstProfile: (target, mandatedProfile) =>
-        validateEmbeddedResource(target, mandatedProfile, recursionDepth + 1),
+        this.validateBundleEntriesIfNeeded(target, version, input, conformance),
+      ...createSingleResourceRecursiveValidation(input, {
+        recursionDepth, maxDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
+        validate: (embeddedInput, nextDepth) => this.validateWithInput(embeddedInput, nextDepth, conformance),
+      }),
     });
   }
 
   private async validateBundleEntriesIfNeeded(
     resource: unknown,
     fhirVersion: 'R4' | 'R5' | 'R6',
+    input?: RecordsSingleResourceValidationInput,
+    conformance?: SingleResourceConformanceFactory,
   ): Promise<ValidationIssue[]> {
     if (!isFhirResource(resource) || resource.resourceType !== 'Bundle' || !Array.isArray(resource.entry)) {
       return [];
     }
-    return this.validateBundleEntries(resource, fhirVersion, 1);
+    return this.validateBundleEntries(resource, fhirVersion, 1, input, conformance);
   }
 
   private static readonly BUNDLE_ENTRY_MAX_DEPTH = 3;
@@ -191,7 +190,7 @@ export class RecordsValidator {
     // Ensure initialization is complete before validating
     await this.waitForInitialization();
 
-    return validateResourceStructure(resource, fhirVersion, recursionDepth, {
+    return withProfileReferenceInventorySnapshot(() => validateResourceStructure(resource, fhirVersion, recursionDepth, {
       sdLoader: this.components.sdLoader,
       profileCache: this.components.profileCache,
       snapshotGenerator: this.components.snapshotGenerator,
@@ -200,13 +199,15 @@ export class RecordsValidator {
       maxBundleEntryDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
       validateBundleEntries: (bundle, version, nextDepth) =>
         this.validateBundleEntries(bundle, version, nextDepth),
-    });
+    }));
   }
 
   private async validateBundleEntries(
     bundle: FhirResource,
     fhirVersion: 'R4' | 'R5' | 'R6',
     recursionDepth: number,
+    input?: RecordsSingleResourceValidationInput,
+    conformance?: SingleResourceConformanceFactory,
   ): Promise<ValidationIssue[]> {
     return validateRecordsBundleEntries(bundle, fhirVersion, recursionDepth, {
       sdLoader: this.components.sdLoader,
@@ -216,8 +217,9 @@ export class RecordsValidator {
       structuralExecutor: this.components.structuralExecutor,
       validateResource: (resource, profileUrl, version, referenceResolver, bundleCanonicalResolver) =>
         this.validateWithInput(
-          { resource, profileUrl, fhirVersion: version, referenceResolver, bundleCanonicalResolver },
-          0,
+          { ...input, resource, profileUrl, fhirVersion: version, referenceResolver, bundleCanonicalResolver,
+            enclosingBundle: bundle, containingResource: resource },
+          0, conformance,
         ),
     });
   }
@@ -264,8 +266,10 @@ export class RecordsValidator {
     return this.runtimeControls.registerQuestionnaire(questionnaire);
   }
 
-  async prewarmQuestionnaireAnswerValueSets(questionnaire: unknown): Promise<void> {
-    await this.runtimeControls.prewarmQuestionnaireAnswerValueSets(questionnaire);
+  async prewarmQuestionnaireAnswerValueSets(
+    questionnaire: unknown, fhirVersion?: 'R4' | 'R5' | 'R6',
+  ): Promise<void> {
+    await this.runtimeControls.prewarmQuestionnaireAnswerValueSets(questionnaire, fhirVersion);
   }
 
   getQuestionnaire(canonicalOrRef: string | undefined | null): FhirResourceRecord | null {

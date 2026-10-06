@@ -1,5 +1,6 @@
 import type { SliceDefinition } from './slice-types.js';
 import { splitResolveDiscriminatorPath } from './slice-discriminator-path.js';
+import { getFhirPathModel } from '../core/fhirpath-context.js';
 import {
   getValueAtPath,
   inferType,
@@ -74,8 +75,28 @@ export function getTypeSpecsForDiscriminator(
       if (referenceSpecs && referenceSpecs.length > 0) return referenceSpecs;
     }
   }
+  // A path below the slice names a child whose type the slice's own type
+  // defines (`Reference.reference` is a string); the reference validator
+  // tests that child's type, not the slice's (Radiation Dose Summary's
+  // performer sliced by type at `reference`).
+  if (path && path !== '$this' && !splitResolveDiscriminatorPath(path)) {
+    const childSpecs = (slice.type ?? []).flatMap(spec => {
+      const code = childTypeCode(spec.code, path);
+      return code ? [{ code }] : [];
+    });
+    if (childSpecs.length > 0) return childSpecs;
+  }
   return slice.type ?? [];
 }
+
+function childTypeCode(typeCode: string, path: string): string | undefined {
+  const types = getFhirPathModel('R4').path2Type as Record<string, string | undefined>;
+  const code = path.split('.').reduce<string | undefined>((current, segment) => (current ? types[`${current}.${segment}`] : undefined), typeCode);
+  // The model names a System-typed child (`Reference.reference`) by its System type.
+  return code && SYSTEM_TYPES.has(code) ? code[0].toLowerCase() + code.slice(1) : code;
+}
+
+const SYSTEM_TYPES = new Set(['Boolean', 'Date', 'DateTime', 'Decimal', 'Integer', 'String', 'Time']);
 
 export function stripCanonicalVersion(profile: string): string {
   return profile.split('|')[0] ?? profile;
@@ -83,6 +104,9 @@ export function stripCanonicalVersion(profile: string): string {
 
 export function typeCodeMatchesValue(expectedType: string | undefined, inferredType: string, value: unknown): boolean {
   if (!expectedType) return false;
+  if (expectedType === 'Resource' || expectedType === 'DomainResource') {
+    return isRecord(value) && value.resourceType === inferredType && isConcreteResourceType(inferredType, expectedType);
+  }
   if (expectedType === inferredType) return true;
 
   // A valid Quantity does not need to carry `unit`. Do not infer its type
@@ -90,6 +114,11 @@ export function typeCodeMatchesValue(expectedType: string | undefined, inferredT
   // Quantities still need to match a type-discriminator slice so their
   // missing/fixed child rules can be reported precisely.
   if (expectedType === 'Quantity' && isQuantityLike(value)) {
+    return true;
+  }
+  // A choice value carries its type only in the property name the slicing
+  // has already read past; a Quantity-shaped offsetDuration is a Duration.
+  if (QUANTITY_SPECIALIZATIONS.has(expectedType) && isQuantityLike(value)) {
     return true;
   }
 
@@ -151,6 +180,19 @@ export function typeCodeMatchesValue(expectedType: string | undefined, inferredT
     default:
       return false;
   }
+}
+
+const ABSTRACT_RESOURCE_TYPES = new Set(['Resource', 'DomainResource', 'CanonicalResource', 'MetadataResource']);
+
+function isConcreteResourceType(type: string, expectedBase: 'Resource' | 'DomainResource'): boolean {
+  if (ABSTRACT_RESOURCE_TYPES.has(type)) return false;
+  return (['R4', 'R5'] as const).some(version => {
+    const parents = getFhirPathModel(version).type2Parent as Record<string, string | undefined>;
+    for (let parent = parents[type]; parent; parent = parents[parent]) {
+      if (parent === expectedBase) return true;
+    }
+    return false;
+  });
 }
 
 // JSON numbers carry no FHIR type marker and inferType can only say
@@ -262,6 +304,8 @@ function isIdentifierLike(value: unknown): boolean {
   if (value.value !== undefined && typeof value.value !== 'string') return false;
   return ['use', 'type', 'system', 'value', 'period', 'assigner'].some(key => value[key] !== undefined);
 }
+
+const QUANTITY_SPECIALIZATIONS = new Set(['Age', 'Count', 'Distance', 'Duration', 'MoneyQuantity', 'SimpleQuantity']);
 
 function isQuantityLike(value: unknown): boolean {
   if (!isRecord(value)) return false;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isKnownCrossVersionExtensionUrl } from '../extension-xver-urls';
+import { isKnownCrossVersionExtensionUrl, unsupportedCrossVersionRelease } from '../extension-xver-urls';
 
 describe('cross-version extension URLs', () => {
   it('accepts a plain cross-version extension for any covered version', () => {
@@ -45,5 +45,13 @@ describe('cross-version extension URLs', () => {
       'http://hl7.org/fhir/9.9/StructureDefinition/extension-Patient.gender',
       'extension',
     )).toBe(false);
+  });
+
+  it('names the release of a cross-version URL the dataset does not cover', () => {
+    expect(unsupportedCrossVersionRelease('http://hl7.org/fhir/6.0/StructureDefinition/extension-Person.deceased[x]')).toBe('6.0');
+    expect(unsupportedCrossVersionRelease('http://hl7.org/fhir/4.3/StructureDefinition/extension-Patient.gender')).toBe('4.3');
+    expect(unsupportedCrossVersionRelease('http://hl7.org/fhir/5.0/StructureDefinition/extension-Patient.gender')).toBeUndefined();
+    expect(unsupportedCrossVersionRelease('https://hl7.org/fhir/6.0/StructureDefinition/extension-Patient.gender')).toBeUndefined();
+    expect(unsupportedCrossVersionRelease('http://hl7.org/fhir/6.0/StructureDefinition/patient-birthPlace')).toBeUndefined();
   });
 });

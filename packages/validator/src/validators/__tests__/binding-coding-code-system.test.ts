@@ -37,6 +37,19 @@ describe('system determination for a bound code primitive', () => {
     },
   );
 
+  it.each([['extensible', 'warning'], ['preferred', 'info']] as const)(
+    'does not count a systemless Coding as a member of a %s value set whose codes include its text',
+    async (strength, severity) => {
+      const issues = await validateBinding(
+        deps('valid'),
+        { coding: [{ code: 'M' }] },
+        { strength, valueSet: VALUE_SET },
+        'Patient.maritalStatus',
+      );
+      expect(issues).toEqual([expect.objectContaining({ code: `terminology-binding-${strength}-code`, severity })]);
+    },
+  );
+
   it('still rejects required membership without a Coding.system', async () => {
     const issues = await validateBinding(
       deps('valid'),

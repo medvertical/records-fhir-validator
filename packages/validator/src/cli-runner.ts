@@ -5,7 +5,7 @@ import { severityOf } from './cli-renderer.js';
 import type { CliOptions, CliSummary, CliValidationIssue, FileResult } from './cli-types.js';
 import { inferCodeBasedProfiles } from './core/code-inferred-profiles.js';
 import { getPrimaryDeclaredProfile } from './core/declared-profile-utils.js';
-import { recordsValidator } from './index.js';
+import type { recordsValidator } from './index.js';
 import { parseFhirNdjson, parseFhirXml } from './input/index.js';
 import type { FhirInputDiagnostic } from './input/fhir-input-types.js';
 
@@ -47,7 +47,11 @@ export function findInputFiles(options: Pick<CliOptions, 'paths' | 'include' | '
 export async function runValidation(
   files: string[],
   options: CliOptions,
-  validateRequest: ValidateRequest = request => recordsValidator.validateRequest(request),
+  validateRequest: ValidateRequest = async request => {
+    // Help, invalid options and malformed input do not need the engine's dependency graph.
+    const { recordsValidator } = await import('./index.js');
+    return recordsValidator.validateRequest(request);
+  },
 ): Promise<CliRunResult> {
   const results: FileResult[] = [];
   let totalErrors = 0;

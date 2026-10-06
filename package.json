@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "license": "Apache-2.0",
+  "packageManager": "npm@11.19.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/medvertical/records-fhir-validator.git"
@@ -18,15 +19,24 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
+    "test": "vitest run --config vitest.config.mjs",
     "pack:dry": "npm run pack:dry --workspace @records-fhir/validation-types && npm run pack:dry --workspace @records-fhir/validator",
     "oss:audit-validator": "node scripts/oss/audit-validator-boundary.mjs",
     "oss:audit-validator:tests": "node scripts/oss/audit-validator-boundary.mjs --include-tests",
     "oss:smoke-validator": "node scripts/oss/smoke-validator-package.mjs"
   },
+  "overrides": {
+    "@lhncbc/ucum-lhc": {
+      "csv-parse": "7.0.2"
+    }
+  },
   "devDependencies": {
     "@typescript/native": "npm:typescript@^7.0.2",
     "@types/node": "^20.16.11",
+    "tar-stream": "^3.2.1",
     "tsx": "^4.20.5",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "7.3.6",
+    "vitest": "4.1.11"
   }
 }

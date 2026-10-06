@@ -2,13 +2,17 @@ import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
 import {
     findDisallowedNarrativeElements,
+    findDuplicateNarrativeIds,
+    findInvalidNarrativeUrls,
     findForbiddenNarrativePatterns,
+    findIllegalXhtmlEntities,
     findInvalidNarrativeAttributes,
     findXxeDeclarations,
     hasNonWhitespaceNarrativeContent,
     hasValidNarrativeRoot,
     isNarrativeXhtmlWellformed,
 } from './narrative-xhtml-scanner.js';
+import { findXhtmlNestingViolations } from './narrative-xhtml-structure.js';
 
 /**
  * htmlChecks() on non-narrative xhtml (e.g. the rendering-xhtml extension's
@@ -114,16 +118,23 @@ export function validateNarrativeDiv(div: unknown, basePath: string, resourceTyp
     }
 
     if (!hasNonWhitespaceNarrativeContent(div)) {
-        issues.push(createValidationIssue({
-            code: 'narrative-txt2-violation',
-            path: `${basePath}.div`,
-            resourceType,
-            severityOverride: 'error',
-            customMessage:
-                `Constraint failed: txt-2: 'The narrative SHALL have some non-whitespace content' ` +
-                `(defined in http://hl7.org/fhir/StructureDefinition/Narrative)`,
-        }));
+        issues.push({
+            ...createValidationIssue({
+                code: 'narrative-txt2-violation',
+                path: `${basePath}.div`,
+                resourceType,
+                severityOverride: 'error',
+                customMessage:
+                    `Constraint failed: txt-2: 'The narrative SHALL have some non-whitespace content' ` +
+                    `(defined in http://hl7.org/fhir/StructureDefinition/Narrative)`,
+            }),
+            // The defining Narrative rule is independent of the resource's applied profile.
+            definitionProfile: 'http://hl7.org/fhir/StructureDefinition/Narrative',
+        });
     }
+
+    issues.push(...illegalEntityIssues(div, `${basePath}.div`, resourceType));
+    issues.push(...nestingIssues(div, `${basePath}.div`, resourceType));
 
     const forbiddenPatterns = findForbiddenNarrativePatterns(div);
     for (const pattern of forbiddenPatterns) {
@@ -172,7 +183,51 @@ export function validateNarrativeDiv(div: unknown, basePath: string, resourceTyp
         }));
     }
 
+    const duplicateIds = findDuplicateNarrativeIds(div);
+    if (duplicateIds.length > 0) {
+        issues.push(createValidationIssue({
+            code: 'narrative-duplicate-ids',
+            path: `${basePath}.div`,
+            resourceType,
+            severityOverride: 'warning',
+            customMessage:
+                'The XHTML in the resource contains more than one node for each of the following node ids ' +
+                `and anchor names: ${duplicateIds.map(({ id, count }) => `${id} (${count}x)`).join(', ')}`,
+            details: { duplicateIds },
+        }));
+    }
+
+    issues.push(...invalidNarrativeUrlIssues(div, `${basePath}.div`, resourceType));
+
     return issues;
+}
+
+function nestingIssues(div: string, path: string, resourceType: string): ValidationIssue[] {
+    return findXhtmlNestingViolations(div).map(message => createValidationIssue({
+        code: 'narrative-invalid-nesting',
+        path,
+        resourceType,
+        severityOverride: 'error',
+        customMessage: message,
+    }));
+}
+
+function invalidNarrativeUrlIssues(div: string, path: string, resourceType: string): ValidationIssue[] {
+    return findInvalidNarrativeUrls(div).map(({ url, invalid }) => {
+        const characters = [...new Set(invalid)].sort();
+        const reason = invalid.length === 0
+            ? 'URL is empty'
+            : `URL contains ${invalid.length === 1 ? 'Invalid Character' : `${invalid.length} Invalid Characters`}: `
+                + characters.map(ch => `'${ch}'`).join(',');
+        return createValidationIssue({
+            code: 'narrative-url-invalid',
+            path,
+            resourceType,
+            severityOverride: 'error',
+            customMessage: `The URL is not valid because '(${reason})': ${url}`,
+            details: { url, invalidCharacters: characters },
+        });
+    });
 }
 
 function checkXxeDeclarations(
@@ -225,4 +280,15 @@ function checkXxeDeclarations(
     }
 
     return issues;
+}
+
+function illegalEntityIssues(xhtml: string, path: string, resourceType: string): ValidationIssue[] {
+    return findIllegalXhtmlEntities(xhtml).map(entity => createValidationIssue({
+        code: 'narrative-invalid-entity',
+        path,
+        resourceType,
+        severityOverride: 'error',
+        customMessage: `Invalid entity in the XHTML ('${entity}')`,
+        details: { entity },
+    }));
 }

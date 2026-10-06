@@ -158,7 +158,20 @@ function isValidOidUrn(value: string): boolean {
     const secondArc = Number(arcs[1]);
     if (!Number.isSafeInteger(firstArc) || firstArc < 0 || firstArc > 2) return false;
     if (!Number.isSafeInteger(secondArc)) return false;
-    return firstArc === 2 || secondArc <= 39;
+    if (firstArc < 2 && secondArc > 39) return false;
+    // Same heuristic as the reference validator: an OID this short (such as
+    // 1.1 or 2.16) is a registration-authority root, never a namespace for
+    // codes or identifiers — except below the 1.3 (ISO identified-organization) arc.
+    return oid.lastIndexOf('.') >= 4 || oid.startsWith('1.3');
+}
+
+const LOWERCASE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** The identifier of a `urn:uuid:` value that is no lowercase UUID; a fragment or canonical version is not part of it. */
+function invalidUuidOfUrn(value: string): string | null {
+    if (!value.startsWith('urn:uuid:')) return null;
+    const uuid = value.split('#')[0].split('|')[0].slice('urn:uuid:'.length);
+    return LOWERCASE_UUID.test(uuid) ? null : uuid;
 }
 
 function isReferenceTypePath(path: string): boolean {
@@ -225,14 +238,31 @@ function validateReferenceTypeUri(value: string, path: string, resourceType: str
 }
 
 /**
- * Validates URI-shaped primitive values that Java reports as absolute-only.
- *
- * Some FHIR `uri` fields accept relative references while canonical/url-like
- * fields do not. Keep the absolute check path-sensitive to preserve Java parity
- * on fields such as Questionnaire.url while avoiding false positives on
- * relative TestReport detail links.
+ * A `uri` may be relative. The reference validator insists on an absolute one
+ * for a canonical, for the url that defines a canonical resource (a contained
+ * one included) and for Identifier.system; Coding.system and Extension.url
+ * have rules of their own.
  */
-export function validateUriFormat(value: string, path: string, resourceType: string, profileUrl?: string): ValidationIssue | null {
+function requiresAbsoluteUri(path: string, primitiveType: 'uri' | 'canonical'): boolean {
+    if (primitiveType === 'canonical' || isCanonicalReferencePath(path) || /\.valueCanonical$/.test(path)) return true;
+    const stripped = path.replace(/\/\*[^*]*\*\//g, '').replace(/\[\d+\]/g, '');
+    if (/identifier\.system$/i.test(stripped)) return true;
+    const definingUrl = /^([A-Z][A-Za-z]+)\.url$/.exec(stripped);
+    // Contract.url is the one resource-level url that defines nothing.
+    return definingUrl ? definingUrl[1] !== 'Contract' : /\.(?:contained|resource)\.url$/.test(stripped);
+}
+
+/**
+ * Validates URI-shaped primitive values: OID and UUID URNs, whitespace, and
+ * absoluteness where the reference validator requires it.
+ */
+export function validateUriFormat(
+    value: string,
+    path: string,
+    resourceType: string,
+    profileUrl?: string,
+    primitiveType: 'uri' | 'canonical' = 'uri',
+): ValidationIssue | null {
     if (!value || typeof value !== 'string') {
         return null;
     }
@@ -252,6 +282,24 @@ export function validateUriFormat(value: string, path: string, resourceType: str
                 value,
                 expectedUriType: 'OID URN',
                 fixHint: 'Use urn:oid followed by at least two numeric arcs without leading zeroes.',
+            },
+        });
+    }
+
+    // Likewise a urn:uuid, in every uri slot including Bundle.entry.fullUrl.
+    const invalidUuid = invalidUuidOfUrn(value);
+    if (invalidUuid !== null) {
+        return createValidationIssue({
+            code: 'structural-invalid-uri',
+            path,
+            resourceType,
+            profile: profileUrl,
+            severityOverride: 'error',
+            customMessage: `UUIDs must be valid and lowercase (${invalidUuid})`,
+            details: {
+                value,
+                expectedUriType: 'UUID URN',
+                fixHint: 'Use urn:uuid followed by a lowercase RFC 4122 UUID such as c757873d-ec9a-4326-a141-556f43239520.',
             },
         });
     }
@@ -281,7 +329,7 @@ export function validateUriFormat(value: string, path: string, resourceType: str
         return null;
     }
 
-    if (/\s/.test(value) || !isAbsoluteUri(value)) {
+    if (/\s/.test(value) || (!isAbsoluteUri(value) && requiresAbsoluteUri(path, primitiveType))) {
         return createValidationIssue({
             code: 'structural-invalid-uri',
             path,

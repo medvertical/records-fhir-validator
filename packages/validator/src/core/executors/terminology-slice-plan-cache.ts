@@ -22,9 +22,12 @@ export class TerminologySlicePlanCache {
     const cached = plan.childConstraints.get(elementDef);
     if (cached) return cached;
     const prefix = `${elementDef.id}.`;
+    // A value fixed inside a nested slice (KBV's display extension on a coding
+    // slice) belongs to that slice's members, not to the enclosing slice's.
     const constraints = plan.elements?.filter((candidate) =>
       typeof candidate.id === 'string'
       && candidate.id.startsWith(prefix)
+      && !candidate.id.slice(prefix.length).includes(':')
       && getPatternOrFixedValue(candidate) !== undefined,
     ) ?? [];
     plan.childConstraints.set(elementDef, constraints);
@@ -58,14 +61,29 @@ export class TerminologySlicePlanCache {
     const plan = this.getPlan(structureDef);
     const cached = plan.valueSetDiscriminated.get(elementDef);
     if (cached !== undefined) return cached;
-    const result = plan.elements?.some((candidate) =>
+    const result = (plan.elements?.some((candidate) =>
       candidate !== elementDef
       && candidate.path === elementDef.path
       && Boolean(candidate.sliceName)
       && Boolean(candidate.binding?.valueSet),
-    ) ?? false;
+    ) ?? false) && !this.fixesDiscriminatorValue(structureDef, elementDef);
     plan.valueSetDiscriminated.set(elementDef, result);
     return result;
+  }
+
+  /**
+   * Slices whose discriminator element carries a fixed value (KBV's coding
+   * slices, told apart by system) are decided by that value; their bindings
+   * constrain the members rather than sort them.
+   */
+  private fixesDiscriminatorValue(structureDef: StructureDefinition, sliceElement: ElementDefinition): boolean {
+    const sliceId = sliceElement.id ?? '';
+    const baseId = sliceId.slice(0, sliceId.lastIndexOf(':'));
+    const discriminators = this.getPlan(structureDef).elements
+      ?.find(element => element.id === baseId)?.slicing?.discriminator ?? [];
+    const childPaths = new Set(this.getSliceChildConstraints(structureDef, sliceElement)
+      .map(child => child.id!.slice(sliceId.length + 1)));
+    return discriminators.some(({ type, path }) => (type === 'value' || type === 'pattern') && childPaths.has(path));
   }
 
   getSiblingSlicePatterns(

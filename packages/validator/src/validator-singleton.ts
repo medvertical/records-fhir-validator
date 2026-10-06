@@ -233,10 +233,10 @@ export const recordsValidator: RecordsValidatorSingleton = {
     return instance.loadProfileWithSnapshot(profileUrl, context.engineVersion);
   },
   async registerQuestionnaire(questionnaire, fhirVersion = 'R4', runtimeScopeKey) {
-    const { instance } = await getConfiguredRecordsValidator(fhirVersion, runtimeScopeKey);
+    const { context, instance } = await getConfiguredRecordsValidator(fhirVersion, runtimeScopeKey);
     await instance.waitForInitialization();
     const ok = instance.registerQuestionnaire(questionnaire);
-    if (ok) await instance.prewarmQuestionnaireAnswerValueSets(questionnaire);
+    if (ok) await instance.prewarmQuestionnaireAnswerValueSets(questionnaire, context.engineVersion);
     return ok;
   },
   async getQuestionnaire(

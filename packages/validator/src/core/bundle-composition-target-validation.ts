@@ -35,7 +35,7 @@ export async function validateBundleCompositionTargets<T>(
     visitCompositionSections(Array.isArray(sections) ? sections : [], 'section', (section, entry, entryPath) => {
       const child = typeof entry.reference === 'string' ? byReference.get(entry.reference) : undefined;
       if (!child) return;
-      const profiles = getCompositionEntryTargetProfiles(composition.structureDef, section)
+      const profiles = getCompositionEntryTargetProfiles(composition.structureDef, section, entryPath)
         ?? getDeclaredProfiles(child.entryResource);
       targets.push({ child, profiles, path: entryPath });
     });

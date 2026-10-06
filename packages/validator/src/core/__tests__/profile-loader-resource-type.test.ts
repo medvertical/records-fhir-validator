@@ -18,6 +18,8 @@ describe('profile resource type compatibility', () => {
       resourceType: 'StructureDefinition',
       url: 'http://hl7.org/fhir/StructureDefinition/Practitioner',
       type: 'Practitioner',
+      kind: 'resource',
+      abstract: false,
       snapshot: { element: [{ path: 'Practitioner' }] },
     };
     const sdLoader = {

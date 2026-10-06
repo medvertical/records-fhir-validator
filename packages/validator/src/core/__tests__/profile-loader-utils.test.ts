@@ -42,6 +42,7 @@ function makeMocks() {
   const profileCache = {
     get: vi.fn<[string], StructureDefinition | null>(),
     set: vi.fn<[string, StructureDefinition], void>(),
+    delete: vi.fn(),
   };
   const snapshotGenerator = {
     generateSnapshot: vi.fn<[StructureDefinition], Promise<StructureDefinition['snapshot']['element'] | null>>(),
@@ -67,9 +68,10 @@ describe('loadProfileWithSnapshot', () => {
     mocks = makeMocks();
   });
 
-  it('returns cached SD on cache hit (L1)', async () => {
+  it('selects the current source definition before accepting a cached snapshot', async () => {
     const sd = makeSD();
     mocks.profileCache.get.mockReturnValue(sd);
+    mocks.sdLoader.loadProfile.mockResolvedValue(sd);
 
     const result = await loadProfileWithSnapshot(
       mocks.sdLoader as any,
@@ -80,7 +82,7 @@ describe('loadProfileWithSnapshot', () => {
     );
 
     expect(result).toBe(sd);
-    expect(mocks.sdLoader.loadProfile).not.toHaveBeenCalled();
+    expect(mocks.sdLoader.loadProfile).toHaveBeenCalledWith(PROFILE_URL, FHIR_VERSION);
     expect(mocks.fhirClient.searchResources).not.toHaveBeenCalled();
   });
 
@@ -278,9 +280,10 @@ describe('loadProfileForValidation', () => {
 
   afterEach(() => setProfileSource({}));
 
-  it('returns cached SD on cache hit', async () => {
+  it('selects the current source definition with a warm snapshot cache', async () => {
     const sd = makeSD();
     mocks.profileCache.get.mockReturnValue(sd);
+    mocks.sdLoader.loadProfile.mockResolvedValue(sd);
 
     const result = await loadProfileForValidation(
       mocks.sdLoader as any,
@@ -291,7 +294,7 @@ describe('loadProfileForValidation', () => {
     );
 
     expect(result).toBe(sd);
-    expect(mocks.sdLoader.loadProfile).not.toHaveBeenCalled();
+    expect(mocks.sdLoader.loadProfile).toHaveBeenCalledWith(PROFILE_URL, FHIR_VERSION);
   });
 
   it('works without a profile cache', async () => {
@@ -322,7 +325,7 @@ describe('loadProfileForValidation', () => {
     expect(result).toBeNull();
   });
 
-  it('retries an exact tenant profile through the scoped host resolver', async () => {
+  it('resolves an explicitly supplied tenant scope through its scoped host source', async () => {
     const profile = makeSD({ fhirVersion: '4.0.1' } as any);
     const resolveProfile = vi.fn().mockResolvedValue(profile);
     setProfileSource({ resolveProfile });

@@ -1,39 +1,75 @@
-/**
- * Records which installed package served a StructureDefinition, keyed by the
- * profile's canonical identity (`url|version`). Dependency pinning needs this
- * later, when a resolved profile's own references are looked up: the pins of
- * the package the profile came from decide which versions its unversioned
- * canonicals resolve to. Keying by canonical identity (not object identity)
- * keeps the provenance valid across the loader's sanitization and caching.
- */
-import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { copyNestedElementProfileSources } from './element-profile-reference-provenance.js';
 import { parsePackageDirName, type PackageRef } from './canonical-pin-store.js';
 
-const provenanceByCanonical = new BoundedLruCache<string, PackageRef>(2048);
+interface ProfileIdentity {
+  url?: string;
+  version?: string;
+}
 
-function provenanceKey(url: string, version: string): string {
-  return `${url}|${version}`;
+interface ProfilePackageOrigin {
+  readonly url: string;
+  readonly version: string | undefined;
+  readonly packageRef: PackageRef;
+  readonly packageDirectory?: string;
+}
+
+// A symbol survives the shallow profile snapshots used by validation callers,
+// while JSON serialization keeps host/DB profiles free of installed provenance.
+const profilePackageOrigin = Symbol('profilePackageOrigin');
+const issuedOrigins = new WeakSet<ProfilePackageOrigin>();
+
+interface ProvenanceCarrier {
+  [profilePackageOrigin]?: unknown;
 }
 
 export function recordProfilePackageProvenance(
-  url: string | undefined,
-  version: string | undefined,
+  profile: ProfileIdentity,
   packageDirName: string,
+  packageDirectory?: string,
 ): void {
-  if (!url || !version) return;
-  const ref = parsePackageDirName(packageDirName);
-  if (!ref) return;
-  provenanceByCanonical.set(provenanceKey(url, version), ref);
+  if (!profile.url) return;
+  const packageRef = parsePackageDirName(packageDirName);
+  if (!packageRef) return;
+  const origin: ProfilePackageOrigin = Object.freeze({
+    url: profile.url,
+    version: profile.version,
+    packageRef: Object.freeze(packageRef),
+    ...(packageDirectory ? { packageDirectory } : {}),
+  });
+  issuedOrigins.add(origin);
+  Object.defineProperty(profile, profilePackageOrigin, {
+    value: origin, enumerable: true, configurable: true,
+  });
 }
 
-export function lookupProfilePackageProvenance(
-  url: string | undefined,
-  version: string | undefined,
-): PackageRef | null {
-  if (!url || !version) return null;
-  return provenanceByCanonical.get(provenanceKey(url, version)) ?? null;
+function issuedProfileOrigin(profile: ProfileIdentity): ProfilePackageOrigin | null {
+  const origin = (profile as ProfileIdentity & ProvenanceCarrier)[profilePackageOrigin];
+  if (typeof origin !== 'object' || origin === null || !issuedOrigins.has(origin as ProfilePackageOrigin)) {
+    return null;
+  }
+  const issued = origin as ProfilePackageOrigin;
+  // A caller can copy a profile then change its identity; the copy must not
+  // assign the original package to a different canonical or business version.
+  return issued.url === profile.url && issued.version === profile.version ? issued : null;
 }
 
-export function clearProfilePackageProvenance(): void {
-  provenanceByCanonical.clear();
+export function lookupProfilePackageProvenance(profile: ProfileIdentity): PackageRef | null {
+  return issuedProfileOrigin(profile)?.packageRef ?? null;
+}
+
+export function lookupProfilePackageDirectory(profile: ProfileIdentity): string | undefined {
+  return issuedProfileOrigin(profile)?.packageDirectory;
+}
+
+/** Detached dependency copies must retain issued authority without inferring it from FHIR content. */
+export function copyProfilePackageProvenance(original: unknown, copy: unknown): void {
+  if (!original || typeof original !== 'object' || Array.isArray(original)
+    || !copy || typeof copy !== 'object' || Array.isArray(copy)) return;
+  copyNestedElementProfileSources(original, copy);
+  const issued = issuedProfileOrigin(original as ProfileIdentity);
+  const identity = copy as ProfileIdentity;
+  if (!issued || issued.url !== identity.url || issued.version !== identity.version) return;
+  Object.defineProperty(copy, profilePackageOrigin, {
+    value: issued, enumerable: true, configurable: true,
+  });
 }

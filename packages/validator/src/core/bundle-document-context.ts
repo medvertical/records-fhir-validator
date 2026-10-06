@@ -109,7 +109,7 @@ function buildCompositionTargetProfileIssues(
     if (blockingIssues.length === 0) return;
 
     const targetProfiles =
-      getCompositionEntryTargetProfiles(compositionChild.structureDef, section) ??
+      getCompositionEntryTargetProfiles(compositionChild.structureDef, section, entryPath) ??
       getDeclaredProfiles(target.entryResource);
     if (targetProfiles.length === 0) return;
     if (targetProfilesAllowAnyResource(targetProfiles)) return;
@@ -198,6 +198,33 @@ export function getTargetProfileBlockingIssues(issues: ValidationIssue[]): Valid
   });
 }
 
+/**
+ * The slicing validator places entries by validating them, so a Composition
+ * that fails its profile also leaves its slice short there. The document
+ * context reports that missing slice with its causes; the slicer's bare
+ * minimum for the same slice would count the one defect twice.
+ */
+export function withoutSupersededSliceMinimums(
+  issues: ValidationIssue[],
+  contextIssues: ValidationIssue[],
+): ValidationIssue[] {
+  const superseded = new Set(contextIssues
+    .filter(issue => issue.ruleId === 'slice-min-composition-conformance')
+    .map(issueSliceName));
+  if (superseded.size === 0) return issues;
+  return issues.filter(issue => !(
+    issue.code === 'profile-slice-min-cardinality'
+    && issue.path === 'Bundle.entry'
+    && superseded.has(issueSliceName(issue))
+  ));
+}
+
+function issueSliceName(issue: ValidationIssue): unknown {
+  return typeof issue.details === 'object' && issue.details !== null
+    ? (issue.details as Record<string, unknown>).sliceName
+    : undefined;
+}
+
 function dedupeDocumentContextIssues(issues: ValidationIssue[]): ValidationIssue[] {
   const seen = new Set<string>();
   const out: ValidationIssue[] = [];
@@ -247,10 +274,11 @@ function getBundleCompositionSliceSources(
   const sources: Array<{ profile?: string; label?: string }> = [];
   const seen = new Set<string>();
   const addSource = (profile: string | undefined, version?: string): void => {
+    const canonical = profile?.split('|')[0];
     if (
       !profile ||
-      profile === 'http://hl7.org/fhir/StructureDefinition/Bundle' ||
-      profile === 'http://hl7.org/fhir/StructureDefinition/Resource'
+      canonical === 'http://hl7.org/fhir/StructureDefinition/Bundle' ||
+      canonical === 'http://hl7.org/fhir/StructureDefinition/Resource'
     ) return;
     const label = version && !profile.includes('|') ? `${profile}|${version}` : profile;
     if (seen.has(label)) return;

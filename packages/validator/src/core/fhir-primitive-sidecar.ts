@@ -41,13 +41,28 @@ export function resolveFhirSegmentValue(container: unknown, segment: string): un
 
   const direct = container[segment];
   if (Array.isArray(direct)) return mergePrimitiveArraySidecars(container, segment, direct);
-  if (direct !== undefined) return direct;
+  if (direct != null) return direct;
 
   if (segment.endsWith('[x]')) {
     return resolveChoiceSegmentValue(container, segment.slice(0, -3));
   }
 
-  return getPrimitiveSidecar(container, segment);
+  return getPrimitiveSidecar(container, segment) ?? direct;
+}
+
+/**
+ * The element at `segment` as a node whose children are read next: a
+ * primitive that carries a sidecar is represented by it, typed as the
+ * primitive (KBV's doseNumberString keeps its data-absent-reason there).
+ */
+export function resolveFhirSegmentElement(container: unknown, segment: string): unknown {
+  const value = resolveFhirSegmentValue(container, segment);
+  if (!isObjectRecord(container) || (value !== null && typeof value === 'object')) return value;
+  const choiceBase = segment.endsWith('[x]') ? segment.slice(0, -3) : undefined;
+  const key = choiceBase ? findConcreteChoiceProperty(container, choiceBase) : segment;
+  const sidecar = key ? container[`_${key}`] : undefined;
+  if (!key || !isMeaningfulPrimitiveSidecar(sidecar)) return value;
+  return markPrimitiveSidecarValue(sidecar, choiceBase ? primitiveTypeFromChoiceKey(key, choiceBase) : undefined);
 }
 
 function mergePrimitiveArraySidecars(
@@ -67,9 +82,23 @@ function mergePrimitiveArraySidecars(
   return changed ? resolved : direct;
 }
 
+// The type a complex choice value was found under (`allowedMoney` holds a
+// Money): its shape alone does not tell, and the value must stay the
+// caller's own object for path lookups.
+const CHOICE_VALUE_TYPES = new WeakMap<object, string>();
+
+export function getChoiceValueType(value: unknown): string | undefined {
+  return value && typeof value === 'object' ? CHOICE_VALUE_TYPES.get(value) : undefined;
+}
+
 function resolveChoiceSegmentValue(container: Record<string, unknown>, baseName: string): unknown {
   const directChoiceKey = findConcreteChoiceProperty(container, baseName);
-  if (directChoiceKey) return container[directChoiceKey];
+  if (directChoiceKey) {
+    const value = container[directChoiceKey];
+    const type = directChoiceKey.slice(baseName.length);
+    if (isObjectRecord(value) && /^[A-Z]/.test(type)) CHOICE_VALUE_TYPES.set(value, type);
+    return value;
+  }
 
   const sidecarChoiceKey = findChoiceSidecarProperty(container, baseName);
   if (!sidecarChoiceKey) return undefined;

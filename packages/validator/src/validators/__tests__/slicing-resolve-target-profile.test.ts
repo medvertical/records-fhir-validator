@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { SlicingValidator } from '../slicing-validator';
-import type { StructureDefinition } from '../../core/structure-definition-types';
+import { SlicingValidator } from '../slicing-validator.js';
+import type { StructureDefinition } from '../../core/structure-definition-types.js';
+
+import metadata from '../__fixtures__/slicing-resolved-code-mii-patho-metadata.json';
 
 const GROUPER = 'http://example.org/StructureDefinition/diagnostic-conclusion-grouper';
 const MACRO = 'http://example.org/StructureDefinition/macroscopic-grouper';
 const ELEMENT_PATH = 'DiagnosticReport.result';
 
 /**
- * Mirrors MII `mii-pr-patho-report`: `resolve()`-traversing discriminator,
- * closed slicing, and slices that carry nothing but `targetProfile`.
+ * Synthetic Reference availability controls use the original target code
+ * metadata. Genuine, unmodified Patho slice definitions have their own suite.
  */
 function targetProfileOnlyProfile(): StructureDefinition {
   return {
@@ -52,18 +54,32 @@ function targetProfileOnlyProfile(): StructureDefinition {
   } as unknown as StructureDefinition;
 }
 
+function targetDefinition(canonical: string): StructureDefinition | null {
+  const source = canonical === GROUPER ? metadata.targets[4]
+    : canonical === MACRO ? metadata.targets[1] : null;
+  return source ? { ...structuredClone(source), url: canonical } as unknown as StructureDefinition : null;
+}
+
+function createValidator(): SlicingValidator {
+  const validator = new SlicingValidator({ valueSetLoader: { loadValueSet: async () => null } });
+  validator.setTypeProfileResolver(async canonical => targetDefinition(canonical));
+  return validator;
+}
+
 function resolverFor(profiles: Record<string, string>) {
   return (reference: string): unknown | null => {
     const profile = profiles[reference];
     return profile === undefined
       ? null
-      : { resourceType: 'Observation', id: reference.split('/')[1], meta: { profile: [`${profile}|1.0.0`] } };
+      : { resourceType: 'Observation', id: reference.split('/')[1],
+          code: structuredClone(targetDefinition(profile)?.snapshot?.element[0].patternCodeableConcept),
+          meta: { profile: [`${profile}|1.0.0`] } };
   };
 }
 
 describe('slicing whose discriminator traverses resolve()', () => {
-  it('matches a targetProfile-only slice against the resolved target profile', async () => {
-    const issues = await new SlicingValidator().validateSlicing(
+  it('matches slices from the resolved targets code metadata', async () => {
+    const issues = await createValidator().validateSlicing(
       [{ reference: 'Observation/macro' }, { reference: 'Observation/conclusion' }],
       ELEMENT_PATH,
       targetProfileOnlyProfile(),
@@ -73,8 +89,8 @@ describe('slicing whose discriminator traverses resolve()', () => {
     expect(issues).toEqual([]);
   });
 
-  it('reports the required slice when the resolved target conforms to another profile', async () => {
-    const issues = await new SlicingValidator().validateSlicing(
+  it('reports the required slice when the resolved target has the other slice code', async () => {
+    const issues = await createValidator().validateSlicing(
       [{ reference: 'Observation/macro' }],
       ELEMENT_PATH,
       targetProfileOnlyProfile(),
@@ -89,8 +105,8 @@ describe('slicing whose discriminator traverses resolve()', () => {
     );
   });
 
-  it('leaves the slicing unverifiable rather than reporting when the target cannot be resolved', async () => {
-    const issues = await new SlicingValidator().validateSlicing(
+  it('warns that the slicing is unverifiable rather than reporting when the target cannot be resolved', async () => {
+    const issues = await createValidator().validateSlicing(
       [{ reference: 'Observation/macro' }],
       ELEMENT_PATH,
       targetProfileOnlyProfile(),
@@ -99,8 +115,8 @@ describe('slicing whose discriminator traverses resolve()', () => {
 
     expect(issues).toContainEqual(
       expect.objectContaining({
-        code: 'profile-slice-validation-error',
-        severity: 'information',
+        code: 'profile-slice-validation-incomplete',
+        severity: 'warning',
         details: expect.objectContaining({ reason: 'unresolved-reference-discriminator' }),
       }),
     );
@@ -108,8 +124,8 @@ describe('slicing whose discriminator traverses resolve()', () => {
     expect(issues.filter(issue => issue.code === 'profile-slice-closed-unmatched')).toEqual([]);
   });
 
-  it('leaves the slicing unverifiable when no resolver is supplied at all', async () => {
-    const issues = await new SlicingValidator().validateSlicing(
+  it('warns that the slicing is unverifiable when no resolver is supplied at all', async () => {
+    const issues = await createValidator().validateSlicing(
       [{ reference: 'Observation/macro' }],
       ELEMENT_PATH,
       targetProfileOnlyProfile(),
@@ -118,12 +134,30 @@ describe('slicing whose discriminator traverses resolve()', () => {
 
     expect(issues).toContainEqual(
       expect.objectContaining({
-        code: 'profile-slice-validation-error',
-        severity: 'information',
+        code: 'profile-slice-validation-incomplete',
+        severity: 'warning',
         details: expect.objectContaining({ reason: 'unresolved-reference-discriminator' }),
       }),
     );
     expect(issues.filter(issue => issue.code === 'profile-slice-min-cardinality')).toEqual([]);
+    expect(issues.filter(issue => issue.code === 'profile-slice-closed-unmatched')).toEqual([]);
+  });
+
+  it('warns instead of failing closed slicing for an element whose target cannot be resolved', async () => {
+    const issues = await createValidator().validateSlicing(
+      [{ reference: 'Observation/conclusion' }, { reference: 'Observation/unknown' }],
+      ELEMENT_PATH,
+      targetProfileOnlyProfile(),
+      resolverFor({ 'Observation/conclusion': GROUPER }),
+    );
+
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        code: 'profile-slice-validation-incomplete',
+        severity: 'warning',
+        details: expect.objectContaining({ reason: 'unresolved-reference-discriminator' }),
+      }),
+    );
     expect(issues.filter(issue => issue.code === 'profile-slice-closed-unmatched')).toEqual([]);
   });
 });

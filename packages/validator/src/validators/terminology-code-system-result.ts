@@ -1,9 +1,11 @@
+import { rejectedCodeSystemDisplayResult, verifiedCodeSystemResult } from './code-system-validation-evidence.js';
 import { logger } from '../logger.js';
 import type { CodeSystemValidationResult } from './terminology-api-types.js';
 import { extractTerminologyIssues, mapOperationOutcomeIssues } from './terminology-api-outcome.js';
 import {
     getOperationOutcomeIssueValues,
     getParametersEntries,
+    isTerminologyResponseRecord,
 } from './terminology-response-utils.js';
 import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 import { operationOutcomeCannotResolveBinding } from './terminology-parameters.js';
@@ -43,12 +45,18 @@ export function parseCodeSystemValidationParameters(
         };
     }
 
-    const resultParam = entries.find(parameter => parameter.name === 'result');
-    if (typeof resultParam?.valueBoolean !== 'boolean' || operationOutcomeCannotResolveBinding(parameters)) {
-        return { valid: false, reason: 'system-unresolvable',
-            message: `Terminology server could not verify '${code}' in '${system}'` };
-    }
+    const resultParameters = entries.filter(parameter => parameter.name === 'result');
+    const resultParam = resultParameters[0];
     const messageParam = entries.find(parameter => parameter.name === 'message');
+    if (typeof resultParam?.valueBoolean !== 'boolean' || operationOutcomeCannotResolveBinding(parameters)) {
+        // The server's own account names what it lacked (an unknown SNOMED
+        // release comes with the releases it does hold).
+        const serverMessage = typeof messageParam?.valueString === 'string' && messageParam.valueString.trim()
+            ? messageParam.valueString
+            : undefined;
+        return { valid: false, reason: 'system-unresolvable',
+            message: serverMessage ?? `Terminology server could not verify '${code}' in '${system}'` };
+    }
     const inactiveParam = entries.find(parameter => parameter.name === 'inactive');
     const displayParam = entries.find(parameter => parameter.name === 'display');
     const issues = extractTerminologyIssues(parameters);
@@ -59,13 +67,14 @@ export function parseCodeSystemValidationParameters(
             '[TerminologyApiClient] CodeSystem validation succeeded',
             terminologyTargetMetadata(system, code),
         );
-        return {
+        const result: CodeSystemValidationResult = {
             valid: true,
             message: typeof messageParam?.valueString === 'string' ? messageParam.valueString : undefined,
             issues,
             inactive: inactiveParam?.valueBoolean === true,
             display: typeof displayParam?.valueString === 'string' ? displayParam.valueString : undefined,
         };
+        return resultParameters.length === 1 ? verifiedCodeSystemResult(result) : result;
     }
 
     const errorMessage = typeof messageParam?.valueString === 'string'
@@ -83,7 +92,7 @@ export function parseCodeSystemValidationParameters(
         '[TerminologyApiClient] CodeSystem validation failed',
         terminologyTargetMetadata(system, code),
     );
-    return {
+    const result: CodeSystemValidationResult = {
         valid: false,
         message: errorMessage,
         reason: hasDisplayMismatch ? 'display-mismatch' : 'code-unknown',
@@ -91,6 +100,7 @@ export function parseCodeSystemValidationParameters(
         inactive: inactiveParam?.valueBoolean === true,
         display: typeof displayParam?.valueString === 'string' ? displayParam.valueString : undefined,
     };
+    return resultParameters.length === 1 ? verifiedCodeSystemResult(result) : result;
 }
 
 export function isSnomedNationalExtensionSystemCode(system: string, code: string): boolean {
@@ -110,12 +120,23 @@ export function operationOutcomeToCodeSystemResult(
     if (issueValues && issueValues.length > 0) {
         const issues = mapOperationOutcomeIssues(opOutcome);
         const msg = issues[0]?.message || `Unknown code '${code}' in CodeSystem '${system}'`;
-        return {
+        const result: CodeSystemValidationResult = {
             valid: false,
             message: msg,
             reason: issues.some(issue => issue.code === 'invalid-display') ? 'display-mismatch' : 'code-unknown',
             issues,
         };
+        const rejectsDisplay = isTerminologyResponseRecord(opOutcome) && opOutcome.resourceType === 'OperationOutcome'
+            && issueValues.some((issue, index) => {
+                if (issues[index]?.code !== 'invalid-display' || !isTerminologyResponseRecord(issue)
+                    || (issue.severity !== 'error' && issue.severity !== 'warning' && issue.severity !== 'fatal')
+                    || !isTerminologyResponseRecord(issue.details) || !Array.isArray(issue.details.coding)) return false;
+                const codes = issue.details.coding.flatMap(coding => isTerminologyResponseRecord(coding)
+                    && coding.system === 'http://hl7.org/fhir/tools/CodeSystem/tx-issue-type'
+                    && typeof coding.code === 'string' ? [coding.code] : []);
+                return codes.length > 0 && codes.every(code => code === 'invalid-display');
+            });
+        return rejectsDisplay ? rejectedCodeSystemDisplayResult(result) : result;
     }
 
     return { valid: false, message: `Unknown code '${code}' in CodeSystem '${system}'` };

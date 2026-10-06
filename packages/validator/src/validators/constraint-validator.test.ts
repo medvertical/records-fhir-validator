@@ -526,7 +526,7 @@ describe('ConstraintValidator', () => {
     ]);
   });
 
-  it('does not apply choice-type dateTime casts to Period values', async () => {
+  it('fails a dateTime-cast invariant on a Period value, as the reference validator does', async () => {
     const validator = new ConstraintValidator();
 
     const issues = await validator.validate(
@@ -551,7 +551,31 @@ describe('ConstraintValidator', () => {
       'http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab',
     );
 
-    expect(issues.find(issue => issue.ruleId === 'us-core-1')).toBeUndefined();
+    // `$this as dateTime` is empty for a Period, so the comparison is empty
+    // too, and an invariant that is not true has failed.
+    expect(issues.find(issue => issue.ruleId === 'us-core-1')).toMatchObject({ severity: 'error' });
+  });
+
+  it('casts a concrete dateTime choice value with its FHIR type', async () => {
+    const validator = new ConstraintValidator();
+    const vitalSignsEffective = [{
+      path: 'Observation.effective[x]',
+      type: [{ code: 'dateTime' }, { code: 'Period' }],
+      constraint: [{
+        key: 'vs-1',
+        severity: 'error' as const,
+        human: 'if Observation.effective[x] is dateTime and has a value then that value shall be precise to the day',
+        expression: '($this as dateTime).toString().length() >= 8',
+      }],
+    }] as any;
+    const validate = (effectiveDateTime: string) => validator.validate(
+      { resourceType: 'Observation', id: 'temperature', effectiveDateTime },
+      vitalSignsEffective,
+      'http://hl7.org/fhir/StructureDefinition/bodytemp',
+    );
+
+    expect((await validate('2024-10-01T09:30:00Z')).find(issue => issue.ruleId === 'vs-1')).toBeUndefined();
+    expect((await validate('2024')).find(issue => issue.ruleId === 'vs-1')).toMatchObject({ severity: 'error' });
   });
 
   describe('PAT-1 constraint with empty backbone elements', () => {
@@ -824,7 +848,7 @@ describe('profile constraint severity', () => {
     expect(issue.code).toBe('profile-constraint-warning');
   });
 
-  it('keeps dom-6 advisory, which the reference validator also treats as advisory', async () => {
+  it('reports dom-6 as a warning, as the reference validator does', async () => {
     const { buildConstraintViolationIssue } = await import('./constraint-violation-issue');
     const issue = buildConstraintViolationIssue(
       { resourceType: 'Patient' } as never,
@@ -833,7 +857,7 @@ describe('profile constraint severity', () => {
       'http://example.org/p',
       'normal' as never,
     );
-    expect(issue.severity).toBe('info');
+    expect(issue.severity).toBe('warning');
     expect(issue.code).toBe('dom-6');
   });
 });

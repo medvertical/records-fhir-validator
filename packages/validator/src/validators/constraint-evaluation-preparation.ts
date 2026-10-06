@@ -5,6 +5,7 @@ import { resolveKnownConstraintOutcome } from './constraint-evaluation-outcome.j
 import type { ConstraintValidationState, FhirResource } from './constraint-validation-input.js';
 import { preprocessTypeLiterals, resolveTypeLiteralContext } from './fhirpath-type-preprocessor.js';
 import { evaluateSpecialisedRootConstraint } from './sd-fhirpath-executor.js';
+import { fixKnownInvariantExpression } from './fhirpath-expression-fixer.js';
 
 export type PreparedConstraintEvaluation =
   | { handled: true; issues: ValidationIssue[] }
@@ -59,9 +60,16 @@ export function prepareConstraintEvaluation({
 
   return {
     handled: false,
-    expression: preprocessTypeLiterals(
-      constraint.expression,
-      resolveTypeLiteralContext(resource, elementPath, elementType, state.fhirVersion),
+    expression: state.focusResource === null
+      ? fixKnownInvariantExpression(constraint.expression, constraint.key, state.fhirVersion)
+      : preprocessTypeLiterals(
+      fixKnownInvariantExpression(constraint.expression, constraint.key, state.fhirVersion),
+      {
+        ...resolveTypeLiteralContext(resource, elementPath, elementType, state.fhirVersion),
+        ...(state.focusResource ? { resourceType: state.focusResource.resourceType } : {}),
+        ...(state.focusResource !== undefined && state.rootResource
+          ? { rootResourceType: state.rootResource.resourceType } : {}),
+      },
     ),
   };
 }

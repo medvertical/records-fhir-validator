@@ -104,6 +104,7 @@ describe('ProfileExecutor choice path resolution', () => {
       'Medication.ingredient.item[x].coding',
       'R4',
       expect.anything(),
+      'Medication.ingredient[0].itemCodeableConcept.coding',
     );
   });
 });

@@ -10,7 +10,7 @@ import { ValueSetCache } from '../validators/valueset-cache.js';
 import { ValueSetValidator } from '../validators/valueset-validator.js';
 import type { FhirVersionFamily } from './sd-loader-version-utils.js';
 import { SnapshotGenerator } from './snapshot-generator.js';
-import { StructureDefinitionLoader } from './structure-definition-loader.js';
+import { StructureDefinitionLoader, type ProfileReferenceSource } from './structure-definition-loader.js';
 import type { RecordsValidatorConfig } from './validator-engine-config.js';
 
 export interface ValidatorCoreComponents {
@@ -50,7 +50,7 @@ export function createValidatorCoreRuntime(
   );
   const typeValidator = new TypeValidator();
   const terminologyCache = new ValueSetCache();
-  const valuesetValidator = new ValueSetValidator(terminologyCache);
+  const valuesetValidator = new ValueSetValidator(terminologyCache, undefined, config.terminologyPackageDirectories);
   const sdFHIRPathExecutor = new SDFHIRPathExecutor(terminologyCache);
   const terminologyResourceValidator = new TerminologyResourceValidator(terminologyCache);
   const elementRulesValidator = new ElementRulesValidator();
@@ -63,8 +63,12 @@ export function createValidatorCoreRuntime(
     sdFHIRPathExecutor,
   );
   const slicingValidator = new SlicingValidator();
-  slicingValidator.setTypeProfileResolver(async (url: string, fhirVersion: FhirVersionFamily = 'R4') => {
-    const structureDefinition = await sdLoader.loadProfile(url, fhirVersion);
+  slicingValidator.setTypeProfileResolver(async (
+    url: string,
+    fhirVersion: FhirVersionFamily = 'R4',
+    referencingProfile?: ProfileReferenceSource,
+  ) => {
+    const structureDefinition = await sdLoader.loadReferencedProfile(url, referencingProfile, fhirVersion);
     if (!structureDefinition) return null;
     if (structureDefinition.snapshot?.element?.length) return structureDefinition;
 

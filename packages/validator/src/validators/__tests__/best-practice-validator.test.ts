@@ -87,7 +87,7 @@ describe('validateBestPractices settings mapping', () => {
     name: [{ family: 'Tester' }],
   };
 
-  it('keeps the default information severity without settings', () => {
+  it('keeps best practices informational without settings', () => {
     const issues = validateBestPractices(validator, {
       resourceType: 'Patient',
       resource: narrativelessPatient,

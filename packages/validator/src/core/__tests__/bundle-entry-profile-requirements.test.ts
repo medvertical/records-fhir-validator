@@ -10,6 +10,7 @@ const child = { index: 0, resourceType: 'Device', entryResource: { resourceType:
 function bundleProfile(min: number, rules: SlicingDefinition['rules'], profileDiscriminator = true): StructureDefinition {
   return {
     resourceType: 'StructureDefinition', url: 'http://example.org/StructureDefinition/device-bundle', type: 'Bundle',
+    name: 'DeviceBundle', status: 'active', kind: 'resource', abstract: false,
     snapshot: { element: [
       { id: 'Bundle.entry', path: 'Bundle.entry', slicing: { rules, discriminator: [
         { type: 'type', path: 'resource' },
@@ -27,12 +28,12 @@ describe('Bundle entry profile requirements', () => {
     expect(getBundleEntryRequiredProfile(child, bundleProfile(0, rules))).toBeUndefined();
   });
 
-  it('retains the conformance check for a required profile slice', () => {
-    expect(getBundleEntryRequiredProfile(child, bundleProfile(1, 'open'))).toBe(deviceProfile);
+  it('leaves required profile-slice membership to actual conformance', () => {
+    expect(getBundleEntryRequiredProfile(child, bundleProfile(1, 'open'))).toBeUndefined();
   });
 
-  it('retains the profile requirement when no unmatched entry is allowed', () => {
-    expect(getBundleEntryRequiredProfile(child, bundleProfile(0, 'closed'))).toBe(deviceProfile);
+  it('leaves closed profile-slice nonmembers to slicing diagnostics', () => {
+    expect(getBundleEntryRequiredProfile(child, bundleProfile(0, 'closed'))).toBeUndefined();
   });
 
   it('retains a type-discriminated slice profile regardless of optionality', () => {

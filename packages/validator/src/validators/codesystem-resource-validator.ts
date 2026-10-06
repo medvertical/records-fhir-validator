@@ -8,7 +8,6 @@ import {
   getCachedCodeSystem,
   isAbsoluteUri,
   isHl7Url,
-  validateUrnUuid,
 } from './terminology-resource-utils.js';
 import { ValueSetCache } from './valueset-cache.js';
 
@@ -30,7 +29,6 @@ export function validateCodeSystemResource(
   const url = getString(codeSystem.url) ?? '';
   const hl7 = isHl7Url(url);
   return [
-    ...validateCodeSystemUuid(url, 'CodeSystem.url', 'CodeSystem'),
     ...validateCodeSystemCaseSensitive(codeSystem, 'CodeSystem', 'CodeSystem', hl7),
     ...validateCodeSystemSupplementContent(codeSystem),
     ...validateCompleteCodeSystem(codeSystem),
@@ -69,7 +67,6 @@ export function validateContainedCodeSystemResource(
   }
 
   issues.push(
-    ...validateCodeSystemUuid(url, `${pathPrefix}.url`, 'ValueSet'),
     ...validateCodeSystemCaseSensitive(codeSystem, pathPrefix, 'ValueSet', hl7),
     ...validateHl7ConceptDefinitions(
       codeSystem,
@@ -79,24 +76,6 @@ export function validateContainedCodeSystemResource(
     ),
   );
   return issues;
-}
-
-function validateCodeSystemUuid(
-  url: string,
-  path: string,
-  resourceType: string,
-): ValidationIssue[] {
-  if (!url.startsWith('urn:uuid:')) return [];
-  const { valid, uuid } = validateUrnUuid(url);
-  if (valid) return [];
-
-  return [createValidationIssue({
-    code: 'tx-codesystem-url-invalid-uuid',
-    path,
-    resourceType,
-    customMessage: `UUIDs must be valid and lowercase (${uuid})`,
-    severityOverride: 'error',
-  })];
 }
 
 function validateCodeSystemCaseSensitive(

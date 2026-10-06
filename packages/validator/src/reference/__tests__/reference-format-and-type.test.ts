@@ -280,3 +280,27 @@ describe('Reference parsing', () => {
     });
   });
 });
+
+describe('relative references with a path before ResourceType/id', () => {
+  it('reads the type and id from the last segments, as the reference validator does', () => {
+    expect(parseReference('/fhir/Patient/5e55/_history/1')).toMatchObject({
+      isValid: true, referenceType: 'relative', resourceType: 'Patient', resourceId: '5e55', version: '1',
+      originalReference: '/fhir/Patient/5e55/_history/1',
+    });
+    expect(parseReference('/fhir/patient/5e55')).toMatchObject({ isValid: false });
+    expect(validateReferenceFormat('/fhir/Patient/5e55/_history/1')).toMatchObject({
+      isValid: true, referenceType: 'relative', resourceType: 'Patient', resourceId: '5e55', version: '1', issues: [],
+    });
+    expect(validateReferenceFormat('/fhir/Unknownthing/5e55').isValid).toBe(false);
+  });
+});
+
+
+// SMART Health Cards name Bundle entries `resource:0` and reference them so.
+describe('references to absolute URIs of other schemes', () => {
+  it('accepts a lower-case scheme the reference validator reads as absolute, without a type', () => {
+    expect(validateReferenceFormat('resource:0')).toMatchObject({ isValid: true, referenceType: 'absolute', issues: [] });
+    expect(parseReference('resource:0')).toMatchObject({ isValid: true, referenceType: 'absolute', resourceType: null });
+    expect(validateReferenceFormat('Patient:123').isValid).toBe(false);
+  });
+});

@@ -1,0 +1,1188 @@
+{
+  "schema": "records.validator.release-followup.v1",
+  "generatedAt": "2026-10-05T10:21:35.886427+00:00",
+  "artifactRole": "measured-follow-up; final current-tree comparison and export audit recorded separately",
+  "acceptanceStatus": "follow-up-measured-with-disclosed-raw-comparison-differences",
+  "noGlobalOrWholeResource100ParityClaim": true,
+  "newReleaseExceptionsApproved": false,
+  "priorApprovedFiniteAcceptance": {
+    "path": "conformance-results/validator-release-acceptance-2026-10-05-g2.json",
+    "bytes": 39912,
+    "sha256": "072e8789747576dbb7fb692b4fa5029784992772455f614bd9fa353b35bce620"
+  },
+  "authorization": "User machen authorizes the single Laboratory metadata correction and executing the three terminology comparisons; earlier Medication exception remains the sole approved release exception.",
+  "versions": {
+    "validator": "0.8.0",
+    "validationTypes": "0.1.13"
+  },
+  "runtimeSha256": "642b12ac9bde728c4fb90f9680c15004e4247a85bbc06175e25b9d91c57cb549",
+  "measurementsKeepTheirActualEpochs": true,
+  "MII442": {
+    "summary": {
+      "fixtures": 442,
+      "clean": 442,
+      "noisy": 0,
+      "precisionPct": 100,
+      "totalFalsePositives": 0,
+      "excluded": 110
+    },
+    "measurement": {
+      "receipt": {
+        "path": ".cache/review/parity-plan/loop104-mii442-g4-provenance.json",
+        "bytes": 1277,
+        "sha256": "29579bc24d7290284d55a6f70c1adeafab7ca914d807f72c7e4eeb897c5bcbd0"
+      },
+      "sourceSha256": "067988830c13d9feecbf8eee48cb75640d394449510b72df26f29089ef257eb1",
+      "runtimeSha256": "642b12ac9bde728c4fb90f9680c15004e4247a85bbc06175e25b9d91c57cb549",
+      "startedAt": "2026-10-05T10:15:19.069Z",
+      "finishedAt": "2026-10-05T10:20:24.409Z",
+      "exitCode": 0,
+      "command": [
+        "env",
+        "TSX_TSCONFIG_PATH=/private/tmp/loop67-built-tsconfig.json",
+        "node_modules/.bin/tsx",
+        "--tsconfig",
+        "/private/tmp/loop67-built-tsconfig.json",
+        "/private/tmp/loop104-mii-labor-observer-g4.mts"
+      ],
+      "log": {
+        "path": ".cache/review/parity-plan/loop104-mii442-g4.log",
+        "bytes": 60271,
+        "sha256": "d7d9a6c83f447ec981e0929bcb918da653a8128d85fc6b441d63da66a5e57ec4"
+      }
+    },
+    "report": {
+      "path": "quality-reports/mii-2026-precision-loop104-g4-2026-10-05.json",
+      "bytes": 150257,
+      "sha256": "da9bf5a405351c40045f6989cee0fadcfeac0e515c308557054607b5c135370b"
+    },
+    "corpusRevisionReceipt": {
+      "path": "/private/tmp/loop104-root-adoption/receipt.json",
+      "bytes": 188325,
+      "sha256": "b479362193c71c196e58a5303b5bfd3294eeb127061c8aa495b30fd6e5ad4574"
+    },
+    "additionalRevision": "Only the duplicated businessversion in Laboratory /meta/profile/0; all other551 FHIR files unchanged from previous revision.",
+    "laborControls": {
+      "exactly442PublicCalls": true,
+      "oneTargetCall": true,
+      "sourceRuntimeStable": true,
+      "inputHashesUnchangedDuringRun": true,
+      "actualOwnWholeDefinitionSeen": true,
+      "rawCompletenessCaptured": true,
+      "noObserverErrors": true,
+      "facadeRestored": true
+    },
+    "laborRawIssueCount": 11,
+    "laborIncomplete": [
+      {
+        "code": "terminology-codesystem-unverified",
+        "path": "ServiceRequest.code.coding[0].code",
+        "severity": "information",
+        "details": {
+          "code": "GroßesBlutbild",
+          "system": "http://example.org/fhir/CodeSystem/LabTests",
+          "reason": "local-code-system-unverified",
+          "validationComplete": false,
+          "validationStatus": "incomplete",
+          "fieldPath": "ServiceRequest.code.coding[0].code",
+          "resourceType": "ServiceRequest",
+          "validationType": "terminology-validation"
+        }
+      }
+    ],
+    "fullTerminologyOrOracleParityClaimed": false,
+    "policy": "Unchanged clean-corpus example URL allowance, exclusions110, denominator442, minimum440 and 99% threshold."
+  },
+  "threeFormerSkips": {
+    "measurement": {
+      "receipt": {
+        "path": ".cache/review/parity-plan/loop104-default3-g6-provenance.json",
+        "bytes": 2324,
+        "sha256": "49ef131367140b49177bba4a4ec1e53ab4b6bb848527a61032f63edbe2a0da0e"
+      },
+      "sourceSha256": "067988830c13d9feecbf8eee48cb75640d394449510b72df26f29089ef257eb1",
+      "runtimeSha256": "642b12ac9bde728c4fb90f9680c15004e4247a85bbc06175e25b9d91c57cb549",
+      "startedAt": "2026-10-05T10:15:22.071Z",
+      "finishedAt": "2026-10-05T10:15:55.774Z",
+      "exitCode": 0,
+      "command": [
+        "env",
+        "TSX_TSCONFIG_PATH=/private/tmp/loop67-built-tsconfig.json",
+        "node_modules/.bin/tsx",
+        "--tsconfig",
+        "/private/tmp/loop67-built-tsconfig.json",
+        "/private/tmp/loop104-default3-observer-g6.mts",
+        "--skip-download",
+        "--test-cases-ref",
+        "8923095fc5e3750025f7dd71988c9e89083b1487",
+        "--test-cases-lock",
+        ".cache/review/parity-plan/loop39-vendored-content-lock.json",
+        "--test-cases-lock-sha256",
+        "f760ff14d23db8405a0cc30fc5e57b1545bb1b70dc8fee16abbef6f8ed63f904",
+        "--tx-server",
+        "none",
+        "--fhir-version",
+        "R4",
+        "--input-format",
+        "json",
+        "--terminology-import",
+        ".cache/review/parity-plan/loop93-series/loinc-named-inventory-g2/import-manifest.json",
+        "--terminology-import",
+        ".cache/review/parity-plan/loop92-series/snomed-named-inventory-g1/import-manifest.json",
+        "--terminology-default-version",
+        "http://snomed.info/sct|http://snomed.info/sct/900000000000207008/version/20250201",
+        "--terminology-default-case",
+        "uk-msg",
+        "--terminology-default-case",
+        "no.gastronet",
+        "--terminology-default-case",
+        "no.gastronet.message-limit",
+        "--only-terminology-default-cases",
+        "--output-file",
+        ".cache/review/parity-plan/loop104-default3-g6.json"
+      ],
+      "log": {
+        "path": ".cache/review/parity-plan/loop104-default3-g6.log",
+        "bytes": 2349,
+        "sha256": "396a3b2774a15618717275eed8784253a7c1e861ac1a0cb962995172b18081f1"
+      }
+    },
+    "report": {
+      "path": ".cache/review/parity-plan/loop104-default3-g6.json",
+      "bytes": 239970,
+      "sha256": "707fcc7c47427db7961630b1187697c614f20cb7ddb5d893625275a53e943f9a"
+    },
+    "controls": {
+      "actual3Captured": true,
+      "sourceRuntimeStable": true,
+      "inputFilesUnchanged": true,
+      "publicFacadeRestored": true,
+      "noObserverErrors": true
+    },
+    "cases": [
+      {
+        "caseId": "uk-msg",
+        "status": "pass",
+        "score": 0.817857142857143,
+        "rawIssueCounts": {
+          "error": 16,
+          "warning": 1,
+          "info": 11
+        },
+        "incompleteIssueOccurrences": 8,
+        "diff": {
+          "score": 0.817857142857143,
+          "errorCountMatch": true,
+          "warningCountMatch": false,
+          "details": {
+            "recordsErrors": 4,
+            "javaErrors": 4,
+            "recordsWarnings": 1,
+            "javaWarnings": 2,
+            "recordsInfos": 29,
+            "javaInfos": 10,
+            "pathOverlap": 0.5714285714285714,
+            "matchedPaths": [
+              "entry.resource.medication.coding.display",
+              "entry.resource.medication.coding.code",
+              "entry.resource.medication.coding.display",
+              "entry.resource.medication.coding.code"
+            ],
+            "unmatchedRecordsPaths": [
+              "entry.resource.event.system"
+            ],
+            "unmatchedJavaPaths": [
+              "identifier",
+              "entry.resource.code.coding.system"
+            ],
+            "categoryOverlap": 0.8333333333333334,
+            "matchedCategories": [
+              "not-found",
+              "invalid",
+              "invalid",
+              "invalid",
+              "invalid"
+            ],
+            "unmatchedRecordsCategories": [],
+            "unmatchedJavaCategories": [
+              "invalid"
+            ]
+          }
+        },
+        "terminologyDefaults": {
+          "mode": "explicit-reference-edition",
+          "versions": {
+            "http://snomed.info/sct": "http://snomed.info/sct/900000000000207008/version/20250201"
+          },
+          "referenceOutcomeSha256": "6f0a82957cd00d163e403683f37f25e5fa44d2572c7585429ab6b5ae849028ae",
+          "registeredImports": [
+            {
+              "fhirVersion": "R4",
+              "manifestPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/loop92-series/snomed-named-inventory-g1/import-manifest.json",
+              "manifestSha256": "89b3589f1b36ab754d985f468d9f23cc29486468e3b4e33ef78f9f00bbe15b8d",
+              "sourcePath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/loop85-series/dataset-sct-g1/sct_intl_20250201.cache",
+              "sourceSha256": "d2418d4599c5b7a899bd8bcb51076a753d5514d4bbe24be333fb439a911edd2e",
+              "sourceBytes": 861602379,
+              "outputPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/loop92-series/snomed-named-inventory-g1/CodeSystem-snomed.json",
+              "outputSha256": "d9b78ada19814a35409fa2db7021936a34397c7e00197c0338c28283b7033b3b",
+              "outputBytes": 39381529,
+              "system": "http://snomed.info/sct",
+              "businessVersion": "http://snomed.info/sct/900000000000207008/version/20250201",
+              "content": "fragment",
+              "projection": {
+                "conceptCount": 519624,
+                "designationLanguages": [
+                  "en"
+                ],
+                "businessVersion": "http://snomed.info/sct/900000000000207008/version/20250201",
+                "formatVersion": "16",
+                "edition": "900000000000207008",
+                "versionDate": "20250201",
+                "datasetConceptCount": 519624,
+                "projectedConceptCount": 519624,
+                "content": "fragment",
+                "completeNamedCodeInventory": true,
+                "descriptionsCompleteForIncludedCodes": false,
+                "propertiesCompleteForIncludedCodes": false,
+                "relationshipsCompleteForIncludedCodes": false,
+                "primaryDisplayPolicy": "no implicit default display",
+                "unsupportedOperations": [
+                  "postcoordination",
+                  "ECL",
+                  "provider filter operators",
+                  "expansion"
+                ],
+                "sourceDefaultLanguageReference": 51756144,
+                "detailConceptCount": 91,
+                "detailDescriptionsComplete": true,
+                "detailPropertiesComplete": false,
+                "detailRelationshipsComplete": false
+              },
+              "contract": "records.fhirsmith.terminology-projection.v2",
+              "selection": {
+                "mode": "all-named-codes",
+                "codesSha256": null,
+                "codeCount": null,
+                "details": {
+                  "mode": "code-list",
+                  "codes": [
+                    "10291000132101",
+                    "10301000132102",
+                    "10311000132100",
+                    "108537001",
+                    "109081006",
+                    "112144000",
+                    "1201005",
+                    "126212009",
+                    "1419004",
+                    "158965000",
+                    "161713000",
+                    "161714006",
+                    "16217701000119102",
+                    "17621005",
+                    "189009",
+                    "237599002",
+                    "246206008",
+                    "248152002",
+                    "248986005",
+                    "250774007",
+                    "25246002",
+                    "252829002",
+                    "255604002",
+                    "258773002",
+                    "264358009",
+                    "264372000",
+                    "265132005",
+                    "26643006",
+                    "27113001",
+                    "276885007",
+                    "287903004",
+                    "288565001",
+                    "292360004",
+                    "292954005",
+                    "300577008",
+                    "322236009",
+                    "32485007",
+                    "32713005",
+                    "329652003",
+                    "34206005",
+                    "36989005",
+                    "371525003",
+                    "371531000",
+                    "3718001",
+                    "372756006",
+                    "373066001",
+                    "38266002",
+                    "38341003",
+                    "387458008",
+                    "394609007",
+                    "40425004",
+                    "409002",
+                    "419891008",
+                    "422735006",
+                    "4241000179101",
+                    "427081008",
+                    "428673006",
+                    "437009",
+                    "442476006",
+                    "445872007",
+                    "446745002",
+                    "459231000124102",
+                    "46224007",
+                    "48546005",
+                    "52910006",
+                    "5913000",
+                    "6736007",
+                    "712510007",
+                    "71388002",
+                    "714081009",
+                    "72098002",
+                    "721912009",
+                    "722172003",
+                    "722446000",
+                    "722818007",
+                    "723961002",
+                    "73761001",
+                    "767525000",
+                    "77176002",
+                    "7947003",
+                    "80943009",
+                    "81464008",
+                    "840535000",
+                    "840539006",
+                    "90560007",
+                    "911003",
+                    "91935009",
+                    "93880001",
+                    "96067005",
+                    "96309000",
+                    "9846003"
+                  ],
+                  "codesSha256": "6cea7411504c391e76d5365ce9ab34ffc088b61275ad8e860a2f125866756468",
+                  "codeCount": 91
+                }
+              }
+            }
+          ],
+          "runtimeScopeKey": "conformance-terminology-default:13fcb7b37625a419a6a0d5f9526db124396b119b85da99110df363443ced0f6d:"
+        }
+      },
+      {
+        "caseId": "no.gastronet",
+        "status": "pass",
+        "score": 0.7959153318077804,
+        "rawIssueCounts": {
+          "error": 19,
+          "warning": 4,
+          "info": 7
+        },
+        "incompleteIssueOccurrences": 14,
+        "diff": {
+          "score": 0.7959153318077804,
+          "errorCountMatch": false,
+          "warningCountMatch": false,
+          "details": {
+            "recordsErrors": 19,
+            "javaErrors": 18,
+            "recordsWarnings": 4,
+            "javaWarnings": 1,
+            "recordsInfos": 54,
+            "javaInfos": 21,
+            "pathOverlap": 0.8260869565217391,
+            "matchedPaths": [
+              "entry.resource.performer.function",
+              "entry.resource.performer.function",
+              "entry.resource.extension.value.coding.code",
+              "entry.resource.extension",
+              "entry.resource.category.coding.display",
+              "entry.resource.performer.function.coding.code",
+              "entry.resource.performer.function.coding.code",
+              "entry.resource.report",
+              "entry.resource.result",
+              "entry.resource.result",
+              "entry.resource.result",
+              "entry.resource.component.code.coding.code",
+              "entry.resource.component.code.coding.code",
+              "entry.resource.component.code.coding.code",
+              "entry.resource.component.code.coding.code",
+              "entry.resource.code.coding.code",
+              "entry",
+              "entry",
+              "entry.resource"
+            ],
+            "unmatchedRecordsPaths": [
+              "entry.resource.meta.profile",
+              "entry.resource.meta.profile",
+              "entry.resource.meta.profile",
+              "entry.resource.meta.profile"
+            ],
+            "unmatchedJavaPaths": [],
+            "categoryOverlap": 0.8260869565217391,
+            "matchedCategories": [
+              "structure",
+              "structure",
+              "invalid",
+              "invalid",
+              "invalid",
+              "invalid",
+              "invalid",
+              "invalid",
+              "invalid",
+              "structure",
+              "structure",
+              "structure",
+              "structure",
+              "invalid",
+              "invalid",
+              "invalid",
+              "invalid",
+              "invalid",
+              "structure"
+            ],
+            "unmatchedRecordsCategories": [
+              "structure",
+              "structure",
+              "structure",
+              "structure"
+            ],
+            "unmatchedJavaCategories": []
+          }
+        },
+        "terminologyDefaults": {
+          "mode": "explicit-reference-edition",
+          "versions": {
+            "http://snomed.info/sct": "http://snomed.info/sct/900000000000207008/version/20250201"
+          },
+          "referenceOutcomeSha256": "78fb206f26b2447b7c2e4f247eebb093257a534236d44768f30752c579430c80",
+          "registeredImports": [
+            {
+              "fhirVersion": "R4",
+              "manifestPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/loop92-series/snomed-named-inventory-g1/import-manifest.json",
+              "manifestSha256": "89b3589f1b36ab754d985f468d9f23cc29486468e3b4e33ef78f9f00bbe15b8d",
+              "sourcePath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/loop85-series/dataset-sct-g1/sct_intl_20250201.cache",
+              "sourceSha256": "d2418d4599c5b7a899bd8bcb51076a753d5514d4bbe24be333fb439a911edd2e",
+              "sourceBytes": 861602379,
+              "outputPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/loop92-series/snomed-named-inventory-g1/CodeSystem-snomed.json",
+              "outputSha256": "d9b78ada19814a35409fa2db7021936a34397c7e00197c0338c28283b7033b3b",
+              "outputBytes": 39381529,
+              "system": "http://snomed.info/sct",
+              "businessVersion": "http://snomed.info/sct/900000000000207008/version/20250201",
+              "content": "fragment",
+              "projection": {
+                "conceptCount": 519624,
+                "designationLanguages": [
+                  "en"
+                ],
+                "businessVersion": "http://snomed.info/sct/900000000000207008/version/20250201",
+                "formatVersion": "16",
+                "edition": "900000000000207008",
+                "versionDate": "20250201",
+                "datasetConceptCount": 519624,
+                "projectedConceptCount": 519624,
+                "content": "fragment",
+                "completeNamedCodeInventory": true,
+                "descriptionsCompleteForIncludedCodes": false,
+                "propertiesCompleteForIncludedCodes": false,
+                "relationshipsCompleteForIncludedCodes": false,
+                "primaryDisplayPolicy": "no implicit default display",
+                "unsupportedOperations": [
+                  "postcoordination",
+                  "ECL",
+                  "provider filter operators",
+                  "expansion"
+                ],
+                "sourceDefaultLanguageReference": 51756144,
+                "detailConceptCount": 91,
+                "detailDescriptionsComplete": true,
+                "detailPropertiesComplete": false,
+                "detailRelationshipsComplete": false
+              },
+              "contract": "records.fhirsmith.terminology-projection.v2",
+              "selection": {
+                "mode": "all-named-codes",
+                "codesSha256": null,
+                "codeCount": null,
+                "details": {
+                  "mode": "code-list",
+                  "codes": [
+                    "10291000132101",
+                    "10301000132102",
+                    "10311000132100",
+                    "108537001",
+                    "109081006",
+                    "112144000",
+                    "1201005",
+                    "126212009",
+                    "1419004",
+                    "158965000",
+                    "161713000",
+                    "161714006",
+                    "16217701000119102",
+                    "17621005",
+                    "189009",
+                    "237599002",
+                    "246206008",
+                    "248152002",
+                    "248986005",
+                    "250774007",
+                    "25246002",
+                    "252829002",
+                    "255604002",
+                    "258773002",
+                    "264358009",
+                    "264372000",
+                    "265132005",
+                    "26643006",
+                    "27113001",
+                    "276885007",
+                    "287903004",
+                    "288565001",
+                    "292360004",
+                    "292954005",
+                    "300577008",
+                    "322236009",
+                    "32485007",
+                    "32713005",
+                    "329652003",
+                    "34206005",
+                    "36989005",
+                    "371525003",
+                    "371531000",
+                    "3718001",
+                    "372756006",
+                    "373066001",
+                    "38266002",
+                    "38341003",
+                    "387458008",
+                    "394609007",
+                    "40425004",
+                    "409002",
+                    "419891008",
+                    "422735006",
+                    "4241000179101",
+                    "427081008",
+                    "428673006",
+                    "437009",
+                    "442476006",
+                    "445872007",
+                    "446745002",
+                    "459231000124102",
+                    "46224007",
+                    "48546005",
+                    "52910006",
+                    "5913000",
+                    "6736007",
+                    "712510007",
+                    "71388002",
+                    "714081009",
+                    "72098002",
+                    "721912009",
+                    "722172003",
+                    "722446000",
+                    "722818007",
+                    "723961002",
+                    "73761001",
+                    "767525000",
+                    "77176002",
+                    "7947003",
+                    "80943009",
+                    "81464008",
+                    "840535000",
+                    "840539006",
+                    "90560007",
+                    "911003",
+                    "91935009",
+                    "93880001",
+                    "96067005",
+                    "96309000",
+                    "9846003"
+                  ],
+                  "codesSha256": "6cea7411504c391e76d5365ce9ab34ffc088b61275ad8e860a2f125866756468",
+                  "codeCount": 91
+                }
+              }
+            }
+          ],
+          "runtimeScopeKey": "conformance-terminology-default:aaf159296f3cd1b4a9186556bc23ad035b2117b0480df6aaefea9a87f5e459d5:"
+        }
+      },
+      {
+        "caseId": "no.gastronet.message-limit",
+        "status": "fail",
+        "score": 0.22211956521739132,
+        "rawIssueCounts": {
+          "error": 19,
+          "warning": 4,
+          "info": 7
+        },
+        "incompleteIssueOccurrences": 14,
+        "diff": {
+          "score": 0.22211956521739132,
+          "errorCountMatch": false,
+          "warningCountMatch": false,
+          "details": {
+            "recordsErrors": 19,
+            "javaErrors": 3,
+            "recordsWarnings": 4,
+            "javaWarnings": 1,
+            "recordsInfos": 54,
+            "javaInfos": 1,
+            "pathOverlap": 0.17391304347826086,
+            "matchedPaths": [
+              "entry.resource.extension.value.coding.code",
+              "entry.resource.category.coding.display",
+              "entry.resource.performer.function.coding.code",
+              "entry"
+            ],
+            "unmatchedRecordsPaths": [
+              "entry",
+              "entry.resource.performer.function",
+              "entry.resource.performer.function",
+              "entry.resource.extension",
+              "entry.resource.performer.function.coding.code",
+              "entry.resource.report",
+              "entry.resource.result",
+              "entry.resource.result",
+              "entry.resource.result",
+              "entry.resource.component.code.coding.code",
+              "entry.resource.component.code.coding.code",
+              "entry.resource.component.code.coding.code",
+              "entry.resource.component.code.coding.code",
+              "entry.resource.code.coding.code",
+              "entry.resource.meta.profile",
+              "entry.resource.meta.profile",
+              "entry.resource.meta.profile",
+              "entry.resource.meta.profile",
+              "entry.resource"
+            ],
+            "unmatchedJavaPaths": [],
+            "categoryOverlap": 0.125,
+            "matchedCategories": [
+              "invalid",
+              "invalid",
+              "invalid"
+            ],
+            "unmatchedRecordsCategories": [
+              "structure",
+              "structure",
+              "invalid",
+              "invalid",
+              "invalid",
+              "invalid",
+              "structure",
+              "structure",
+              "structure",
+              "structure",
+              "invalid",
+              "invalid",
+              "invalid",
+              "invalid",
+              "invalid",
+              "structure",
+              "structure",
+              "structure",
+              "structure",
+              "structure"
+            ],
+            "unmatchedJavaCategories": [
+              "processing"
+            ]
+          }
+        },
+        "terminologyDefaults": {
+          "mode": "explicit-reference-edition",
+          "versions": {
+            "http://snomed.info/sct": "http://snomed.info/sct/900000000000207008/version/20250201"
+          },
+          "referenceOutcomeSha256": "abd6915a2dd5964542dcfd7d09d92ceb58426e1e6044317faf2b842aceeff7c0",
+          "registeredImports": [
+            {
+              "fhirVersion": "R4",
+              "manifestPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/loop92-series/snomed-named-inventory-g1/import-manifest.json",
+              "manifestSha256": "89b3589f1b36ab754d985f468d9f23cc29486468e3b4e33ef78f9f00bbe15b8d",
+              "sourcePath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/loop85-series/dataset-sct-g1/sct_intl_20250201.cache",
+              "sourceSha256": "d2418d4599c5b7a899bd8bcb51076a753d5514d4bbe24be333fb439a911edd2e",
+              "sourceBytes": 861602379,
+              "outputPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/loop92-series/snomed-named-inventory-g1/CodeSystem-snomed.json",
+              "outputSha256": "d9b78ada19814a35409fa2db7021936a34397c7e00197c0338c28283b7033b3b",
+              "outputBytes": 39381529,
+              "system": "http://snomed.info/sct",
+              "businessVersion": "http://snomed.info/sct/900000000000207008/version/20250201",
+              "content": "fragment",
+              "projection": {
+                "conceptCount": 519624,
+                "designationLanguages": [
+                  "en"
+                ],
+                "businessVersion": "http://snomed.info/sct/900000000000207008/version/20250201",
+                "formatVersion": "16",
+                "edition": "900000000000207008",
+                "versionDate": "20250201",
+                "datasetConceptCount": 519624,
+                "projectedConceptCount": 519624,
+                "content": "fragment",
+                "completeNamedCodeInventory": true,
+                "descriptionsCompleteForIncludedCodes": false,
+                "propertiesCompleteForIncludedCodes": false,
+                "relationshipsCompleteForIncludedCodes": false,
+                "primaryDisplayPolicy": "no implicit default display",
+                "unsupportedOperations": [
+                  "postcoordination",
+                  "ECL",
+                  "provider filter operators",
+                  "expansion"
+                ],
+                "sourceDefaultLanguageReference": 51756144,
+                "detailConceptCount": 91,
+                "detailDescriptionsComplete": true,
+                "detailPropertiesComplete": false,
+                "detailRelationshipsComplete": false
+              },
+              "contract": "records.fhirsmith.terminology-projection.v2",
+              "selection": {
+                "mode": "all-named-codes",
+                "codesSha256": null,
+                "codeCount": null,
+                "details": {
+                  "mode": "code-list",
+                  "codes": [
+                    "10291000132101",
+                    "10301000132102",
+                    "10311000132100",
+                    "108537001",
+                    "109081006",
+                    "112144000",
+                    "1201005",
+                    "126212009",
+                    "1419004",
+                    "158965000",
+                    "161713000",
+                    "161714006",
+                    "16217701000119102",
+                    "17621005",
+                    "189009",
+                    "237599002",
+                    "246206008",
+                    "248152002",
+                    "248986005",
+                    "250774007",
+                    "25246002",
+                    "252829002",
+                    "255604002",
+                    "258773002",
+                    "264358009",
+                    "264372000",
+                    "265132005",
+                    "26643006",
+                    "27113001",
+                    "276885007",
+                    "287903004",
+                    "288565001",
+                    "292360004",
+                    "292954005",
+                    "300577008",
+                    "322236009",
+                    "32485007",
+                    "32713005",
+                    "329652003",
+                    "34206005",
+                    "36989005",
+                    "371525003",
+                    "371531000",
+                    "3718001",
+                    "372756006",
+                    "373066001",
+                    "38266002",
+                    "38341003",
+                    "387458008",
+                    "394609007",
+                    "40425004",
+                    "409002",
+                    "419891008",
+                    "422735006",
+                    "4241000179101",
+                    "427081008",
+                    "428673006",
+                    "437009",
+                    "442476006",
+                    "445872007",
+                    "446745002",
+                    "459231000124102",
+                    "46224007",
+                    "48546005",
+                    "52910006",
+                    "5913000",
+                    "6736007",
+                    "712510007",
+                    "71388002",
+                    "714081009",
+                    "72098002",
+                    "721912009",
+                    "722172003",
+                    "722446000",
+                    "722818007",
+                    "723961002",
+                    "73761001",
+                    "767525000",
+                    "77176002",
+                    "7947003",
+                    "80943009",
+                    "81464008",
+                    "840535000",
+                    "840539006",
+                    "90560007",
+                    "911003",
+                    "91935009",
+                    "93880001",
+                    "96067005",
+                    "96309000",
+                    "9846003"
+                  ],
+                  "codesSha256": "6cea7411504c391e76d5365ce9ab34ffc088b61275ad8e860a2f125866756468",
+                  "codeCount": 91
+                }
+              }
+            }
+          ],
+          "runtimeScopeKey": "conformance-terminology-default:4d68f238c9add6f7fb6d4d3967bc8f9d138c8fdb21d4c9947f94dade515ee12c:"
+        },
+        "referenceOutputBoundary": {
+          "kind": "reference-cli-presentation",
+          "manifestTags": [
+            "fhir-validator-cli"
+          ],
+          "options": {
+            "max-validation-messages": 5
+          },
+          "optionsAppliedToRecords": false
+        }
+      }
+    ],
+    "originalInputsAndCodingVersionsUnchanged": true,
+    "context": "Verified named SNOMED International20250201 used only as explicit optional default for these three runtime scopes. Concrete baseline assertions establish this context, not a global historical terminology default.",
+    "rawResultsPreserved": true,
+    "rootPrefixMatcherQualification": "Path overlap permits root and prefix matches; unmatchedJavaPaths=[] alone is not one-to-one issue parity."
+  },
+  "genuineCorrections": [
+    "Own legacy snapshot datatype slice IDs preserve source definitions and real maximum rules.",
+    "Reference .code.coding discriminator proofs preserve own snapshot, source/FHIR/version, occurrence isolation and unknown alternatives.",
+    "Exact-edition owned named-code rejections remain negative in simple ValueSet bindings; filters/imports/edition alternatives remain unknown.",
+    "Embedded extension walks switch declaration, lookup and FHIRPath context together at proved Resource slots; container declarations do not admit child extensions. Missing/kind/abstract/version/FHIR/slot authority remains incomplete, universal and modifier checks remain active.",
+    "Conformance Choice-path normalization is symmetric. Existing root/prefix matching, comparison formula and70% threshold remain; CLI message limits are disclosed metadata and never truncate Records output."
+  ],
+  "engineering": {
+    "wholeValidatorSuite": {
+      "passed": 6688,
+      "skipped": 4,
+      "total": 6692,
+      "proof": {
+        "receipt": {
+          "path": ".cache/review/parity-plan/loop104-validator-suite-g7-provenance.json",
+          "bytes": 1175,
+          "sha256": "09ed73a807f78f974760307c8bc9bf461e8d0b518e7764e0dd3dbec5d133806d"
+        },
+        "sourceSha256": "067988830c13d9feecbf8eee48cb75640d394449510b72df26f29089ef257eb1",
+        "runtimeSha256": "642b12ac9bde728c4fb90f9680c15004e4247a85bbc06175e25b9d91c57cb549",
+        "startedAt": "2026-10-05T10:15:21.186Z",
+        "finishedAt": "2026-10-05T10:20:24.013Z",
+        "exitCode": 0,
+        "command": [
+          "npm",
+          "run",
+          "test:validator",
+          "--",
+          "--bail=1",
+          "--reporter=dot",
+          "--silent=true"
+        ],
+        "log": {
+          "path": ".cache/review/parity-plan/loop104-validator-suite-g7.log",
+          "bytes": 14932,
+          "sha256": "52d0dbc7bc6985e285ba558f6e635ccf18fe566f535ad8ae81a3d1099eddd4ad"
+        }
+      }
+    },
+    "sourceChecks": {
+      "passedUniqueIds": [
+        "architecture:artifacts",
+        "architecture:boundaries",
+        "architecture:client-layers",
+        "architecture:composition",
+        "architecture:data-access",
+        "architecture:hotspots",
+        "architecture:layers",
+        "architecture:server-entrypoints",
+        "architecture:validator-exports",
+        "architecture:validator-mirror",
+        "check:esm-import-extensions",
+        "check:hardcoded-fhir-urls",
+        "check:mock-gating",
+        "check:quality-rule-pack-lock",
+        "check:validator-version-bump",
+        "deps:check",
+        "lint:ratchet",
+        "ops:deployment-templates:check",
+        "oss:audit-validator",
+        "oss:evidence:check",
+        "release:check-render-blueprint",
+        "release:check-vercel-config",
+        "repo:hygiene",
+        "runtime:dependencies:check",
+        "security:all",
+        "size:check",
+        "test:hygiene",
+        "test:type-integrity",
+        "test:workflow-policy",
+        "typecheck"
+      ],
+      "reports": [
+        {
+          "path": ".cache/review/parity-plan/loop104-checks-source-g7-results.json",
+          "bytes": 11333,
+          "sha256": "ed38d630bca44defae2d13d67aeee439fb3acba66e2b9a4b07ad06a297086502"
+        },
+        {
+          "path": ".cache/review/parity-plan/loop104-checks-source-g8-results.json",
+          "bytes": 1468,
+          "sha256": "c119f715ba789747d44d8d260e1843c662c529e0ec11f0b43e5aecb647458912"
+        }
+      ],
+      "qualification": "All30 Source-phase check IDs passed on stable Source f0818bd5, with lint limited to all changed runtime/harness files after the earlier repository-wide pass. Validator dist transitioned from8a11563 to519c7ff9 during the separate paired build; this Source phase is not a stable-runtime measurement. Built checks and actual-dist comparisons have separate stable-runtime receipts. The final demand guard changes only2 files; affected size/lint/typecheck/dependency checks passed again on Source06798883, stable pre-build Runtime519c7ff9. Other Source checks retain original f0818bd5 epochs; final whole suite and built comparisons use Runtime642b12ac."
+    },
+    "builtPackageChecks": {
+      "results": [
+        {
+          "id": "architecture:esm-declarations",
+          "phase": "built-package",
+          "status": "passed",
+          "exitCode": 0,
+          "durationMs": 339
+        },
+        {
+          "id": "test:package-consumer",
+          "phase": "built-package",
+          "status": "passed",
+          "exitCode": 0,
+          "durationMs": 3233
+        },
+        {
+          "id": "test:contracts",
+          "phase": "built-package",
+          "status": "passed",
+          "exitCode": 0,
+          "durationMs": 20689
+        }
+      ],
+      "report": {
+        "path": ".cache/review/parity-plan/loop104-built-checks-g3-results.json",
+        "bytes": 1073,
+        "sha256": "70de10d63fa1f7a341e6b14d0b8b74eb01b0de9f7e582eae9105c65d8adbf392"
+      },
+      "proof": {
+        "receipt": {
+          "path": ".cache/review/parity-plan/loop104-built-checks-g3-provenance.json",
+          "bytes": 1234,
+          "sha256": "0d96f0d5d0223f7dd7e202005fa44cb7a6a7711f365509484fb3c1bc77b03a76"
+        },
+        "sourceSha256": "067988830c13d9feecbf8eee48cb75640d394449510b72df26f29089ef257eb1",
+        "runtimeSha256": "642b12ac9bde728c4fb90f9680c15004e4247a85bbc06175e25b9d91c57cb549",
+        "startedAt": "2026-10-05T10:15:17.796Z",
+        "finishedAt": "2026-10-05T10:15:42.491Z",
+        "exitCode": 0,
+        "command": [
+          "env",
+          "TSX_TSCONFIG_PATH=/Users/sheydin/.codex/worktrees/validator-release-review/records/tsconfig.json",
+          "node",
+          "/private/tmp/loop104-built-checks-g3.mjs"
+        ],
+        "log": {
+          "path": ".cache/review/parity-plan/loop104-built-checks-g3.log",
+          "bytes": 8320,
+          "sha256": "8277359b5a4ab2f9c11650ba8ff839d493a0cef4fed8bb1925a5c5112d439ac3"
+        }
+      }
+    },
+    "packedConsumer": {
+      "receipt": {
+        "path": ".cache/review/parity-plan/loop104-packed-smoke-g3-provenance.json",
+        "bytes": 1108,
+        "sha256": "95caf6b75baca1be75eee8bbfa837952999bb925ba2c728795e67035a8612dfc"
+      },
+      "sourceSha256": "067988830c13d9feecbf8eee48cb75640d394449510b72df26f29089ef257eb1",
+      "runtimeSha256": "642b12ac9bde728c4fb90f9680c15004e4247a85bbc06175e25b9d91c57cb549",
+      "startedAt": "2026-10-05T10:15:19.330Z",
+      "finishedAt": "2026-10-05T10:15:57.012Z",
+      "exitCode": 0,
+      "command": [
+        "npm",
+        "run",
+        "oss:smoke-validator"
+      ],
+      "log": {
+        "path": ".cache/review/parity-plan/loop104-packed-smoke-g3.log",
+        "bytes": 126,
+        "sha256": "8b38100fc9455f098a68950baa06d56457cb297e729cbfcbc0feacf0b157a961"
+      }
+    },
+    "focused": [
+      {
+        "receipt": {
+          "path": ".cache/review/parity-plan/loop104-extension-owner-focused-g2-provenance.json",
+          "bytes": 3599,
+          "sha256": "34c36351132874fe06d4840a1b21581f349dfce0f00851ffd45af435e63b4da2"
+        },
+        "sourceSha256": "f0818bd5bb57a50f33e198dbd8d4a8535ded9c0c7e8b4ff7a5dc7955607d96a4",
+        "runtimeSha256": "519c7ff92b73aef245e32a31ee9e2414401011125a428479319fd70dc258674c",
+        "startedAt": "2026-10-05T10:02:37.947Z",
+        "finishedAt": "2026-10-05T10:02:44.782Z",
+        "exitCode": 0,
+        "command": [
+          "node_modules/.bin/vitest",
+          "run",
+          "packages/validator/src/validators/__tests__/extension-context-matching.test.ts",
+          "packages/validator/src/validators/__tests__/extension-context-usage.test.ts",
+          "packages/validator/src/validators/__tests__/extension-differential-validation.test.ts",
+          "packages/validator/src/validators/__tests__/extension-embedded-resource-owner.test.ts",
+          "packages/validator/src/validators/__tests__/extension-group-resolver.test.ts",
+          "packages/validator/src/validators/__tests__/extension-instance-rule-validation.test.ts",
+          "packages/validator/src/validators/__tests__/extension-logical-paths.test.ts",
+          "packages/validator/src/validators/__tests__/extension-nested-reference-pins.test.ts",
+          "packages/validator/src/validators/__tests__/extension-profile-scope-validation.test.ts",
+          "packages/validator/src/validators/__tests__/extension-resource-walk.test.ts",
+          "packages/validator/src/validators/__tests__/extension-sliced-cardinality.test.ts",
+          "packages/validator/src/validators/__tests__/extension-structure-rules.test.ts",
+          "packages/validator/src/validators/__tests__/extension-subextension-url-rule.test.ts",
+          "packages/validator/src/validators/__tests__/extension-universal-rules.test.ts",
+          "packages/validator/src/validators/__tests__/extension-validator-invariants.test.ts",
+          "packages/validator/src/validators/__tests__/extension-validator-known-hl7.test.ts",
+          "packages/validator/src/validators/__tests__/extension-validator.test.ts",
+          "packages/validator/src/validators/__tests__/extension-value-profile-validation.test.ts",
+          "packages/validator/src/validators/__tests__/extension-value-slicing.test.ts",
+          "packages/validator/src/validators/__tests__/extension-xver-urls.test.ts",
+          "packages/validator/src/validators/__tests__/german-extension-validator.test.ts",
+          "packages/validator/src/validators/__tests__/slicing-validator-cross-version-extension.test.ts",
+          "packages/validator/src/validators/__tests__/snomed-national-extension.test.ts",
+          "packages/validator/src/validators/extension-resolution-undetermined.test.ts",
+          "packages/validator/src/validators/extension-url-resolver-pins.test.ts",
+          "packages/validator/src/validators/extension-validator-architecture.test.ts",
+          "packages/validator/src/core/__tests__/reference-resolved-slice-conformance.test.ts",
+          "packages/validator/src/validators/__tests__/valueset-versioned-named-binding.test.ts",
+          "--reporter=dot",
+          "--silent=true"
+        ],
+        "log": {
+          "path": ".cache/review/parity-plan/loop104-extension-owner-focused-g2.log",
+          "bytes": 670,
+          "sha256": "896b8319a8f4b797c1b811c35cbd917be220ca32ea090d87983fd5b5763ffeb9"
+        }
+      },
+      {
+        "receipt": {
+          "path": ".cache/review/parity-plan/loop104-extension-noop-focused-g1-provenance.json",
+          "bytes": 1407,
+          "sha256": "3efaa75b11494c710cd763e2a10288d22797c1ff2aafec46411fd25e7e3e9160"
+        },
+        "sourceSha256": "067988830c13d9feecbf8eee48cb75640d394449510b72df26f29089ef257eb1",
+        "runtimeSha256": "519c7ff92b73aef245e32a31ee9e2414401011125a428479319fd70dc258674c",
+        "startedAt": "2026-10-05T10:11:57.415Z",
+        "finishedAt": "2026-10-05T10:12:02.231Z",
+        "exitCode": 0,
+        "command": [
+          "node_modules/.bin/vitest",
+          "run",
+          "packages/validator/src/validators/__tests__/extension-embedded-resource-owner.test.ts",
+          "packages/validator/src/core/__tests__/open-profile-contracts.test.ts",
+          "packages/validator/src/validators/__tests__/extension-resource-walk.test.ts",
+          "--reporter=dot",
+          "--silent=true"
+        ],
+        "log": {
+          "path": ".cache/review/parity-plan/loop104-extension-noop-focused-g1.log",
+          "bytes": 336,
+          "sha256": "6a711765a40067289105a1ea1f6af138c84cc354af32e086e6fa4fd653b9c564"
+        }
+      },
+      {
+        "receipt": {
+          "path": ".cache/review/parity-plan/loop104-final-tooling-evidence-g1-provenance.json",
+          "bytes": 1897,
+          "sha256": "b7c6b91ab044d03d2a6904483d2b026f258076aaa6cff0b79a804aa501aa5ce3"
+        },
+        "sourceSha256": "f0818bd5bb57a50f33e198dbd8d4a8535ded9c0c7e8b4ff7a5dc7955607d96a4",
+        "runtimeSha256": "519c7ff92b73aef245e32a31ee9e2414401011125a428479319fd70dc258674c",
+        "startedAt": "2026-10-05T10:05:37.023Z",
+        "finishedAt": "2026-10-05T10:05:47.561Z",
+        "exitCode": 0,
+        "command": [
+          "node_modules/.bin/vitest",
+          "run",
+          "--config",
+          "vitest.config.tooling.ts",
+          "scripts/conformance/__tests__/conformance-terminology-defaults.test.ts",
+          "scripts/conformance/__tests__/run-conformance-suite.test.ts",
+          "scripts/conformance/__tests__/case-terminology-import-precedence.test.ts",
+          "scripts/conformance/__tests__/publication-group-runtime.test.ts",
+          "scripts/conformance/__tests__/conformance-named-inventory-imports.test.ts",
+          "scripts/conformance/__tests__/manifest-parser.test.ts",
+          "scripts/conformance/__tests__/report.test.ts",
+          "scripts/conformance/__tests__/outcome-diff.test.ts",
+          "scripts/oss/__tests__/export-validator-repo.test.ts",
+          "scripts/oss/__tests__/validator-release-evidence.test.mjs",
+          "--maxWorkers=2",
+          "--reporter=dot",
+          "--silent=true"
+        ],
+        "log": {
+          "path": ".cache/review/parity-plan/loop104-final-tooling-evidence-g1.log",
+          "bytes": 451,
+          "sha256": "f9c63bedd5e670a0af48858ca68ee5b74f3056ac047d2a54e8eca0b9e2aa0afe"
+        }
+      }
+    ],
+    "focusedQualification": "Source-focused tests keep their actual observed Source/runtime epochs; final actual-dist measurements and whole suite carry their own final epochs."
+  },
+  "unchangedMedicationPolicy": {
+    "caseId": "med-example",
+    "priorRawScore": 0.375,
+    "sixASKPlusOnePZNRemainIncomplete": true,
+    "noSeverityBaselineACKSkipOrThresholdRewrite": true
+  },
+  "historicalMeasurements": "Prior Java/native MII/Records host/CLI/defect lanes retain their measured source and runtime epochs; none is restamped by this follow-up.",
+  "publicSelectionQualification": "Append this explicitly pinned follow-up; preserve all25 earlier artifacts and lane/headline metadata. Historical public comparison figures remain historical.",
+  "GitHubActionsUsed": false,
+  "publicationPerformed": false,
+  "pushPRTagPublishMergeDeployPerformed": false,
+  "retainedWholeSuiteFailure": {
+    "receipt": {
+      "path": ".cache/review/parity-plan/loop104-validator-suite-g6-provenance.json",
+      "bytes": 1175,
+      "sha256": "d70ed5cc4e815c88e96d0891424644d74ad45951730435c04fb63495a004a5f7"
+    },
+    "cause": "Extension-owner U was incorrectly requested for extension-free contained resources; the bounded lazy demand guard fixes it. Original open-profile contract assertions remain unchanged.",
+    "passedContractCounterproof": {
+      "path": ".cache/review/parity-plan/loop104-extension-noop-focused-g1-provenance.json",
+      "bytes": 1407,
+      "sha256": "3efaa75b11494c710cd763e2a10288d22797c1ff2aafec46411fd25e7e3e9160"
+    }
+  },
+  "harnessChoiceReview": {
+    "path": "/private/tmp/loop104-choice-review-g1.json",
+    "bytes": 3125,
+    "sha256": "eeb6262fade79d5692aa2270d334a5afcce5e04b94e3302b6c48852052df2d38"
+  },
+  "sourcePhaseReceipt": {
+    "path": ".cache/review/parity-plan/loop104-checks-source-g7-provenance.json",
+    "bytes": 1366,
+    "sha256": "6d3b7c534da9a0dcb7a68787c3f89aa554380c5cb5c58497aa5d33d9537eca80"
+  },
+  "finalAffectedSourceReceipt": {
+    "path": ".cache/review/parity-plan/loop104-checks-source-g8-provenance.json",
+    "bytes": 1238,
+    "sha256": "88b04434c5b5f279473a4a0e89cc1d852594bc5b756bfb901fa5b7521f50a7cf"
+  },
+  "pairedBuildReceipt": {
+    "path": ".cache/review/parity-plan/loop104-build-validator-g8-provenance.json",
+    "bytes": 1108,
+    "sha256": "532c58202527ac21949bc59d649ca0da18facd1c221c36a08c8618265c649395"
+  }
+}

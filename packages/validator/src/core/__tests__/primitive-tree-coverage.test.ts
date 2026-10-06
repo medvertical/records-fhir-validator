@@ -1,5 +1,6 @@
-import { beforeAll, describe, expect, it } from 'vitest';
-import { RecordsValidator } from '../validator-engine';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { RecordsValidator } from '../validator-engine.js';
+import { createIsolatedCoreValidationFixture, expectOwnCoreProfilesResolved } from './isolated-core-validation-fixture.js';
 
 /**
  * Every primitive in the resource tree must reach format validation, the
@@ -9,14 +10,13 @@ import { RecordsValidator } from '../validator-engine';
  */
 describe('primitive tree coverage', () => {
   let validator: RecordsValidator;
+  let fixture: Awaited<ReturnType<typeof createIsolatedCoreValidationFixture>>;
+
+  afterAll(async () => { await fixture?.dispose(); });
 
   beforeAll(async () => {
-    validator = new RecordsValidator({
-      autoDownload: false,
-      enableCaching: true,
-      strictMode: false,
-    });
-    await validator.waitForInitialization();
+    fixture = await createIsolatedCoreValidationFixture({ enableCaching: true, strictMode: false });
+    validator = fixture.validator;
   }, 120_000);
 
   it('warns on an implausible year in a standalone Patient.birthDate', async () => {
@@ -26,6 +26,7 @@ describe('primitive tree coverage', () => {
       'R4',
     );
 
+    expectOwnCoreProfilesResolved(issues);
     expect(issues).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: 'date-year-implausible',
@@ -48,6 +49,7 @@ describe('primitive tree coverage', () => {
       'R4',
     );
 
+    expectOwnCoreProfilesResolved(issues);
     expect(issues).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: 'structural-invalid-format',
@@ -64,6 +66,7 @@ describe('primitive tree coverage', () => {
       'R4',
     );
 
+    expectOwnCoreProfilesResolved(issues);
     expect(issues).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: 'string-whitespace-padding',
@@ -94,6 +97,7 @@ describe('primitive tree coverage', () => {
       'R4',
     );
 
+    expectOwnCoreProfilesResolved(issues);
     expect(issues).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: 'date-year-implausible',
@@ -121,6 +125,7 @@ describe('primitive tree coverage', () => {
     };
     const issues = result.aspects.flatMap(aspect => aspect.issues);
 
+    expectOwnCoreProfilesResolved(issues);
     expect(issues).toEqual(expect.arrayContaining([
       expect.objectContaining({
         code: 'date-year-implausible',

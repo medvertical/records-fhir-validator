@@ -28,6 +28,7 @@ export function validateSliceContentConstraints(
   const checkedFixedPaths = new Set<string>();
   const checkedPatternPaths = new Set<string>();
   const requiredPaths = new Map(slice.childMin ?? []);
+  const limitedPaths = new Map(slice.childMax ?? []);
 
   for (const elementDef of elements) {
     const relativePath = getSliceRelativePath(elementDef, slicePrefix);
@@ -49,6 +50,8 @@ export function validateSliceContentConstraints(
     if (minimum > 0) {
       requiredPaths.set(relativePath, Math.max(requiredPaths.get(relativePath) ?? 0, minimum));
     }
+    const maximum = elementDef.max === undefined || elementDef.max === '*' ? NaN : Number(elementDef.max);
+    if (Number.isInteger(maximum)) limitedPaths.set(relativePath, Math.min(limitedPaths.get(relativePath) ?? maximum, maximum));
   }
 
   for (const [relativePath, fixedValue] of slice.childFixed ?? []) {
@@ -60,6 +63,22 @@ export function validateSliceContentConstraints(
   for (const [relativePath, minimum] of requiredPaths) {
     if (!isContentConstraintPath(relativePath)) continue;
     issues.push(...validateMinimumPerParent(element, slice, elementPath, relativePath, minimum));
+  }
+
+  // KBV's Mutterpass allows one entry in section:Epikrise.section:Schwangerschaft.
+  for (const [relativePath, maximum] of limitedPaths) {
+    if (!isContentConstraintPath(relativePath)) continue;
+    issues.push(...getChildCardinalities(element, relativePath).filter(cardinality => cardinality.count > maximum)
+      .map(cardinality => {
+        const issuePath = appendRelativePath(elementPath, cardinality.path);
+        return createValidationIssue({
+          code: "structural-cardinality-max",
+          path: issuePath,
+          resourceType: resourceTypeFromPath(elementPath),
+          customMessage: `Element ${issuePath} has too many values: expected at most ${maximum}, found ${cardinality.count}`,
+          details: { sliceName: slice.sliceName, relativePath, expectedMax: maximum, actualCount: cardinality.count },
+        });
+      }));
   }
 
   for (const [relativePath, patternValue] of slice.childPatterns ?? []) {

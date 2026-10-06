@@ -46,6 +46,7 @@ export class TerminologyApiClientRuntime {
     private readonly circuitBreakers = new TerminologyCircuitBreakerRegistry(),
     private readonly requestBroker: TerminologyRequestBroker = sharedTerminologyRequestBroker,
   ) {
+    this.operationCache.bindSourceContexts(cache.sourceContexts);
     this.config = snapshotTerminologyConfig(config);
   }
 

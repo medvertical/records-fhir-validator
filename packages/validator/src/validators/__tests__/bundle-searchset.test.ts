@@ -325,6 +325,22 @@ describe('BundleValidator searchset rules', () => {
     );
   });
 
+  it('reads no searched type from a self link that does not end in a resource type', async () => {
+    // Identity Matching's $match response names itself Bundle/MATCHOperationResponse.
+    const bundle = {
+      resourceType: 'Bundle',
+      type: 'searchset',
+      total: 1,
+      link: [{ relation: 'self', url: 'http://example.org/Bundle/MATCHOperationResponse' }],
+      entry: [
+        { fullUrl: 'https://example.com/base/Organization/OrgExample', resource: { resourceType: 'Organization', id: 'OrgExample' }, search: { mode: 'match' } },
+      ],
+    };
+
+    const issues = await validator.validateBundle(bundle);
+    expect(issues.filter(i => i.code === 'bundle-searchset-entry-wrong-type')).toHaveLength(0);
+  });
+
   it('honours _type query parameter when matching expected types', async () => {
     const bundle = {
       resourceType: 'Bundle',

@@ -10,12 +10,10 @@ export function getCollectedConstraintTargets(
     resource: unknown,
     resourceType: string,
     elementPath: string,
-    expression: string,
     isRootConstraint: boolean,
-    expressionStartsAtResourceRoot: (expression: string | undefined, resourceType: string) => boolean,
     elementContextResolver: ElementContextResolver,
 ): ConstraintTarget[] {
-    if (isRootConstraint || expressionStartsAtResourceRoot(expression, resourceType)) {
+    if (isRootConstraint) {
         return [{ context: resource, path: elementPath, checkHtml: isRootConstraint }];
     }
     return elementContextResolver

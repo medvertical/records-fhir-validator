@@ -3,6 +3,7 @@ import type { TerminologyOperationCache } from './terminology-operation-cache.js
 import type { ValueSetCache } from './valueset-cache.js';
 import { ValueSetCodeSystemOperations } from './valueset-code-system-operations.js';
 import { ValueSetPackageLoader } from './valueset-package-loader.js';
+import { ValueSetPackageResourceAccess } from './valueset-package-resource-access.js';
 import { TwoPhaseShadowEvaluator } from './valueset-two-phase-shadow.js';
 import type { TerminologyResolutionConfig } from './valueset-types.js';
 
@@ -17,10 +18,11 @@ export function createValueSetValidatorComponents(
   cache: ValueSetCache,
   operationCache: TerminologyOperationCache,
   getResolutionConfig: () => TerminologyResolutionConfig,
+  packageDirectories?: string[],
 ): ValueSetValidatorComponents {
   const config = getResolutionConfig();
   const apiClient = new TerminologyApiClient(config, cache, operationCache);
-  const packageLoader = new ValueSetPackageLoader(cache);
+  const packageLoader = new ValueSetPackageLoader(cache, new ValueSetPackageResourceAccess(packageDirectories));
   return {
     apiClient,
     packageLoader,

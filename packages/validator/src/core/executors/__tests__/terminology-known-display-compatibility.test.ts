@@ -19,8 +19,10 @@ describe('remote display validation and known historical designations', () => {
   };
   const coding = { system: 'http://loinc.org', code: '10185-7', display: 'Hospital discharge procedures Narrative' };
 
-  it('accepts a verified historical designation for an unversioned coding', () => {
-    expect(buildCodeSystemResultIssues(coding, result, 'Composition.section.code.coding', 0, true)).toEqual([]);
+  it('preserves the resolved source rejection for an unversioned historical designation', () => {
+    expect(buildCodeSystemResultIssues(coding, result, 'Composition.section.code.coding', 0, true)).toContainEqual(expect.objectContaining({
+      code: 'terminology-display-mismatch', severity: 'error',
+    }));
   });
 
   it('preserves the rejection when the coding explicitly pins the newer edition', () => {

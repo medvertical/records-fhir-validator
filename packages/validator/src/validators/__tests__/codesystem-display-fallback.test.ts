@@ -1,5 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ValueSetValidator } from '../valueset-validator';
+import { parseCodeSystemValidationParameters } from '../terminology-code-system-result.js';
+
+function confirmed(fields: { display?: string; inactive?: boolean } = {}) {
+  return parseCodeSystemValidationParameters({ resourceType: 'Parameters', parameter: [
+    { name: 'result', valueBoolean: true },
+    ...(fields.display ? [{ name: 'display', valueString: fields.display }] : []),
+    ...(fields.inactive !== undefined ? [{ name: 'inactive', valueBoolean: fields.inactive }] : []),
+  ] }, 'fixture-code', 'http://snomed.info/sct');
+}
 
 describe('ValueSetValidator CodeSystem display fallback', () => {
   it('suppresses a primary display mismatch when another enabled terminology server accepts the display', async () => {
@@ -35,7 +44,7 @@ describe('ValueSetValidator CodeSystem display fallback', () => {
           message: "Wrong Display Name 'Opioid abuse (disorder)' for http://snomed.info/sct#5602001",
         }],
       })
-      .mockResolvedValueOnce({ valid: true });
+      .mockResolvedValueOnce(confirmed());
 
     (validator as any).apiClient.validateCodeInCodeSystem = validateCodeInCodeSystem;
 
@@ -162,10 +171,7 @@ describe('ValueSetValidator CodeSystem display fallback', () => {
         reason: 'code-unknown',
         message: "Unknown code '34117-2' in the CodeSystem 'http://loinc.org'",
       })
-      .mockResolvedValueOnce({
-        valid: true,
-        display: 'History and physical note',
-      });
+      .mockResolvedValueOnce(confirmed({ display: 'History and physical note' }));
 
     (validator as any).apiClient.validateCodeInCodeSystem = validateCodeInCodeSystem;
 
@@ -423,11 +429,7 @@ describe('ValueSetValidator CodeSystem display fallback', () => {
           message: "The concept '315639002' has a status of inactive and its use should be reviewed",
         }],
       })
-      .mockResolvedValueOnce({
-        valid: true,
-        inactive: false,
-        display: 'Initial patient assessment',
-      });
+      .mockResolvedValueOnce(confirmed({ inactive: false, display: 'Initial patient assessment' }));
 
     (validator as any).apiClient.validateCodeInCodeSystem = validateCodeInCodeSystem;
 
@@ -485,10 +487,7 @@ describe('ValueSetValidator CodeSystem display fallback', () => {
           message: "The concept '394701000' has a status of inactive and its use should be reviewed",
         }],
       })
-      .mockResolvedValueOnce({
-        valid: true,
-        display: 'Asthma follow-up (regime/therapy)',
-      });
+      .mockResolvedValueOnce(confirmed({ display: 'Asthma follow-up (regime/therapy)' }));
 
     (validator as any).apiClient.validateCodeInCodeSystem = validateCodeInCodeSystem;
 

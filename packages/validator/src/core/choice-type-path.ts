@@ -1,3 +1,5 @@
+import type { ElementDefinition } from './structure-definition-types.js';
+
 interface NormalizeChoiceTypePathOptions {
   stripIndices?: boolean;
 }
@@ -112,4 +114,22 @@ function normalizeChoiceTypeSegment(segment: string): string {
   }
 
   return lowerSegment;
+}
+
+/** Choice property names come from the declared types, including choices unknown to the generic display normalizer. */
+export function matchesDefinitionInstancePath(
+  definitionPath: string,
+  instancePath: string,
+  elements: readonly ElementDefinition[],
+): boolean {
+  const expected = definitionPath.split('.');
+  const actual = instancePath.replace(/\[\d+\]/g, '').split('.');
+  return expected.length === actual.length && expected.every((segment, index) => {
+    if (segment === actual[index]) return true;
+    if (!segment.endsWith('[x]')) return false;
+    const choicePath = expected.slice(0, index + 1).join('.');
+    return elements.filter(element => element.path === choicePath).some(element => Array.isArray(element.type) && element.type.some(type =>
+      typeof type?.code === 'string' && type.code.length > 0
+      && `${segment.slice(0, -3)}${type.code[0].toUpperCase()}${type.code.slice(1)}` === actual[index]));
+  });
 }

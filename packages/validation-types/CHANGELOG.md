@@ -11,6 +11,19 @@ captures changes that affect type-package consumers directly.
 
 ## [Unreleased]
 
+## [0.1.13] — 2026-10-05
+
+### Fixed
+
+- Classify `terminology-coding-missing-system` as a verified resource finding
+  with high confidence, without mistaking its message for a terminology outage.
+
+### Added
+
+- Dedicated `validation/finding-verification` schemas and types for read-only
+  run finding verification and repository-based GitHub issue manifests.
+- Add validated, request-scoped `defaultCodeSystemVersions` terminology settings for explicit edition selection without changing Coding versions.
+
 ## [0.1.12] — 2026-09-22
 
 ### Changed

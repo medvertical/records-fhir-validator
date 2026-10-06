@@ -62,6 +62,8 @@ export interface TerminologyServerOverride {
 /** Configuration for terminology resolution */
 export interface TerminologyResolutionConfig {
     strategy: TerminologyResolutionStrategy;
+    /** Explicit caller defaults for unversioned CodeSystem requests; Coding.version always wins. */
+    defaultCodeSystemVersions?: Record<string, string>;
     serverUrl?: string;
     /** Auth config for the active server. Undefined = anonymous call. */
     auth?: TerminologyApiAuthConfig;
@@ -135,6 +137,7 @@ export const TERMINOLOGY_UNVERIFIED_REASONS = [
     'empty-expansion',
     'unsupported-filter',
     'unenumerable-system-include',
+    'incomplete-expansion',
     'unresolvable-snomed-extension-filter',
     'versioned-binding-unverified',
     'validation-error',
@@ -203,6 +206,7 @@ export interface ValueSet {
         exclude?: ValueSetComposeExclude[];
     };
     expansion?: {
+        total?: number;
         contains?: ValueSetExpansionContains[];
     };
 }
@@ -219,8 +223,10 @@ export interface CodeSystemConceptProperty {
     code: string;
     valueCode?: string;
     valueString?: string;
+    valueBoolean?: boolean;
     valueCoding?: {
         system?: string;
+        version?: string;
         code?: string;
     };
 }
@@ -262,6 +268,9 @@ export interface CodeSystemFilterDefinition {
 
 export interface CodeSystem {
     resourceType: 'CodeSystem';
+    language?: string;
+    hierarchyMeaning?: 'grouped-by' | 'is-a' | 'part-of' | 'classified-with';
+    caseSensitive?: boolean;
     url: string;
     version?: string;
     /**

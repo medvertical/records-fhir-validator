@@ -32,10 +32,25 @@ export const StructuralCodes = {
         severity: 'error',
         description: 'Primitive value format is invalid',
     },
+    'structural-example-url': {
+        aspect: 'structural',
+        severity: 'error',
+        description: 'Instance data points at an example URL (example.org, acme.com)',
+    },
+    'structural-url-unresolved': {
+        aspect: 'structural',
+        severity: 'error',
+        description: 'A URL in the http://hl7.org/fhir namespace names no definition',
+    },
     'structural-invalid-base64-format': {
         aspect: 'structural',
         severity: 'error',
         description: 'base64Binary value format is invalid',
+    },
+    'structural-base64-whitespace': {
+        aspect: 'structural',
+        severity: 'warning',
+        description: 'base64Binary value contains whitespace (an error from R5)',
     },
     'structural-cardinality-violation': {
         aspect: 'structural',
@@ -76,6 +91,11 @@ export const StructuralCodes = {
         aspect: 'structural',
         severity: 'error',
         description: 'Attachment has data but no contentType (invariant att-1)',
+    },
+    'identifier-uri-value-not-absolute': {
+        aspect: 'structural',
+        severity: 'error',
+        description: "Identifier in the urn:ietf:rfc:3986 system has a value that is not a full URI",
     },
     'attachment-no-content': {
         aspect: 'structural',
@@ -164,10 +184,20 @@ export const StructuralCodes = {
     },
 
     // Narrative (text.div) XHTML validation
+    'narrative-textlink-target-unverified': {
+        aspect: 'structural',
+        severity: 'information',
+        description: 'A textLink data target cannot be checked with the available resource context',
+    },
     'narrative-malformed-xhtml': {
         aspect: 'structural',
         severity: 'error',
         description: 'Narrative text.div is not well-formed XHTML (includes DOCTYPE/ENTITY XXE protection)',
+    },
+    'narrative-invalid-entity': {
+        aspect: 'structural',
+        severity: 'error',
+        description: 'Narrative XHTML uses an HTML named entity that XML without the XHTML DTD does not define',
     },
     'narrative-invalid-root': {
         aspect: 'structural',
@@ -198,6 +228,51 @@ export const StructuralCodes = {
         aspect: 'structural',
         severity: 'error',
         description: 'Narrative contains a disallowed XHTML attribute',
+    },
+    'structural-internal-uri-unresolved': {
+        aspect: 'structural',
+        severity: 'warning',
+        description: 'A uri pointing into the resource (#id) names no element or narrative anchor of it',
+    },
+    'measure-groups-missing': {
+        aspect: 'structural',
+        severity: 'warning',
+        description: 'A Measure has no group',
+    },
+    'measure-group-code-missing': {
+        aspect: 'structural',
+        severity: 'warning',
+        description: 'One of several Measure groups has no code',
+    },
+    'measure-group-population-missing': {
+        aspect: 'structural',
+        severity: 'warning',
+        description: 'A Measure group has no population',
+    },
+    'measure-population-code-missing': {
+        aspect: 'structural',
+        severity: 'warning',
+        description: 'One of several populations of a Measure group has no code',
+    },
+    'measure-stratifier-code-missing': {
+        aspect: 'structural',
+        severity: 'warning',
+        description: 'One of several stratifiers of a Measure group has no code',
+    },
+    'measure-criteria-cql-library-missing': {
+        aspect: 'structural',
+        severity: 'error',
+        description: 'A Measure with CQL criteria names no Library',
+    },
+    'narrative-url-invalid': {
+        aspect: 'structural',
+        severity: 'error',
+        description: 'A narrative link or image URL is empty or contains characters no URL may hold',
+    },
+    'narrative-duplicate-ids': {
+        aspect: 'structural',
+        severity: 'warning',
+        description: 'Narrative XHTML uses the same node id or anchor name more than once',
     },
 
     // Generic / Fallback

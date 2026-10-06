@@ -13,6 +13,7 @@ import {
 } from "../terminology-executor";
 import {
   createTerminologyValidationPortMock,
+  localCodeSystemUnverifiedIssue,
   type TerminologyValidationPortMock,
 } from "./terminology-validation-port.test-support";
 
@@ -101,7 +102,7 @@ describe("TerminologyExecutor CodeSystem regressions", () => {
     );
     expect(issues).toContainEqual(
       expect.objectContaining({
-        severity: "warning",
+        severity: "error",
         code: "terminology-display-mismatch",
         path: "Practitioner.identifier[0].type.coding[0].display",
       }),
@@ -211,7 +212,7 @@ describe("TerminologyExecutor CodeSystem regressions", () => {
       issues.filter((issue) => issue.code === "terminology-display-mismatch"),
     ).toEqual([
       expect.objectContaining({
-        severity: "warning",
+        severity: "error",
         path:
           "Bundle.entry[0].resource.identifier[0].type.coding[0].display",
       }),
@@ -559,8 +560,16 @@ describe("TerminologyExecutor CodeSystem regressions", () => {
 
     const issues = await executor.validate(context);
 
-    expect(issues).toEqual([]);
-    expect(validatorInstance.validateBinding).toHaveBeenCalledTimes(2);
+    expect(issues).toEqual([
+      localCodeSystemUnverifiedIssue(
+        "problem-list-item", "http://terminology.hl7.org/CodeSystem/condition-category",
+        "Condition.category[0].coding[0].code",
+      ),
+    ]);
+    // The optional screening-assessment slice is told apart by its own
+    // binding, so no instance can violate it; only the required us-core
+    // slice's binding stands in for a missing slice.
+    expect(validatorInstance.validateBinding).toHaveBeenCalledTimes(1);
   });
 
   it("keeps required binding errors for required value set slice roots", async () => {
@@ -645,7 +654,11 @@ describe("TerminologyExecutor CodeSystem regressions", () => {
 
     const issues = await executor.validate(context);
 
-    expect(issues).toHaveLength(1);
+    expect(issues).toHaveLength(2);
+    expect(issues[1]).toEqual(localCodeSystemUnverifiedIssue(
+      "encounter-diagnosis", "http://terminology.hl7.org/CodeSystem/condition-category",
+      "Condition.category[0].coding[0].code",
+    ));
     expect(issues[0]).toEqual(
       expect.objectContaining({
         code: "terminology-binding-required",

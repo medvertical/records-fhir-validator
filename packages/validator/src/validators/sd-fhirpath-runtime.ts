@@ -36,7 +36,7 @@ export function createSDFHIRPathInvocationTable(context: FHIRPathContext): unkno
         },
         conformsTo: {
             fn: (inputs: unknown[], url: string) =>
-                fhirPathCustomFunctions.conformsTo.fn(inputs, url),
+                fhirPathCustomFunctions.conformsTo.fn(inputs, url, context),
             arity: { 1: ['String'] },
         },
         extension: {
@@ -55,12 +55,13 @@ export function evaluateCompiledSDFHIRPath(
     context: unknown,
     rootResource: unknown,
     userInvocationTable?: unknown,
+    focusResource?: unknown,
 ): unknown {
     const invocationTable = toFHIRPathInvocationTable(userInvocationTable);
     return compiled(
         context,
         {
-            resource: rootResource,
+            resource: focusResource ?? rootResource,
             rootResource,
         },
         {

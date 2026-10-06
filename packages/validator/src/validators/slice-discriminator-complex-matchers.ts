@@ -1,5 +1,6 @@
 import { getValueAtPath } from './slice-utils.js';
 import type { SliceDefinition } from './slice-types.js';
+import { getExistsDiscriminatorExpectation } from './slice-discriminator-constraints.js';
 import { getTypeSpecsForDiscriminator } from './slice-type-discriminator.js';
 import {
   profileListContains,
@@ -57,10 +58,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export { matchWholeElementChildConstraints } from './slice-discriminator-constraints.js';
 
-export function matchExistsDiscriminator(element: unknown, path: string): boolean {
+export function matchExistsDiscriminator(element: unknown, path: string, slice?: SliceDefinition): boolean {
   const value = getValueAtPath(element, path);
-  return value !== null && value !== undefined &&
-    (!Array.isArray(value) || value.length > 0);
+  if (!slice) return value !== null && value !== undefined && (!Array.isArray(value) || value.length > 0);
+  const expected = getExistsDiscriminatorExpectation(slice, path);
+  return expected !== undefined && hasPresentValue(value) === expected;
+}
+
+function hasPresentValue(value: unknown): boolean {
+  return Array.isArray(value) ? value.some(hasPresentValue) : value !== null && value !== undefined;
 }
 
 export function resolveDiscriminatorPath(

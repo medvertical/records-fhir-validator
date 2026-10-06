@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "kind": "mii-clean-corpus-triage",
+  "generatedAt": "2026-09-30T08:58:34.220Z",
+  "reference": {
+    "oracle": {
+      "version": "6.10.4",
+      "sha256": "1106b9d58f9e363e47bea7c4fc065841e5fc91fe9d062775c3bfdd212bd653cc"
+    },
+    "inputs": {
+      "count": 3,
+      "sha256": "118727776be1d0f5d6a4e49fe888bbcc8d88ff9b02c145d3cdcf3751400232ef"
+    },
+    "fhirVersion": "R4",
+    "terminology": "n/a",
+    "packages": [
+      "de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2"
+    ],
+    "packageContentSha256": "71d71e33847f3c4a151857ed2ba7a1cb56775d7c7000666993d8570a751df233",
+    "extraArguments": []
+  },
+  "testedSourceRevision": "2d307f80a72c337b8f209ff9436a8b42add22499",
+  "decision": "Reclassify three upstream examples as negative fixtures; do not suppress validator findings.",
+  "cleanDenominatorBefore": 445,
+  "cleanDenominatorAfter": 442,
+  "exclusionsBefore": 110,
+  "exclusionsAfter": 110,
+  "fixtures": [
+    {
+      "fixture": "quality-corpus/r4/defects/mii-2026-icu-observation-mii-exa-icu-ect-arterieller-druck-gemessen.json",
+      "sha256": "43570e634e52c4afcfabde8921ba1baf419b2a1ee0d361d72ba6545a6556fd6e",
+      "classification": "invalid-core-blood-pressure-observation",
+      "recordsErrors": [
+        {
+          "code": "structural-cardinality-min",
+          "path": "Observation.component",
+          "message": "Element Observation.component has too few values: expected at least 2, found 0"
+        },
+        {
+          "code": "profile-slice-min-cardinality",
+          "path": "Observation.category",
+          "message": "Slice 'VSCat' minimum cardinality not met: expected at least 1, found 0"
+        },
+        {
+          "code": "profile-slice-min-cardinality",
+          "path": "Observation.code.coding",
+          "message": "Slice 'BPCode' minimum cardinality not met: expected at least 1, found 0"
+        },
+        {
+          "code": "profile-slice-max-cardinality",
+          "path": "Observation.value[x]",
+          "message": "Slice 'valueQuantity' maximum cardinality exceeded: expected at most 0, found 1"
+        }
+      ]
+    },
+    {
+      "fixture": "quality-corpus/r4/defects/mii-2026-icu-observation-mii-exa-icu-ect-parameter-von-extrakorporalen-verfahren.json",
+      "sha256": "7640bb87fde74f04eb8f8e074ad4bacafe1a351e09ebe51674501cab999ef2b9",
+      "classification": "invalid-core-blood-pressure-observation",
+      "recordsErrors": [
+        {
+          "code": "structural-cardinality-min",
+          "path": "Observation.component",
+          "message": "Element Observation.component has too few values: expected at least 2, found 0"
+        },
+        {
+          "code": "profile-slice-min-cardinality",
+          "path": "Observation.category",
+          "message": "Slice 'VSCat' minimum cardinality not met: expected at least 1, found 0"
+        },
+        {
+          "code": "profile-slice-min-cardinality",
+          "path": "Observation.code.coding",
+          "message": "Slice 'BPCode' minimum cardinality not met: expected at least 1, found 0"
+        },
+        {
+          "code": "profile-slice-max-cardinality",
+          "path": "Observation.value[x]",
+          "message": "Slice 'valueQuantity' maximum cardinality exceeded: expected at most 0, found 1"
+        }
+      ]
+    },
+    {
+      "fixture": "quality-corpus/r4/defects/mii-2026-icu-observation-mii-exa-icu-muv-koerpergewicht.json",
+      "sha256": "3416de264389b9cd345078e1892967a8c493be3e251908b281f1b912216ce3bb",
+      "classification": "upstream-profile-definition-defect",
+      "recordsErrors": [
+        {
+          "code": "profile-slice-validation-error",
+          "path": "Observation.category[0]",
+          "message": "Slicing cannot be evaluated: slice 'Observation.category:sct' in profile https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-muv-koerpergewicht has no fixed value, pattern or required binding for its discriminator"
+        }
+      ]
+    }
+  ],
+  "referenceFindings": [
+    {
+      "family": "reference-version-mismatch | Validation_VAL_Profile_Minimum_SLICE | error|structure|component",
+      "count": 4
+    },
+    {
+      "family": "unexplained | Validation_VAL_Profile_NotSlice | error|invalid|",
+      "count": 2
+    },
+    {
+      "family": "reference-version-mismatch | VALIDATION_VAL_PROFILE_MINIMUM_MAGIC | error|structure|code",
+      "count": 2
+    },
+    {
+      "family": "unexplained | SLICING_CANNOT_BE_EVALUATED | error|processing|category",
+      "count": 1
+    }
+  ],
+  "limitations": [
+    "HAPI cannot resolve the two pressure examples' legacy declared canonicals. Independent errors against the inferred core blood-pressure profile establish that they are not clean.",
+    "The weight example exposes an invalid $this slice discriminator in the upstream ICU profile; this is not evidence that the example resource itself violates a well-formed profile."
+  ]
+}

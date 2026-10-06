@@ -14,6 +14,7 @@
 
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
+import { validateCanonicalResourceMetadata } from './canonical-resource-metadata-rules.js';
 
 /** Identifier regex from the FHIR R4 invariant. */
 const IDENTIFIER_REGEX = /^[A-Z]([A-Za-z0-9_]){0,254}$/;
@@ -105,7 +106,7 @@ export class CanonicalResourceInvariantValidator {
         return issues;
     }
 
-    validate(resource: unknown): ValidationIssue[] {
+    validate(resource: unknown, options: { forPublication?: boolean } = {}): ValidationIssue[] {
         const resourceRecord = asRecord(resource);
         if (!resourceRecord || typeof resourceRecord.resourceType !== 'string') return [];
         const issues: ValidationIssue[] = [];
@@ -127,6 +128,8 @@ export class CanonicalResourceInvariantValidator {
                 }));
             }
         }
+
+        issues.push(...validateCanonicalResourceMetadata(resourceRecord, options));
 
         if (rt === 'StructureDefinition') {
             issues.push(...this.validateConstraintKeyReuse(resourceRecord));

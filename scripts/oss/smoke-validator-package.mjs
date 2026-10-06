@@ -136,6 +136,8 @@ async function packWorkspace(workspace, destination) {
 
 const tmp = await mkdtemp(join(tmpdir(), 'records-fhir-validator-smoke-'));
 const packageDir = join(tmp, 'consumer');
+const sourcePackage = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
+const runtimeSecurityOverrides = { '@lhncbc/ucum-lhc': sourcePackage.overrides['@lhncbc/ucum-lhc'] };
 
 try {
   const typesTarball = await packWorkspace('@records-fhir/validation-types', tmp);
@@ -144,7 +146,7 @@ try {
   await mkdir(packageDir, { recursive: true });
   await writeFile(
     join(packageDir, 'package.json'),
-    JSON.stringify({ type: 'module', private: true }, null, 2),
+    JSON.stringify({ type: 'module', private: true, overrides: runtimeSecurityOverrides }, null, 2),
   );
 
   await run('npm', [
@@ -153,6 +155,8 @@ try {
     typesTarball,
     validatorTarball,
   ], { cwd: packageDir });
+
+  await run('npm', ['audit', '--omit=dev', '--audit-level=moderate'], { cwd: packageDir });
 
   await run('node', [
     '--input-type=module',

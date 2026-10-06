@@ -45,13 +45,23 @@ export function validateBundleTypeRules(
   return issues;
 }
 
+const RESPONSE_BUNDLE_TYPES = new Set(['batch-response', 'transaction-response']);
+const QUERY_RESULT_BUNDLE_TYPES = new Set(['searchset', 'history']);
+
 export function validateBundleFullUrlPresence(
   bundle: Record<string, unknown>,
   bundleType: string | null,
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  const mandatory = bundleType !== null
-    && new Set(['document', 'message', 'transaction', 'batch']).has(bundleType);
+  const isResponse = bundleType !== null && RESPONSE_BUNDLE_TYPES.has(bundleType);
+  // "The fullUrl element SHALL have a value" in R4 and R5 alike. R5 exempts
+  // the results of a search or history, so those only draw a warning; the
+  // reference validator requires no fullUrl in a transaction or batch
+  // response, whose entries report their outcome instead.
+  const mandatory = bundleType !== null && !QUERY_RESULT_BUNDLE_TYPES.has(bundleType);
+  // The reference validator resolves references against the entry's fullUrl
+  // in every Bundle; only responses may carry unanchored relative references.
+  const anchorsReferences = bundleType !== null && !isResponse;
   for (const [index, value] of getBundleEntries(bundle).entries()) {
     const entry = toBundleRecord(value);
     const resource = toBundleRecord(entry?.resource);
@@ -61,7 +71,7 @@ export function validateBundleFullUrlPresence(
     // empty on a POST" — the entry creates the resource, so there is no URL
     // for it yet. A relative reference inside it is still unanchored, which is
     // reported below on its own.
-    if (!createsTheResource(entry)) {
+    if (!isResponse && !createsTheResource(entry)) {
       issues.push(issue(
         'bundle-entry-missing-fullurl',
         `Bundle.entry[${index}].fullUrl`,
@@ -71,9 +81,37 @@ export function validateBundleFullUrlPresence(
         mandatory ? 'error' : 'warning',
       ));
     }
-    if (mandatory) issues.push(...relativeReferenceIssues(resource, index));
+    if (anchorsReferences) issues.push(...relativeReferenceIssues(resource, index));
   }
+  if (anchorsReferences) issues.push(...bundleLevelRelativeReferenceIssues(bundle));
   return issues;
+}
+
+/**
+ * A reference on the Bundle itself (Bundle.identifier.assigner) sits in no
+ * entry, so it has no fullUrl to resolve against either; the reference
+ * validator reports it like one inside an entry without fullUrl. Signatures
+ * are exempt there.
+ */
+function bundleLevelRelativeReferenceIssues(bundle: Record<string, unknown>): ValidationIssue[] {
+  const { entry: _entries, signature: _signature, ...ownElements } = bundle;
+  const references: Array<{ reference: string; path: string }> = [];
+  extractReferencesWithPaths(ownElements, '', references);
+  return references
+    .filter(({ reference }) => isUnanchoredRelativeReference(reference))
+    .map(({ path }) => issue(
+      'bundle-entry-missing-fullurl-relative-ref',
+      `Bundle.${path}`,
+      'Relative Reference appears inside Bundle whose entry is missing a fullUrl',
+    ));
+}
+
+function isUnanchoredRelativeReference(reference: string): boolean {
+  return Boolean(reference)
+    && !reference.startsWith('#')
+    && !reference.startsWith('urn:')
+    && !/^https?:\/\//.test(reference)
+    && !reference.includes('?');
 }
 
 function createsTheResource(entry: Record<string, unknown>): boolean {
@@ -85,13 +123,7 @@ function relativeReferenceIssues(resource: Record<string, unknown>, entryIndex: 
   const references: Array<{ reference: string; path: string }> = [];
   extractReferencesWithPaths(resource, '', references);
   return references
-    .filter(({ reference }) => (
-      reference
-      && !reference.startsWith('#')
-      && !reference.startsWith('urn:')
-      && !/^https?:\/\//.test(reference)
-      && !reference.includes('?')
-    ))
+    .filter(({ reference }) => isUnanchoredRelativeReference(reference))
     .map(({ path }) => issue(
       'bundle-entry-missing-fullurl-relative-ref',
       path ? `Bundle.entry[${entryIndex}].resource.${path}` : `Bundle.entry[${entryIndex}].resource`,

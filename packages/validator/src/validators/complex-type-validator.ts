@@ -18,6 +18,10 @@ import { validationFailureMetadata } from '../utils/validation-execution-failure
 import { ComplexTypeDefinitionResolver } from './complex-type-definition-resolver.js';
 import { validateComplexTypeSubElement } from './complex-type-sub-element-validation.js';
 import { DatatypeInvariantEvaluator } from './datatype-invariant-evaluator.js';
+import { withoutExemptExtensionExampleUrls } from './example-url-rule.js';
+import { checkAttachmentHasContent } from './attachment-validator.js';
+import { createProfileBindingSelector } from './profile-binding-selection.js';
+import { checkUriIdentifierValue } from './identifier-uri-value-rule.js';
 
 export class ComplexTypeValidator {
     private valueSetValidator: ValueSetValidator;
@@ -25,7 +29,7 @@ export class ComplexTypeValidator {
     private readonly datatypeInvariantEvaluator = new DatatypeInvariantEvaluator();
 
     constructor(
-        sdLoader: StructureDefinitionLoader,
+        private readonly sdLoader: StructureDefinitionLoader,
         private typeValidator?: TypeValidator,
         valueSetValidator: ValueSetValidator = new ValueSetValidator(),
     ) {
@@ -43,7 +47,8 @@ export class ComplexTypeValidator {
         basePath: string,
         profileUrl: string,
         parentStructureDef?: StructureDefinition,
-        fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
+        fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+        rootResource?: unknown,
     ): Promise<ValidationIssue[]> {
         const issues: ValidationIssue[] = [];
 
@@ -75,7 +80,7 @@ export class ComplexTypeValidator {
                     const el = value[i];
                     if (el && typeof el === 'object' && !Array.isArray(el)) {
                         issues.push(...await this.validateComplexTypeSubElements(
-                            el, elementDef, `${basePath}[${i}]`, profileUrl, parentStructureDef, fhirVersion
+                            el, elementDef, `${basePath}[${i}]`, profileUrl, parentStructureDef, fhirVersion, rootResource
                         ));
                     }
                 }
@@ -85,6 +90,18 @@ export class ComplexTypeValidator {
             if (primaryType.code === 'Extension') {
                 const ext1Issue = checkExtensionExt1(value, basePath);
                 if (ext1Issue) issues.push(ext1Issue);
+            }
+
+            // The resource walker finds attachments by name and shape; here the
+            // type is known, e.g. for RelatedArtifact.document or Library.content.
+            if (primaryType.code === 'Attachment') {
+                const noContentIssue = checkAttachmentHasContent(value as Record<string, unknown>, basePath);
+                if (noContentIssue) issues.push(noContentIssue);
+            }
+
+            if (primaryType.code === 'Identifier') {
+                const uriValueIssue = checkUriIdentifierValue(value as Record<string, unknown>, basePath);
+                if (uriValueIssue) issues.push(uriValueIssue);
             }
 
             if (primaryType.code === 'Period') {
@@ -115,6 +132,8 @@ export class ComplexTypeValidator {
             );
             if (!effectiveElements) return issues;
 
+            const selectBinding = createProfileBindingSelector({ profile: parentStructureDef, rootResource, basePath, value, fhirVersion, loader: this.sdLoader });
+
             for (const [elementPath, subElementDef] of effectiveElements.entries()) {
                 if (subElementDef.path === primaryType.code) continue;
                 const subIssues = await validateComplexTypeSubElement({
@@ -127,11 +146,14 @@ export class ComplexTypeValidator {
                     parentStructureDef,
                     fhirVersion,
                 }, {
+                    selectBinding,
                     typeValidator: this.typeValidator,
                     valueSetValidator: this.valueSetValidator,
-                    validateNested: (...args) => this.validateComplexTypeSubElements(...args),
+                    validateNested: (...args) => this.validateComplexTypeSubElements(...args, rootResource),
                 });
-                issues.push(...subIssues);
+                issues.push(...(primaryType.code === 'Extension'
+                    ? withoutExemptExtensionExampleUrls(value, subIssues)
+                    : subIssues));
             }
         } catch (error) {
             logger.debug(

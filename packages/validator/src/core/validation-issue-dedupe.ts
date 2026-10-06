@@ -1,3 +1,4 @@
+import { patientNarrativeDedupeKey } from './patient-narrative-issue-reconciliation.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { normalizeIssuePathForDedupe } from './validation-issue-dedupe-constraints.js';
 import { collectDedupeContext } from './validation-issue-dedupe-context.js';
@@ -67,7 +68,7 @@ function preferRebasedBundleEntryIssue(
 export function dedupeResourceTreeIssues(issues: ValidationIssue[]): ValidationIssue[] {
   const seen = new Set<string>();
   const exact = issues.filter(issue => {
-    const key = [
+    const key = issue.code === 'dom-6' ? patientNarrativeDedupeKey(issue, normalizeResourceTreePath(issue)) : [
       issue.code,
       normalizeResourceTreePath(issue),
       issue.severity,
@@ -176,12 +177,12 @@ function getSemanticDedupeKey(issue: ValidationIssue, ruleKey: string): string {
     ? 'info'
     : issue.severity;
   if (issue.code === 'dom-6') {
-    return `${issue.code}:${pathKey}:${severityKey}`;
+    return patientNarrativeDedupeKey(issue, pathKey);
   }
   // A single Narrative.div can contain several broken fragment links. They
   // share code, severity, and path but point at different targets, so each is
   // a distinct actionable finding rather than a duplicate validator report.
-  if (issue.code === 'narrative-hyperlink-target-not-found') {
+  if (issue.code === 'narrative-hyperlink-target-not-found' || issue.code === 'narrative-image-target-not-found') {
     const targetId = getIssueDetails(issue)?.targetId;
     return `${issue.code}:${pathKey}:${severityKey}:${String(targetId ?? issue.message)}`;
   }

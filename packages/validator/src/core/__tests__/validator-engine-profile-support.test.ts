@@ -29,7 +29,7 @@ function makeCrdDeviceRequestSd(): StructureDefinition {
 }
 
 describe('RecordsValidator profile support', () => {
-  it('uses the runtime profile loader path for known canonical aliases', async () => {
+  it('reports support for the published canonical and leaves its spelling alias unresolved', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'records-validator-profile-support-'));
     const validator = new RecordsValidator({
       packageCachePath: dir,
@@ -43,7 +43,8 @@ describe('RecordsValidator profile support', () => {
 
       await expect(
         validator.isProfileSupported(CRD_DEVICE_REQUEST_R4_ALIAS_URL, 'R4'),
-      ).resolves.toBe(true);
+      ).resolves.toBe(false);
+      await expect(validator.isProfileSupported(CRD_DEVICE_REQUEST_URL, 'R4')).resolves.toBe(true);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

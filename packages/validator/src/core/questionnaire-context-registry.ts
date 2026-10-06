@@ -14,20 +14,28 @@ export class QuestionnaireContextRegistry {
     if (!isRecord(questionnaire) || questionnaire.resourceType !== 'Questionnaire') {
       return false;
     }
+    const aliases: string[] = [];
     if (typeof questionnaire.url === 'string' && questionnaire.url.length > 0) {
-      this.questionnaires.set(questionnaire.url, questionnaire);
+      aliases.push(questionnaire.url);
     }
     if (typeof questionnaire.id === 'string' && questionnaire.id.length > 0) {
-      this.questionnaires.set(`Questionnaire/${questionnaire.id}`, questionnaire);
-      this.questionnaires.set(`#${questionnaire.id}`, questionnaire);
+      aliases.push(`Questionnaire/${questionnaire.id}`, `#${questionnaire.id}`);
+    }
+    for (const alias of aliases) {
+      this.questionnaires.set(alias, questionnaire);
+      if (typeof questionnaire.version === 'string' && questionnaire.version.length > 0) {
+        this.questionnaires.set(`${alias}|${questionnaire.version}`, questionnaire);
+      }
     }
     return true;
   }
 
   get(canonicalOrRef: string | undefined | null): FhirResourceRecord | null {
     if (!canonicalOrRef) return null;
-    const base = canonicalOrRef.split('|')[0];
-    return this.questionnaires.get(base) || this.questionnaires.get(canonicalOrRef) || null;
+    const [base, version] = canonicalOrRef.split('|');
+    const questionnaire = this.questionnaires.get(canonicalOrRef) || this.questionnaires.get(base);
+    if (!questionnaire || (version && questionnaire.version !== version)) return null;
+    return questionnaire;
   }
 
   resolveForResponse(response: unknown): FhirResourceRecord | undefined {

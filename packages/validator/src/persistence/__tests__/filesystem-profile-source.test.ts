@@ -1,37 +1,21 @@
-import { describe, it, expect } from 'vitest';
-import { createFilesystemProfileSource } from '../filesystem-profile-source';
-import * as path from 'path';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { beforeAll, afterAll } from 'vitest';
+import { registerFilesystemProfileSourceContracts } from './filesystem-profile-source-contracts';
 
-const BUNDLED_DIR = path.resolve(
-    __dirname,
-    '../../../../../server/storage/profiles/bundled',
-);
-
-describe('createFilesystemProfileSource', () => {
-    const source = createFilesystemProfileSource({ packageDirs: [BUNDLED_DIR] });
-
-    it('exposes only findByUrl (not resolveProfile or warmupRecent)', () => {
-        expect(source.findByUrl).toBeTypeOf('function');
-        expect(source.resolveProfile).toBeUndefined();
-        expect(source.loadAllForWarmup).toBeUndefined();
-        expect(source.warmupRecent).toBeUndefined();
-    });
-
-    it('resolves a core R4 StructureDefinition from the bundled directory', async () => {
-        const sd = await source.findByUrl!(
-            'http://hl7.org/fhir/StructureDefinition/Patient',
-            'R4',
-        );
-        expect(sd).not.toBeNull();
-        expect(sd?.resourceType).toBe('StructureDefinition');
-        expect(sd?.url).toBe('http://hl7.org/fhir/StructureDefinition/Patient');
-    });
-
-    it('returns null for an unknown profile URL', async () => {
-        const sd = await source.findByUrl!(
-            'http://example.com/StructureDefinition/Nonexistent',
-            'R4',
-        );
-        expect(sd).toBeNull();
-    });
+let packageRoot: string;
+beforeAll(async () => {
+  packageRoot = await mkdtemp(join(tmpdir(), 'records-synthetic-filesystem-profile-'));
+  const packageDir = join(packageRoot, 'hl7.fhir.r4.core#4.0.1', 'package');
+  await mkdir(packageDir, { recursive: true });
+  await writeFile(join(packageDir, 'package.json'), JSON.stringify({ name: 'hl7.fhir.r4.core', version: '4.0.1', fhirVersions: ['4.0.1'] }));
+  await writeFile(join(packageDir, 'StructureDefinition-Patient.json'), JSON.stringify({
+    resourceType: 'StructureDefinition', url: 'http://hl7.org/fhir/StructureDefinition/Patient',
+    version: '4.0.1', fhirVersion: '4.0.1', name: 'SyntheticPatient', status: 'active',
+    kind: 'resource', abstract: false, type: 'Patient',
+    snapshot: { element: [{ id: 'Patient', path: 'Patient', min: 0, max: '*' }] },
+  }));
 });
+afterAll(async () => { if (packageRoot) await rm(packageRoot, { recursive: true, force: true }); });
+registerFilesystemProfileSourceContracts('Synthetic filesystem core lookup', () => [packageRoot]);

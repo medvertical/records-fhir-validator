@@ -1,0 +1,45 @@
+{
+  "schema": "records.validator.current-release.v1",
+  "candidate": {
+    "validator": "0.8.0",
+    "validationTypes": "0.1.13"
+  },
+  "inventory": {
+    "path": "conformance-results/validator-release-inventory-loop111-g1-2026-10-05.json",
+    "sha256": "cd9b977d53009eee937efa0154f7d5ad8b8bf334aa2d013f956c1cf931235167"
+  },
+  "acceptance": {
+    "rawReport": {
+      "path": "conformance-results/validator-r4-raw-loop111-g1-2026-10-05.json.gz",
+      "sha256": "b1dce811a42fb3329318f4deb0d1129f05756ec2d8ec7d041b7a1f7ca82048d4",
+      "contentSha256": "2c797459ed123d6e7bba6b00265eabe03c3d126c85e65cc9699524b81d72648d"
+    },
+    "measurement": {
+      "path": "conformance-results/validator-r4-receipts-loop111-g1-2026-10-05.json.gz",
+      "sha256": "2631aac491cfe626d8b7509c1cb44eededbe16ecc4a290a58ae09d6a43c1c914",
+      "contentSha256": "0287d12dbd2c3ae0d7037ebccc09242ce5c5129aefbb9182b41bf282979478bd"
+    },
+    "report": {
+      "path": "conformance-results/validator-r4-acceptance-loop111-g1-2026-10-05.json",
+      "sha256": "806192e0dd2013748127f0ee786ac5c2d91077f9535da19ea85458a9bab9b187"
+    },
+    "origin": {
+      "path": "conformance-results/validator-r4-measurement-origin-loop111-g1-2026-10-05.json",
+      "sha256": "5f656c8b2b2be147983bc1c3d681271a0a18041cfcb17961263af7be9d173dbc"
+    }
+  },
+  "miiClean": {
+    "report": {
+      "path": "conformance-results/validator-mii-clean-loop111-g1-2026-10-05.json",
+      "sha256": "e3ec3f408a7c75bb008cd37ef045e17ecdd5b51049aad0b548191797af31644f"
+    },
+    "origin": {
+      "path": "conformance-results/validator-mii-measurement-origin-loop111-g1-2026-10-05.json",
+      "sha256": "09c5cb6c28458d2ff1c7e50827ba96720343b9561d1c49f65763b4ff439219a4"
+    }
+  },
+  "limits": {
+    "r4LiveAuthorityReobserved": false,
+    "originalMeasurementReused": true
+  }
+}

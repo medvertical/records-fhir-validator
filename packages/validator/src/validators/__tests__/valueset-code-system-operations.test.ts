@@ -219,4 +219,37 @@ describe('ValueSetCodeSystemOperations', () => {
       { url: 'https://r5.example/fhir', auth: undefined },
     );
   });
+
+  it('resolves one immutable default before awaiting local work and routes that exact edition', async () => {
+    let resolve!: (value: null) => void;
+    const pending = new Promise<null>(done => { resolve = done; });
+    const loadCodeSystem = vi.fn().mockReturnValue(pending);
+    const validateCodeInCodeSystem = vi.fn().mockResolvedValue({ valid: false, reason: 'code-unknown' });
+    const config: TerminologyResolutionConfig = { strategy: 'server-first', defaultCodeSystemVersions: { [SNOMED_SYSTEM]: UK_VERSION },
+      servers: [{ id: 'uk', url: 'https://uk.example/fhir', enabled: true, fhirVersions: ['R4'], snomedEditions: ['999000041000000102'] }] };
+    const operations = new ValueSetCodeSystemOperations({ apiClient: { validateCodeInCodeSystem } as never,
+      cache: new ValueSetCache(), getResolutionConfig: () => config, packageLoader: { loadCodeSystem } as never });
+    const result = operations.validate('35901911000001104', SNOMED_SYSTEM, undefined, 'R4');
+    config.defaultCodeSystemVersions![SNOMED_SYSTEM] = INTERNATIONAL_VERSION;
+    config.servers![0].url = 'https://another.example/fhir';
+    resolve(null);
+    await result;
+    expect(loadCodeSystem).toHaveBeenCalledWith(SNOMED_SYSTEM, '4', UK_VERSION);
+    expect(validateCodeInCodeSystem).toHaveBeenCalledWith('35901911000001104', SNOMED_SYSTEM, undefined,
+      { url: 'https://uk.example/fhir', auth: undefined, authoritativeSnomedEdition: true }, UK_VERSION);
+  });
+
+  it('does not claim a pinned subsumption answer from an unversioned transport', async () => {
+    const subsumes = vi.fn().mockResolvedValue('subsumes');
+    const config: TerminologyResolutionConfig = { strategy: 'server-first', serverUrl: 'https://tx.example/fhir',
+      defaultCodeSystemVersions: { [SNOMED_SYSTEM]: INTERNATIONAL_VERSION } };
+    const operations = new ValueSetCodeSystemOperations({ apiClient: { subsumes } as never,
+      cache: new ValueSetCache(), getResolutionConfig: () => config, packageLoader: {} as never });
+    await expect(operations.resolveSubsumption(SNOMED_SYSTEM, '123', '456')).resolves.toBe('unknown');
+    expect(subsumes).not.toHaveBeenCalled();
+    config.defaultCodeSystemVersions = undefined;
+    await expect(operations.resolveSubsumption(SNOMED_SYSTEM, '123', '456')).resolves.toBe('subsumes');
+    expect(subsumes).toHaveBeenCalledTimes(1);
+  });
+
 });

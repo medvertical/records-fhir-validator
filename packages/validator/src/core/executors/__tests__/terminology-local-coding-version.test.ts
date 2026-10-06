@@ -25,7 +25,11 @@ describe('deep local Coding validation', () => {
       [],
       { validateCodeInLocalCodeSystemOnly },
       'R4',
-    )).resolves.toEqual([]);
+    )).resolves.toEqual([expect.objectContaining({
+      code: 'terminology-codesystem-unverified',
+      severity: 'information',
+      details: expect.objectContaining({ validationComplete: false, validationStatus: 'incomplete' }),
+    })]);
 
     expect(validateCodeInLocalCodeSystemOnly).toHaveBeenCalledWith(
       '35901911000001104',

@@ -2,6 +2,9 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import {
+  lookupProfilePackageProvenance,
+} from '../package/canonical-pin-provenance';
 import { StructureDefinitionLoader } from './structure-definition-loader';
 
 describe('StructureDefinitionLoader manual IG packages', () => {
@@ -35,6 +38,23 @@ describe('StructureDefinitionLoader manual IG packages', () => {
       url: canonical,
       version: '1.0.0',
     });
+  });
+
+  it('remembers the package a manually loaded profile came from', async () => {
+    const cacheRoot = await mkdtemp(path.join(tmpdir(), 'records-loader-ig-'));
+    tempDirs.push(cacheRoot);
+    const canonical = 'http://example.org/fhir/StructureDefinition/example-patient';
+    await writePackage(cacheRoot, 'example.fhir', '1.0.0', canonical, '1.0.0');
+    const loader = new StructureDefinitionLoader(cacheRoot, null, {
+      autoDownload: false,
+      prewarmProfileSource: false,
+    });
+    await loader.waitForInitialization();
+
+    await loader.loadIGPackage('example.fhir', '1.0.0');
+
+    const resolved = await loader.loadProfile(canonical, 'R4');
+    expect(lookupProfilePackageProvenance(resolved!)).toEqual({ name: 'example.fhir', version: '1.0.0' });
   });
 });
 

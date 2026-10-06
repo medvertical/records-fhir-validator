@@ -1,0 +1,300 @@
+[
+  {
+    "id": "known-positive-custom-n2",
+    "types": [
+      "Observation",
+      "Observation"
+    ],
+    "min": 2,
+    "definition": {
+      "type": "Observation",
+      "version": "R4",
+      "fhirVersion": "5.0.0"
+    },
+    "requestVersion": "R4",
+    "family": "R5",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": false
+    }
+  },
+  {
+    "id": "known-wrong-type-despite-meta",
+    "types": [
+      "Patient"
+    ],
+    "min": 0,
+    "targetMetaMatches": true,
+    "definition": {
+      "type": "Observation",
+      "version": "2",
+      "fhirVersion": "4.0.1"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 1,
+      "incomplete": false
+    }
+  },
+  {
+    "id": "known-short-n1",
+    "types": [
+      "Observation"
+    ],
+    "min": 2,
+    "definition": {
+      "type": "Observation",
+      "version": "2",
+      "fhirVersion": "4.0.1"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 1,
+      "closedErrors": 0,
+      "incomplete": false,
+      "minActual": 1
+    }
+  },
+  {
+    "id": "duplicate-physical-n2-max1",
+    "types": [
+      "Observation",
+      "Observation"
+    ],
+    "duplicate": true,
+    "min": 0,
+    "max": "1",
+    "definition": {
+      "type": "Observation",
+      "version": "2",
+      "fhirVersion": "4.0.1"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "maxErrors": 1,
+      "incomplete": false,
+      "maxActual": 2
+    }
+  },
+  {
+    "id": "wrong-edition",
+    "types": [
+      "Observation"
+    ],
+    "min": 1,
+    "definition": {
+      "type": "Observation",
+      "version": "1",
+      "fhirVersion": "4.0.1"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": true
+    }
+  },
+  {
+    "id": "missing-edition",
+    "types": [
+      "Observation"
+    ],
+    "min": 1,
+    "definition": {
+      "type": "Observation",
+      "fhirVersion": "4.0.1"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": true
+    }
+  },
+  {
+    "id": "wrong-family",
+    "types": [
+      "Observation"
+    ],
+    "min": 1,
+    "definition": {
+      "type": "Observation",
+      "version": "2",
+      "fhirVersion": "5.0.0"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": true
+    }
+  },
+  {
+    "id": "foreign-canonical",
+    "types": [
+      "Observation"
+    ],
+    "min": 1,
+    "definition": {
+      "type": "Observation",
+      "version": "2",
+      "fhirVersion": "4.0.1",
+      "foreignUrl": true
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": true
+    }
+  },
+  {
+    "id": "generic-type",
+    "types": [
+      "Observation"
+    ],
+    "min": 1,
+    "definition": {
+      "type": "Resource",
+      "version": "2",
+      "fhirVersion": "4.0.1"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": true
+    }
+  },
+  {
+    "id": "throw-publication",
+    "types": [
+      "Observation"
+    ],
+    "min": 1,
+    "definition": {
+      "type": "Observation",
+      "version": "2",
+      "fhirVersionGetterThrows": true
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": true
+    }
+  },
+  {
+    "id": "optional-publication-absence-bound-request",
+    "types": [
+      "Observation"
+    ],
+    "min": 1,
+    "definition": {
+      "type": "Observation",
+      "version": "2"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": false
+    }
+  },
+  {
+    "id": "unversioned-does-not-read-version-getter",
+    "types": [
+      "Observation"
+    ],
+    "min": 1,
+    "definition": {
+      "type": "Observation",
+      "fhirVersion": "4.0.1",
+      "versionGetterThrows": true
+    },
+    "requestVersion": null,
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": false
+    }
+  },
+  {
+    "id": "metadata-unknown-impossible-n1",
+    "types": [
+      "Observation"
+    ],
+    "min": 2,
+    "definition": null,
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 1,
+      "closedErrors": 0,
+      "incomplete": true,
+      "upperBound": 1
+    }
+  },
+  {
+    "id": "unknown-target-declared-meta",
+    "types": [
+      null
+    ],
+    "referenceMetaMatches": true,
+    "min": 1,
+    "definition": {
+      "type": "Observation",
+      "version": "2",
+      "fhirVersion": "4.0.1"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": true
+    }
+  },
+  {
+    "id": "known-plus-unknown-bound-n2",
+    "types": [
+      "Observation",
+      null
+    ],
+    "min": 3,
+    "definition": {
+      "type": "Observation",
+      "version": "2",
+      "fhirVersion": "4.0.1"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 1,
+      "closedErrors": 0,
+      "incomplete": true,
+      "upperBound": 2
+    }
+  },
+  {
+    "id": "known-child-rule-preserved",
+    "types": [
+      "Observation"
+    ],
+    "min": 1,
+    "displayMin": 1,
+    "definition": {
+      "type": "Observation",
+      "version": "2",
+      "fhirVersion": "4.0.1"
+    },
+    "requestVersion": "2",
+    "expected": {
+      "minErrors": 0,
+      "closedErrors": 0,
+      "incomplete": false,
+      "childRequiredErrors": 1
+    }
+  }
+]

@@ -21,7 +21,8 @@ import {
   type ValidateBindingOptions,
 } from './valueset-binding-validator.js';
 import { resolveCodeBindingSafely as runSafeBindingResolution } from './valueset-binding-resolution-safety.js';
-import { resolveValueSetCodeBinding } from './valueset-code-binding-resolver.js';
+import { resolveValueSetCodeBinding, resolveBindingCodeSystemVersion } from './valueset-code-binding-resolver.js';
+import { resolveCodeSystemVersion } from './terminology-config-snapshot.js';
 import type { ValueSetCodeSystemOperations } from './valueset-code-system-operations.js';
 import { isValueSetAvailable as resolveValueSetAvailability } from './valueset-availability.js';
 import type {
@@ -49,8 +50,8 @@ export class ValueSetValidationPipeline {
     private readonly resolveCodeBindingSeam: ResolveCodeBinding,
   ) {}
 
-  async prewarmValueSet(valueSetUrl: string): Promise<void> {
-    await this.runtime.packageLoader.loadValueSet(valueSetUrl);
+  async prewarmValueSet(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<void> {
+    await this.runtime.packageLoader.loadValueSet(valueSetUrl, fhirVersion);
   }
 
   isExternalCodeSystem(system: string): boolean {
@@ -84,11 +85,7 @@ export class ValueSetValidationPipeline {
     fhirVersion?: FhirVersion,
   ): Promise<boolean> {
     return (await this.resolveCodeBindingForBinding(
-      code,
-      system,
-      valueSetUrl,
-      bindingStrength,
-      fhirVersion,
+      code, system, valueSetUrl, bindingStrength, fhirVersion,
     )) !== 'invalid';
   }
 
@@ -101,13 +98,19 @@ export class ValueSetValidationPipeline {
     elementPath?: string,
     codeSystemVersion?: string,
   ): Promise<CodeBindingOutcome> {
-    return this.runtime.bindingResolutions.run([
+    const configuredVersion = resolveCodeSystemVersion(this.runtime.resolutionConfig, system, codeSystemVersion);
+    const selectedVersion = codeSystemVersion === undefined && configuredVersion !== undefined
+      ? await resolveBindingCodeSystemVersion(this.runtime.resolutionConfig,
+        this.runtime.packageLoader, system, valueSetUrl, fhirVersion, codeSystemVersion)
+      : codeSystemVersion;
+    const outcome = await this.runtime.bindingResolutions.run([
+      this.runtime.cache.contextKey(''),
       fhirVersion ?? '',
       bindingStrength,
       valueSetUrl,
       system ?? '',
       code,
-      codeSystemVersion ?? '',
+      selectedVersion ?? '',
       elementPath ?? '',
     ], () => this.resolveCodeBindingSafely(
       code,
@@ -116,8 +119,15 @@ export class ValueSetValidationPipeline {
       bindingStrength,
       fhirVersion,
       elementPath,
-      codeSystemVersion,
+      selectedVersion,
     ));
+    if (outcome === 'unverified' && selectedVersion !== codeSystemVersion) {
+      const key = (version?: string) => this.runtime.cache.contextKey(unverifiedBindingKey(code, system, valueSetUrl, fhirVersion, version));
+      const diagnostic = this.runtime.unverifiedBindingDiagnostics.get(key(selectedVersion));
+      // Publication reads the caller's original request, paired with this same completed resolution.
+      if (diagnostic) this.runtime.unverifiedBindingDiagnostics.set(key(codeSystemVersion), diagnostic);
+    }
+    return outcome;
   }
 
   async validateCodeInCodeSystem(
@@ -126,6 +136,7 @@ export class ValueSetValidationPipeline {
     display?: string,
     fhirVersion?: FhirVersion,
     codeSystemVersion?: string,
+    displayLanguage?: string,
   ): Promise<CodeSystemValidationResult> {
     return this.getCodeSystems().validate(
       code,
@@ -133,6 +144,7 @@ export class ValueSetValidationPipeline {
       display,
       fhirVersion,
       codeSystemVersion,
+      displayLanguage,
     );
   }
 
@@ -143,13 +155,18 @@ export class ValueSetValidationPipeline {
     fhirVersion?: FhirVersion,
     codeSystemVersion?: string,
   ): Promise<CodeSystemValidationResult | null> {
-    return this.getCodeSystems().validateLocal(
-      code,
-      system,
-      display,
-      fhirVersion,
-      codeSystemVersion,
-    );
+    return this.validateCodeInLocalCodeSystemWithLanguage(code, system, display, fhirVersion, codeSystemVersion);
+  }
+
+  async validateCodeInLocalCodeSystemWithLanguage(
+    code: string,
+    system: string,
+    display?: string,
+    fhirVersion?: FhirVersion,
+    codeSystemVersion?: string,
+    displayLanguage?: string,
+  ): Promise<CodeSystemValidationResult | null> {
+    return this.getCodeSystems().validateLocal(code, system, display, fhirVersion, codeSystemVersion, displayLanguage);
   }
 
   async isCodeInValueSet(
@@ -180,13 +197,7 @@ export class ValueSetValidationPipeline {
     valueSetUrl: string,
     fhirVersion: FhirVersion,
   ): Promise<CodeBindingOutcome> {
-    return this.resolveCodeBindingForBinding(
-      code,
-      system,
-      valueSetUrl,
-      'required',
-      fhirVersion,
-    );
+    return this.resolveCodeBindingForBinding(code, system, valueSetUrl, 'required', fhirVersion);
   }
 
   async resolveSubsumption(
@@ -210,7 +221,7 @@ export class ValueSetValidationPipeline {
       isValueSetAvailable: this.isValueSetAvailable.bind(this),
       getUnverifiedBindingDiagnostic: (code, system, valueSetUrl, fhirVersion, codeSystemVersion) =>
         this.runtime.unverifiedBindingDiagnostics.get(
-          unverifiedBindingKey(code, system, valueSetUrl, fhirVersion, codeSystemVersion),
+          this.runtime.cache.contextKey(unverifiedBindingKey(code, system, valueSetUrl, fhirVersion, codeSystemVersion)),
         ),
     };
   }
@@ -261,7 +272,7 @@ export class ValueSetValidationPipeline {
     diagnostic: UnverifiedBindingDiagnostic,
   ): void {
     this.runtime.unverifiedBindingDiagnostics.set(
-      unverifiedBindingKey(code, system, valueSetUrl, fhirVersion, codeSystemVersion),
+      this.runtime.cache.contextKey(unverifiedBindingKey(code, system, valueSetUrl, fhirVersion, codeSystemVersion)),
       diagnostic,
     );
   }
@@ -309,6 +320,7 @@ export class ValueSetValidationPipeline {
       hasTerminologyServer: this.hasTerminologyServer.bind(this),
       packageLoader: this.runtime.packageLoader,
       resolutionConfig: this.runtime.resolutionConfig,
+      validateLocalCodeSystem: (code, system, family, version) => this.getCodeSystems().validateLocal(code, system, undefined, family, version),
       resolveServerForSystem: this.resolveServerForSystem.bind(this),
       terminologyDiagnostics: this.runtime.terminologyDiagnostics,
       twoPhaseShadow: this.runtime.twoPhaseShadow,

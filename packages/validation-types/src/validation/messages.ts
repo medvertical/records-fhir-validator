@@ -34,6 +34,8 @@ export interface ValidationIssue {
   path?: string;
   code?: string;
   profile?: string; // Core field: profile URL this validation message belongs to
+  /** Canonical URI of the rule definer, separately from applied validation context; not an edition receipt. */
+  definitionProfile?: string;
   details?: string | Record<string, unknown>; // Accept both string and structured objects (optional metadata only)
   suggestions?: string[];
   timestamp?: Date | string; // Accept both Date and ISO string

@@ -2,6 +2,12 @@ import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
 import { deriveBundleBaseUrl, extractReferencesWithPaths } from './bundle-reference-utils.js';
 import {
+    closedBundleReferenceSeverity,
+    isRelativeReference,
+    mustResolveInClosedBundle,
+    resolvesAgainstOwnRestfulFullUrl,
+} from './bundle-closed-reference-rules.js';
+import {
     buildReferenceIndexes,
     extractLogicalReference,
     resolveReferenceInBundle,
@@ -74,12 +80,12 @@ function validateEntryReferences(
         const historyMatch = ref.match(/^(.*)\/_history\/[^/]+$/);
         const unversioned = historyMatch ? historyMatch[1] : ref;
         const resolved = resolveReferenceInBundle(ref, unversioned, sourceFullUrl, indexes, strictRefs);
-        if (
-            isRelativeReference(ref) &&
-            sourceFullUrl &&
-            !sourceFullUrlMatchesResource(sourceFullUrl, resource)
-        ) {
-            resolved.resolvable = false;
+        if (isRelativeReference(ref) && sourceFullUrl) {
+            if (!sourceFullUrlMatchesResource(sourceFullUrl, resource)) resolved.resolvable = false;
+            if (isClosedBundle && !resolvesAgainstOwnRestfulFullUrl(ref, sourceFullUrl, resource, indexes)) {
+                resolved.resolvable = false;
+                resolved.hasTypeIdMatch = indexes.typeIdToFullUrls.has(unversioned);
+            }
         }
         if (resolved.resolvable) continue;
 
@@ -97,10 +103,6 @@ function validateEntryReferences(
     }
 
     return issues;
-}
-
-function isRelativeReference(reference: string): boolean {
-    return /^[A-Z][A-Za-z]+\/[^/?#]+(?:\/_history\/[^/?#]+)?$/.test(reference);
 }
 
 function sourceFullUrlMatchesResource(
@@ -122,7 +124,8 @@ function createUnresolvedReferenceIssues(
     context: ReferenceContext,
     indexes: BundleReferenceIndexes,
 ): ValidationIssue[] {
-    if (context.isClosedBundle) {
+    // A reference that several entries answer fails in every Bundle type.
+    if (context.resolved.multipleMatches || (context.isClosedBundle && mustResolveInClosedBundle(context))) {
         return createClosedBundleReferenceIssues(context);
     }
     return createOpenBundleReferenceIssues(context, indexes);
@@ -146,7 +149,7 @@ function createClosedBundleReferenceIssues(context: ReferenceContext): Validatio
             ? `Found ${context.resolved.matchCount} matches for '${context.ref}' in the bundle`
             : `Can't find '${context.ref}' in the bundle ` +
                 `(${getResourceLabel(context.resource)}[${context.entryIndex}]).${detail}`,
-        severityOverride: 'error',
+        severityOverride: closedBundleReferenceSeverity(context),
         details: buildReferenceMismatchDetails(context),
     }));
 

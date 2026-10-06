@@ -1,6 +1,5 @@
 import type { StructureDefinition } from '../core/structure-definition-types.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
-import { expressionStartsAtResourceRoot } from './constraint-choice-context.js';
 import { SDConstraintCollector } from './sd-constraint-collector.js';
 import type { MatchResult } from './sd-element-matcher.js';
 import {
@@ -33,21 +32,12 @@ export class SDFHIRPathConstraintRunner {
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
 
-    const rootExpressionConstraints = new Set<string>();
     for (const matched of matchResult.constraintElements) {
       if (matched.element?.path === resourceType) {
         continue;
       }
 
       for (const constraint of matched.element.constraint || []) {
-        if (expressionStartsAtResourceRoot(constraint.expression, resourceType)) {
-          const key = `${matched.element?.id ?? matched.element?.path ?? matched.resourcePath}|${constraint.key}|${constraint.expression}`;
-          if (rootExpressionConstraints.has(key)) {
-            continue;
-          }
-          rootExpressionConstraints.add(key);
-        }
-
         const constraintIssues = await this.constraintEvaluator.evaluateMatchedConstraint(
           matched,
           constraint,

@@ -30,6 +30,7 @@ export async function validateCodeSystemRemotely(
   display?: string,
   override?: TerminologyServerOverride,
   codeSystemVersion?: string,
+  displayLanguage?: string,
 ): Promise<CodeSystemValidationResult> {
   const serverUrl = override?.url ?? context.config.serverUrl;
   if (!serverUrl) {
@@ -37,7 +38,11 @@ export async function validateCodeSystemRemotely(
       '[TerminologyApiClient] No terminology server configured; skipping direct CodeSystem validation',
       terminologyTargetMetadata(system),
     );
-    return { valid: true };
+    return {
+      valid: true,
+      reason: 'no-server',
+      message: 'CodeSystem membership was not verified because no terminology server is configured.',
+    };
   }
   const serverScope = getTerminologyServerScope(serverUrl, override?.auth ?? context.config.auth);
   const cacheKey = makeCodeSystemValidateCodeCacheKey(
@@ -47,6 +52,7 @@ export async function validateCodeSystemRemotely(
     display,
     codeSystemVersion,
     override?.authoritativeSnomedEdition === true,
+    displayLanguage,
   );
   const cached = context.operationCache.getCodeSystemValidateCode<CodeSystemValidationResult>(cacheKey);
   if (cached) {
@@ -55,7 +61,7 @@ export async function validateCodeSystemRemotely(
   }
   return runSingleFlight(
     context.pendingRequests,
-    cacheKey,
+    context.operationCache.contextKey?.(cacheKey) ?? cacheKey,
     () => logger.debug(
       '[TerminologyApiClient] CodeSystem validate-code in-flight hit',
       terminologyTargetMetadata(system, code),
@@ -67,7 +73,11 @@ export async function validateCodeSystemRemotely(
           '[TerminologyApiClient] CodeSystem $validate-code circuit open',
           terminologyTargetMetadata(serverUrl, system),
         );
-        return { valid: true };
+        return {
+          valid: true,
+          reason: 'circuit-open',
+          message: 'CodeSystem membership was not verified because the terminology server circuit is open.',
+        };
       }
       if (!context.remoteBudget.reserve(serverUrl, context.config)) {
         return {
@@ -87,6 +97,7 @@ export async function validateCodeSystemRemotely(
           codeSystemVersion,
           config: context.config,
           display,
+          displayLanguage,
           override,
           operationCache: context.operationCache,
           requestConfigBuilder: context.requestConfigBuilder,

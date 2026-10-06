@@ -56,13 +56,15 @@ describe('ConstraintValidator resource-root expression handling', () => {
     expect(issues.find(issue => issue.ruleId === 'contained-context')).toBeUndefined();
   });
 
-  it('evaluates absolute resource-root expressions from nested elements only once', async () => {
+  // FHIRPath reads a leading type name as a filter on the context: on
+  // Patient.name, `Patient` selects nothing, as in the reference validator.
+  it('evaluates a nested invariant that names the resource at each element', async () => {
     const validator = new ConstraintValidator();
 
     const issues = await validator.validate(
       {
         resourceType: 'Patient',
-        active: false,
+        active: true,
         name: [
           { family: 'Curie' },
           { family: 'Meitner' },
@@ -77,27 +79,25 @@ describe('ConstraintValidator resource-root expression handling', () => {
             key: 'root-active',
             severity: 'error' as const,
             human: 'Patient must be active',
-            expression: 'Patient.active = true',
+            expression: '(Patient.active = true)',
           }],
         },
       ],
       'http://example.org/StructureDefinition/Patient',
     );
 
-    expect(issues).toHaveLength(1);
-    expect(issues[0]).toEqual(expect.objectContaining({
-      path: 'Patient.name',
-      ruleId: 'root-active',
-    }));
+    expect(issues.map(issue => [issue.ruleId, issue.path])).toEqual([
+      ['root-active', 'Patient.name[0]'],
+      ['root-active', 'Patient.name[1]'],
+    ]);
   });
 
-  it('does not flag nested absolute resource-root expressions when the root matches', async () => {
+  it('holds a nested element to what its resource-named paths select there', async () => {
     const validator = new ConstraintValidator();
 
     const issues = await validator.validate(
       {
         resourceType: 'Patient',
-        active: true,
         name: [{ family: 'Curie' }],
       },
       [
@@ -106,10 +106,10 @@ describe('ConstraintValidator resource-root expression handling', () => {
           path: 'Patient.name',
           min: 0,
           constraint: [{
-            key: 'root-active',
+            key: 'root-guard',
             severity: 'error' as const,
-            human: 'Patient must be active',
-            expression: '(Patient.active = true)',
+            human: 'Named patients must state whether they are active',
+            expression: 'Patient.active.exists() or Patient.name.exists().not()',
           }],
         },
       ],

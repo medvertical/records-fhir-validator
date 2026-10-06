@@ -1,0 +1,27 @@
+{
+  "schema": "records.validator.mii-clean-measurement.v1",
+  "before": "cd9b977d53009eee937efa0154f7d5ad8b8bf334aa2d013f956c1cf931235167",
+  "after": "cd9b977d53009eee937efa0154f7d5ad8b8bf334aa2d013f956c1cf931235167",
+  "startedAt": "2026-10-05T22:40:13.392Z",
+  "finishedAt": "2026-10-05T22:42:05.028Z",
+  "command": [
+    "env",
+    "TSX_TSCONFIG_PATH=tsconfig.conformance-built.json",
+    "node_modules/.bin/tsx",
+    "--tsconfig",
+    "tsconfig.conformance-built.json",
+    "scripts/quality/clean-validation.ts",
+    "--corpus",
+    "quality-corpus/r4/profiled/mii-2026",
+    "--report-prefix",
+    "mii-2026-precision-loop111-g1",
+    "--min-precision",
+    "99",
+    "--min-fixtures",
+    "440",
+    "--max-excluded",
+    "110"
+  ],
+  "exitCode": 0,
+  "reportSha256": "e3ec3f408a7c75bb008cd37ef045e17ecdd5b51049aad0b548191797af31644f"
+}

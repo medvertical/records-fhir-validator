@@ -5,6 +5,7 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
 import { logger } from '../logger.js';
+import { unresolvedInternalSystemIssues } from './internal-system-target-rule.js';
 import { assertFhirObjectTraversalCapacity } from '../utils/object-traversal-limit.js';
 
 type FhirRecord = Record<string, unknown>;
@@ -21,6 +22,7 @@ interface ContainedAnalysis {
     containedIndexes: Map<string, number>;
     duplicateIndexes: Set<number>;
     references: InternalReferenceHit[];
+    canonicalReferences: InternalReferenceHit[];
     referencedIds: Set<string>;
 }
 
@@ -34,7 +36,8 @@ export interface ContainedValidationResult {
 export class ContainedResourceValidator {
     validate(resource: unknown): ValidationIssue[] {
         const analysis = analyzeContainedResources(resource);
-        if (analysis.contained.length === 0) return [];
+        const internalSystems = unresolvedInternalSystemIssues(resource);
+        if (analysis.contained.length === 0) return [...validateInternalCanonicals(analysis), ...internalSystems];
 
         logger.debug(
             `[ContainedValidator] Validating ${analysis.contained.length} contained resources`,
@@ -43,6 +46,8 @@ export class ContainedResourceValidator {
         return [
             ...validateContainedDefinitions(analysis),
             ...validateInternalReferences(analysis),
+            ...validateInternalCanonicals(analysis),
+            ...internalSystems,
             ...validateContainedUsage(analysis),
         ];
     }
@@ -66,9 +71,10 @@ export class ContainedResourceValidator {
                 ? [
                     ...validateContainedDefinitions(analysis),
                     ...validateInternalReferences(analysis),
+                    ...validateInternalCanonicals(analysis),
                     ...validateContainedUsage(analysis),
                 ]
-                : [],
+                : validateInternalCanonicals(analysis),
             containedMap: analysis.containedMap,
             referencedIds: analysis.referencedIds,
             unreferencedIds,
@@ -97,9 +103,10 @@ function analyzeContainedResources(resource: unknown): ContainedAnalysis {
     }
 
     const references: InternalReferenceHit[] = [];
+    const canonicalReferences: InternalReferenceHit[] = [];
     const referencedIds = new Set<string>();
     if (root) {
-        collectInternalReferences(root, resourceType, undefined, true, references, referencedIds);
+        collectInternalReferences(root, resourceType, undefined, true, references, referencedIds, canonicalReferences);
         for (let index = 0; index < contained.length; index++) {
             const candidate = toRecord(contained[index]);
             if (!candidate) continue;
@@ -110,6 +117,7 @@ function analyzeContainedResources(resource: unknown): ContainedAnalysis {
                 false,
                 references,
                 referencedIds,
+                canonicalReferences,
             );
         }
     }
@@ -121,6 +129,7 @@ function analyzeContainedResources(resource: unknown): ContainedAnalysis {
         containedIndexes,
         duplicateIndexes,
         references,
+        canonicalReferences,
         referencedIds,
     };
 }
@@ -192,6 +201,30 @@ function validateInternalReferences(analysis: ContainedAnalysis): ValidationIssu
     });
 }
 
+function validateInternalCanonicals(analysis: ContainedAnalysis): ValidationIssue[] {
+    return analysis.canonicalReferences.flatMap(({ id, path }) => analysis.containedMap.has(id) ? [] : [
+        createValidationIssue({
+            code: 'contained-unresolved-canonical',
+            path,
+            resourceType: analysis.resourceType,
+            customMessage: `The URL value '#${id}' is invalid because there is no matching target`,
+            severityOverride: 'error',
+            details: { reference: `#${id}`, availableIds: Array.from(analysis.containedMap.keys()) },
+        }),
+    ]);
+}
+
+/**
+ * Elements whose type is canonical wherever the name occurs, where `#id`
+ * must name a contained resource. Raw JSON does not carry the primitive
+ * type, and other strings may start with `#` (a markdown heading).
+ */
+const CANONICAL_ELEMENT_NAMES = new Set(['answerValueSet', 'library', 'valueSet']);
+
+function isCanonicalElementName(key: string): boolean {
+    return (key.length > 'Canonical'.length && key.endsWith('Canonical')) || CANONICAL_ELEMENT_NAMES.has(key);
+}
+
 function validateContainedUsage(analysis: ContainedAnalysis): ValidationIssue[] {
     const issues: ValidationIssue[] = [];
     for (const [id, index] of analysis.containedIndexes) {
@@ -214,6 +247,7 @@ function collectInternalReferences(
     skipRootContained: boolean,
     hits: InternalReferenceHit[],
     referencedIds: Set<string>,
+    canonicalHits: InternalReferenceHit[],
 ): void {
     const pending: Array<{ value: unknown; path: string; isRoot: boolean }> = [
         { value: start, path: startPath, isRoot: true },
@@ -241,6 +275,9 @@ function collectInternalReferences(
         }
 
         const record = current.value as FhirRecord;
+        // A resource inside this one (a Bundle entry, a Parameters value)
+        // resolves `#id` against its own contained list and is validated on its own.
+        if (!current.isRoot && typeof record.resourceType === 'string') continue;
         for (const [key, value] of Object.entries(record)) {
             if (current.isRoot && skipRootContained && key === 'contained') continue;
             const path = `${current.path}.${key}`;
@@ -250,6 +287,14 @@ function collectInternalReferences(
                 // primitive type here, so mirror the structural check and only
                 // use the fragment as positive usage evidence.
                 referencedIds.add(value.slice(1));
+            }
+            if (isCanonicalElementName(key)) {
+                const values = Array.isArray(value) ? value : [value];
+                values.forEach((item, index) => {
+                    if (typeof item === 'string' && item.startsWith('#') && item.length > 1) {
+                        canonicalHits.push({ id: item.slice(1), path: Array.isArray(value) ? `${path}[${index}]` : path });
+                    }
+                });
             }
             if (key === 'reference' && typeof value === 'string' && value.startsWith('#')) {
                 const id = value.slice(1);

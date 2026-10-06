@@ -22,15 +22,18 @@ interface InterpretedConstraintResult {
 }
 
 /**
- * FHIR invariants must return a Boolean collection. An empty collection is
- * vacuously satisfied; arbitrary truthy JavaScript values are not Booleans.
+ * FHIR invariants must evaluate to `true`. An empty collection is not
+ * success: in three-valued FHIRPath logic `value.matches(…)` on an identifier
+ * without a value, or arithmetic over a non-numeric digit, yields empty, and
+ * the reference validator reports the invariant as failed. Arbitrary truthy
+ * JavaScript values are not Booleans.
  */
 export function classifyConstraintResult(result: unknown): ClassifiedConstraintResult {
   if (result === true) return { status: 'passed', resultTypes: ['boolean'] };
   if (result === false) return { status: 'failed', resultTypes: ['boolean'] };
 
   if (Array.isArray(result)) {
-    if (result.length === 0) return { status: 'passed', resultTypes: [] };
+    if (result.length === 0) return { status: 'failed', resultTypes: [] };
     const resultTypes = [...new Set(result.map(resultType))];
     if (resultTypes.length === 1 && resultTypes[0] === 'boolean') {
       return {
@@ -68,10 +71,14 @@ export function interpretConstraintResult(
       profile: profileUrl,
       customMessage: `Constraint '${constraint.key}' did not return a Boolean result`,
       severityOverride: 'information',
+      aspectOverride: 'profile',
+      ruleId: constraint.key,
       details: {
         expression: constraint.expression,
         constraintKey: constraint.key,
         resultTypes: classification.resultTypes,
+        validationComplete: false,
+        validationStatus: 'incomplete',
       },
     }),
   };

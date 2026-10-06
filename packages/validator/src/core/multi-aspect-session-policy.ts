@@ -24,6 +24,7 @@ interface MultiAspectSessionRunnerOptions {
 export class MultiAspectSessionPolicy {
   private readonly strictnessConfig: ReturnType<typeof resolveStrictnessConfig>;
   private readonly advisorRules: AdvisorRule[];
+  private readonly bestPracticeSeverity: ValidationSettings['bestPracticeSeverity'];
   private readonly forPublication: boolean;
   readonly validateBundleEntries: boolean;
   readonly runCustomRules: boolean;
@@ -31,6 +32,7 @@ export class MultiAspectSessionPolicy {
   constructor(settings: ValidationSettings | undefined) {
     this.strictnessConfig = resolveStrictnessConfig(settings);
     this.advisorRules = settings?.advisorRules ?? [];
+    this.bestPracticeSeverity = settings?.bestPracticeSeverity;
     this.forPublication = isForPublication(settings);
     this.validateBundleEntries = shouldValidateBundleEntryResources(settings);
     this.runCustomRules = shouldRunCustomRules(settings);
@@ -41,6 +43,7 @@ export class MultiAspectSessionPolicy {
       advisorRules: this.advisorRules,
       attributeIssues: options.attributeIssues,
       aspectSeverityFor: this.strictnessConfig.aspectSeverityFor,
+      bestPracticeSeverity: this.bestPracticeSeverity,
       collectedAspects: options.collectedAspects,
       fhirVersion: options.fhirVersion,
       forPublication: this.forPublication,
@@ -54,8 +57,9 @@ export class MultiAspectSessionPolicy {
     collectedAspects: AspectResult[],
     structureDef: StructureDefinition,
     profileFallbackIssue: ValidationIssue | null,
+    fhirVersion?: 'R4' | 'R5' | 'R6',
   ): MultiAspectValidateResult {
-    const aspects = normalizeIssuesByAspect(collectedAspects);
+    const aspects = normalizeIssuesByAspect(collectedAspects, structureDef, fhirVersion);
     if (profileFallbackIssue) {
       const profileAspect = aspects.find(aspect => aspect.aspect === 'profile');
       if (profileAspect) profileAspect.isValid = false;

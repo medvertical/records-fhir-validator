@@ -1,7 +1,7 @@
-import { getResolvedPrimitiveSidecarType } from '../core/fhir-primitive-sidecar.js';
+import { getChoiceValueType, getResolvedPrimitiveSidecarType } from '../core/fhir-primitive-sidecar.js';
 
 export function inferType(value: unknown): string {
-  const sidecarType = getResolvedPrimitiveSidecarType(value);
+  const sidecarType = getResolvedPrimitiveSidecarType(value) ?? getChoiceValueType(value);
   if (sidecarType) return sidecarType;
   if (typeof value === 'string') return 'string';
   if (typeof value === 'number') return Number.isInteger(value) ? 'integer' : 'decimal';

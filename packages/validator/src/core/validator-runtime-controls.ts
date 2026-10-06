@@ -51,10 +51,12 @@ export class ValidatorRuntimeControls {
     return this.components.questionnaireRegistry.register(questionnaire);
   }
 
-  async prewarmQuestionnaireAnswerValueSets(questionnaire: unknown): Promise<void> {
+  async prewarmQuestionnaireAnswerValueSets(questionnaire: unknown, fhirVersion?: FhirVersion): Promise<void> {
     await prewarmQuestionnaireAnswerValueSets(
       questionnaire,
-      valueSetUrl => this.components.valuesetValidator.prewarmValueSet(valueSetUrl),
+      valueSetUrl => fhirVersion
+        ? this.components.valuesetValidator.prewarmValueSet(valueSetUrl, fhirVersion)
+        : this.components.valuesetValidator.prewarmValueSet(valueSetUrl),
     );
   }
 

@@ -3,6 +3,7 @@ import { createMemberOfFunction, extensionFunction } from './fhirpath-custom-fun
 import { makeTypedResourceNode, unwrapFhirPathValue } from './fhirpath-node-unwrap.js';
 import { normalizeFhirReferenceKey } from '../core/fhir-reference-key.js';
 import { ValueSetCache } from './valueset-cache.js';
+import type { ProfileConformanceLookup } from './sd-fhirpath-profile-conformance.js';
 
 export { extensionFunction } from './fhirpath-custom-functions.js';
 
@@ -17,6 +18,8 @@ export interface FHIRPathContext {
     bundleResources?: Map<string, unknown>;
     /** ValueSet validator for memberOf */
     valueSetCache?: ValueSetCache;
+    /** Conformance the validator established before evaluation, for conformsTo */
+    profileConformance?: ProfileConformanceLookup;
 }
 
 export type FHIRPathBundleInput =
@@ -55,9 +58,11 @@ export function resolveFunction(
 
 function resolveReferenceValue(item: unknown, context: FHIRPathContext): unknown {
     const referenceValue = unwrapFhirPathValue(item);
-    if (!isObjectRecord(referenceValue)) return undefined;
-
-    const reference = referenceValue.reference;
+    // resolve() also takes the reference string itself (Da Vinci PCT's
+    // `descendants().reference.all(resolve().exists())`).
+    const reference = typeof referenceValue === 'string'
+        ? referenceValue
+        : isObjectRecord(referenceValue) ? referenceValue.reference : undefined;
     if (typeof reference !== 'string') return undefined;
 
     if (context.bundleResources) {
@@ -120,13 +125,18 @@ export function memberOfFunction(input: unknown[], valueSetUrl: string | string[
  * Empty input propagates to an empty result (constraints stay vacuously
  * satisfied, matching the HL7 validator) instead of asserting conformance.
  */
-export function conformsToFunction(input: unknown[], profileUrl: string): boolean[] {
+export function conformsToFunction(input: unknown[], profileUrl: string, context?: FHIRPathContext): boolean[] {
     const results: boolean[] = [];
 
     for (const item of input) {
         const resource = unwrapFhirPathValue(item);
         if (!isObjectRecord(resource)) {
             results.push(false);
+            continue;
+        }
+        const established = context?.profileConformance?.(resource, profileUrl);
+        if (established !== undefined) {
+            results.push(established);
             continue;
         }
 
@@ -181,6 +191,7 @@ export function createFHIRPathContext(
     rootResource: unknown,
     bundleResources?: FHIRPathBundleInput,
     cache: ValueSetCache = new ValueSetCache(),
+    profileConformance?: ProfileConformanceLookup,
 ): FHIRPathContext {
     const resourceMap = new Map<string, unknown>();
 
@@ -196,6 +207,15 @@ export function createFHIRPathContext(
             resourceMap.set(resource.fullUrl, resource);
         }
     };
+    const addEntries = (entries: unknown[]) => {
+        for (const entry of entries) {
+            if (!isObjectRecord(entry)) continue;
+            addResource(
+                entry.resource,
+                typeof entry.fullUrl === 'string' ? entry.fullUrl : undefined,
+            );
+        }
+    };
 
     if (bundleResources instanceof Map) {
         for (const [reference, resource] of bundleResources) {
@@ -206,19 +226,20 @@ export function createFHIRPathContext(
             addResource(resource);
         }
     } else if (Array.isArray(bundleResources?.entry)) {
-        for (const entry of bundleResources.entry) {
-            if (!isObjectRecord(entry)) continue;
-            addResource(
-                entry.resource,
-                typeof entry.fullUrl === 'string' ? entry.fullUrl : undefined,
-            );
-        }
+        addEntries(bundleResources.entry);
+    }
+    // A Bundle's own invariants resolve against its entries, whatever batch
+    // it came in (Da Vinci PCT's `Bundle.entry.descendants().reference
+    // .all(resolve().exists())`).
+    if (isObjectRecord(rootResource) && rootResource.resourceType === 'Bundle' && Array.isArray(rootResource.entry)) {
+        addEntries(rootResource.entry);
     }
 
     return {
         rootResource,
         bundleResources: resourceMap,
         valueSetCache: cache,
+        ...(profileConformance ? { profileConformance } : {}),
     };
 }
 

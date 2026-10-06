@@ -28,19 +28,17 @@ export function buildConstraintViolationIssue(
   const isDom6 = constraint.key === 'dom-6';
   const isWarningConstraint = constraint.severity === 'warning' && !escalateToError;
   // A profile that declares `severity: warning` on a constraint means warning,
-  // and the reference validator reports it as one. Demoting every non-dom
-  // warning constraint to information diverged from that on every fixture
-  // carrying such a constraint. dom-6 keeps its demotion: it is a best-practice
-  // narrative rule the reference validator also treats as advisory.
-  const shouldDemoteToInfo = (isDom6 && strictnessMode !== 'strict');
+  // and the reference validator reports it as one. dom-6 is a best-practice
+  // narrative rule the reference validator also reports as a warning; the
+  // bestPracticeSeverity setting may demote it with the other best practices.
   const issueCode = isDom6
     ? 'dom-6'
-    : ((isWarningConstraint && (!isDomConstraint || (isDom6 && shouldDemoteToInfo)))
+    : ((isWarningConstraint && !isDomConstraint)
       ? 'profile-constraint-warning'
       : 'profile-constraint-violation');
   const severityOverride = isDom6
-    ? (escalateToError ? 'error' : 'info')
-    : (shouldDemoteToInfo ? 'info' : undefined);
+    ? ((constraint.severity === 'error' || escalateToError) ? 'error' : 'warning')
+    : undefined;
   const escalationNote = escalateToError ? ' [escalated from warning in strict mode]' : '';
 
   return createValidationIssue({

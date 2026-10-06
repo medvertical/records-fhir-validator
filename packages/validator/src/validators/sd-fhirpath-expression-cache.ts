@@ -1,6 +1,6 @@
 import fhirpath from 'fhirpath';
 
-import { getFhirPathModel } from '../core/fhirpath-context.js';
+import { getInvariantFhirPathModel } from '../core/fhirpath-context.js';
 import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite.js';
 import { logger } from '../logger.js';
 import { VersionedExpressionCache } from './fhirpath-expression-cache-core.js';
@@ -9,7 +9,7 @@ import { validationFailureMetadata } from '../utils/validation-execution-failure
 function compileSDFHIRPathExpression(expression: string, fhirVersion: 'R4' | 'R5' | 'R6') {
     return fhirpath.compile(
         rewriteCollectionTypeOperators(expression),
-        getFhirPathModel(fhirVersion),
+        getInvariantFhirPathModel(fhirVersion),
         { async: false },
     );
 }

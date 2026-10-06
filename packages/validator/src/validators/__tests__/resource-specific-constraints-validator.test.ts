@@ -210,6 +210,15 @@ describe('ResourceSpecificConstraintsValidator malformed and repeated structures
     ]);
   });
 
+  it('counts a section Narrative without its div as present text for cmp-1, as FHIRPath does', () => {
+    const issues = resourceSpecificConstraintsValidator.validate({
+      resourceType: 'Composition',
+      section: [{ title: 'History', text: { status: 'generated' } }],
+    });
+
+    expect(issues.filter(issue => issue.code === 'cmp-1-violation')).toEqual([]);
+  });
+
   it('contains cyclic Composition sections', () => {
     const section: Record<string, unknown> = {};
     section.section = [section];

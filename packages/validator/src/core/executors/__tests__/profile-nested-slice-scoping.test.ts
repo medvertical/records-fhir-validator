@@ -497,3 +497,45 @@ describe('nested slice scoping', () => {
     expect(scoped).toEqual([subjectExtension]);
   });
 });
+
+describe('nested slices below other slices', () => {
+  // KBV's Mutterpass fixes the German display of component:SystolicBP's
+  // coding; the sub-extension slice below cannot tell its items apart by
+  // itself, but the slices around it keep the diastolic component out.
+  it('scopes by every enclosing slice where the innermost cannot', () => {
+    const GERMAN_DISPLAY = 'https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Terminology_German';
+    const component = (code: string, german: string) => ({ code: { coding: [{
+      code,
+      display: german,
+      _display: { extension: [{ url: GERMAN_DISPLAY, extension: [{ url: 'content', valueString: german }] }] },
+    }] } });
+    const byUrl = { discriminator: [{ type: 'value', path: 'url' }], rules: 'open' };
+    const extensionPath = 'Observation.component.code.coding.display.extension';
+    const systolic = 'Observation.component:SystolicBP';
+    const profile = {
+      resourceType: 'StructureDefinition',
+      url: 'https://fhir.kbv.de/StructureDefinition/KBV_PR_MIO_MR_Observation_Blood_Pressure',
+      type: 'Observation',
+      snapshot: { element: [
+        { id: 'Observation.component', path: 'Observation.component', slicing: { discriminator: [{ type: 'value', path: 'code.coding.code' }], rules: 'open' } },
+        { id: systolic, path: 'Observation.component', sliceName: 'SystolicBP' },
+        { id: `${systolic}.code.coding.code`, path: 'Observation.component.code.coding.code', fixedCode: '8480-6' },
+        { id: `${systolic}.code.coding.display.extension`, path: extensionPath, slicing: byUrl },
+        { id: `${systolic}.code.coding.display.extension:german`, path: extensionPath, sliceName: 'german' },
+        { id: `${systolic}.code.coding.display.extension:german.url`, path: `${extensionPath}.url`, fixedUri: GERMAN_DISPLAY },
+        { id: `${systolic}.code.coding.display.extension:german.extension`, path: `${extensionPath}.extension`, slicing: byUrl },
+        { id: `${systolic}.code.coding.display.extension:german.extension:content`, path: `${extensionPath}.extension`, sliceName: 'content' },
+        {
+          id: `${systolic}.code.coding.display.extension:german.extension:content.value[x]`,
+          path: `${extensionPath}.extension.value[x]`,
+          slicing: { discriminator: [{ type: 'type', path: '$this' }], rules: 'closed' },
+        },
+      ] },
+    } as unknown as StructureDefinition;
+    const resource = { resourceType: 'Observation', component: [component('8480-6', 'systolischer Blutdruck'), component('8462-4', 'diastolischer Blutdruck')] };
+    const valueSlicing = profile.snapshot!.element!.at(-1)!;
+
+    expect(resolveNestedSliceParentItems(resource, valueSlicing, profile, getValueAtPath))
+      .toEqual([{ url: 'content', valueString: 'systolischer Blutdruck' }]);
+  });
+});

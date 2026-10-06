@@ -15,6 +15,7 @@ export function validatePrimitiveStringFormat(
   effectiveType: string,
   path: string,
   profileUrl?: string,
+  fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
 ): ValidationIssue | null {
   switch (effectiveType) {
     case 'date':
@@ -38,7 +39,7 @@ export function validatePrimitiveStringFormat(
           effectiveType,
         );
       }
-      return isValidFhirDateTime(value)
+      return isValidFhirDateTime(value, effectiveType)
         ? null
         : createInvalidFormatIssue(
           path,
@@ -58,15 +59,18 @@ export function validatePrimitiveStringFormat(
           'time',
         );
     case 'base64Binary':
-      return isValidBase64Binary(value)
+      return validateBase64Binary(value, path, profileUrl, fhirVersion);
+    case 'code':
+      // A Coding's code answers to the terminology hygiene rule instead.
+      if (/(?:\.coding\[\d+\]|\.(?:value|answer|pattern|fixed)Coding)\.code$/.test(path)) return null;
+      return /^[^\s]+(?: [^\s]+)*$/.test(value)
         ? null
         : createInvalidFormatIssue(
           path,
           profileUrl,
-          `Invalid base64Binary format at ${path}`,
+          `The code '${value}' is not valid (whitespace rules)`,
           value,
-          'base64Binary',
-          'structural-invalid-base64-format',
+          'code',
         );
     case 'string':
       return createStringWhitespacePaddingIssue(value, path, profileUrl);
@@ -227,13 +231,21 @@ function suggestFhirDateTime(value: string): string | undefined {
   return undefined;
 }
 
+// The FHIR patterns the reference validator applies: there is no year 0000,
+// and an instant always carries a time and a time zone.
+const FHIR_YEAR = '([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)';
+const FHIR_MONTH_DAY = '(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01])';
+const FHIR_TIME = 'T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\\.[0-9]+)?(Z|[+-]((0[0-9]|1[0-3]):[0-5][0-9]|14:00))';
+const FHIR_DATE = new RegExp(`^${FHIR_YEAR}(-${FHIR_MONTH_DAY})?)?$`);
+const FHIR_DATE_TIME = new RegExp(`^${FHIR_YEAR}(-${FHIR_MONTH_DAY}(${FHIR_TIME})?)?)?$`);
+const FHIR_INSTANT = new RegExp(`^${FHIR_YEAR}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])${FHIR_TIME}$`);
+
 function isValidFhirDate(value: string): boolean {
-  return /^\d{4}(-\d{2}(-\d{2})?)?$/.test(value) && hasValidCalendarDay(value);
+  return FHIR_DATE.test(value) && hasValidCalendarDay(value);
 }
 
-function isValidFhirDateTime(value: string): boolean {
-  const format = /^[0-9]{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|[+-]((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$/;
-  return format.test(value) && hasValidCalendarDay(value);
+function isValidFhirDateTime(value: string, type: string): boolean {
+  return (type === 'instant' ? FHIR_INSTANT : FHIR_DATE_TIME).test(value) && hasValidCalendarDay(value);
 }
 
 function hasValidCalendarDay(value: string): boolean {
@@ -244,6 +256,41 @@ function hasValidCalendarDay(value: string): boolean {
   return date.getUTCFullYear() === Number(year)
     && date.getUTCMonth() + 1 === Number(month)
     && date.getUTCDate() === Number(day);
+}
+
+/**
+ * RFC 4648 has no whitespace in base64, but the FHIR R4 base64Binary pattern
+ * allows it and readers are asked to accept it: R4 only discourages it, R5
+ * forbids it. The value is judged without it.
+ */
+function validateBase64Binary(
+  value: string,
+  path: string,
+  profileUrl: string | undefined,
+  fhirVersion: 'R4' | 'R5' | 'R6',
+): ValidationIssue | null {
+  const compact = value.replace(/\s/g, '');
+  if (!isValidBase64Binary(compact)) {
+    return createInvalidFormatIssue(
+      path,
+      profileUrl,
+      `Invalid base64Binary format at ${path}`,
+      value,
+      'base64Binary',
+      'structural-invalid-base64-format',
+    );
+  }
+  if (compact === value || compact.length === 0) return null;
+  const forbidden = fhirVersion !== 'R4';
+  return createValidationIssue({
+    code: 'structural-base64-whitespace',
+    path,
+    resourceType: normalizeResourceType('Unknown', path),
+    profile: profileUrl,
+    customMessage: `Base64 encoded values ${forbidden ? 'are not allowed to' : 'SHOULD not'} contain any whitespace `
+      + '(per RFC 4648). Note that non-validating readers are encouraged to accept whitespace anyway',
+    severityOverride: forbidden ? 'error' : 'warning',
+  });
 }
 
 function isValidBase64Binary(value: string): boolean {

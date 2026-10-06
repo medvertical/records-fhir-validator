@@ -83,7 +83,7 @@ async function validatePostStructureRules(
   ];
 
   if (resource.resourceType === 'Bundle') {
-    issues.push(...await deps.structuralExecutor.validateBundle(resource));
+    issues.push(...await deps.structuralExecutor.validateBundle(resource, fhirVersion));
 
     if (recursionDepth < deps.maxBundleEntryDepth) {
       issues.push(...await deps.validateBundleEntries(resource, fhirVersion, recursionDepth + 1));

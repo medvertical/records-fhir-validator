@@ -74,7 +74,8 @@ export function isSliceInScope(
 ): boolean {
   if (!slicingElementId) return true;
   return typeof element.id === 'string'
-    && element.id.startsWith(`${slicingElementId}:`);
+    && (element.id.startsWith(`${slicingElementId}:`)
+      || (slicingElementId.includes(':') && element.id.startsWith(`${slicingElementId}/`)));
 }
 
 export function normalizeCodes(value: unknown): string[] {
@@ -170,4 +171,12 @@ function toRecord(value: unknown): Record<string, unknown> | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : undefined;
+}
+
+
+/** Optional nested slices cannot make a whole occurrence a proven nonmember. */
+export function localSliceConstraintElements(slice: ElementDefinition, elements: ElementDefinition[]): ElementDefinition[] {
+  const prefix = `${slice.id ?? `${slice.path}:${slice.sliceName}`}.`;
+  return [slice, ...elements.filter(element => element.id?.startsWith(prefix)
+    && !element.id.slice(prefix.length).includes(':'))].map(element => ({ ...element, id: element.path }));
 }

@@ -11,6 +11,7 @@ import {
   getElementTypes,
   getNonEmptyString,
   getProfileElements,
+  localSliceConstraintElements,
   type TypeSpec,
 } from './slice-info-input.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
@@ -36,6 +37,7 @@ export async function mergeTypeProfilePatterns(
   // Read the raw type entries rather than getElementTypes(), which drops the
   // `_profile` primitive extensions this needs.
   const rawTypes = Array.isArray(element.type) ? element.type : [];
+  if (rawTypes.length !== 1) return;
   for (const rawType of rawTypes) {
     const typeRecord = asRecord(rawType);
     // Keep getElementTypes()'s contract: an entry without a code is not a type
@@ -43,6 +45,8 @@ export async function mergeTypeProfilePatterns(
     // entry, because getElementTypes() drops it.
     if (!getNonEmptyString(typeRecord?.code)) continue;
     const profiles = Array.isArray(typeRecord?.profile) ? typeRecord.profile : [];
+    // Individual alternative constraints cannot become shared slice requirements.
+    if (profiles.length !== 1) continue;
     const profileSidecars = Array.isArray(typeRecord?._profile) ? typeRecord._profile : [];
     for (let index = 0; index < profiles.length; index += 1) {
       const profileUrl = getNonEmptyString(profiles[index]);
@@ -105,7 +109,8 @@ export async function mergeAncestorTypeProfileSliceMetadata(input: {
   }
 }
 
-export function applyRootSliceConstraints(sliceDef: SliceDefinition, element: ElementDefinition): void {
+export function applyRootSliceConstraints(sliceDef: SliceDefinition, element: ElementDefinition, elements: ElementDefinition[]): void {
+  sliceDef.localProfileDiscriminatorElements = localSliceConstraintElements(element, elements);
   const rootPattern = extractPatternEntry(element);
   if (rootPattern !== undefined) {
     sliceDef.pattern = rootPattern.value;

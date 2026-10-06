@@ -13,6 +13,9 @@
 
 import fhirpath_r4 from 'fhirpath/fhir-context/r4/index.js';
 import fhirpath_r5 from 'fhirpath/fhir-context/r5/index.js';
+import { installFhirPathFractionalSecondsFix } from './fhirpath-fractional-seconds.js';
+
+installFhirPathFractionalSecondsFix();
 
 export type FhirPathModel = typeof fhirpath_r4;
 
@@ -34,3 +37,28 @@ export function getFhirPathModel(
       return fhirpath_r4;
   }
 }
+
+/**
+ * The model profile invariants are evaluated with. The reference validator
+ * tests a value against a type name no model defines (PACIO ADI's
+ * `resolve() is relatedPerson`) as against any other type the value is not;
+ * fhirpath.js refuses the name and the invariant goes unchecked. Custom rules
+ * keep the strict model, where such a name is an authoring mistake to report.
+ */
+export function getInvariantFhirPathModel(fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'): FhirPathModel {
+  const model = getFhirPathModel(fhirVersion);
+  let lenient = invariantModels.get(model);
+  if (!lenient) {
+    lenient = Object.create(model, { availableTypes: { value: new AnyTypeName() } }) as FhirPathModel;
+    invariantModels.set(model, lenient);
+  }
+  return lenient;
+}
+
+class AnyTypeName extends Set<string> {
+  override has(): boolean {
+    return true;
+  }
+}
+
+const invariantModels = new Map<FhirPathModel, FhirPathModel>();

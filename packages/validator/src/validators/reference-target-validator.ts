@@ -1,3 +1,5 @@
+import { elementTypeTargetProfileSource } from '../package/element-profile-reference-provenance.js';
+import type { ProfileReferenceSource } from '../core/profile-reference-authority.js';
 /**
  * Validates Reference target types declared by a StructureDefinition.
  */
@@ -12,7 +14,6 @@ import { createValidationIssue } from '../issues/index.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { targetMatchesSliceDefinition } from './constraint-slice-targets.js';
 import {
-  canonicalBase,
   extractResourceTypeFromCanonical,
   extractTargetTypeFromReference,
   isAbsoluteUri,
@@ -22,14 +23,20 @@ import {
   resolveTargetTypeViaResolver,
   type ProfileTypeResolver,
   type ReferenceResolver,
+  type TargetProfileTypeResolver,
 } from './reference-target-type-resolution.js';
 
-export type { ProfileTypeResolver, ReferenceResolver } from './reference-target-type-resolution.js';
+export type { ProfileTypeResolver, ReferenceResolver, TargetProfileTypeResolver } from './reference-target-type-resolution.js';
 
 export interface ProfiledTargetHit {
+  referencingProfile?: ProfileReferenceSource;
+  profileCandidates?: Array<{ profile: string; referencingProfile?: ProfileReferenceSource }>;
   path: string;
   reference: string;
+  /** Profiled targetProfiles, as written (with the version a definition pins). */
   profiles: string[];
+  /** Every targetProfile of the element's Reference types, sorted, for naming the choices. */
+  choices: string[];
 }
 
 interface AllowedTargetRule {
@@ -54,12 +61,13 @@ export class ReferenceTargetValidator {
     resource: unknown,
     structureDef: StructureDefinition,
     resolveReference?: ReferenceResolver,
+    targetProfileTypeResolver?: TargetProfileTypeResolver,
   ): ValidationIssue[] {
     if (!isRecord(resource)) return [];
     const elements = getSnapshotElements(structureDef);
     if (elements.length === 0) return [];
 
-    const rules = buildAllowedTargetRules(elements, this.profileTypeResolver);
+    const rules = buildAllowedTargetRules(elements, this.profileTypeResolver, targetProfileTypeResolver);
 
     const issues: ValidationIssue[] = [];
     const resourceType = typeof resource.resourceType === 'string'
@@ -144,23 +152,46 @@ export class ReferenceTargetValidator {
     return deduplicateIssues(issues);
   }
 
+  /**
+   * Profiled targetProfiles whose resource type the synchronous resolver does
+   * not know yet. Their ids can mislead (CH eMed's
+   * ch-emed-medication-medicationdispense profiles a Medication), so the
+   * caller loads them before the targets are typed.
+   */
+  untypedTargetProfiles(structureDef: StructureDefinition): string[] {
+    const urls = new Set<string>();
+    for (const element of getSnapshotElements(structureDef)) {
+      for (const canonical of getReferenceTypes(element).flatMap(getTargetProfiles)) {
+        if (isProfiledCanonical(canonical) && !this.profileTypeResolver?.(canonical.split('|')[0])) urls.add(canonical);
+      }
+    }
+    return [...urls];
+  }
+
   collectProfiledTargetHits(
     resource: unknown,
     structureDef: StructureDefinition,
+    selectedSlices?: ReadonlyMap<ElementDefinition, ReadonlySet<string>>,
   ): ProfiledTargetHit[] {
     if (!isRecord(resource)) return [];
     const elements = getSnapshotElements(structureDef);
     const hits: ProfiledTargetHit[] = [];
 
     for (const element of elements) {
-      const profiles = collectProfiledCanonicals(element);
+      const choices = [...new Set(getReferenceTypes(element).flatMap(getTargetProfiles))].sort();
+      const profiles = choices.filter(isProfiledCanonical);
       if (profiles.length === 0) continue;
+      const candidates = getReferenceTypes(element).flatMap(type => getTargetProfiles(type)
+        .filter(isProfiledCanonical).map(profile => ({ profile, referencingProfile: elementTypeTargetProfileSource(type) })));
+      const profileCandidates = candidates.some(candidate => candidate.referencingProfile) ? candidates : undefined;
 
-      for (const hit of collectReferenceHits(resource, element, elements)) {
+      for (const hit of collectReferenceHits(resource, element, elements, selectedSlices?.get(element))) {
         hits.push({
           path: hit.path,
           reference: hit.reference,
           profiles,
+          choices,
+          ...(profileCandidates ? { profileCandidates } : {}),
         });
       }
     }
@@ -172,6 +203,7 @@ export class ReferenceTargetValidator {
 function buildAllowedTargetRules(
   elements: ElementDefinition[],
   profileTypeResolver?: ProfileTypeResolver,
+  targetProfileTypeResolver?: TargetProfileTypeResolver,
 ): AllowedTargetRule[] {
   const rules: AllowedTargetRule[] = [];
 
@@ -193,7 +225,9 @@ function buildAllowedTargetRules(
           unrestricted = true;
           break;
         }
-        const resourceType = extractResourceTypeFromCanonical(canonical, profileTypeResolver);
+        const resourceType = targetProfileTypeResolver
+          ? targetProfileTypeResolver(canonical, type)
+          : extractResourceTypeFromCanonical(canonical, profileTypeResolver);
         if (!resourceType) {
           unrestricted = true;
           break;
@@ -213,10 +247,12 @@ function collectReferenceHits(
   resource: Record<string, unknown>,
   element: ElementDefinition,
   elements: ElementDefinition[],
+  selectedPaths?: ReadonlySet<string>,
 ): ReferenceHit[] {
   return getValidationTargets(resource, element.path).flatMap(target => {
     if (
-      !targetMatchesSliceDefinition(target.value, element, elements, { resource, target }) ||
+      !(selectedPaths ? selectedPaths.has(target.fullPath)
+        : targetMatchesSliceDefinition(target.value, element, elements, { resource, target })) ||
       !isRecord(target.value) ||
       typeof target.value.reference !== 'string' ||
       target.value.reference.length === 0
@@ -231,16 +267,6 @@ function collectReferenceHits(
         : {}),
     }];
   });
-}
-
-function collectProfiledCanonicals(element: ElementDefinition): string[] {
-  const profiles = new Set<string>();
-  for (const type of getReferenceTypes(element)) {
-    for (const canonical of getTargetProfiles(type)) {
-      if (isProfiledCanonical(canonical)) profiles.add(canonicalBase(canonical));
-    }
-  }
-  return [...profiles];
 }
 
 function getReferenceTypes(element: ElementDefinition): ElementType[] {

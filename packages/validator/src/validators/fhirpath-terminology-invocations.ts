@@ -26,7 +26,7 @@ export function buildAsyncTerminologyInvocationTable(
   };
 }
 
-async function resolveMemberOfInvocation(
+export async function resolveMemberOfInvocation(
   inputs: unknown[],
   rawValueSetUrl: unknown,
   resolver: FHIRPathTerminologyResolver,

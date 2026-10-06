@@ -34,8 +34,8 @@ export class StructuralExecutor {
     this.pipeline.configureTerminologyResolution(config);
   }
 
-  validateBundle(resource: unknown): Promise<ValidationIssue[]> {
-    return this.pipeline.validateBundle(resource);
+  validateBundle(resource: unknown, fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'): Promise<ValidationIssue[]> {
+    return this.pipeline.validateBundle(resource, fhirVersion);
   }
 
   /**
@@ -78,7 +78,7 @@ export class StructuralExecutor {
   validateResourceIdAndArrays(
     resource: StructuralResource,
     contextQuestionnaire?: unknown,
-    options: { warnOnUnresolvedQuestionnaireReference?: boolean } = {},
+    options: { warnOnUnresolvedQuestionnaireReference?: boolean; enclosingBundle?: Record<string, unknown>; forPublication?: boolean } = {},
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ): ValidationIssue[] {
     return this.pipeline.validateResourceIdAndArrays(

@@ -8,6 +8,7 @@ import {
   isPrimitiveType,
   mergeElementConstraints,
 } from '../core/executors/structural-executor-helpers.js';
+import { matchesDefinitionInstancePath } from '../core/choice-type-path.js';
 import { logger } from '../logger.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 
@@ -188,10 +189,13 @@ export class ComplexTypeDefinitionResolver {
     if (!parentStructureDef?.snapshot?.element) return result;
 
     const basePathPrefix = basePath.replace(/\[\d+\]/g, '');
+    const depth = basePathPrefix.split('.').length;
     for (const element of parentStructureDef.snapshot.element) {
       if (element.sliceName || (typeof element.id === 'string' && element.id.includes(':'))) continue;
-      if (!element.path.startsWith(`${basePathPrefix}.`)) continue;
-      const relativePath = element.path.substring(basePathPrefix.length + 1);
+      const segments = element.path.split('.');
+      if (segments.length <= depth || !matchesDefinitionInstancePath(segments.slice(0, depth).join('.'),
+        basePathPrefix, parentStructureDef.snapshot.element)) continue;
+      const relativePath = segments.slice(depth).join('.');
       result.set(`${typeCode}.${relativePath}`, element);
     }
     return result;

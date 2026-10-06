@@ -1,18 +1,19 @@
 import type { AutoDownloadSourceContext } from './sd-loader-auto-download-source-context.js';
+import { profileMatchesCanonical } from './sd-loader-profile-identity.js';
 import { sanitizeProfile } from './sd-loader-profile-sanitizer.js';
 import type { StructureDefinition } from './structure-definition-types.js';
-import { cacheKeyForProfile, fhirVersionFamily } from './sd-loader-version-utils.js';
+import { cacheKeyForProfile } from './sd-loader-version-utils.js';
 
 /** Sanitize and commit a remotely resolved profile to all canonical cache keys. */
 export function cacheDownloadedProfile(
   url: string,
   profile: StructureDefinition,
   context: AutoDownloadSourceContext,
-): StructureDefinition {
+): StructureDefinition | null {
+  const family = context.fhirVersion || 'R4';
+  if (!profileMatchesCanonical(profile, url, family)) return null;
   const sanitized = sanitizeProfile(profile);
   if (context.canCache && !context.canCache()) return sanitized;
-  const requested = context.fhirVersion || 'R4';
-  const family = fhirVersionFamily(sanitized) ?? requested;
   const canonicals = new Set([
     url,
     sanitized.url,

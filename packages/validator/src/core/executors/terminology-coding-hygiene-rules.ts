@@ -2,9 +2,11 @@ import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../../issues/index.js';
 import { UcumCodeValidator, ucumCodeHasAnnotation } from '../../validators/ucum-validator.js';
 import { hasInvalidSnomedCheckDigit } from '../../validators/snomed-id-validator.js';
+import { classifySnomedExpressionSyntax } from '../../validators/snomed-expression-syntax.js';
 import {
   buildInvalidUcumIssueDetails,
   buildInvalidUcumMessage,
+  buildUnverifiedUcumIssue,
 } from './terminology-ucum-rules.js';
 
 type CodingHygieneIssue = {
@@ -13,6 +15,7 @@ type CodingHygieneIssue = {
   message: string;
   path: string;
   details?: Record<string, unknown>;
+  messageParams?: Record<string, unknown>;
 };
 
 function snomedCheckDigitIssue(value: Record<string, unknown>, path: string): CodingHygieneIssue | undefined {
@@ -29,6 +32,41 @@ function snomedCheckDigitIssue(value: Record<string, unknown>, path: string): Co
       reason: 'snomed-check-digit',
       fixHint: 'Verify the intended concept against its source terminology; changing the check digit alone does not establish the intended clinical meaning.',
     },
+  };
+}
+
+function snomedExpressionSyntaxIssue(value: Record<string, unknown>, path: string): CodingHygieneIssue | undefined {
+  if (value.system !== 'http://snomed.info/sct' || typeof value.code !== 'string') return undefined;
+  const result = classifySnomedExpressionSyntax(value.code);
+  if (result.kind === 'named-id' || result.kind === 'expression') return undefined;
+  const details = {
+    code: value.code,
+    system: value.system,
+    syntaxOffset: result.offset,
+  };
+  if (result.kind === 'unverified') {
+    return {
+      severity: 'information',
+      code: 'terminology-snomed-syntax-unverified',
+      message: `SNOMED CT expression syntax could not be fully checked because the ${result.reason} was reached; syntax validation is incomplete.`,
+      path: `${path}.code`,
+      messageParams: { syntaxLimitReason: result.reason },
+      details: {
+        ...details,
+        reason: 'snomed-expression-syntax-limit',
+        syntaxLimitReason: result.reason,
+        syntaxLimit: result.limit,
+        validationComplete: false,
+        validationStatus: 'incomplete',
+      },
+    };
+  }
+  return {
+    severity: 'error',
+    code: 'terminology-code-invalid',
+    message: `Invalid SNOMED CT expression syntax at UTF-16 offset ${result.offset}: expected ${result.expected}.`,
+    path: `${path}.code`,
+    details: { ...details, reason: 'snomed-expression-syntax', syntaxExpected: result.expected },
   };
 }
 
@@ -72,11 +110,15 @@ export function validateCodingHygiene(
   const root = resourceTypeOf(resource);
   const visited = new WeakSet<object>();
 
-  const pushOnce = (issue: CodingHygieneIssue): void => {
+  const pushCreatedOnce = (issue: ValidationIssue): void => {
     const key = `${issue.code}|${issue.path}`;
     if (seen.has(key)) return;
     seen.add(key);
-    issues.push(createValidationIssue({
+    issues.push(issue);
+  };
+
+  const pushOnce = (issue: CodingHygieneIssue): void => {
+    pushCreatedOnce(createValidationIssue({
       code: issue.code,
       path: issue.path,
       resourceType: root,
@@ -84,6 +126,7 @@ export function validateCodingHygiene(
       severityOverride: issue.severity,
       customMessage: issue.message,
       details: issue.details,
+      messageParams: issue.messageParams,
     }));
   };
 
@@ -147,12 +190,15 @@ export function validateCodingHygiene(
       });
     }
 
-    const snomedIssue = snomedCheckDigitIssue(value, path);
+    const snomedIssue = snomedCheckDigitIssue(value, path) ?? snomedExpressionSyntaxIssue(value, path);
     if (snomedIssue) pushOnce(snomedIssue);
 
     if (value.system === 'http://unitsofmeasure.org' && typeof value.code === 'string') {
       const result = ucumValidator.validate(value.code);
-      if (result.valid && ucumCodeHasAnnotation(value.code)) {
+      const unchecked = buildUnverifiedUcumIssue(value.code, `${path}.code`, result);
+      if (unchecked) {
+        pushCreatedOnce(unchecked);
+      } else if (result.valid && ucumCodeHasAnnotation(value.code)) {
         pushOnce({
           severity: 'information',
           code: 'terminology-ucum-annotation',

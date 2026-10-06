@@ -14,6 +14,8 @@ const CHOICE_TYPE_SUFFIXES = [
 
 interface PathInfo {
   type?: string;
+  /** The base specification allows at most one value, so JSON has no array. */
+  singleValued?: boolean;
 }
 
 export interface SnapshotIndex {
@@ -27,7 +29,8 @@ export function buildSnapshotIndex(sd: StructureDefinition | undefined): Snapsho
   for (const element of sd?.snapshot?.element || []) {
     if (!element?.path || (typeof element.id === 'string' && element.id.includes(':'))) continue;
     const type = element.type?.[0]?.code;
-    byPath.set(element.path, { type });
+    const singleValued = baseMax(element) === '1';
+    byPath.set(element.path, { type, singleValued });
     if (!element.path.endsWith('[x]')) {
       knownPaths.add(element.path);
       continue;
@@ -36,10 +39,15 @@ export function buildSnapshotIndex(sd: StructureDefinition | undefined): Snapsho
     knownPaths.add(base);
     for (const suffix of choiceSuffixesForElement(element)) {
       knownPaths.add(base + suffix);
-      byPath.set(base + suffix, { type: suffix });
+      byPath.set(base + suffix, { type: suffix, singleValued });
     }
   }
   return { knownPaths, byPath };
+}
+
+function baseMax(element: ElementDefinition): unknown {
+  const base = element.base;
+  return typeof base === 'object' && base !== null ? (base as { max?: unknown }).max : undefined;
 }
 
 function choiceSuffixesForElement(element: ElementDefinition): string[] {

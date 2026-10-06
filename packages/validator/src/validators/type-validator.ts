@@ -17,6 +17,9 @@ import { normalizeResourceType } from '../issues/resource-type-normalizer.js';
 import type { ElementType } from '../core/structure-definition-types.js';
 import { normalizeFhirType, getTypeDescription } from '../terminology/index.js';
 import { validateUriFormat } from './uri-format-validator.js';
+import { unlessPackageDefined, validateExampleUrl, validateSpecificationPageUrl } from './example-url-rule.js';
+import { validateHl7SidUri } from './hl7-sid-registry.js';
+import { validateUnresolvedHl7Url } from './hl7-url-resolution.js';
 import {
   getActualFhirType,
   isExtensionOnly,
@@ -32,6 +35,8 @@ import {
 } from './primitive-string-format-validator.js';
 import { validateDecimalRange } from './decimal-range-validator.js';
 
+type FhirVersion = 'R4' | 'R5' | 'R6';
+
 // ============================================================================
 // Type Validator
 // ============================================================================
@@ -44,7 +49,8 @@ export class TypeValidator {
     value: unknown,
     types: ElementType[],
     path: string,
-    profileUrl?: string
+    profileUrl?: string,
+    fhirVersion?: FhirVersion,
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
 
@@ -56,14 +62,14 @@ export class TypeValidator {
     // Handle array values
     if (Array.isArray(value)) {
       for (let i = 0; i < value.length; i++) {
-        const itemIssues = await this.validateSingle(value[i], types, `${path}[${i}]`, profileUrl);
+        const itemIssues = await this.validateSingle(value[i], types, `${path}[${i}]`, profileUrl, fhirVersion);
         issues.push(...itemIssues);
       }
       return issues;
     }
 
     // Validate single value
-    return this.validateSingle(value, types, path, profileUrl);
+    return this.validateSingle(value, types, path, profileUrl, fhirVersion);
   }
 
   /**
@@ -73,7 +79,8 @@ export class TypeValidator {
     value: unknown,
     types: ElementType[],
     path: string,
-    profileUrl?: string
+    profileUrl?: string,
+    fhirVersion?: FhirVersion,
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
     const effectiveTypes = narrowTypesForConcreteChoicePath(types, path);
@@ -90,19 +97,24 @@ export class TypeValidator {
         matchedType = true;
 
         // Additional format validation for URIs
-        // HAPI strictly validates that 'uri' and 'canonical' are absolute URIs (e.g. in system fields)
         const normalizedType = normalizeFhirType(typeCode);
         const effectiveType = normalizedType || typeCode;
 
         if (typeof value === 'string' && ['uri', 'canonical'].includes(effectiveType)) {
-          const uriIssue = validateUriFormat(value, path, resourceType, profileUrl);
+          const uriIssue = validateUriFormat(value, path, resourceType, profileUrl, effectiveType as 'uri' | 'canonical');
           if (uriIssue) {
             issues.push(uriIssue);
           }
         }
 
+        const exampleUrlIssue = await unlessPackageDefined(validateExampleUrl(value, effectiveType, path, resourceType, profileUrl), value)
+          ?? validateSpecificationPageUrl(value, effectiveType, path, resourceType, profileUrl)
+          ?? await validateHl7SidUri(value, effectiveType, path, profileUrl)
+          ?? await validateUnresolvedHl7Url(value, effectiveType, path, resourceType, profileUrl);
+        if (exampleUrlIssue) issues.push(exampleUrlIssue);
+
         if (typeof value === 'string') {
-          const formatIssue = validatePrimitiveStringFormat(value, effectiveType, path, profileUrl);
+          const formatIssue = validatePrimitiveStringFormat(value, effectiveType, path, profileUrl, fhirVersion);
           if (formatIssue) {
             issues.push(formatIssue);
           } else {

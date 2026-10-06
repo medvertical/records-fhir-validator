@@ -14,6 +14,8 @@
 
 import type { StructureDefinition, ElementDefinition } from '../core/structure-definition-types.js';
 import { isConcreteChoiceProperty } from '../core/fhir-choice-property.js';
+import { getPrimitiveSidecar } from '../core/fhir-primitive-sidecar.js';
+import { PRIMITIVE_TYPE_CODES } from './type-matching-helpers.js';
 import { logger } from '../logger.js';
 
 // ============================================================================
@@ -162,6 +164,7 @@ export class SDElementMatcher {
             if (Array.isArray(obj)) {
                 for (let i = 0; i < obj.length; i++) {
                     const item = obj[i];
+                    if (item == null) continue;
                     const itemPath = `${currentPath}[${i}]`;
 
                     if (element) {
@@ -179,9 +182,9 @@ export class SDElementMatcher {
                     // an ancestor, so a self-reference cannot re-enter it.
                     if (isObjectLike(item) && !ancestors.has(item)) {
                         ancestors.add(item);
-                        for (const key of Object.keys(item)) {
+                        for (const [key, value] of this.childEntries(item, itemPath, elementMap)) {
                             this.traverseAndMatch(
-                                getObjectValue(item, key),
+                                value,
                                 `${itemPath}.${key}`,
                                 elementMap,
                                 matches,
@@ -194,10 +197,9 @@ export class SDElementMatcher {
                 }
             } else {
                 // Recurse into object properties
-                for (const key of Object.keys(obj)) {
-                    if (key === 'resourceType') continue;
+                for (const [key, value] of this.childEntries(obj, currentPath, elementMap)) {
                     this.traverseAndMatch(
-                        obj[key],
+                        value,
                         `${currentPath}.${key}`,
                         elementMap,
                         matches,
@@ -209,6 +211,25 @@ export class SDElementMatcher {
         } finally {
             ancestors.delete(obj);
         }
+    }
+
+    private childEntries(
+        container: Record<string, unknown> | unknown[],
+        currentPath: string,
+        elementMap: Map<string, ElementDefinition>,
+    ): [string, unknown][] {
+        if (Array.isArray(container)) return Object.keys(container).map(key => [key, getObjectValue(container, key)]);
+        const children = new Map(Object.entries(container));
+        children.delete('resourceType');
+        for (const key of Object.keys(container)) {
+            if (!key.startsWith('_')) continue;
+            const logicalKey = key.slice(1);
+            const element = this.findMatchingElement(`${currentPath}.${logicalKey}`, elementMap);
+            if (!isDeclaredPrimitiveProperty(element, logicalKey)) continue;
+            children.delete(key);
+            children.set(logicalKey, resolvePrimitiveChild(container, logicalKey));
+        }
+        return [...children];
     }
 
     /**
@@ -266,4 +287,25 @@ function getObjectValue(
     key: string,
 ): unknown {
     return Array.isArray(value) ? value[Number(key)] : value[key];
+}
+
+function isDeclaredPrimitiveProperty(element: ElementDefinition | undefined, property: string): boolean {
+    return Boolean(element?.type?.some(type => PRIMITIVE_TYPE_CODES.has(type.code) &&
+        (!element.path.endsWith('[x]') || property ===
+            `${element.path.slice(element.path.lastIndexOf('.') + 1, -3)}${type.code[0].toUpperCase()}${type.code.slice(1)}`)));
+}
+
+function resolvePrimitiveChild(container: Record<string, unknown>, key: string): unknown {
+    const direct = container[key];
+    const sidecars = container[`_${key}`];
+    if (direct != null && !Array.isArray(direct)) return direct;
+    if (!Array.isArray(direct) && !Array.isArray(sidecars)) {
+        return direct ?? getPrimitiveSidecar(container, key);
+    }
+    // FHIR primitive arrays align values and underscore metadata by index.
+    // Missing placeholders must never shift a later element's constraint path.
+    const values = Array.isArray(direct) ? direct : [];
+    const metadata = Array.isArray(sidecars) ? sidecars : [];
+    return Array.from({ length: Math.max(values.length, metadata.length) }, (_, index) =>
+        values[index] ?? getPrimitiveSidecar({ [`_${key}`]: metadata[index] }, key));
 }

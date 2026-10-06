@@ -12,6 +12,7 @@ import {
 } from './valueset-server-routing.js';
 import { validateCodeViaTerminologyServerWithFilters } from './valueset-terminology-server-validation.js';
 import type {
+  CodeBindingOutcome,
   TerminologyDiagnostics,
   TerminologyResolutionConfig,
 } from './valueset-types.js';
@@ -33,13 +34,13 @@ interface ValueSetMembershipServerDelegationRequest {
 
 /**
  * Tries the optional terminology-server fallback for a direct membership check.
- * A false result means either delegation was not allowed or the server did not
- * accept the code; callers retain ownership of local fail-open policy.
+ * Preserve rejection separately from unavailable authority until the caller
+ * applies the boolean API's fail-open policy.
  */
 export async function tryValidateValueSetMembershipViaServer(
   deps: ValueSetMembershipServerDelegationDeps,
   request: ValueSetMembershipServerDelegationRequest,
-): Promise<boolean> {
+): Promise<CodeBindingOutcome> {
   const { code, system, valueSetUrl, localExpansionIsEmpty, fhirVersion } = request;
   const override = resolveTerminologyServerForSystem(
     deps.resolutionConfig,
@@ -53,7 +54,7 @@ export async function tryValidateValueSetMembershipViaServer(
       localExpansionIsEmpty
       || deps.resolutionConfig.serverDelegation?.validateCodes === true
     );
-  if (!canUseServer) return false;
+  if (!canUseServer) return 'unverified';
 
   logger.debug(
     '[ValueSetValidator] Code not found in local expansion; attempting server validation',
@@ -85,5 +86,5 @@ export async function tryValidateValueSetMembershipViaServer(
       fhirVersion,
     ),
   });
-  return outcome === 'valid';
+  return outcome;
 }

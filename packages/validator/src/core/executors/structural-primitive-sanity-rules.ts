@@ -22,6 +22,50 @@ export function validateWhitespaceOnlyPrimitives(resource: unknown, resourceType
   return issues;
 }
 
+/**
+ * A primitive written as "" has no value, which only extensions in its
+ * sidecar can make up for; the reference validator reports it as
+ * "value cannot be empty" besides ele-1.
+ */
+export function validateEmptyPrimitives(resource: unknown, resourceType: string): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const visited = new WeakSet<object>();
+  const walk = (node: unknown, path: string): void => {
+    if (!isObjectRecord(node) || visited.has(node)) return;
+    visited.add(node);
+    for (const [key, value] of Object.entries(node)) {
+      if (key.startsWith('_') || key === 'div') continue;
+      const childPath = `${path}.${key}`;
+      const sidecars = [node[`_${key}`]].flat();
+      if (value === '' && !carriesExtensions(sidecars[0])) issues.push(emptyValueIssue(childPath, resourceType));
+      if (!Array.isArray(value)) {
+        walk(value, childPath);
+        continue;
+      }
+      value.forEach((item, index) => {
+        if (item === '' && !carriesExtensions(sidecars[index])) issues.push(emptyValueIssue(`${childPath}[${index}]`, resourceType));
+        walk(item, `${childPath}[${index}]`);
+      });
+    }
+  };
+  walk(resource, resourceType);
+  return issues;
+}
+
+function carriesExtensions(sidecar: unknown): boolean {
+  return isObjectRecord(sidecar) && Array.isArray(sidecar.extension) && sidecar.extension.length > 0;
+}
+
+function emptyValueIssue(path: string, resourceType: string): ValidationIssue {
+  return createValidationIssue({
+    code: 'structural-empty-value',
+    path,
+    resourceType,
+    customMessage: 'value cannot be empty',
+    severityOverride: 'error',
+  });
+}
+
 export function validateIllegalXmlCharacterPrimitives(
   resource: unknown,
   resourceType: string,

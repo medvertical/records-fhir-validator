@@ -1,11 +1,20 @@
 import type { StructureDefinition } from './structure-definition-types.js';
 
+/**
+ * `entryPath` locates the entry (`section[1].section[0].entry[0]`). A profile
+ * whose `Composition.section.section` refers to the base definition leaves
+ * nested sections to the base rules, as the reference validator reads that
+ * contentReference: its section slices and their entry target profiles
+ * apply to top-level sections only.
+ */
 export function getCompositionEntryTargetProfiles(
   structureDef: StructureDefinition | undefined,
   section: Record<string, unknown>,
+  entryPath: string,
 ): string[] | null {
   const elements = structureDef?.snapshot?.element;
   if (!elements?.length) return null;
+  if ((entryPath.match(/section\[/g) ?? []).length > 1 && nestedSectionsFollowBase(structureDef)) return [];
 
   const sectionSliceName = findMatchingSectionSliceName(elements, section);
   if (sectionSliceName) {
@@ -24,6 +33,14 @@ export function getCompositionEntryTargetProfiles(
   }
 
   return collectTargetProfiles(elements, element => element.path === 'Composition.section.entry');
+}
+
+function nestedSectionsFollowBase(structureDef: StructureDefinition | undefined): boolean {
+  const reference = structureDef?.snapshot?.element?.find(element => element.id === 'Composition.section.section')
+    ?.contentReference;
+  if (typeof reference !== 'string') return false;
+  const url = reference.slice(0, Math.max(0, reference.indexOf('#')));
+  return url.length > 0 && url.split('|')[0] !== structureDef?.url?.split('|')[0];
 }
 
 function collectTargetProfiles(

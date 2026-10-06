@@ -75,20 +75,8 @@ export class VersionIdValidator {
         }));
       }
 
-      // Check numeric versionId is positive
-      if (/^\d+$/.test(versionId)) {
-        const numericVersion = parseInt(versionId, 10);
-        if (numericVersion <= 0) {
-          issues.push(createValidationIssue({
-            code: 'metadata-version-id-non-positive',
-            path: PATH,
-            resourceType,
-            profile: profileUrl,
-            messageParams: { value: versionId },
-            details: { numericValue: numericVersion },
-          }));
-        }
-      }
+      // A versionId is opaque: `0` is simply Cerner's first version, not a
+      // count that should have started at 1.
 
       // Warn if only special characters
       if (/^[-.]+$/.test(versionId)) {

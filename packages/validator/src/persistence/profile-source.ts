@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { StructureDefinition } from '../core/structure-definition-types.js';
 import type { ValidationSettings } from '@records-fhir/validation-types';
 import { captureValidationDependency, isValidationDependencySnapshotActive } from '../validation-dependency-snapshot.js';
@@ -100,15 +101,36 @@ const NOOP_PROFILE_SOURCE: ProfileSource = {};
 
 let activeProfileSource: ProfileSource = NOOP_PROFILE_SOURCE;
 let activeProfileSourceRevision = 0;
+let activeProfileSourceCaptureScope = {};
+const boundProfileSource = new AsyncLocalStorage<{ source: ProfileSource; captureScope: object; revision: number }>();
+
+/** Keep one initiating host installation through asynchronous resolution. */
+export function withProfileSourceSnapshot<T>(operation: () => Promise<T>): Promise<T> {
+    const binding = boundProfileSource.getStore()
+        ?? { source: activeProfileSource, captureScope: activeProfileSourceCaptureScope, revision: activeProfileSourceRevision };
+    return boundProfileSource.run(binding, operation);
+}
+
+export function getProfileSourceCaptureScope(): object {
+    return boundProfileSource.getStore()?.captureScope ?? activeProfileSourceCaptureScope;
+}
+
+export function getBoundProfileSourceRevision(): number {
+    return boundProfileSource.getStore()?.revision ?? activeProfileSourceRevision;
+}
 
 /** Replace the host profile capabilities for subsequently created work. */
 export function setProfileSource(source: ProfileSource): void {
     activeProfileSource = source;
     activeProfileSourceRevision++;
+    activeProfileSourceCaptureScope = {};
 }
 
 export function getProfileSource(): ProfileSource {
-    if (isValidationDependencySnapshotActive()) return new Proxy(activeProfileSource, {
+    const binding = boundProfileSource.getStore();
+    const source = binding?.source ?? activeProfileSource;
+    const captureScope = binding?.captureScope ?? activeProfileSourceCaptureScope;
+    if (isValidationDependencySnapshotActive()) return new Proxy(source, {
         get(target, property) {
             const method: unknown = Reflect.get(target, property);
             if (typeof method !== 'function' || typeof property !== 'string'
@@ -117,15 +139,15 @@ export function getProfileSource(): ProfileSource {
             }
             const kind = property === 'hasCodeSystem' ? 'terminology' : 'profile';
             return (...args: unknown[]) => captureValidationDependency(kind, `host-${property}`, args,
-                () => Reflect.apply(method, target, args) as Promise<unknown>);
+                () => Reflect.apply(method, target, args) as Promise<unknown>, captureScope);
         },
     });
-    return activeProfileSource;
+    return source;
 }
 
 /** Host package stores declared on the active source; empty when none. */
 export function getProfileSourcePackageDirectories(): string[] {
-    const directories = activeProfileSource.packageDirectories;
+    const directories = (boundProfileSource.getStore()?.source ?? activeProfileSource).packageDirectories;
     return directories ? [...directories] : [];
 }
 

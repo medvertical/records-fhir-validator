@@ -107,7 +107,8 @@ export function isRedundantMetadataProfileInvalidUrlIssue(
 
 export function getQuestionnaireReferenceWarningKey(issue: ValidationIssue): string | null {
   if (issue.code !== 'questionnaire-reference-not-resolved') return null;
-  if (normalizeRequiredElementPath(issue) !== 'questionnaire') return null;
+  // Reported at the response itself, or at its questionnaire element.
+  if (normalizeRequiredElementPath(issue).includes('.')) return null;
   const questionnaire = getDetailsRecord(issue)?.questionnaire;
   return typeof questionnaire === 'string' && questionnaire.trim().length > 0
     ? questionnaire.trim().toLowerCase()

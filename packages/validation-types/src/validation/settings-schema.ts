@@ -100,7 +100,8 @@ const ValidationSettingsObjectSchema = z.object({
     listViewPollingInterval: z.number().optional(),
     enableBestPracticeChecks: z.boolean().optional(),
     bestPracticeSeverity: z.enum(['warning', 'info']).optional(),
-    // FHIR IG-Publisher "for-publication" mode: escalate surviving warnings to
+    // FHIR IG-Publisher "for-publication" mode also requires a workgroup for
+    // HL7 canonical metadata outside the SID exception. Escalate surviving warnings to
     // errors (and best-practice hints to warnings) so a published IG is clean.
     // Applied after strictness + advisor rules — see publication-escalation.ts.
     forPublication: z.boolean().optional(),

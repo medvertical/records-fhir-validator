@@ -7,6 +7,7 @@ import type { ValidationIssue } from '@records-fhir/validation-types';
 import { sliceHasDiscriminatorEvidence } from './slice-discriminator-matcher.js';
 import type { SliceDefinition } from './slice-types.js';
 import { resourceTypeFromPath } from './slicing-content-rules.js';
+import { usesDirectExistsDiscrimination } from './slice-discriminator-constraints.js';
 
 export interface SlicingVerifiabilityAssessment {
   blockingIssues: ValidationIssue[];
@@ -24,14 +25,16 @@ export function assessSlicingVerifiability({
   elementPath: string;
 }): SlicingVerifiabilityAssessment {
   const discriminators = slicing.discriminator ?? [];
-  const unresolvedDiscriminators = discriminators
+  const completeness = { validationComplete: false, validationStatus: 'incomplete' };
+  const everySliceUndiscriminated = slices.length > 0 && slices.every(slice => slice.undiscriminated);
+  const unresolvedDiscriminators = everySliceUndiscriminated ? [] : discriminators
     .filter(discriminator => !hasEvidenceInAnySlice(slices, discriminator))
     .map(discriminator => `${discriminator.type}:${discriminator.path || '$this'}`);
 
   if (unresolvedDiscriminators.length > 0) {
     return {
       blockingIssues: [createValidationIssue({
-        code: 'profile-slice-validation-error',
+        code: 'profile-slice-validation-incomplete',
         path: elementPath,
         resourceType: resourceTypeFromPath(elementPath),
         severityOverride: 'information',
@@ -40,6 +43,7 @@ export function assessSlicingVerifiability({
           + 'was not resolved from the profile dependency.',
         details: {
           reason: 'unresolved-discriminator-metadata',
+          ...completeness,
           unresolvedDiscriminators,
         },
       })],
@@ -50,13 +54,20 @@ export function assessSlicingVerifiability({
 
   const unresolvedSliceNames = new Set(
     slices
-      .filter(slice => !discriminators.some(discriminator =>
-        sliceHasDiscriminatorEvidence(slice, discriminator)))
+      .filter(slice => !discriminators.some(discriminator => sliceHasDiscriminatorEvidence(slice, discriminator))
+        || discriminators.some(discriminator => usesDirectExistsDiscrimination([discriminator])
+          && !sliceHasDiscriminatorEvidence(slice, discriminator)))
       .map(slice => slice.sliceName),
   );
-  const advisoryIssues = unresolvedSliceNames.size > 0
+  // A slice the profile itself leaves undiscriminated is reported as an
+  // error per element (slicing-undiscriminated-slices.ts), not as missing
+  // inherited metadata.
+  const unexplainedSliceNames = slices
+    .filter(slice => unresolvedSliceNames.has(slice.sliceName) && !slice.undiscriminated)
+    .map(slice => slice.sliceName);
+  const advisoryIssues = unexplainedSliceNames.length > 0
     ? [createValidationIssue({
-        code: 'profile-slice-validation-error',
+        code: 'profile-slice-validation-incomplete',
         path: elementPath,
         resourceType: resourceTypeFromPath(elementPath),
         severityOverride: 'information',
@@ -65,7 +76,8 @@ export function assessSlicingVerifiability({
           + 'metadata was not resolved for one or more slices.',
         details: {
           reason: 'unresolved-slice-discriminator-metadata',
-          unresolvedSliceNames: Array.from(unresolvedSliceNames),
+          ...completeness,
+          unresolvedSliceNames: unexplainedSliceNames,
         },
       })]
     : [];

@@ -2,7 +2,10 @@ import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
 import { logger } from '../logger.js';
 import { buildQuestionnaireAnswerMap } from './questionnaire-enable-when.js';
+import { validateEnableWhenTargets } from './questionnaire-enable-when-targets.js';
 import { validateQuestionnaireItems } from './questionnaire-item-validator.js';
+import { validateAuthoredWithinEffectivePeriod } from './questionnaire-response-period.js';
+import { validateResponseItemPlacement } from './questionnaire-response-placement.js';
 import { validateQuestionnaireSdcConstraints } from './questionnaire-sdc-validator.js';
 import { ValueSetCache } from './valueset-cache.js';
 import type {
@@ -52,7 +55,8 @@ export class QuestionnaireValidator {
                     isQuestionnaire(candidate) && candidate.id === id
                 );
             }
-            issues.push(...this.validateQuestionnaireResponse(resourceRecord, q, options));
+            issues.push(...this.cache.sourceContexts.run(fhirVersion,
+                () => this.validateQuestionnaireResponse(resourceRecord, q, options)));
         }
 
         if (Array.isArray(resourceRecord.contained)) {
@@ -116,6 +120,7 @@ export class QuestionnaireValidator {
                 `${basePath}.item`,
                 fhirVersion,
             ));
+            issues.push(...validateEnableWhenTargets(questionnaireRecord.item, `${basePath}.item`));
         }
 
         return issues;
@@ -165,12 +170,14 @@ export class QuestionnaireValidator {
                         severityOverride: 'error',
                     }));
                 }
+                // Where and how the reference validator reports it: at the response,
+                // and only as a hint for an example.org questionnaire.
                 issues.push(createValidationIssue({
                     code: 'questionnaire-reference-not-resolved',
-                    path: 'QuestionnaireResponse.questionnaire',
+                    path: 'QuestionnaireResponse',
                     resourceType: 'QuestionnaireResponse',
-                    customMessage: `Questionnaire '${responseRecord.questionnaire}' could not be resolved; QuestionnaireResponse items were not validated against the questionnaire definition.`,
-                    severityOverride: 'warning',
+                    customMessage: `The questionnaire '${responseRecord.questionnaire}' could not be resolved, so no validation can be performed against the base questionnaire`,
+                    severityOverride: /^https?:\/\/example\.org/.test(responseRecord.questionnaire) ? 'information' : 'warning',
                     details: {
                         questionnaire: responseRecord.questionnaire,
                     },
@@ -208,6 +215,8 @@ export class QuestionnaireValidator {
             ));
         }
 
+        issues.push(...validateResponseItemPlacement(responseItems, questionnaireItems));
+        issues.push(...validateAuthoredWithinEffectivePeriod(responseRecord, questionnaireRecord));
         issues.push(...validateRequiredQuestionnaireItems(responseItems, questionMap, answerMap));
 
         if (responseItems.length > 0) {

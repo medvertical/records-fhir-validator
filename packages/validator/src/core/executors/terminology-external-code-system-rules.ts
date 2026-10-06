@@ -1,23 +1,30 @@
+import { validateLocalWithInvocationEvidence } from './terminology-validation-evidence-port.js';
+import { isVerifiedCodeSystemResult } from '../../validators/code-system-validation-evidence.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createTerminologyIssue } from '../../terminology/terminology-issue.js';
-import { buildInvalidUcumIssueDetails, buildInvalidUcumMessage } from './terminology-ucum-rules.js';
+import { buildInvalidUcumIssueDetails, buildInvalidUcumMessage, buildUnverifiedUcumIssue } from './terminology-ucum-rules.js';
 import { UcumCodeValidator } from '../../validators/ucum-validator.js';
 import { isValidFhirCodePrimitive, missingCodingSystemSeverity } from './terminology-coding-hygiene-rules.js';
-import { CodeSystemReferenceLookupCache, validateCodeSystemReference } from './terminology-code-system-reference-rules.js';
+import {
+  CodeSystemReferenceLookupCache,
+  validateCodeSystemReference,
+} from './terminology-code-system-reference-rules.js';
+import { isUndefinedCoreCodeSystem, undefinedCoreCodeSystemIssues } from './terminology-core-code-system-rules.js';
 import type { ProfileSourceContext } from '../../persistence/index.js';
 import { ValueSetCache } from '../../validators/valueset-cache.js';
 import { buildCodeSystemResultIssues, type CodingValue } from './terminology-code-system-result-issues.js';
-import type { TerminologyCodeSystemValidationPort } from './terminology-validation-port.js';
+import type { TerminologyCodeSystemValidationPort, TerminologyLocalCodeSystemValidationPort } from './terminology-validation-port.js';
 
 export async function validateExternalCodeSystems(
   value: unknown,
   path: string,
-  valuesetValidator: Pick<TerminologyCodeSystemValidationPort, 'validateCodeInCodeSystem'>,
+  valuesetValidator: Pick<TerminologyCodeSystemValidationPort, 'validateCodeInCodeSystem' | 'getDefinitionLookup'>,
   fhirVersion?: 'R4' | 'R5' | 'R6',
   sourceContext?: ProfileSourceContext,
   cache: ValueSetCache = new ValueSetCache(),
   lookupCache: CodeSystemReferenceLookupCache = new CodeSystemReferenceLookupCache(),
   ucumValidator: UcumCodeValidator = new UcumCodeValidator(),
+  displayLanguage?: string,
 ): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
   const codings = Array.isArray(value) ? value : [value];
@@ -59,6 +66,7 @@ export async function validateExternalCodeSystems(
         sourceContext,
         cache,
         lookupCache,
+        valuesetValidator.getDefinitionLookup?.(),
       )),
     );
     if (!isValidFhirCodePrimitive(coding.code)) continue;
@@ -68,9 +76,10 @@ export async function validateExternalCodeSystems(
     // emit clinical terminology lookup noise for operational tags.
     if (isMetaTagPath(path)) continue;
     issues.push(...validateUcumCoding(coding, path, i, isArrayInput, ucumValidator));
-    issues.push(...(await validateExternalCoding(coding, path, i, isArrayInput, valuesetValidator, fhirVersion)));
-    issues.push(
-      ...(await validateCodeSystemReference(
+    issues.push(...validateUriCoding(coding, path, i, isArrayInput));
+    const externalResult = await validateExternalCoding(coding, path, i, isArrayInput, valuesetValidator, fhirVersion, displayLanguage);
+    issues.push(...externalResult.issues);
+    const referenceIssues = await validateCodeSystemReference(
         coding,
         path,
         i,
@@ -80,8 +89,10 @@ export async function validateExternalCodeSystems(
         sourceContext,
         cache,
         lookupCache,
-      )),
-    );
+        valuesetValidator.getDefinitionLookup?.(),
+      );
+    issues.push(...referenceIssues.filter(issue =>
+      !externalResult.verified || issue.code !== 'terminology-codesystem-unresolvable'));
   }
 
   return issues;
@@ -94,22 +105,45 @@ function isMetaTagPath(path: string): boolean {
 export async function validateLocalCodeSystemCoding(
   value: unknown,
   path: string,
-  valuesetValidator: Pick<TerminologyCodeSystemValidationPort, 'validateCodeInLocalCodeSystemOnly'>,
+  valuesetValidator: TerminologyLocalCodeSystemValidationPort,
   fhirVersion?: 'R4' | 'R5' | 'R6',
   _sourceContext?: ProfileSourceContext,
+  invocation?: { displayLanguage?: string; rootOwned: boolean },
 ): Promise<ValidationIssue[]> {
   const coding = asCodingValue(value);
   if (!coding || /\/ValueSet\//i.test(coding.system)) return [];
 
   const display = typeof coding.display === 'string' ? coding.display : undefined;
-  const result = coding.version
-    ? await valuesetValidator.validateCodeInLocalCodeSystemOnly(
-        coding.code, coding.system, display, fhirVersion, coding.version,
-      )
-    : await valuesetValidator.validateCodeInLocalCodeSystemOnly(
-        coding.code, coding.system, display, fhirVersion,
-      );
-  if (!result) return [];
+  const localArguments: Parameters<TerminologyCodeSystemValidationPort['validateCodeInLocalCodeSystemOnly']> = coding.version
+    ? [coding.code, coding.system, display, fhirVersion, coding.version]
+    : [coding.code, coding.system, display, fhirVersion];
+  const result = await validateLocalWithInvocationEvidence(
+    valuesetValidator, localArguments, invocation?.displayLanguage, invocation?.rootOwned ?? true,
+  );
+  if (!result) {
+    if (coding.system === URI_CODE_SYSTEM) return validateUriCoding(coding, path, 0, false);
+    if (coding.system === 'http://unitsofmeasure.org') {
+      return validateUcumCoding(coding, path, 0, false, new UcumCodeValidator());
+    }
+    if (await isUndefinedCoreCodeSystem(coding.system, fhirVersion, undefined, valuesetValidator.getDefinitionLookup?.())) {
+      return undefinedCoreCodeSystemIssues(coding.system, coding.code, display, `${path}.system`);
+    }
+    return [createTerminologyIssue({
+      severity: 'information',
+      code: 'terminology-codesystem-unverified',
+      message: `CodeSystem membership could not be verified locally for '${coding.system}#${coding.code}'`
+        + (coding.version ? ` version '${coding.version}'` : ''),
+      path: `${path}.code`,
+      details: {
+        code: coding.code, system: coding.system,
+        ...(display ? { display } : {}),
+        ...(coding.version ? { codeSystemVersion: coding.version } : {}),
+        reason: 'local-code-system-unverified',
+        validationComplete: false,
+        validationStatus: 'incomplete',
+      },
+    })];
+  }
 
   return buildCodeSystemResultIssues(coding, result, path, 0, false, false);
 }
@@ -129,9 +163,10 @@ function validateUcumCoding(
   if (coding.system !== 'http://unitsofmeasure.org') return [];
 
   const result = ucumValidator.validate(coding.code);
-  if (result.valid) return [];
-
   const codingPath = isArrayInput ? `${path}[${index}].code` : `${path}.code`;
+  const unchecked = buildUnverifiedUcumIssue(coding.code, codingPath, result);
+  if (unchecked) return [unchecked];
+  if (result.valid) return [];
   return [
     createTerminologyIssue({
       severity: 'error',
@@ -143,25 +178,61 @@ function validateUcumCoding(
   ];
 }
 
+const URI_CODE_SYSTEM = 'urn:ietf:rfc:3986';
+/** RFC 3986: a scheme, a colon and something after it. */
+const ABSOLUTE_URI = /^[A-Za-z][A-Za-z0-9+.-]*:\S+$/;
+
+/**
+ * `urn:ietf:rfc:3986` is the system of URIs themselves; the reference
+ * validator knows it without a definition and takes every absolute URI, and
+ * nothing else, as one of its codes.
+ */
+function validateUriCoding(
+  coding: CodingValue,
+  path: string,
+  index: number,
+  isArrayInput: boolean,
+): ValidationIssue[] {
+  if (coding.system !== URI_CODE_SYSTEM || ABSOLUTE_URI.test(coding.code)) return [];
+  const codingPath = isArrayInput ? `${path}[${index}].code` : `${path}.code`;
+  return [
+    createTerminologyIssue({
+      severity: 'error',
+      code: 'terminology-code-invalid',
+      message: `Unknown code '${coding.code}' in the CodeSystem '${URI_CODE_SYSTEM}': its codes are absolute URIs`,
+      path: codingPath,
+      details: { code: coding.code, system: coding.system },
+    }),
+  ];
+}
+
 async function validateExternalCoding(
   coding: CodingValue,
   path: string,
   index: number,
   isArrayInput: boolean,
-  valuesetValidator: Pick<TerminologyCodeSystemValidationPort, 'validateCodeInCodeSystem'>,
+  valuesetValidator: Pick<TerminologyCodeSystemValidationPort, 'validateCodeInCodeSystem' | 'getDefinitionLookup'>,
   fhirVersion?: 'R4' | 'R5' | 'R6',
-): Promise<ValidationIssue[]> {
-  if (/\/ValueSet\//i.test(coding.system)) return [];
+  displayLanguage?: string,
+): Promise<{ issues: ValidationIssue[]; verified: boolean }> {
+  if (/\/ValueSet\//i.test(coding.system)) return { issues: [], verified: false };
 
   const display = typeof coding.display === 'string' ? coding.display : undefined;
-  const result = coding.version
+  const result = displayLanguage
+    ? await valuesetValidator.validateCodeInCodeSystem(
+        coding.code, coding.system, display, fhirVersion, coding.version, displayLanguage,
+      )
+    : coding.version
     ? await valuesetValidator.validateCodeInCodeSystem(
         coding.code, coding.system, display, fhirVersion, coding.version,
       )
     : await valuesetValidator.validateCodeInCodeSystem(
         coding.code, coding.system, display, fhirVersion,
       );
-  return buildCodeSystemResultIssues(coding, result, path, index, isArrayInput);
+  return {
+    issues: buildCodeSystemResultIssues(coding, result, path, index, isArrayInput),
+    verified: isVerifiedCodeSystemResult(result),
+  };
 }
 
 function asCodingValue(value: unknown): CodingValue | undefined {

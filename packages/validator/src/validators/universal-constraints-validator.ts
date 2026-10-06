@@ -110,13 +110,14 @@ export class UniversalConstraintsValidator {
         // meaningful FHIR content such as id or extensions.
         const record = obj as Record<string, unknown>;
         const keys = Object.keys(record).filter(k => !k.startsWith('_'));
-        const contentKeys = keys.filter(key => key !== 'id');
         const primitiveSidecarKeys = Object.keys(record).filter(k =>
             k.startsWith('_') && k.length > 1 && getPrimitiveSidecar(record, k.slice(1)) !== undefined
         );
 
-        // Empty object check
-        if (contentKeys.length === 0 && primitiveSidecarKeys.length === 0) {
+        // The reference validator counts a complex element's id as one of its
+        // children, so `{ "id": "x" }` satisfies ele-1; only a primitive whose
+        // sole content is its id (below) does not.
+        if (keys.length === 0 && primitiveSidecarKeys.length === 0) {
             // Allow empty at root level or in certain contexts
             if (path !== resourceType && !path.includes('.extension')) {
                 issues.push(createValidationIssue({
@@ -153,6 +154,26 @@ export class UniversalConstraintsValidator {
                     severityOverride: 'error',
                 }));
             });
+        }
+
+        // A primitive written as "" has no value either; only children in
+        // its sidecar beyond the id let it satisfy ele-1.
+        if (!path.includes('.extension')) {
+            for (const key of keys) {
+                if (key === 'extension') continue;
+                const value = record[key];
+                const sidecars = [record[`_${key}`]].flat();
+                (Array.isArray(value) ? value : [value]).forEach((item, index) => {
+                    if (item !== '' || this.carriesChildrenBeyondId(sidecars[index])) return;
+                    issues.push(createValidationIssue({
+                        code: 'ele-1-violation',
+                        path: `${path}.${key}${Array.isArray(value) ? `[${index}]` : ''}`,
+                        resourceType,
+                        customMessage: 'ele-1: All FHIR elements must have a @value or children',
+                        severityOverride: 'error',
+                    }));
+                });
+            }
         }
 
         // Recurse into children
@@ -239,6 +260,11 @@ export class UniversalConstraintsValidator {
         }
 
         return issues;
+    }
+
+    private carriesChildrenBeyondId(sidecar: unknown): boolean {
+        return typeof sidecar === 'object' && sidecar !== null && !Array.isArray(sidecar)
+            && Object.keys(sidecar).some(key => key !== 'id');
     }
 }
 

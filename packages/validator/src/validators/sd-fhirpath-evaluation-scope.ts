@@ -8,6 +8,8 @@ export interface SDFHIRPathEvaluationScope {
   resource: unknown;
   resourceType: string;
   rootResource: unknown;
+  /** %resource where it is not found along the element's own path. */
+  focusResource?: unknown;
   terminologyResolver?: FHIRPathTerminologyResolver;
   userInvocationTable: unknown;
 }

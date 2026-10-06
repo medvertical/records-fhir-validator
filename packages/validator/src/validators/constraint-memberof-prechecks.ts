@@ -1,8 +1,7 @@
 import type { ConstraintExpressionCache } from './constraint-expression-cache.js';
 import {
-  evaluateOptionalMemberOfUnion,
+  evaluateCachedMemberOf,
   evaluateSimpleMemberOfExists,
-  evaluateTrailingMemberOf,
   rewriteLegacyValueSetInExists,
   type MemberOfPrecheckResult,
 } from './fhirpath-memberof-precheck.js';
@@ -39,32 +38,24 @@ export class ConstraintMemberOfPrechecks {
     );
   }
 
-  evaluateTrailing(
+  evaluateCached(
     expression: string,
     resource: unknown,
     fhirVersion: FhirVersion,
-  ): MemberOfPrecheckResult {
-    return evaluateTrailingMemberOf(
+    deferUnavailableTerminology: boolean,
+  ): Promise<MemberOfPrecheckResult> {
+    return evaluateCachedMemberOf(
       expression,
       resource,
-      fhirVersion,
       this.valueSetCache,
+      this.valueSetLoader,
+      fhirVersion,
+      deferUnavailableTerminology,
       this.expressionCache,
     );
   }
 
   rewriteLegacyExpression(expression: string): string {
     return rewriteLegacyValueSetInExists(expression);
-  }
-
-  evaluateOptional(
-    expression: string,
-    context: unknown,
-  ): MemberOfPrecheckResult {
-    return evaluateOptionalMemberOfUnion(
-      expression,
-      context,
-      this.valueSetCache,
-    );
   }
 }

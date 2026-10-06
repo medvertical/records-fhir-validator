@@ -9,20 +9,27 @@
  * declared dependency versions. Pins are applied by rewriting the canonical
  * to `url|resourceVersion`, so the existing versioned resolution paths keep
  * full authority: exact match wins, same-major fallback and the cross-major
- * guard stay intact, and version-qualified cache keys prevent bleed-through.
+ * guard stay intact. Terminology bindings additionally carry the selected
+ * package source into scoped lookups and cache keys: two packages can ship
+ * different content under the same canonical and business version.
  */
+import type { PinnedCanonicalSource } from './canonical-pin-scope.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
 import {
   CanonicalPinStore,
+  type CanonicalVersionLookupOptions,
   type InstalledPackageManifest,
   type PackageRef,
 } from './canonical-pin-store.js';
+import { lookupProfilePackageProvenance } from './canonical-pin-provenance.js';
+import { buildDependencyClosure } from './canonical-pin-dependency-closure.js';
 
 export type { PackageRef } from './canonical-pin-store.js';
 
 export interface CanonicalPinContext {
   /** Package the artifact under validation comes from. */
   source: PackageRef;
-  /** Source package first (own IG wins), then dependencies in declared order. */
+  /** Source package first (own IG wins), then its dependencies in lookup order. */
   pinnedPackages: PackageRef[];
 }
 
@@ -41,10 +48,15 @@ function canonicalIdentityOf(resource: unknown): CanonicalIdentity | null {
     : null;
 }
 
-const sharedPinStore = new CanonicalPinStore();
+export const sharedPinStore = new CanonicalPinStore();
+
+// Validation resolves the same few references from the same profiles over
+// and over; each lookup would otherwise stat every package it walks.
+const dependencyClosurePins = new BoundedLruCache<string, Promise<string | null>>(4_096);
 
 export function clearCanonicalPinCaches(): void {
   sharedPinStore.clear();
+  dependencyClosurePins.clear();
 }
 
 // Core FHIR canonical spaces already resolve through the FHIR-version
@@ -94,6 +106,63 @@ export async function derivePackagePinContext(
 }
 
 /**
+ * Resource version an unversioned canonical referenced from inside a profile
+ * resolves to: the first package of the profile's package closure — the
+ * package, then its dependencies breadth-first, each at its installed
+ * stand-in release (see canonical-pin-dependency-closure.ts) — that ships it.
+ * Installing or removing a package changes its store's signature, and with
+ * it every memo key.
+ */
+export async function resolveDependencyClosurePin(
+  storeDirs: readonly string[],
+  ref: PackageRef,
+  canonicalUrl: string,
+  fhirVersion?: 'R4' | 'R5' | 'R6',
+  packageVersionPins: Readonly<Record<string, string>> = {},
+): Promise<string | null> {
+  if (isPinExemptCanonical(canonicalUrl) || CORE_PACKAGE_PATTERN.test(ref.name)) return null;
+  const key = [
+    await sharedPinStore.storeSignature(storeDirs),
+    `${ref.name}#${ref.version}`,
+    JSON.stringify(Object.entries(packageVersionPins).sort(([left], [right]) => left.localeCompare(right))),
+    fhirVersion ?? '',
+    canonicalUrl,
+  ].join('\n');
+  let pending = dependencyClosurePins.get(key);
+  if (!pending) {
+    // A pin is soft: a lookup that fails leaves the reference unversioned.
+    pending = pinWithinDependencyClosure(storeDirs, ref, canonicalUrl, fhirVersion, packageVersionPins)
+      .catch(() => null);
+    dependencyClosurePins.set(key, pending);
+  }
+  return pending;
+}
+
+async function pinWithinDependencyClosure(
+  storeDirs: readonly string[],
+  ref: PackageRef,
+  canonicalUrl: string,
+  fhirVersion: 'R4' | 'R5' | 'R6' | undefined,
+  packageVersionPins: Readonly<Record<string, string>>,
+): Promise<string | null> {
+  const manifests = await sharedPinStore.listInstalledManifests(storeDirs);
+  const pinnedPackages = buildDependencyClosure(
+    manifests,
+    ref,
+    packageVersionPins,
+    name => CORE_PACKAGE_PATTERN.test(name),
+  );
+  if (pinnedPackages.length === 0) return null;
+  return resolvePinnedVersionForCanonical(
+    storeDirs,
+    { source: ref, pinnedPackages },
+    canonicalUrl,
+    fhirVersion,
+    { scanWithoutIndex: true },
+  );
+}
+
+/**
  * Resolve the resource version an unversioned canonical is pinned to, or
  * null when no pinned package ships it (callers keep current behavior — the
  * pin is soft by construction).
@@ -103,16 +172,51 @@ export async function resolvePinnedVersionForCanonical(
   context: CanonicalPinContext,
   canonicalUrl: string,
   fhirVersion?: 'R4' | 'R5' | 'R6',
+  lookupOptions: CanonicalVersionLookupOptions = { scanWithoutIndex: true },
 ): Promise<string | null> {
+  return (await resolvePinnedCanonicalSource(storeDirs, context, canonicalUrl, fhirVersion, lookupOptions))?.version ?? null;
+}
+
+export async function resolvePinnedCanonicalSource(
+  storeDirs: readonly string[],
+  context: CanonicalPinContext,
+  canonicalUrl: string,
+  fhirVersion?: 'R4' | 'R5' | 'R6',
+  lookupOptions: CanonicalVersionLookupOptions = { scanWithoutIndex: true },
+): Promise<PinnedCanonicalSource | null> {
   if (isPinExemptCanonical(canonicalUrl)) return null;
 
   const manifests = await sharedPinStore.listInstalledManifests(storeDirs);
   for (const pin of context.pinnedPackages) {
     if (!pinMatchesFhirVersion(manifests, pin, fhirVersion)) continue;
-    const version = await sharedPinStore.findCanonicalResourceVersion(storeDirs, pin, canonicalUrl);
-    if (version) return version;
+    const version = await sharedPinStore.findCanonicalResourceVersion(
+      storeDirs,
+      pin,
+      canonicalUrl,
+      lookupOptions,
+    );
+    if (version) return { canonical: canonicalUrl, version, packageDirName: `${pin.name}#${pin.version}` };
   }
   return null;
+}
+
+/**
+ * Rewrite an unversioned canonical a resolved profile names to the version
+ * its owning package, then that package's dependencies, ship.
+ */
+export async function applyProfilePinToCanonical(
+  storeDirs: readonly string[],
+  profile: { url?: string; version?: string },
+  canonicalUrl: string,
+  fhirVersion?: 'R4' | 'R5' | 'R6',
+): Promise<string> {
+  if (isPinExemptCanonical(canonicalUrl)) return canonicalUrl;
+  const provenance = lookupProfilePackageProvenance(profile);
+  if (!provenance) return canonicalUrl;
+  const context = await derivePackagePinContext(storeDirs, provenance);
+  if (!context) return canonicalUrl;
+  const version = await resolvePinnedVersionForCanonical(storeDirs, context, canonicalUrl, fhirVersion);
+  return version ? `${canonicalUrl}|${version}` : canonicalUrl;
 }
 
 /**

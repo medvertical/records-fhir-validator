@@ -1,3 +1,4 @@
+import { cloneSnapshotElements, copySnapshotTypeSource, copySnapshotTargetProfileSource, snapshotTypeProfileKey } from './snapshot-type-profile-authority.js';
 import type { ElementDefinition } from './structure-definition-types.js';
 
 export class SnapshotElementMerger {
@@ -5,11 +6,45 @@ export class SnapshotElementMerger {
     baseElements: ElementDefinition[],
     differentialElements: ElementDefinition[],
     applyConstraints: boolean,
+    typeProfiles: ReadonlyMap<string, ElementDefinition[]> = new Map(),
   ): ElementDefinition[] {
-    const differential = this.inferLegacySliceIds(differentialElements);
-    const snapshot = this.mergeElements(baseElements, differential);
+    const differential = this.normalizeDifferential(differentialElements);
+    const snapshot = this.mergeElements(baseElements, differential, typeProfiles);
     if (applyConstraints) this.applyConstraints(snapshot, differential);
+    this.prepareChoiceTypeSlicing(snapshot);
     return snapshot;
+  }
+
+  /** Disjoint choice variants need a type discriminator without restricting omitted allowed types. */
+  private prepareChoiceTypeSlicing(elements: ElementDefinition[]): void {
+    const identities = new Map<string, number>();
+    for (const element of elements) {
+      if (typeof element.id === 'string') identities.set(element.id, (identities.get(element.id) ?? 0) + 1);
+    }
+    for (const base of elements) {
+      if (typeof base.path !== 'string' || !base.path.endsWith('[x]') || base.sliceName || base.slicing !== undefined
+        || typeof base.id !== 'string' || !base.id || identities.get(base.id) !== 1 || base.path.includes('xtension.value')) continue;
+      if (!Array.isArray(base.type) || !base.type.length || !base.type.every(type =>
+        type !== null && typeof type === 'object' && typeof type.code === 'string' && /^\S+$/.test(type.code))) continue;
+      const allowed = new Set(base.type.map(type => type.code));
+      if (allowed.size !== base.type.length) continue;
+      const slices = elements.filter(element => element.path === base.path && typeof element.sliceName === 'string'
+        && element.sliceName.length > 0 && typeof element.id === 'string' && this.sliceParentScope(element) === base.id);
+      if (!slices.length) continue;
+      const covered = new Set<string>();
+      const disjoint = slices.every(slice => {
+        const type = Array.isArray(slice.type) && slice.type.length === 1 ? slice.type[0] : undefined;
+        const code = type !== null && typeof type === 'object' && typeof type.code === 'string' ? type.code : undefined;
+        if (!code || !allowed.has(code) || covered.has(code) || identities.get(slice.id!) !== 1
+          || slice.id !== `${base.id}:${slice.sliceName}`) return false;
+        covered.add(code);
+        return true;
+      });
+      if (disjoint) base.slicing = {
+        discriminator: [{ type: 'type', path: '$this' }], ordered: false,
+        rules: covered.size === allowed.size ? 'closed' : 'open',
+      };
+    }
   }
 
   /**
@@ -22,30 +57,70 @@ export class SnapshotElementMerger {
   private mergeElements(
     baseElements: ElementDefinition[],
     differentialElements: ElementDefinition[],
+    typeProfiles: ReadonlyMap<string, ElementDefinition[]>,
   ): ElementDefinition[] {
-    const mergedElements = JSON.parse(JSON.stringify(baseElements)) as ElementDefinition[];
+    const mergedElements = cloneSnapshotElements(baseElements);
+    const differentialIds = differentialElements.flatMap(element => (element.id ? [element.id] : []));
+
+    for (let index = 0; index < mergedElements.length; index++)
+      this.expandTypeProfile(mergedElements, index, typeProfiles, differentialIds);
 
     for (const diffElement of differentialElements) {
       if (!diffElement.path) continue;
       const isSliceInstance = Boolean(diffElement.sliceName);
       const isSliceScopedChild = this.isSliceScopedElement(diffElement);
 
+      // A slice's child the base (or a type profile) already holds is refined, not repeated.
       const existingIndex = isSliceInstance
         ? this.findExistingSliceIndex(mergedElements, diffElement)
         : isSliceScopedChild
-          ? -1
+          ? mergedElements.findIndex(element => element.id === diffElement.id)
           : this.findUnslicedIndex(mergedElements, diffElement.path);
+      const index = existingIndex >= 0 ? existingIndex : this.insertionIndex(mergedElements, diffElement);
       if (existingIndex >= 0) {
-        mergedElements[existingIndex] = this.mergeElementProperties(
-          mergedElements[existingIndex],
-          diffElement,
-        );
-        continue;
+        mergedElements[existingIndex] = this.mergeElementProperties(mergedElements[existingIndex], diffElement);
+      } else {
+        mergedElements.splice(index, 0, { ...diffElement });
       }
-      mergedElements.splice(this.insertionIndex(mergedElements, diffElement), 0, { ...diffElement });
+      this.expandTypeProfile(mergedElements, index, typeProfiles, differentialIds);
     }
 
     return mergedElements;
+  }
+
+  /**
+   * An element constrained to a profiled type takes that profile's elements
+   * as its children once the differential walks into it, as the reference
+   * validator's snapshot generator does: KBV's practitioner identifier slices
+   * carry their LANR and DN codes in de.basisprofil's identifier profiles.
+   */
+  private expandTypeProfile(
+    elements: ElementDefinition[],
+    index: number,
+    typeProfiles: ReadonlyMap<string, ElementDefinition[]>,
+    differentialIds: readonly string[],
+  ): void {
+    const element = elements[index];
+    const profile = element.type?.length === 1 && element.type[0].profile?.length === 1 ? element.type[0].profile[0] : undefined;
+    const profileKey = snapshotTypeProfileKey(element);
+    const profileElements = profileKey ? typeProfiles.get(profileKey) ?? (profile ? typeProfiles.get(profile) : undefined) : undefined;
+    const id = element.id ?? element.path;
+    if (!profileElements || profileElements.length < 2 || !id || !element.path || !element.path.includes('.')) return;
+    if (!differentialIds.some(candidate => candidate.startsWith(`${id}.`))) return;
+    if (elements.some(candidate => candidate.id?.startsWith(`${id}.`))) return;
+    const root = profileElements[0];
+    const rootId = root.id ?? root.path;
+    if (!rootId || !root.path) return;
+    const children = cloneSnapshotElements(profileElements.slice(1)).flatMap(child => {
+      if (!child.path?.startsWith(`${root.path}.`)) return [];
+      const childId = child.id ?? child.path;
+      return [{
+        ...child,
+        id: `${id}${childId.slice(rootId.length)}`,
+        path: `${element.path}${child.path.slice(root.path.length)}`,
+      }];
+    });
+    elements.splice(index + 1, 0, ...children);
   }
 
   private findUnslicedIndex(elements: ElementDefinition[], path: string): number {
@@ -83,7 +158,7 @@ export class SnapshotElementMerger {
     return end;
   }
 
-  private inferLegacySliceIds(elements: ElementDefinition[]): ElementDefinition[] {
+  normalizeDifferential(elements: ElementDefinition[]): ElementDefinition[] {
     let activeSlice: { path: string; name: string; id: string } | null = null;
     return elements.map(source => {
       const element = { ...source };
@@ -234,11 +309,14 @@ function mergeTypes(baseTypes?: ElementType[], diffTypes?: ElementType[]): Eleme
   const merged = diffTypes.map(diffType => {
     const baseType = baseTypes.find(candidate => candidate.code === diffType.code);
     if (!baseType) return diffType;
-    return {
+    const mergedType = {
       ...baseType,
       ...(diffType.profile ? { profile: diffType.profile } : {}),
       ...(diffType.targetProfile ? { targetProfile: diffType.targetProfile } : {}),
     };
+    copySnapshotTypeSource(diffType.profile ? diffType : baseType, mergedType);
+    copySnapshotTargetProfileSource(diffType.targetProfile ? diffType : baseType, mergedType);
+    return mergedType;
   });
   return merged.length > 0 ? merged : baseTypes;
 }

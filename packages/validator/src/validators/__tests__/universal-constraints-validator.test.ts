@@ -2,6 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { universalConstraintsValidator } from '../universal-constraints-validator';
 
 describe('universalConstraintsValidator', () => {
+  it('reports ele-1 for a primitive written as an empty string', () => {
+    const issues = universalConstraintsValidator.validateElementConstraints({
+      resourceType: 'Patient',
+      name: [{ text: '', given: ['', 'Anna'], _given: [{ extension: [{ url: 'http://example.org/reason', valueCode: 'masked' }] }, null] }],
+      gender: '',
+      _gender: { id: 'g' },
+    });
+
+    expect(issues.filter(issue => issue.code === 'ele-1-violation').map(issue => issue.path).sort())
+      .toEqual(['Patient.gender', 'Patient.name[0].text']);
+  });
+
   it('does not report ele-1 when a primitive sidecar-only child has extensions', () => {
     const issues = universalConstraintsValidator.validate({
       resourceType: 'Observation',
@@ -70,16 +82,16 @@ describe('universalConstraintsValidator', () => {
     }));
   });
 
-  it('reports ele-1 when a repeating element contains only an element id', () => {
+  it('counts a complex element\'s id as content, as the reference validator does', () => {
     const issues = universalConstraintsValidator.validate({
       resourceType: 'Patient',
-      name: [{ id: 'metadata-only' }],
+      name: [{ id: 'metadata-only' }, {}],
+      maritalStatus: { id: 'm1' },
+      contact: [{ id: 'c1' }],
     });
 
-    expect(issues).toContainEqual(expect.objectContaining({
-      code: 'ele-1-violation',
-      path: 'Patient.name[0]',
-    }));
+    expect(issues.filter(issue => issue.code === 'ele-1-violation').map(issue => issue.path))
+      .toEqual(['Patient.name[1]']);
   });
 
   it('still reports ele-1 when a repeating primitive sidecar array has no meaningful items', () => {

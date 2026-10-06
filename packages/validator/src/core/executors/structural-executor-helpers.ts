@@ -209,5 +209,9 @@ export function mergeElementConstraints(
         merged.mustSupport = profileElement.mustSupport;
     }
 
+    if (profileElement.binding !== undefined) {
+        merged.binding = { ...baseElement.binding, ...profileElement.binding };
+    }
+
     return merged;
 }

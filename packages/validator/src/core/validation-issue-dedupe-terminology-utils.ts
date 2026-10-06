@@ -10,9 +10,6 @@ import {
   isIndexedBundleEntryResourcePath,
   normalizeIndexedBundleEntryResourcePath,
 } from './validation-issue-dedupe-bundle-path-utils.js';
-import {
-  normalizeInvalidUriDedupePath,
-} from './validation-issue-dedupe-path-utils.js';
 
 export function getTerminologyDisplayMismatchKey(issue: ValidationIssue): string | null {
   if (issue.code !== 'terminology-display-mismatch') return null;
@@ -67,7 +64,24 @@ export function getInvalidUriIssueKey(issue: ValidationIssue): string | null {
   if (issue.code !== 'structural-invalid-uri') return null;
   const value = getDetailsRecord(issue)?.value;
   if (typeof value !== 'string' || value.trim().length === 0) return null;
-  return `${normalizeInvalidUriDedupePath(issue)}:${value.trim().toLowerCase()}`;
+  return `${invalidUriElementKey(issue)}:${value.trim().toLowerCase()}`;
+}
+
+/**
+ * Two validators report one invalid uri under the generic
+ * (`extension[0].value[x]`) or the profiled path
+ * (`extension[url='…'].valueCanonical`) of the same element, so extension
+ * selectors and choice types fold together. Any other repeat index keeps the
+ * same value in different elements apart, as each is a finding of its own.
+ */
+function invalidUriElementKey(issue: ValidationIssue): string {
+  const path = (issue.path || getIssuePath(issue))
+    .replace(/\/\*[^*]*\*\//g, '')
+    .replace(/(extension)\[(?:\d+|url=(?:'[^']*'|"[^"]*"))\]/gi, '$1')
+    .replace(/:[^.[]+/g, '')
+    .replace(/^[A-Z][A-Za-z0-9]*\./, '')
+    .trim();
+  return normalizeChoiceTypePath(path, { stripIndices: false });
 }
 
 export function compareInvalidUriSpecificity(
@@ -117,8 +131,14 @@ function getDisplayMismatchSpecificity(issue: ValidationIssue): number {
     + (hasBundleEntryResourceIdentity(issue.path ?? '') ? 50 : 0);
 }
 
+/**
+ * The generic terminology walk names an extension by position
+ * (`extension[0]`), the profile walk by its url (`extension[url='ombCategory']`);
+ * both report one wrong display of one coding.
+ */
 function normalizeDisplayMismatchPath(issue: ValidationIssue, issuePath: string): string {
   return normalizeRawDisplayMismatchPath(issue, issuePath)
+    .replace(/(extension)\[(?:\d+|url=(?:'[^']*'|"[^"]*"))\]/gi, '$1')
     .replace(/\.display$/i, '')
     .toLowerCase();
 }

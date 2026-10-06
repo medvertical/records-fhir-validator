@@ -1,0 +1,288 @@
+{
+  "scope": "Manual review of selected examples, not all members of a diagnostic family. Raw counts are not adjusted by these explanations.",
+  "cases": [
+    {
+      "run": "corpus-24-declared",
+      "file": "uv.order-catalog-1.0.0__ActivityDefinition-example-lab-blood-electrolyte.json",
+      "inputSha256": "ededa0efd0604349eada67d8b352dba06a4259c3b0a9e4c60e2d95ee5e0f25ec",
+      "classification": "offline-language-system-inference",
+      "review": "HAPI cannot infer a system for language en-US in all-languages|5.0.0 in this offline run. This is retained as a disagreement; it is not evidence that rejecting this language would improve Records.",
+      "observedBeforeFinalRerun": {
+        "recordsOnlyErrors": [],
+        "hapiOnlyErrors": [
+          {
+            "severity": "error",
+            "code": "not-found",
+            "path": "ActivityDefinition.language",
+            "message": "The System URI could not be determined for the code 'en-US' in the ValueSet 'http://hl7.org/fhir/ValueSet/all-languages|5.0.0'",
+            "key": "error|not-found|langu",
+            "identity": "[\"error\",[\"UNABLE_TO_INFER_CODESYSTEM\",\"The System URI could not be determined for the code 'en-US' in the ValueSet 'http://hl7.org/fhir/ValueSet/all-languages|5.0.0'\"],\"langu\"]",
+            "source": "UNABLE_TO_INFER_CODESYSTEM",
+            "boundary": false,
+            "location": "ActivityDefinition.language",
+            "disagreement": "unexplained"
+          }
+        ]
+      },
+      "finalObservation": {
+        "recordsError": false,
+        "hapiError": true,
+        "recordsOnlyErrors": [],
+        "hapiOnlyErrors": [
+          {
+            "severity": "error",
+            "code": "not-found",
+            "path": "ActivityDefinition.language",
+            "message": "The System URI could not be determined for the code 'en-US' in the ValueSet 'http://hl7.org/fhir/ValueSet/all-languages|5.0.0'",
+            "key": "error|not-found|langu",
+            "identity": "[\"error\",[\"UNABLE_TO_INFER_CODESYSTEM\",\"The System URI could not be determined for the code 'en-US' in the ValueSet 'http://hl7.org/fhir/ValueSet/all-languages|5.0.0'\"],\"langu\"]",
+            "source": "UNABLE_TO_INFER_CODESYSTEM",
+            "boundary": false,
+            "location": "ActivityDefinition.language",
+            "disagreement": "unexplained"
+          }
+        ]
+      },
+      "rawComparisonSha256": "63faa516b2cfef8f2b7240b1f5ff96c874d7f7288ebf4701f48f12d7f94fcf3e"
+    },
+    {
+      "run": "corpus-43-declared",
+      "file": "uv.smart-app-launch-2.2.0__Bundle-example1.json",
+      "inputSha256": "2f460378c3873ea5fc6854852eb11ff8f6ea93b3f846790d766652d5f78fb222",
+      "classification": "canonical-version-selection",
+      "review": "Records resolves organization-type|2.0.1, which does not include laboratory. Other installed releases include that code. The observed difference requires aligning canonical selection before assigning a validator defect.",
+      "observedBeforeFinalRerun": {
+        "recordsOnlyErrors": [
+          {
+            "severity": "error",
+            "code": "terminology-code-invalid",
+            "path": "Bundle.entry[0].resource/*Organization/examplelabs*/.type[0].coding[0].code",
+            "message": "Unknown code 'laboratory' in CodeSystem 'http://terminology.hl7.org/CodeSystem/organization-type' version '2.0.1'",
+            "key": "error|invalid|entry.resource.type.coding",
+            "identity": "[\"error\",[\"terminology-code-invalid\",\"Unknown code 'laboratory' in CodeSystem 'http://terminology.hl7.org/CodeSystem/organization-type' version '2.0.1'\"],\"entry.resource.type.coding\"]",
+            "source": "terminology-code-invalid",
+            "boundary": false,
+            "location": "Bundle.entry[0].resource/*Organization/examplelabs*/.type[0].coding[0].code",
+            "profileUrl": "http://hl7.org/fhir/StructureDefinition/Organization",
+            "disagreement": "unexplained"
+          }
+        ],
+        "hapiOnlyErrors": []
+      },
+      "finalObservation": {
+        "recordsError": true,
+        "hapiError": false,
+        "recordsOnlyErrors": [
+          {
+            "severity": "error",
+            "code": "terminology-code-invalid",
+            "path": "Bundle.entry[0].resource/*Organization/examplelabs*/.type[0].coding[0].code",
+            "message": "Unknown code 'laboratory' in CodeSystem 'http://terminology.hl7.org/CodeSystem/organization-type' version '2.0.1'",
+            "key": "error|invalid|entry.resource.type.coding",
+            "identity": "[\"error\",[\"terminology-code-invalid\",\"Unknown code 'laboratory' in CodeSystem 'http://terminology.hl7.org/CodeSystem/organization-type' version '2.0.1'\"],\"entry.resource.type.coding\"]",
+            "source": "terminology-code-invalid",
+            "boundary": false,
+            "location": "Bundle.entry[0].resource/*Organization/examplelabs*/.type[0].coding[0].code",
+            "profileUrl": "http://hl7.org/fhir/StructureDefinition/Organization",
+            "disagreement": "unexplained"
+          }
+        ],
+        "hapiOnlyErrors": []
+      },
+      "rawComparisonSha256": "2f231034847cd2138d284e9b1a0b630bb649efc495584601c280be1d00cafa55"
+    },
+    {
+      "run": "corpus-51-declared",
+      "file": "fhir.r4.ukcore.stu2-2.0.2__UKCore-Condition-Extension-ConditionEpisode-Example.json",
+      "inputSha256": "9fc78f65b3f5f78b0025322985afc3b01afbc024a3d3a38d5cba371f93cf1485",
+      "classification": "confirmed-records-bug-fixed",
+      "review": "The selected extension definition contains only a differential restricting value[x] to code. Snapshot generation was missing in the extension validation path. The fix and inherited R4/R5/R6 regressions are included in commit 2031e8ae3fd7aad4548c379398c7824482928bb4; the real resource now produces profile-extension-wrong-value-type.",
+      "observedBeforeFinalRerun": {
+        "recordsOnlyErrors": [],
+        "hapiOnlyErrors": [
+          {
+            "severity": "error",
+            "code": "structure",
+            "path": "Condition.extension[0]",
+            "message": "The Extension 'https://fhir.hl7.org.uk/StructureDefinition/Extension-UKCore-ConditionEpisode' definition allows for the types [code] but found type CodeableConcept",
+            "key": "error|structure|extension",
+            "identity": "[\"error\",[\"Extension_EXT_Type\",\"The Extension 'https://fhir.hl7.org.uk/StructureDefinition/Extension-UKCore-ConditionEpisode' definition allows for the types [code] but found type CodeableConcept\"],\"extension\"]",
+            "source": "Extension_EXT_Type",
+            "boundary": false,
+            "location": "Condition.extension[0]",
+            "disagreement": "unexplained"
+          },
+          {
+            "severity": "error",
+            "code": "not-supported",
+            "path": "Condition.extension[0].value.ofType(CodeableConcept).coding[0]",
+            "message": "This element is not allowed by the profile http://hl7.org/fhir/StructureDefinition/code|4.0.1",
+            "key": "error|invalid|extension.value.coding",
+            "identity": "[\"error\",[\"Validation_VAL_Profile_NotAllowed\",\"This element is not allowed by the profile http://hl7.org/fhir/StructureDefinition/code|4.0.1\"],\"extension.value.coding\"]",
+            "source": "Validation_VAL_Profile_NotAllowed",
+            "boundary": false,
+            "location": "Condition.extension[0].value.ofType(CodeableConcept).coding[0]",
+            "disagreement": "unexplained"
+          }
+        ]
+      },
+      "finalObservation": {
+        "recordsError": true,
+        "hapiError": true,
+        "recordsOnlyErrors": [
+          {
+            "severity": "error",
+            "code": "profile-extension-wrong-value-type",
+            "path": "Condition.extension[0]",
+            "message": "The Extension 'https://fhir.hl7.org.uk/StructureDefinition/Extension-UKCore-ConditionEpisode' definition allows for the types [code] but found type CodeableConcept",
+            "key": "error|structure|extension",
+            "identity": "[\"error\",[\"profile-extension-wrong-value-type\",\"The Extension 'https://fhir.hl7.org.uk/StructureDefinition/Extension-UKCore-ConditionEpisode' definition allows for the types [code] but found type CodeableConcept\"],\"extension\"]",
+            "source": "profile-extension-wrong-value-type",
+            "boundary": false,
+            "location": "Condition.extension[0]",
+            "profileUrl": "https://fhir.hl7.org.uk/StructureDefinition/Extension-UKCore-ConditionEpisode",
+            "disagreement": "unexplained"
+          }
+        ],
+        "hapiOnlyErrors": [
+          {
+            "severity": "error",
+            "code": "structure",
+            "path": "Condition.extension[0]",
+            "message": "The Extension 'https://fhir.hl7.org.uk/StructureDefinition/Extension-UKCore-ConditionEpisode' definition allows for the types [code] but found type CodeableConcept",
+            "key": "error|structure|extension",
+            "identity": "[\"error\",[\"Extension_EXT_Type\",\"The Extension 'https://fhir.hl7.org.uk/StructureDefinition/Extension-UKCore-ConditionEpisode' definition allows for the types [code] but found type CodeableConcept\"],\"extension\"]",
+            "source": "Extension_EXT_Type",
+            "boundary": false,
+            "location": "Condition.extension[0]",
+            "disagreement": "unexplained"
+          },
+          {
+            "severity": "error",
+            "code": "not-supported",
+            "path": "Condition.extension[0].value.ofType(CodeableConcept).coding[0]",
+            "message": "This element is not allowed by the profile http://hl7.org/fhir/StructureDefinition/code|4.0.1",
+            "key": "error|invalid|extension.value.coding",
+            "identity": "[\"error\",[\"Validation_VAL_Profile_NotAllowed\",\"This element is not allowed by the profile http://hl7.org/fhir/StructureDefinition/code|4.0.1\"],\"extension.value.coding\"]",
+            "source": "Validation_VAL_Profile_NotAllowed",
+            "boundary": false,
+            "location": "Condition.extension[0].value.ofType(CodeableConcept).coding[0]",
+            "disagreement": "unexplained"
+          }
+        ]
+      },
+      "rawComparisonSha256": "3cd3e1a2bd0e508cc1692b710136afa8d5e5d1fb38f0ff3b3f895be6849684b5"
+    },
+    {
+      "run": "corpus-31-declared",
+      "file": "spark-r4__CodeSystem-allergyintolerance-clinical.json",
+      "classification": "canonical-version-selection-candidate",
+      "review": "The unversioned shareablecodesystem canonical has different installed definitions. R4 core 4.0.1 has no scs-1 constraint; CRMI 2.0.0 ships version 4.0.2 with that constraint. HAPI reports scs-1 while Records accepts the resource. This supports a canonical-selection hypothesis; align and record the selected definition before attributing an engine defect. No disagreement is removed from the counts.",
+      "inputSha256": "b4d0f64acab782019e0b8e44974c700e73fc7ba59d7f845de3eaad3b920bb9b1",
+      "definitionEvidence": [
+        {
+          "package": "hl7.fhir.r4.core#4.0.1",
+          "file": "StructureDefinition-shareablecodesystem.json",
+          "sha256": "c2e91b62ff27da24946851a4b2ee050ded0ddea8578e885651b3d2b809cbf1f8",
+          "version": "4.0.1",
+          "fhirVersion": "4.0.1",
+          "scs1": false
+        },
+        {
+          "package": "hl7.fhir.uv.crmi#2.0.0",
+          "file": "StructureDefinition-shareablecodesystem.json",
+          "sha256": "6c9305ca7bb884f82ec53c486cefaa56d310f1afc49ae44c44a8c67ab7513976",
+          "version": "4.0.2",
+          "fhirVersion": "4.0.1",
+          "scs1": true
+        }
+      ],
+      "finalObservation": {
+        "recordsError": false,
+        "hapiError": true,
+        "recordsOnlyErrors": [],
+        "hapiOnlyErrors": [
+          {
+            "severity": "error",
+            "code": "invariant",
+            "path": "CodeSystem",
+            "message": "Constraint failed: scs-1: 'If a codesystem contains nested concepts, it must specify hierarchyMeaning'",
+            "key": "error|invariant|scs-1",
+            "identity": "error|invariant|scs-1",
+            "source": "http://hl7.org/fhir/StructureDefinition/shareablecodesystem#scs-1",
+            "boundary": false,
+            "location": "CodeSystem",
+            "disagreement": "unexplained"
+          }
+        ]
+      },
+      "rawComparisonSha256": "cd44c539cba9dce61eba1c8532ccd332adf7ed418db7134769ffbbb24ce3a88f"
+    },
+    {
+      "run": "corpus-22-declared",
+      "file": "ihe.iti.mhd-4.2.2__DocumentReference-ex-DocumentReferenceComprehensive.json",
+      "inputSha256": "c79be12f984386103b9fa7facda9d6c21c8b0fad026d92d8e252ad7725c2551f",
+      "classification": "canonical-version-selection-candidate",
+      "review": "HAPI explicitly applies IHE.MHD.UniqueIdIdentifier|4.2.3 and requires Identifier.use. The example belongs to IHE MHD 4.2.2, whose corresponding definition allows use to be absent (min=0); 4.2.3 changes min to 1. The diagnostic also includes offline MIME-system inference. A controlled comparison must align the datatype profile version before assigning a missing-cardinality defect. Counts remain unchanged.",
+      "definitionEvidence": [
+        {
+          "package": "ihe.iti.mhd#4.2.2",
+          "file": "StructureDefinition-IHE.MHD.UniqueIdIdentifier.json",
+          "sha256": "6176991cd9d660c25a804ad85635c906bec2df39b944b4faecc8e9279bb1368a",
+          "version": "4.2.2",
+          "identifierUseMin": 0
+        },
+        {
+          "package": "ihe.iti.mhd#4.2.3",
+          "file": "StructureDefinition-IHE.MHD.UniqueIdIdentifier.json",
+          "sha256": "beb3c33f22da5dd208c489e07b6492cbfdce582c02d2970afb99a36c79477090",
+          "version": "4.2.3",
+          "identifierUseMin": 1
+        }
+      ],
+      "finalObservation": {
+        "recordsError": false,
+        "hapiError": true,
+        "recordsOnlyErrors": [],
+        "hapiOnlyErrors": [
+          {
+            "severity": "error",
+            "code": "not-found",
+            "path": "DocumentReference.content[0].attachment.contentType",
+            "message": "The System URI could not be determined for the code 'text/plain' in the ValueSet 'http://hl7.org/fhir/ValueSet/mimetypes|4.0.1'",
+            "key": "error|not-found|content.attachment.contenttype",
+            "identity": "[\"error\",[\"UNABLE_TO_INFER_CODESYSTEM\",\"The System URI could not be determined for the code 'text/plain' in the ValueSet 'http://hl7.org/fhir/ValueSet/mimetypes|4.0.1'\"],\"content.attachment.contenttype\"]",
+            "source": "UNABLE_TO_INFER_CODESYSTEM",
+            "boundary": false,
+            "location": "DocumentReference.content[0].attachment.contentType",
+            "disagreement": "reference-defect"
+          },
+          {
+            "severity": "error",
+            "code": "structure",
+            "path": "DocumentReference.masterIdentifier.use",
+            "message": "Identifier.use: minimum required = 1, but only found 0 (from https://profiles.ihe.net/ITI/MHD/StructureDefinition/IHE.MHD.UniqueIdIdentifier|4.2.3)",
+            "key": "error|structure|master.use",
+            "identity": "[\"error\",\"cardinality-min\",\"master.use\"]",
+            "source": "Validation_VAL_Profile_Minimum",
+            "boundary": false,
+            "location": "DocumentReference.masterIdentifier",
+            "disagreement": "unexplained"
+          }
+        ]
+      },
+      "rawComparisonSha256": "7c71506515b5ecceb8c8b17bdbb998091a74a44f36e0c16819330c6e21957b95"
+    }
+  ],
+  "schemaVersion": 1,
+  "kind": "selected-public-parity-triage",
+  "generatedAt": "2026-09-30T11:27:25.689060+00:00",
+  "source": {
+    "revision": "2031e8ae3fd7aad4548c379398c7824482928bb4",
+    "sourceSha256": "ad38dfec07d27455dbedbe7ea27da6b0c0aaf2b0c6e30ebe0c2b250f3124212e",
+    "runtimeSha256": "9f795033ad596c1f4653aeaa9a8364c183615a12ff5a9f531b2b4ca63d8c1024",
+    "validatorVersion": "0.8.0",
+    "validationTypesVersion": "0.1.13"
+  },
+  "measurement": "conformance-results/public-parity-2026-09-30.json"
+}

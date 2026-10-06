@@ -42,7 +42,7 @@ export function narrowChoiceTypeElement(
   const actualKey = Object.keys(value).find(k => k.startsWith(prefix) && k !== prefix);
   if (!actualKey || !elementDef.type || elementDef.type.length <= 1) return elementDef;
   const suffix = actualKey.substring(prefix.length);
-  const matched = elementDef.type.find(t => t.code.toLowerCase() === suffix.toLowerCase());
+  const matched = elementDef.type.find(t => typeof t?.code === 'string' && t.code.toLowerCase() === suffix.toLowerCase());
   return matched ? { ...elementDef, type: [matched] } : elementDef;
 }
 
@@ -56,6 +56,6 @@ export function narrowChoiceTypeForConcreteSegment(
   const baseName = choiceSegment.slice(0, -3);
   if (!concreteSegment.startsWith(baseName) || concreteSegment === baseName) return elementDef;
   const suffix = concreteSegment.substring(baseName.length);
-  const matched = elementDef.type.find(t => t.code.toLowerCase() === suffix.toLowerCase());
+  const matched = elementDef.type.find(t => typeof t?.code === 'string' && t.code.toLowerCase() === suffix.toLowerCase());
   return matched ? { ...elementDef, type: [matched] } : elementDef;
 }

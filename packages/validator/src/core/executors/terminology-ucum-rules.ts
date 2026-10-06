@@ -4,6 +4,7 @@ import {
   UCUM_SYSTEM_URL,
   quantityUsesUcum,
   UcumCodeValidator,
+  type UcumValidationResult,
   ucumCodeHasAnnotation,
 } from '../../validators/ucum-validator.js';
 
@@ -85,6 +86,8 @@ export function validateUcumAtPath(
       const result = ucumValidator.validate(q.code);
       const arrayPart = Array.isArray(hit.value) ? `[${idx}]` : '';
       const finalPath = `${hit.basePath}.${hit.leafName}${arrayPart}.code`;
+      const unchecked = buildUnverifiedUcumIssue(q.code, finalPath, result);
+      if (unchecked) { issues.push(unchecked); continue; }
 
       if (result.valid) {
         if (ucumCodeHasAnnotation(q.code)) {
@@ -113,6 +116,18 @@ export function validateUcumAtPath(
   }
 
   return issues;
+}
+
+export function buildUnverifiedUcumIssue(
+  code: string, path: string, result: UcumValidationResult,
+): ValidationIssue | undefined {
+  if (result.validationComplete !== false) return undefined;
+  return createTerminologyIssue({
+    severity: 'information', code: 'terminology-ucum-unverified',
+    message: result.message ?? 'UCUM code could not be verified by the unit parser.', path,
+    details: { code, system: UCUM_SYSTEM_URL, reason: result.reason,
+      validationComplete: false, validationStatus: 'incomplete' },
+  });
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  choiceContextHasOnlyOtherTypes,
-  expressionStartsAtResourceRoot,
-  hasUnresolvableChoiceTypes,
-} from '../constraint-choice-context';
+import { hasUnresolvableChoiceTypes } from '../constraint-choice-context';
 
 describe('constraint choice context', () => {
   it('detects dynamically derived choice bases', () => {
@@ -41,24 +37,5 @@ describe('constraint choice context', () => {
       { _id: { extension: [{ url: 'http://example.org/ext', valueCode: 'x' }] } },
       'id.exists()',
     )).toBe(false);
-  });
-
-  it('compares only actual concrete choice types', () => {
-    expect(choiceContextHasOnlyOtherTypes(
-      [{ valueSet: 'ignored', valueQuantity: { value: 1 } }],
-      'value',
-      'string',
-    )).toBe(true);
-    expect(choiceContextHasOnlyOtherTypes(
-      [{ valueString: 'ok' }],
-      'value',
-      'string',
-    )).toBe(false);
-  });
-
-  it('recognises resource-root expressions through whitespace and grouping', () => {
-    expect(expressionStartsAtResourceRoot('  ((Patient.name.exists()))', 'Patient')).toBe(true);
-    expect(expressionStartsAtResourceRoot('name.exists()', 'Patient')).toBe(false);
-    expect(expressionStartsAtResourceRoot('PatientName.exists()', 'Patient')).toBe(false);
   });
 });

@@ -383,7 +383,7 @@ describe("ExtensionValidator", () => {
                 {
                   code: "Extension",
                   profile: [
-                    "http://hl7.org/fhir/5.0/StructureDefinition/extension-Procedure.recorded",
+                    "http://hl7.org/fhir/5.0/StructureDefinition/procedure-recorded",
                   ],
                 },
               ],
@@ -800,6 +800,38 @@ describe("ExtensionValidator", () => {
       expect(minErrors.length).toBe(0);
     });
 
+    it("reports a relative sub-extension url the complex extension does not define", async () => {
+      const validator = makeDeepValidator();
+      const resource = {
+        resourceType: "Patient",
+        id: "p1",
+        extension: [
+          {
+            url: PARENT_URL,
+            extension: [
+              { url: "required-sub", valueCoding: { code: "x" } },
+              { url: "uri", valueUri: "https://gl.nmdp.org/x" },
+              { url: "http://example.org/ext/absolute", valueString: "own definition" },
+            ],
+          },
+        ],
+      };
+
+      const issues = await validator.validateExtensions(
+        resource,
+        patientProfile,
+        makeContext(resource, patientProfile),
+      );
+
+      expect(issues.filter(i => i.code === "profile-extension-subextension-invalid")).toEqual([
+        expect.objectContaining({
+          severity: "error",
+          path: `Patient.extension[url='${PARENT_URL}'].extension[url='uri']`,
+          message: `Sub-extension url 'uri' is not defined by the Extension ${PARENT_URL}`,
+        }),
+      ]);
+    });
+
     it("reports max-cardinality violation on a required singleton sub-extension", async () => {
       const validator = makeDeepValidator();
       const resource = {
@@ -886,6 +918,7 @@ describe("ExtensionValidator", () => {
           valueSet: "http://example.org/ValueSet/required-sub",
         }),
         expect.stringContaining("extension[url='required-sub'].valueCoding"),
+        { fhirVersion: "R4", profileUrl: PARENT_URL },
       );
       expect(issues).toContainEqual(
         expect.objectContaining({

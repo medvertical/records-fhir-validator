@@ -6,9 +6,11 @@ import { setProfileSource, type ProfileSourceContext } from '../../persistence';
 import { ValueSetPackageResourceAccess } from '../valueset-package-resource-access';
 import type { ValueSet } from '../valueset-types';
 
+type HostValueSetFixture = ValueSet & Record<string, unknown>;
+
 const VS_URL = 'https://example.test/ValueSet/host-tier';
 
-function valueSet(version: string): ValueSet {
+function valueSet(version: string): HostValueSetFixture {
     return { resourceType: 'ValueSet', url: VS_URL, version, status: 'active' };
 }
 
@@ -32,7 +34,7 @@ async function writeStoreValueSet(version: string): Promise<void> {
     );
 }
 
-function hostAnswering(byVersion: Record<string, ValueSet | null>) {
+function hostAnswering(byVersion: Record<string, HostValueSetFixture | null>) {
     const findCanonicalResource = vi.fn(async (
         _url: string,
         _resourceType: string,
@@ -114,12 +116,12 @@ describe('host package tier of the ValueSet package resource access', () => {
         await expect(find(access)).resolves.toBeNull();
     });
 
-    it('reports a scope change only when the tenant changes', () => {
+    it('reports changes to any source selection context', () => {
         const access = new ValueSetPackageResourceAccess([storeDir]);
 
-        expect(access.setSourceContext({ fhirVersion: 'R4' })).toBe(false);
+        expect(access.setSourceContext({ fhirVersion: 'R4' })).toBe(true);
         expect(access.setSourceContext({ organizationId: 3 })).toBe(true);
-        expect(access.setSourceContext({ organizationId: 3, serverId: 9 })).toBe(false);
+        expect(access.setSourceContext({ organizationId: 3, serverId: 9 })).toBe(true);
         expect(access.setSourceContext({ organizationId: 4 })).toBe(true);
         expect(access.setSourceContext(undefined)).toBe(true);
         expect(access.getSourceContext()).toBeUndefined();

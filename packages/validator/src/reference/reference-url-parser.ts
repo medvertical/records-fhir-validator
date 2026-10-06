@@ -5,6 +5,17 @@ import {
   isFhirVersionPathSegment,
 } from './reference-resource-types.js';
 
+/**
+ * An absolute URI of a scheme other than http(s) or urn that the HL7
+ * validator accepts as a reference (Utilities.isAbsoluteUrl: a lower-case
+ * token scheme): SMART Health Cards name Bundle entries `resource:0` and
+ * reference them so, resolved through the entry fullUrl. `Patient:123` stays
+ * a malformed relative reference; http(s) and urn values have stricter rules.
+ */
+export function isOtherSchemeAbsoluteUri(reference: string): boolean {
+  return /^(?!https?:|urn:)[a-z][a-z0-9]*:\S+$/.test(reference);
+}
+
 export function parseAbsoluteReference(
   reference: string,
   validateKnownResourceType: boolean,

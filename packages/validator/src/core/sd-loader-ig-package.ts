@@ -15,6 +15,7 @@ export interface LoadedIGPackage {
   packageId: string;
   version?: string;
   profiles: StructureDefinition[];
+  packageDirectory?: string;
 }
 
 export async function loadIGPackageIntoAvailableProfiles(
@@ -52,6 +53,7 @@ export async function loadIGPackageIntoAvailableProfiles(
       packageId: installed?.packageId ?? packageId,
       version: installed?.version,
       profiles,
+      packageDirectory: packagePath,
     };
   } catch (error: unknown) {
     logger.error('[SDLoader] Failed to load IG package', {

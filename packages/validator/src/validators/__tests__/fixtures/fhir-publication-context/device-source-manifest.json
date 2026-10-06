@@ -1,0 +1,54 @@
+{
+  "kind": "Original metadata-only Device terminology and source package publication fixtures",
+  "files": [
+    {
+      "id": "r4-valueset",
+      "file": "device-r4-valueset.json",
+      "originalPath": "/Users/sheydin/.fhir/packages/hl7.fhir.r4.core#4.0.1/package/ValueSet-device-nametype.json",
+      "sha256": "bcf6e0588e13146541c054907f5baaf214ef3bf9fd191b98efe8c37dda643619",
+      "packageDirectory": "hl7.fhir.r4.core#4.0.1"
+    },
+    {
+      "id": "r4-codesystem",
+      "file": "device-r4-codesystem.json",
+      "originalPath": "/Users/sheydin/.fhir/packages/hl7.fhir.r4.core#4.0.1/package/CodeSystem-device-nametype.json",
+      "sha256": "d9cc427df36c9ab36391cf5f4c39a90709d5ebe8e2c3727ab10d440ce5bd1b25",
+      "packageDirectory": "hl7.fhir.r4.core#4.0.1"
+    },
+    {
+      "id": "r4-manifest",
+      "file": "device-r4-manifest.json",
+      "originalPath": "/Users/sheydin/.fhir/packages/hl7.fhir.r4.core#4.0.1/package/package.json",
+      "sha256": "7614377a54db343e48a9b3b862114f9f63ad1d5f746f6f0f7af68e55ac81c6f7",
+      "packageDirectory": "hl7.fhir.r4.core#4.0.1"
+    },
+    {
+      "id": "r5-valueset",
+      "file": "device-r5-valueset.json",
+      "originalPath": "/Users/sheydin/.fhir/packages/hl7.fhir.r5.core#5.0.0/package/ValueSet-device-nametype.json",
+      "sha256": "3e3faa6db908839f980e06a964b3686af90410675526654b6603b1f210e13285",
+      "packageDirectory": "hl7.fhir.r5.core#5.0.0"
+    },
+    {
+      "id": "r5-codesystem",
+      "file": "device-r5-codesystem.json",
+      "originalPath": "/Users/sheydin/.fhir/packages/hl7.fhir.r5.core#5.0.0/package/CodeSystem-device-nametype.json",
+      "sha256": "ebd7085feea25feedc63de4a4344d057d21796018a943c28baeb40a911ba8869",
+      "packageDirectory": "hl7.fhir.r5.core#5.0.0"
+    },
+    {
+      "id": "r5-manifest",
+      "file": "device-r5-manifest.json",
+      "originalPath": "/Users/sheydin/.fhir/packages/hl7.fhir.r5.core#5.0.0/package/package.json",
+      "sha256": "5ee555ae53b7688664d13e7862b48686d0939a70a70668502d25ddc82215c923",
+      "packageDirectory": "hl7.fhir.r5.core#5.0.0"
+    },
+    {
+      "id": "r4-bundled-manifest",
+      "file": "device-r4-bundled-manifest.json",
+      "originalPath": "/Users/sheydin/.codex/worktrees/validator-release-review/records/packages/bundled-profiles/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/package.json",
+      "sha256": "e5c114ff04776789c7c6647862d49efbaf395d419c3f507574e7292aca471f62",
+      "packageDirectory": "hl7.fhir.r4.core#4.0.1"
+    }
+  ]
+}

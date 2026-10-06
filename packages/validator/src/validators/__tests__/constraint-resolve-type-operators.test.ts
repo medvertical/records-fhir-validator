@@ -125,3 +125,31 @@ describe('resolve() with type operators (provenance-1)', () => {
     expect(issues).toContainEqual(provenance1Issue);
   });
 });
+
+describe('resolve() on absolute references outside the bundle', () => {
+  // The reference validator fetches absolute references, so the target's type
+  // decides the invariant; the URL names that type.
+  it('types an absolute Practitioner reference from its URL', async () => {
+    const validator = new ConstraintValidator();
+
+    const issues = await validator.validate(
+      provenance({ who: { reference: 'https://server.example.test/fhir/Practitioner/pr1' } }),
+      provenanceAgentElements as any,
+      profileUrl,
+    );
+
+    expect(issues).toContainEqual(provenance1Issue);
+  });
+
+  it('stays satisfied when the absolute reference names another type', async () => {
+    const validator = new ConstraintValidator();
+
+    const issues = await validator.validate(
+      provenance({ who: { reference: 'https://server.example.test/fhir/Patient/p1' } }),
+      provenanceAgentElements as any,
+      profileUrl,
+    );
+
+    expect(issues.find(issue => issue.ruleId === 'provenance-1')).toBeUndefined();
+  });
+});

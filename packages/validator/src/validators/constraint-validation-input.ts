@@ -6,6 +6,7 @@ import type { BundleResourceInput } from './fhirpath-resolve-precheck.js';
 import type { buildUserInvocationTable } from './fhirpath-custom-functions.js';
 import { isRecord } from '../core/fhir-resource.js';
 import type { FhirResource } from '../core/fhir-resource.js';
+import type { ProfileConformanceLookup } from './sd-fhirpath-profile-conformance.js';
 
 export { isFhirResource, isRecord } from '../core/fhir-resource.js';
 export type { FhirResource } from '../core/fhir-resource.js';
@@ -16,6 +17,7 @@ export interface ConstraintValidationState {
   userInvocationTable: ReturnType<typeof buildUserInvocationTable>;
   bundle?: BundleResourceInput;
   rootResource?: FhirResource;
+  focusResource?: FhirResource | null;
 }
 
 export interface ConstraintValidationOptions {
@@ -23,12 +25,15 @@ export interface ConstraintValidationOptions {
   fhirVersion?: 'R4' | 'R5' | 'R6';
   bundle?: BundleResourceInput;
   /**
-   * FHIRPath `%resource` binding when the validated input is not the
-   * containing resource — e.g. a slice value validated against its type
-   * profile, where constraints like `%resource.where(gender='other')`
-   * must see the resource that holds the sliced element.
+   * Outermost FHIRPath %rootResource. Legacy callers also use it as %resource;
+   * slice callers supply focusResource separately when an embedded resource
+   * owns the node under test.
    */
   rootResource?: FhirResource;
+  /** Explicit nearest %resource; null leaves it unbound instead of inventing an owner. */
+  focusResource?: FhirResource | null;
+  /** Conformance to the profiles conformsTo() names, established beforehand. */
+  profileConformance?: ProfileConformanceLookup;
 }
 
 export function isElementWithConstraints(

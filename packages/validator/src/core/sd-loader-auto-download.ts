@@ -4,6 +4,7 @@ import { logger } from '../logger.js';
 import { getProfileSourceRevision } from '../persistence/index.js';
 import { isPublicProfileUrl } from './remote-profile-url-policy.js';
 import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { ProfileReferenceUnavailableError } from './profile-reference-authority.js';
 import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 import {
   executeAutoDownload,
@@ -16,6 +17,8 @@ export type { AutoDownloadAttemptResult } from './sd-loader-auto-download-source
 export interface AutoDownloadContext extends AutoDownloadSourceContext {
   /** Mutable deduplication/miss state owned by one StructureDefinitionLoader. */
   autoDownloadState?: AutoDownloadState;
+  /** Referenced definitions retain unavailable authority instead of returning an absence. */
+  retainUnavailableFailures?: boolean;
 }
 
 // ============================================================================
@@ -112,7 +115,7 @@ export async function attemptAutoDownload(
   const pending = state.getPending(requestKey);
   if (pending) {
     logger.debug('[SDLoader] Waiting for pending profile request', profileCanonicalMetadata(url));
-    return (await pending).profile;
+    return resolvedAutoDownloadProfile(url, await pending, context);
   }
 
   // 3. Execute actual download
@@ -131,10 +134,19 @@ export async function attemptAutoDownload(
       }
     }
 
-    return result.profile;
+    return resolvedAutoDownloadProfile(url, result, context);
   } finally {
     state.deletePending(requestKey, promise);
   }
+}
+
+function resolvedAutoDownloadProfile(
+  url: string, result: AutoDownloadAttemptResult, context: AutoDownloadContext,
+): StructureDefinition | null {
+  if (context.retainUnavailableFailures && result.profile === null && !result.cacheableMiss) {
+    throw new ProfileReferenceUnavailableError({ canonical: url, cause: 'auto-download-source-unavailable' });
+  }
+  return result.profile;
 }
 
 function autoDownloadRequestKey(

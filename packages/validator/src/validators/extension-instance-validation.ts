@@ -1,14 +1,19 @@
+import { ProfileReferenceUnavailableError, profileReferenceUnavailableIssue } from '../core/profile-reference-authority.js';
 import type { BoundedLruCache } from '../cache/bounded-lru-cache.js';
 import { isRecord, resourceTypeOf } from '../core/fhir-resource.js';
 import { createValidationIssue } from '../issues/index.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { checkExtensionPathCardinality } from './extension-cardinality-rules.js';
-import { normalizeExtensionUrlForMatching } from './extension-definition-extractor.js';
+import {
+  definitionReferencingProfile,
+  normalizeExtensionUrlForMatching,
+} from './extension-definition-extractor.js';
 import {
   type ExtensionInstanceRuleDependencies,
   validateExtensionInstanceRules,
 } from './extension-instance-rule-validation.js';
 import { getSubExtensionDefinitions } from './extension-subdefinition-loader.js';
+import { undefinedSubExtensionIssues } from './extension-subextension-url-rule.js';
 import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types.js';
 import { filterDefinitionsForFhirVersion } from './extension-version-filter.js';
 
@@ -66,8 +71,27 @@ export async function validateExtensionInstance(
     extensionPath,
     input.context,
     input.depth ?? 0,
+    input.skipUniversalChecks ?? false,
   ));
   return issues;
+}
+
+/**
+ * Holds an extension the resource's profile does not slice to its own
+ * definition below the top level, as the reference validator does whatever
+ * profile the resource declares: each sub-extension against the slice of its
+ * url, value type included, and the slices' cardinality. The universal rules
+ * the resource walk already applied are not repeated.
+ */
+export function validateOwnSubExtensions(
+  dependencies: ExtensionInstanceValidationDependencies,
+  extension: Record<string, unknown>,
+  profileUrl: string,
+  extensionPath: string,
+  context: ExtensionValidationContext,
+): Promise<ValidationIssue[]> {
+  const definition: ExtensionDefinition = { url: profileUrl, path: 'Extension', min: 0, max: '*', profileUrl };
+  return validateNestedExtensions(dependencies, extension, definition, extensionPath, context, 0, true);
 }
 
 async function validateNestedExtensions(
@@ -77,10 +101,12 @@ async function validateNestedExtensions(
   extensionPath: string,
   context: ExtensionValidationContext,
   depth: number,
+  skipUniversalChecks = false,
 ): Promise<ValidationIssue[]> {
-  if (!Array.isArray(extension.extension)) return [];
+  if (extension.extension !== undefined && !Array.isArray(extension.extension)) return [];
+  const nestedExtensions = Array.isArray(extension.extension) ? extension.extension : [];
   const resourceType = resourceTypeOf(context.resource, 'Unknown');
-  if (depth >= dependencies.maxNestedExtensionDepth) {
+  if (nestedExtensions.length > 0 && depth >= dependencies.maxNestedExtensionDepth) {
     return [createValidationIssue({
       code: 'profile-extension-max-depth',
       path: extensionPath,
@@ -91,18 +117,28 @@ async function validateNestedExtensions(
       },
     })];
   }
-  const definitions = definition?.profileUrl
+  const issues: ValidationIssue[] = [];
+  let definitions: Map<string, ExtensionDefinition> | undefined;
+  try {
+  definitions = definition?.profileUrl
     ? await getSubExtensionDefinitions(
       definition.profileUrl,
       context.fhirVersion,
       dependencies.sdLoader,
       dependencies.subExtensionDefinitionsCache,
+      definitionReferencingProfile(definition, context.profileSD),
     )
-    : new Map<string, ExtensionDefinition>();
-  const compatible = filterDefinitionsForFhirVersion(definitions, context.fhirVersion);
+    : undefined;
+  } catch (error: unknown) {
+    if (!(error instanceof ProfileReferenceUnavailableError)) throw error;
+    issues.push(profileReferenceUnavailableIssue(error, extensionPath));
+  }
+  const compatible = filterDefinitionsForFhirVersion(
+    definitions ?? new Map<string, ExtensionDefinition>(),
+    context.fhirVersion,
+  );
   const nestedCounts = new Map<string, number>();
-  const issues: ValidationIssue[] = [];
-  for (const nestedValue of extension.extension) {
+  for (const nestedValue of nestedExtensions) {
     const nested = isRecord(nestedValue) ? nestedValue : null;
     const nestedUrl = typeof nested?.url === 'string' ? nested.url : undefined;
     const normalizedUrl = nestedUrl
@@ -118,7 +154,17 @@ async function validateNestedExtensions(
       elementPath: `${extensionPath}.extension`,
       extensionType: 'extension',
       extensionValue: nestedValue,
+      skipUniversalChecks,
     }));
+  }
+  if (definition?.profileUrl && definitions) {
+    issues.push(...undefinedSubExtensionIssues(
+      extension,
+      new Set(compatible.keys()),
+      definition.profileUrl,
+      extensionPath,
+      resourceType,
+    ));
   }
   if (compatible.size > 0) {
     issues.push(...checkExtensionPathCardinality(

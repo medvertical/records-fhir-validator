@@ -1,4 +1,5 @@
 import { normalizeFhirReferenceKey } from '../core/fhir-reference-key.js';
+import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types.js';
 import { makeTypedResourceNode, unwrapFhirPathValue } from './fhirpath-node-unwrap.js';
 
 export interface FHIRPathEvaluationContext {
@@ -8,9 +9,14 @@ export interface FHIRPathEvaluationContext {
 
 /**
  * Resolve contained and bundle-local FHIR references without remote I/O.
- * Unresolvable references yield EMPTY (never the Reference itself), so
- * `resolve() is X`-style constraints stay vacuously satisfiable exactly like
- * the HL7 validator's local resolve().
+ *
+ * The reference validator fetches an absolute http(s) reference it cannot
+ * resolve locally, so an invariant such as `provider.all(resolve() is
+ * Practitioner)` sees the target's type. Without I/O the type is taken from
+ * the URL itself (`…/Practitioner/123`): the stub answers type tests, while
+ * content predicates on it stay empty. Relative references that miss the
+ * bundle and contained resources yield EMPTY, as they do in the reference
+ * validator.
  */
 export function resolveFunction(context: FHIRPathEvaluationContext) {
   return {
@@ -48,9 +54,23 @@ function resolveSingleReference(
     return contained;
   }
 
-  if (!isObjectRecord(context.bundle) || !Array.isArray(context.bundle.entry)) return undefined;
   const normalizedReference = normalizeFhirReferenceKey(rawReference);
-  for (const entry of context.bundle.entry) {
+  // A Bundle's own invariants resolve against its entries, whatever batch it
+  // came in (Da Vinci PCT's `Bundle.entry.descendants().reference
+  // .all(resolve().exists())`).
+  const ownEntries = isObjectRecord(context.rootResource) && context.rootResource.resourceType === 'Bundle'
+    ? context.rootResource
+    : undefined;
+  for (const bundle of [context.bundle, ownEntries]) {
+    const target = bundleEntryResource(bundle, rawReference, normalizedReference);
+    if (target !== undefined) return target;
+  }
+  return absoluteReferenceStub(rawReference, normalizedReference);
+}
+
+function bundleEntryResource(bundle: unknown, rawReference: string, normalizedReference: string | null): unknown {
+  if (!isObjectRecord(bundle) || !Array.isArray(bundle.entry)) return undefined;
+  for (const entry of bundle.entry) {
     if (!isObjectRecord(entry) || !isObjectRecord(entry.resource)) continue;
     if (entry.fullUrl === rawReference) return entry.resource;
     const resource = entry.resource;
@@ -61,6 +81,13 @@ function resolveSingleReference(
     ) return resource;
   }
   return undefined;
+}
+
+function absoluteReferenceStub(rawReference: string, normalizedReference: string | null): unknown {
+  if (!/^https?:\/\//i.test(rawReference) || !normalizedReference) return undefined;
+  const [resourceType, id] = normalizedReference.split('/');
+  if (!resourceType || !id || !KNOWN_FHIR_RESOURCE_TYPES.has(resourceType)) return undefined;
+  return { resourceType, id };
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {

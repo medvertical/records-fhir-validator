@@ -3,6 +3,7 @@ import { validateResourceLanguage } from '../../validators/language-code-validat
 import {
   validateContainedResourceIdsPresent,
   validateContainedResourcesReferenced,
+  validateEmptyPrimitives,
   validateIllegalXmlCharacterPrimitives,
   validateNoEmptyArrays,
   validateOrphanPrimitiveSidecars,
@@ -18,7 +19,7 @@ interface ResourceSanityValidators {
     validate(resource: unknown): ValidationIssue[];
   };
   canonicalResourceInvariant: {
-    validate(resource: unknown): ValidationIssue[];
+    validate(resource: unknown, options?: { forPublication?: boolean }): ValidationIssue[];
   };
   structureDefinition: {
     validate(resource: unknown): ValidationIssue[];
@@ -27,7 +28,7 @@ interface ResourceSanityValidators {
     validate(resource: unknown): ValidationIssue[];
   };
   narrative: {
-    validateNarrative(resource: unknown, resourceType: string): ValidationIssue[];
+    validateNarrative(resource: unknown, resourceType: string, enclosingBundle?: Record<string, unknown>): ValidationIssue[];
   };
   questionnaire: {
     validateAnyResource(
@@ -40,7 +41,9 @@ interface ResourceSanityValidators {
 }
 
 interface ResourceSanityOptions {
+  forPublication?: boolean;
   warnOnUnresolvedQuestionnaireReference?: boolean;
+  enclosingBundle?: Record<string, unknown>;
 }
 
 export function validateResourceSanity(
@@ -59,12 +62,13 @@ export function validateResourceSanity(
     ...validateNoEmptyArrays(resource, resourceType),
     ...validateContainedResourcesReferenced(resource, resourceType),
     ...validators.attachment.validate(resource),
-    ...validators.canonicalResourceInvariant.validate(resource),
+    ...validators.canonicalResourceInvariant.validate(resource, { forPublication: options.forPublication }),
     ...validators.structureDefinition.validate(resource),
     ...validators.stringSecurity.validate(resource),
-    ...validators.narrative.validateNarrative(resource, resourceType),
+    ...validators.narrative.validateNarrative(resource, resourceType, options.enclosingBundle),
     ...validateResourceLanguage(resource, resourceType),
     ...validateWhitespaceOnlyPrimitives(resource, resourceType),
+    ...validateEmptyPrimitives(resource, resourceType),
     ...validateIllegalXmlCharacterPrimitives(resource, resourceType),
     ...validateOrphanPrimitiveSidecars(resource, resourceType),
     ...validatePrimitiveSidecarArrayAlignment(resource, resourceType),

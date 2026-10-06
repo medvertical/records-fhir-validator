@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  choiceElementsAt,
   deriveChoiceTypeFromConcretePath,
   prepareElementContext,
   resolveChoiceTypeCast,
@@ -53,9 +54,26 @@ describe('SD FHIRPath choice utilities', () => {
     expect(normalizedArray[2]).toEqual({ valueString: 'last', value: 'last' });
   });
 
+  it('keeps a choice value that exists through its sidecar alone', () => {
+    const absent = { extension: [{ url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason', valueCode: 'unknown' }] };
+
+    expect(prepareElementContext({ name: 'a', _valueBoolean: absent }, 'value.exists()'))
+      .toEqual({ name: 'a', _valueBoolean: absent, _value: absent });
+  });
+
   it('does not add aliases that the expression never references', () => {
     const context = { valueString: 'kept concrete' };
 
     expect(prepareElementContext(context, 'status.exists()')).toBe(context);
   });
+
+  // CH ELM's TestScripts assert on responseCode; TestScript.test.action.assert
+  // is defined by content reference to TestScript.setup.action.assert, where
+  // `response` is a code of its own, not a choice.
+  it('follows content references before taking a property for a choice value', () => {
+    const assert = { direction: 'response', responseCode: '200' };
+    expect(prepareElementContext(assert, 'response.count()', choiceElementsAt('TestScript.test[0].action[1].assert', 'R4')))
+      .toEqual(assert);
+  });
 });
+

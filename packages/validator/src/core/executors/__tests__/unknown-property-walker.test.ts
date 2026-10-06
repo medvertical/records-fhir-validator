@@ -217,7 +217,7 @@ describe('unknown-property-walker', () => {
       index, 'TestRes', sd.url,
     );
     expect(issues).toHaveLength(1);
-    expect(issues[0].path).toBe('TestRes.contact.relationshp');
+    expect(issues[0].path).toBe('TestRes.contact[0].relationshp');
     expect(issues[0].severity).toBe('warning');
   });
 
@@ -232,6 +232,53 @@ describe('unknown-property-walker', () => {
       index, 'TestRes', sd.url,
     );
     expect(issues).toHaveLength(0);
+  });
+
+  it('reports a JSON array where the base specification allows one value, at any depth', async () => {
+    const baseSd = {
+      url: 'http://example.org/base-sd',
+      snapshot: {
+        element: [
+          { path: 'TestRes' },
+          { path: 'TestRes.gender', type: [{ code: 'code' }], base: { path: 'TestRes.gender', max: '1' } },
+          { path: 'TestRes.name', type: [{ code: 'HumanName' }], base: { path: 'TestRes.name', max: '*' }, max: '1' },
+          { path: 'TestRes.contact', type: [{ code: 'Reference' }], base: { path: 'TestRes.contact', max: '1' } },
+        ],
+      },
+    } as any;
+    const referenceSd = {
+      resourceType: 'StructureDefinition',
+      url: 'http://hl7.org/fhir/StructureDefinition/Reference',
+      snapshot: {
+        element: [
+          { path: 'Reference' },
+          { path: 'Reference.identifier', type: [{ code: 'Identifier' }], base: { path: 'Reference.identifier', max: '1' } },
+        ],
+      },
+    };
+    const deps = makeWalkerDeps({
+      loadProfile: async (url: string) => (url === referenceSd.url ? referenceSd : null),
+    } as any, 'R4');
+
+    const issues = await detectUnknownProperties(
+      {
+        resourceType: 'TestRes',
+        meta: [{ versionId: '1' }],
+        gender: ['male'],
+        // A profile narrowing a repeating element to one value keeps it an array.
+        name: [{ family: 'Doe' }],
+        contact: { identifier: [{ value: '1' }] },
+      },
+      buildSnapshotIndex(baseSd), 'TestRes', baseSd.url, deps,
+    );
+
+    const shapeIssues = issues.filter(issue => issue.code === 'structural-validation-error');
+    expect(shapeIssues.map(issue => [issue.path, issue.severity, issue.message])).toEqual([
+      ['TestRes.meta', 'error', 'The property meta must be an Object, not an Array (at TestRes.meta)'],
+      ['TestRes.gender', 'error', 'The property gender must be a JSON primitive, not an Array (at TestRes.gender)'],
+      ['TestRes.contact.identifier', 'error',
+        'The property identifier must be an Object, not an Array (at TestRes.contact.identifier)'],
+    ]);
   });
 
   it('treats complex datatype children as opaque when no walker deps are provided', async () => {
@@ -266,7 +313,7 @@ describe('unknown-property-walker', () => {
       { resourceType: 'TestRes', name: { family: 'Doe', faimly: 'typo' }, contact: [{ name: { faimly: 'nested typo' } }] },
       index, 'TestRes', sd.url, deps,
     );
-    expect(issues.map(issue => issue.path)).toEqual(['TestRes.name.faimly', 'TestRes.contact.name.faimly']);
+    expect(issues.map(issue => issue.path)).toEqual(['TestRes.name.faimly', 'TestRes.contact[0].name.faimly']);
     expect(issues[0].severity).toBe('warning');
   });
 
@@ -371,7 +418,7 @@ describe('unknown-property-walker', () => {
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
       code: 'structural-unknown-element',
-      path: 'EvidenceVariable.characteristic.definitionBogus',
+      path: 'EvidenceVariable.characteristic[0].definitionBogus',
       severity: 'warning',
     });
   });

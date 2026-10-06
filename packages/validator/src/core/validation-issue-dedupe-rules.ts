@@ -142,7 +142,7 @@ function createCanonicalAndContentRules(context: DedupeContext): DedupeSuppressi
     rule('narrative-div-over-required', issue =>
       isRedundantNarrativeRequiredElementIssue(issue, context.narrativeMissingDivPaths)),
     rule('narrative-text-over-dom6', issue =>
-      isRedundantDom6Issue(issue, context.narrativeMissingDivTextPaths)),
+      isRedundantDom6Issue(issue, context.redundantGeneratedNarrativeAdvice)),
     rule('contained-invalid-over-profile-dom3', issue =>
       isRedundantProfileDom3Issue(issue, context.structuralDom3ContainedKeys)),
   ];

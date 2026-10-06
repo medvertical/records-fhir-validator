@@ -82,7 +82,8 @@ export function resolveReferenceInBundle(
     const refIsVersioned = /^(.*)\/_history\/([^/]+)$/.test(ref);
 
     if (ref.startsWith('urn:uuid:') || ref.startsWith('urn:oid:')) {
-        return { resolvable: indexes.fullUrlIndex.has(ref), hasTypeIdMatch: false };
+        const matchCount = indexes.fullUrlToEntryIndexes.get(ref)?.length ?? 0;
+        return { resolvable: matchCount === 1, hasTypeIdMatch: false, multipleMatches: matchCount > 1, matchCount };
     }
     if (/^https?:\/\//.test(ref)) {
         return resolveAbsoluteReference(ref, unversioned, refIsVersioned, indexes);

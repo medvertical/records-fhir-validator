@@ -111,6 +111,7 @@ export class ConstraintEvaluationEngine {
       this.terminologyResolver,
       this.expressionCache,
       this.asyncExpressionCache,
+      state.focusResource,
     );
     return resolveEvaluatedConstraintOutcome(result, {
       constraint,

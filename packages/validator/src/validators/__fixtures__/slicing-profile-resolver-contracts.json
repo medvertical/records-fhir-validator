@@ -1,0 +1,120 @@
+{
+  "scope": "Before any G4 candidate edit; known current G6a export/source and G4 immutable read-only workcard disclosed. Intentional conformance callback truth is a scoped API seam, not full native/clinical positive proof.",
+  "sourceBefore": "e35b2be3bbf7db0d3c2e9a2e8eb718618da6d1da767c44531f12104efefcae05",
+  "cases": [
+    {
+      "id": "clone-known-type-negative",
+      "mode": "clone",
+      "definitionType": "Patient",
+      "targetType": "Observation",
+      "expected": {
+        "closed": 1,
+        "incomplete": false,
+        "resolverCalls": 1
+      }
+    },
+    {
+      "id": "clone-conformance-negative",
+      "mode": "clone",
+      "definitionType": "Observation",
+      "targetType": "Observation",
+      "verdict": false,
+      "expected": {
+        "closed": 1,
+        "incomplete": false,
+        "resolverCalls": 1
+      }
+    },
+    {
+      "id": "clone-positive-duplicate-occurrences",
+      "mode": "clone",
+      "definitionType": "Observation",
+      "targetType": "Observation",
+      "verdict": true,
+      "occurrences": 2,
+      "max": "1",
+      "expected": {
+        "closed": 0,
+        "maxErrors": 1,
+        "maxActual": 2,
+        "incomplete": false,
+        "resolverCalls": 1
+      }
+    },
+    {
+      "id": "changing-target-first-negative",
+      "mode": "changing",
+      "definitionType": "Observation",
+      "targetType": "Patient",
+      "laterType": "Observation",
+      "verdict": true,
+      "expected": {
+        "closed": 1,
+        "incomplete": false,
+        "resolverCalls": 1
+      }
+    },
+    {
+      "id": "unavailable-target",
+      "mode": "null",
+      "definitionType": "Observation",
+      "expected": {
+        "closed": 0,
+        "incomplete": true,
+        "resolverCalls": 1
+      }
+    },
+    {
+      "id": "rejected-target",
+      "mode": "throw",
+      "definitionType": "Observation",
+      "expected": {
+        "closed": 0,
+        "incomplete": true,
+        "resolverCalls": 1
+      }
+    },
+    {
+      "id": "distinct-exact-reference-arguments",
+      "mode": "distinct",
+      "definitionType": "Observation",
+      "targetType": "Observation",
+      "verdict": true,
+      "occurrences": 2,
+      "expected": {
+        "closed": 1,
+        "incomplete": false,
+        "resolverCalls": 2
+      }
+    },
+    {
+      "id": "stable-known-negative",
+      "mode": "stable",
+      "definitionType": "Patient",
+      "targetType": "Observation",
+      "expected": {
+        "closed": 1,
+        "incomplete": false,
+        "resolverCalls": 1
+      }
+    },
+    {
+      "id": "same-reference-new-invocation-source-family",
+      "mode": "two-invocations",
+      "definitionType": "Observation",
+      "targetType": "Patient",
+      "laterType": "Observation",
+      "verdict": true,
+      "expectedFirst": {
+        "closed": 1,
+        "incomplete": false,
+        "resolverCalls": 1
+      },
+      "expectedSecond": {
+        "closed": 0,
+        "incomplete": false,
+        "resolverCalls": 1
+      }
+    }
+  ]
+}

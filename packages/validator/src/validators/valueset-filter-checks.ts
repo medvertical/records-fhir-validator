@@ -88,5 +88,6 @@ export function classifyUnverifiableComposeReason(
 export function isLocallyUnprovableMissReason(
   reason: TerminologyUnverifiedReason | undefined,
 ): boolean {
-  return reason === 'unsupported-filter' || reason === 'unenumerable-system-include';
+  return reason === 'unsupported-filter' || reason === 'unenumerable-system-include'
+    || reason === 'incomplete-expansion';
 }

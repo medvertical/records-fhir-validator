@@ -1,0 +1,1711 @@
+[
+  {
+    "id": "dataFHIR-only",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "dataXHTML-only",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-target-not-found"
+    ],
+    "expectedComplete": true
+  },
+  {
+    "id": "bothMissing",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span>Synthetic</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-htmlid-not-found",
+      "narrative-textlink-target-not-found"
+    ],
+    "expectedComplete": true
+  },
+  {
+    "id": "bothPresent",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "relative-own",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "Patient/synthetic-textlink#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  },
+  {
+    "id": "relative-own-slash",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "Patient/synthetic-textlink/#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  },
+  {
+    "id": "absolute-lookalike",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "https://example.test/Patient/synthetic-textlink#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  },
+  {
+    "id": "external-unknown",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "https://other.test/Patient/other#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  },
+  {
+    "id": "whole-external-unknown",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "https://other.test/Patient/other"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  },
+  {
+    "id": "primitive-element-id",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#primitive-element"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ],
+      "birthDate": "2000-01-01",
+      "_birthDate": {
+        "id": "primitive-element"
+      }
+    },
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "duplicate-element-id",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        },
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "unrelated-extension",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://other.test/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "section-root-element-id",
+    "resource": {
+      "resourceType": "Composition",
+      "id": "synthetic-composition",
+      "identifier": {
+        "id": "structured-id",
+        "system": "http://example.test/id",
+        "value": "synthetic"
+      },
+      "status": "final",
+      "type": {
+        "text": "synthetic"
+      },
+      "date": "2026-10-02T10:00:00Z",
+      "author": [
+        {
+          "display": "synthetic"
+        }
+      ],
+      "title": "synthetic",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">synthetic</div>"
+      },
+      "section": [
+        {
+          "title": "synthetic",
+          "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+            "extension": [
+              {
+                "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                "extension": [
+                  {
+                    "url": "htmlid",
+                    "valueString": "html-anchor"
+                  },
+                  {
+                    "url": "data",
+                    "valueUri": "#structured-id"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "parent-data-contained-element",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "parent",
+      "identifier": [
+        {
+          "id": "parent-element",
+          "system": "http://example.test/id",
+          "value": "synthetic"
+        }
+      ],
+      "contained": [
+        {
+          "resourceType": "Patient",
+          "id": "child",
+          "identifier": [
+            {
+              "id": "child-element",
+              "system": "http://example.test/id",
+              "value": "synthetic"
+            }
+          ]
+        }
+      ],
+      "link": [
+        {
+          "other": {
+            "reference": "#child"
+          },
+          "type": "seealso"
+        }
+      ],
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#child-element"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "select": "root",
+    "boundBundle": false,
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "contained-data-parent-element",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "parent",
+      "identifier": [
+        {
+          "id": "parent-element",
+          "system": "http://example.test/id",
+          "value": "synthetic"
+        }
+      ],
+      "contained": [
+        {
+          "resourceType": "Patient",
+          "id": "child",
+          "identifier": [
+            {
+              "id": "child-element",
+              "system": "http://example.test/id",
+              "value": "synthetic"
+            }
+          ],
+          "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"parent-element\">y</span></div>",
+            "extension": [
+              {
+                "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                "extension": [
+                  {
+                    "url": "htmlid",
+                    "valueString": "html-anchor"
+                  },
+                  {
+                    "url": "data",
+                    "valueUri": "#parent-element"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "link": [
+        {
+          "other": {
+            "reference": "#child"
+          },
+          "type": "seealso"
+        }
+      ]
+    },
+    "select": "contained",
+    "boundBundle": false,
+    "expectedCodes": [
+      "narrative-textlink-target-not-found"
+    ],
+    "expectedComplete": true
+  },
+  {
+    "id": "contained-data-own-element",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "parent",
+      "identifier": [
+        {
+          "id": "parent-element",
+          "system": "http://example.test/id",
+          "value": "synthetic"
+        }
+      ],
+      "contained": [
+        {
+          "resourceType": "Patient",
+          "id": "child",
+          "identifier": [
+            {
+              "id": "child-element",
+              "system": "http://example.test/id",
+              "value": "synthetic"
+            }
+          ],
+          "text": {
+            "status": "generated",
+            "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span></div>",
+            "extension": [
+              {
+                "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                "extension": [
+                  {
+                    "url": "htmlid",
+                    "valueString": "html-anchor"
+                  },
+                  {
+                    "url": "data",
+                    "valueUri": "#child-element"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "link": [
+        {
+          "other": {
+            "reference": "#child"
+          },
+          "type": "seealso"
+        }
+      ]
+    },
+    "select": "contained",
+    "boundBundle": false,
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "bundle-child-data-sibling-element",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"sibling-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "#sibling-element"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [
+      "narrative-textlink-target-not-found"
+    ],
+    "expectedComplete": true
+  },
+  {
+    "id": "bundle-child-data-sibling-resource",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"sibling\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "#sibling"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "bundle-child-data-own-element",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"own-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "#own-element"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "htmlid-legacy-name-only",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><a name=\"html-anchor\">x</a></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-htmlid-not-found"
+    ],
+    "expectedComplete": true
+  },
+  {
+    "id": "htmlid-lookalike",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span data-id=\"html-anchor\">x</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-htmlid-not-found"
+    ],
+    "expectedComplete": true
+  },
+  {
+    "id": "htmlid-quoted-literal",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span title=\"id='html-anchor'\">x</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-htmlid-not-found"
+    ],
+    "expectedComplete": true
+  },
+  {
+    "id": "htmlid-after-quoted-gt",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span title=\"x&gt;y\" id=\"html-anchor\">x</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "selector-unverified",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              },
+              {
+                "url": "selector",
+                "valueString": "where(value = 'not-synthetic')"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  },
+  {
+    "id": "second-data-not-hidden",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              },
+              {
+                "url": "data",
+                "valueUri": "#missing-second"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-target-not-found"
+    ],
+    "expectedComplete": true
+  },
+  {
+    "id": "second-htmlid-not-hidden",
+    "resource": {
+      "resourceType": "Patient",
+      "id": "synthetic-textlink",
+      "text": {
+        "status": "generated",
+        "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">Synthetic</span><span id=\"structured-id\">Synthetic data label</span></div>",
+        "extension": [
+          {
+            "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+            "extension": [
+              {
+                "url": "htmlid",
+                "valueString": "html-anchor"
+              },
+              {
+                "url": "data",
+                "valueUri": "#structured-id"
+              },
+              {
+                "url": "htmlid",
+                "valueString": "missing-second"
+              }
+            ]
+          }
+        ]
+      },
+      "identifier": [
+        {
+          "system": "http://example.test/identifier",
+          "value": "synthetic",
+          "id": "structured-id"
+        }
+      ]
+    },
+    "expectedCodes": [
+      "narrative-textlink-htmlid-not-found"
+    ],
+    "expectedComplete": true
+  },
+  {
+    "id": "bound-relative-own",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"own-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "Patient/own#own-element"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "bound-relative-sibling",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"own-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "Patient/sibling#sibling-element"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "bound-absolute-sibling",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"own-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "https://example.test/Patient/sibling#sibling-element"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "bound-whole-sibling",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"own-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "Patient/sibling"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [],
+    "expectedComplete": true
+  },
+  {
+    "id": "bound-wrong-origin",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"own-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "https://other.test/Patient/sibling#sibling-element"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  },
+  {
+    "id": "bound-relative-slash",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"own-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "Patient/own/#own-element"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  },
+  {
+    "id": "unbound-clone-cannot-attest",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"own-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "Patient/sibling#sibling-element"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "cloneSelected": true,
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  },
+  {
+    "id": "ambiguous-url-cannot-select-first",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"own-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "Patient/sibling#sibling-element"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  },
+  {
+    "id": "invalid-resource-node-cannot-attest",
+    "resource": {
+      "resourceType": "Bundle",
+      "id": "synthetic-bundle",
+      "type": "collection",
+      "entry": [
+        {
+          "fullUrl": "https://example.test/Patient/own",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "own",
+            "identifier": [
+              {
+                "id": "own-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ],
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><span id=\"html-anchor\">x</span><span id=\"own-element\">y</span></div>",
+              "extension": [
+                {
+                  "url": "http://hl7.org/fhir/StructureDefinition/textLink",
+                  "extension": [
+                    {
+                      "url": "htmlid",
+                      "valueString": "html-anchor"
+                    },
+                    {
+                      "url": "data",
+                      "valueUri": "undefined/undefined#fake"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "fullUrl": "https://example.test/Patient/sibling",
+          "resource": {
+            "resourceType": "Patient",
+            "id": "sibling",
+            "identifier": [
+              {
+                "id": "sibling-element",
+                "system": "http://example.test/id",
+                "value": "synthetic"
+              }
+            ]
+          }
+        },
+        {
+          "fullUrl": "https://bad.test/fake",
+          "resource": {
+            "identifier": [
+              {
+                "id": "fake"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "select": "entry",
+    "boundBundle": true,
+    "expectedCodes": [
+      "narrative-textlink-target-unverified"
+    ],
+    "expectedComplete": false
+  }
+]

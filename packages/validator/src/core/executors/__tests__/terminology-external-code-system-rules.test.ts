@@ -374,4 +374,26 @@ describe('terminology external CodeSystem rules', () => {
       }),
     );
   });
+
+  // Core example Contract/C-123 types its asset as 'RicardianContract' in the URI system.
+  it('takes only absolute URIs as codes of urn:ietf:rfc:3986', async () => {
+    const valuesetValidator = {
+      validateCodeInCodeSystem: vi.fn().mockResolvedValue({ valid: true }),
+    };
+    const validate = (code: string) => validateExternalCodeSystems(
+      [{ system: 'urn:ietf:rfc:3986', code }],
+      'Contract.term[0].asset[0].type[0].coding',
+      valuesetValidator,
+      'R4',
+    );
+
+    expect(await validate('RicardianContract')).toContainEqual(expect.objectContaining({
+      severity: 'error',
+      code: 'terminology-code-invalid',
+      path: 'Contract.term[0].asset[0].type[0].coding[0].code',
+    }));
+    expect((await validate('http://example.org/contracts/ricardian'))
+      .filter(issue => issue.code === 'terminology-code-invalid')).toHaveLength(0);
+    expect((await validate('urn:oid:1.2.3')).filter(issue => issue.code === 'terminology-code-invalid')).toHaveLength(0);
+  });
 });

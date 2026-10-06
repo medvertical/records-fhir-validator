@@ -1,9 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { logger } from '../logger.js';
 import { compareVersions, parsePackageName } from './sd-loader-package-scanner.js';
-import { matchesRequestedFhirVersion, type FhirVersionFamily } from './sd-loader-version-utils.js';
-import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
+import { canonicalVersionMatches, isPartialCanonicalVersion, matchesRequestedFhirVersion, type FhirVersionFamily } from './sd-loader-version-utils.js';
 import {
   addProfileToIndex,
   loadCanonicalUrlsFromPackageIndex,
@@ -182,36 +180,18 @@ export function selectExactProfile(
 ): IndexedProfile | null {
   if (targetVersion) {
     const exact = index.byVersionedUrl.get(`${targetUrl}|${targetVersion}`);
-    if (exact && matchesRequestedFhirVersion(exact.sd, fhirVersion)) return exact;
+    if (exact && !isPartialCanonicalVersion(targetVersion, fhirVersion) && matchesRequestedFhirVersion(exact.sd, fhirVersion)) return exact;
 
-    const candidates = index.byUrl.get(targetUrl) ?? [];
-    return candidates.find(candidate =>
-      typeof candidate.sd.version === 'string'
-      && matchesRequestedFhirVersion(candidate.sd, fhirVersion)
-      && canonicalVersionsAreEquivalent(targetVersion, candidate.sd.version)
-    ) ?? null;
+    let best: IndexedProfile | null = null;
+    for (const candidate of index.byUrl.get(targetUrl) ?? []) {
+      if (!matchesRequestedFhirVersion(candidate.sd, fhirVersion)) continue;
+      if (!canonicalVersionMatches(candidate.sd.version, targetVersion, fhirVersion)) continue;
+      best = selectBetterUnversionedProfile(best, candidate);
+    }
+    return best;
   }
 
-  const candidates = index.byUrl.get(targetUrl) ?? [];
-  let preRelease: IndexedProfile | null = null;
-  for (const candidate of candidates) {
-    if (!matchesRequestedFhirVersion(candidate.sd, fhirVersion)) {
-      logger.info(
-        '[SDLoader] Skipping FHIR-version-incompatible profile',
-        profileCanonicalMetadata(targetUrl, candidate.sd.version),
-      );
-      continue;
-    }
-    if (
-      isPreReleaseVersion(candidate.sd.version)
-      && !allowsUnversionedPreRelease(targetUrl, candidate, fhirVersion, packageVersionPins)
-    ) {
-      preRelease ??= candidate;
-      continue;
-    }
-    return candidate;
-  }
-  return preRelease ?? null;
+  return selectUnversionedCandidate(index, targetUrl, fhirVersion, packageVersionPins);
 }
 
 /**
@@ -219,10 +199,10 @@ export function selectExactProfile(
  * acceptable, so it needs no canonical, FHIR version or pin: those decided
  * acceptability, this decides precedence.
  */
-export function selectBetterUnversionedProfile(
-  current: IndexedProfile | null,
-  candidate: IndexedProfile,
-): IndexedProfile | null {
+export function selectBetterUnversionedProfile<T extends { sd: { version?: string } }>(
+  current: T | null,
+  candidate: T,
+): T | null {
   if (!current) return candidate;
 
   // Release beats pre-release regardless of the numbers: 1.0.0-ballot sorts
@@ -245,19 +225,18 @@ export function selectUnversionedCandidate(
   fhirVersion: FhirVersionFamily,
   packageVersionPins: Readonly<Record<string, string>> = {},
 ): IndexedProfile | null {
-  const candidates = index.byUrl.get(targetUrl) ?? [];
+  let preferred: IndexedProfile | null = null;
   let preRelease: IndexedProfile | null = null;
-  for (const candidate of candidates) {
+  for (const candidate of index.byUrl.get(targetUrl) ?? []) {
     if (!matchesRequestedFhirVersion(candidate.sd, fhirVersion)) continue;
-    if (
-      !isPreReleaseVersion(candidate.sd.version)
-      || allowsUnversionedPreRelease(targetUrl, candidate, fhirVersion, packageVersionPins)
-    ) {
-      return candidate;
+    if (isPreReleaseVersion(candidate.sd.version)
+      && !allowsUnversionedPreRelease(targetUrl, candidate, fhirVersion, packageVersionPins)) {
+      preRelease = selectBetterUnversionedProfile(preRelease, candidate);
+    } else {
+      preferred = selectBetterUnversionedProfile(preferred, candidate);
     }
-    preRelease ??= candidate;
   }
-  return preRelease ?? null;
+  return preferred ?? preRelease;
 }
 
 async function buildPackageProfileIndex(
@@ -293,16 +272,6 @@ async function packageDirectorySignature(packagePath: string): Promise<string> {
 
 
 
-
-function canonicalVersionsAreEquivalent(requested: string, actual: string): boolean {
-  if (requested === actual) return true;
-  return normalizeShortSemverVersion(requested) === normalizeShortSemverVersion(actual);
-}
-
-function normalizeShortSemverVersion(version: string): string {
-  const match = version.match(/^(\d+)\.(\d+)$/);
-  return match ? `${match[1]}.${match[2]}.0` : version;
-}
 
 function isPreReleaseVersion(version: string | undefined): boolean {
   return typeof version === 'string' && version.includes('-');

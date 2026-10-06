@@ -1,3 +1,4 @@
+import { canonicalPinCacheKey } from '../package/canonical-pin-scope.js';
 import { logger } from '../logger.js';
 import type { FhirVersion } from './valueset-expansion-cache-key.js';
 import type {
@@ -91,7 +92,7 @@ export class TwoPhaseTerminologyExpansion {
   }
 
   private async getExpansion(valueSetUrl: string, fhirVersion?: FhirVersion): Promise<CachedExpansion> {
-    const cacheKey = `${fhirVersion ?? 'any'}|${valueSetUrl}`;
+    const cacheKey = this.packageLoader.contextCacheKey?.(`${fhirVersion ?? 'any'}|${valueSetUrl}`) ?? canonicalPinCacheKey(`${fhirVersion ?? 'any'}|${valueSetUrl}`);
     const cached = this.cache.get(cacheKey);
     if (cached) return cached;
 

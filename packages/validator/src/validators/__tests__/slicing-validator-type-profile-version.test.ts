@@ -48,7 +48,7 @@ describe('slice type profile resolution release', () => {
 
     await validator.validateSlicing([{ url: extensionUrl }], 'Procedure.extension', procedureProfile, null, undefined, 'R5');
 
-    expect(resolver).toHaveBeenCalledWith(extensionUrl, 'R5');
+    expect(resolver).toHaveBeenCalledWith(extensionUrl, 'R5', procedureProfile);
     expect(resolver.mock.calls.every(call => call[1] === 'R5')).toBe(true);
   });
 
@@ -59,12 +59,12 @@ describe('slice type profile resolution release', () => {
 
     await validator.validateSlicing([{ url: extensionUrl }], 'Procedure.extension', procedureProfile);
 
-    expect(resolver).toHaveBeenCalledWith(extensionUrl, 'R4');
+    expect(resolver).toHaveBeenCalledWith(extensionUrl, 'R4', procedureProfile);
   });
 
   it('loads and snapshots the type profile for that release in the engine wiring', async () => {
     const runtime = createValidatorCoreRuntime({ enableCaching: false, autoDownload: false });
-    const loadProfile = vi.spyOn(runtime.components.sdLoader, 'loadProfile').mockResolvedValue({
+    const loadProfile = vi.spyOn(runtime.components.sdLoader, 'loadReferencedProfile').mockResolvedValue({
       resourceType: 'StructureDefinition',
       url: extensionUrl,
       name: 'TherapyPosition',
@@ -81,7 +81,7 @@ describe('slice type profile resolution release', () => {
 
     await resolver(extensionUrl, 'R6');
 
-    expect(loadProfile).toHaveBeenCalledWith(extensionUrl, 'R6');
+    expect(loadProfile).toHaveBeenCalledWith(extensionUrl, undefined, 'R6');
     expect(generateSnapshot).toHaveBeenCalledWith(expect.objectContaining({ url: extensionUrl }), { fhirVersion: 'R6' });
   });
 });

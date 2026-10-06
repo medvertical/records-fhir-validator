@@ -43,12 +43,14 @@ describe('valueset display equivalence', () => {
       { system: 'https://example.org/codes', code: 'example' })).toBe(false);
   });
 
-  it('allows identifier type displays without the optional number suffix', () => {
-    expect(displaysEquivalentForCodeInfo(
-      'Driver license number',
-      "Driver's License",
-      { system: 'http://terminology.hl7.org/CodeSystem/v2-0203' },
-    )).toBe(true);
+  it('matches displays of fully known code systems ignoring case only, like the reference validator', () => {
+    const v20203 = { system: 'http://terminology.hl7.org/CodeSystem/v2-0203' };
+    const v20131 = { system: 'http://terminology.hl7.org/CodeSystem/v2-0131', code: 'N' };
+    expect(displaysEquivalentForCodeInfo('Driver license number', 'DRIVER LICENSE NUMBER', v20203)).toBe(true);
+    expect(displaysEquivalentForCodeInfo('Driver license number', "Driver's License", v20203)).toBe(false);
+    expect(displaysEquivalentForCodeInfo('Next-of-Kin', 'Next of Kin', v20131)).toBe(false);
+    expect(displaysEquivalentForCodeInfo('Home Health', '##@Home Health@#',
+      { system: 'http://hl7.org/fhir/us/davinci-pdex-plan-net/CodeSystem/HealthcareServiceCategoryCS' })).toBe(false);
   });
 
   it('does not apply identifier display leniency to clinical code systems', () => {

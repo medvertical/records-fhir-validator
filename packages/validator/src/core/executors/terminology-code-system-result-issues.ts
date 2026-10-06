@@ -1,16 +1,15 @@
+import { displayUnverifiedIssue } from '../../validators/valueset-display-authority.js';
 import { createTerminologyIssue } from '../../terminology/terminology-issue.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import type {
   CodeSystemValidationIssue,
   CodeSystemValidationResult,
 } from '../../validators/terminology-api-types.js';
-import { displaysEquivalentForCodeInfo } from '../../validators/valueset-display-utils.js';
+import { hasAuthoritativeDisplayMismatch, sourceDisplaysEquivalent } from '../../validators/valueset-display-evidence.js';
 import {
-  anyDisplayEquivalent,
   buildDisplayMismatchFixHint,
   extractAcceptedDisplays,
   extractExpectedDisplay,
-  knownDisplaysForCode,
   uniqueAcceptedDisplays,
 } from './terminology-display-rules.js';
 
@@ -39,8 +38,13 @@ export function buildCodeSystemResultIssues(
   const serverIssues = result.issues ?? [];
   return [
     ...(includeUnverified ? buildUnverifiedIssues(coding, result, path, index, isArrayInput) : []),
+    ...serverIssues.filter(issue => issue.code === 'display-unverified').map(issue =>
+      displayUnverifiedIssue(coding, resultPath(path, index, isArrayInput, 'display'), issue.message,
+        issue.severity === 'information' ? 'information' : 'warning', result.displayLanguage)),
     ...buildDisplayIssues(coding, result, serverIssues, path, index, isArrayInput),
     ...buildInactiveIssues(coding, result, serverIssues, path, index, isArrayInput),
+    ...buildRetiredIssues(coding, serverIssues, path, index, isArrayInput),
+    ...buildDeprecatedIssues(coding, serverIssues, path, index, isArrayInput),
     ...buildInvalidCodeIssues(coding, result, path, index, isArrayInput),
   ];
 }
@@ -52,15 +56,21 @@ function buildUnverifiedIssues(
   index: number,
   isArrayInput: boolean,
 ): ValidationIssue[] {
-  if (!['remote-budget-exhausted', 'national-extension-unverified'].includes(result.reason ?? '')) {
+  if (!['remote-budget-exhausted', 'national-extension-unverified', 'delegation-disabled', 'no-server', 'circuit-open'].includes(result.reason ?? '')) {
     return [];
   }
   const codingPath = resultPath(path, index, isArrayInput, 'code');
   const nationalExtension = result.reason === 'national-extension-unverified';
+  const delegationDisabled = result.reason === 'delegation-disabled';
+  const unavailable = result.reason === 'no-server' || result.reason === 'circuit-open';
   return [createTerminologyIssue({
     severity: 'information',
     code: 'terminology-codesystem-unverified',
-    message: nationalExtension
+    message: unavailable
+      ? result.message ?? 'CodeSystem membership was not verified because no eligible terminology server could be asked.'
+      : delegationDisabled
+      ? result.message ?? 'CodeSystem membership was not verified because terminology code validation delegation is disabled.'
+      : nationalExtension
       ? result.message
         ?? `SNOMED national-extension code ${coding.system}#${coding.code} was not verified against the required national edition`
       : `Remote CodeSystem validation budget was exhausted; ${coding.system}#${coding.code} `
@@ -71,7 +81,14 @@ function buildUnverifiedIssues(
       system: coding.system,
       ...(coding.display ? { display: coding.display } : {}),
       reason: result.reason,
-      fixHint: nationalExtension
+      validationComplete: false,
+      validationStatus: 'incomplete',
+      ...(coding.version ? { codeSystemVersion: coding.version } : {}),
+      fixHint: unavailable
+        ? 'Provide a complete local CodeSystem, or configure an enabled terminology server for this FHIR release and validate again when it is available.'
+        : delegationDisabled
+        ? 'Provide a complete local CodeSystem or explicitly enable terminology code validation delegation.'
+        : nationalExtension
         ? 'Configure a terminology server that contains the required SNOMED national edition.'
         : 'Increase maxRemoteCodeSystemValidations for deeper remote terminology evidence, or provide a local CodeSystem package/cache.',
     },
@@ -86,23 +103,27 @@ function buildDisplayIssues(
   index: number,
   isArrayInput: boolean,
 ): ValidationIssue[] {
-  const displayIssue = serverIssues.find(issue => issue.code === 'invalid-display');
+  const displayIssue = serverIssues.find(issue => issue.code === 'invalid-display' && issue.severity === 'error')
+    ?? serverIssues.find(issue => issue.code === 'invalid-display');
   if (!coding.display) return [];
   const expectedDisplay = result.display ?? extractExpectedDisplay(displayIssue?.message ?? result.message);
+  // Unversioned compatibility hints cannot overrule this source's display evidence.
   const acceptedDisplays = uniqueAcceptedDisplays([
-    ...(!coding.version ? knownDisplaysForCode(coding.system, coding.code) ?? [] : []),
     ...(result.display ? [result.display] : []),
     ...extractAcceptedDisplays(displayIssue?.message ?? result.message),
   ]);
   if (
     !displayIssue
-    || (expectedDisplay ? displaysEquivalentForCodeInfo(expectedDisplay, coding.display, coding) : false)
-    || acceptedDisplays.some(display => displaysEquivalentForCodeInfo(display, coding.display!, coding))
-    || anyDisplayEquivalent(acceptedDisplays, coding.display)
+    || (!hasAuthoritativeDisplayMismatch(result) && (
+      (expectedDisplay ? sourceDisplaysEquivalent(expectedDisplay, coding.display, coding) : false)
+      || acceptedDisplays.some(display => sourceDisplaysEquivalent(display, coding.display!, coding))
+    ))
   ) return [];
 
+  // A wrong display is an error, as the reference validator and the server
+  // itself grade it, unless the server was asked to report displays as warnings.
   return [createTerminologyIssue({
-    severity: 'warning',
+    severity: displayIssue.severity === 'warning' ? 'warning' : 'error',
     code: 'terminology-display-mismatch',
     message: displayIssue.message
       || result.message
@@ -128,7 +149,8 @@ function buildInactiveIssues(
   isArrayInput: boolean,
 ): ValidationIssue[] {
   const inactiveIssue = serverIssues.find(issue =>
-    issue.code === 'code-comment' && /inactive/i.test(issue.message ?? '')
+    issue.code === 'code-comment'
+    && (issue.source === 'local-code-system' || /inactive/i.test(issue.message ?? ''))
   );
   if (!result.inactive && !inactiveIssue) return [];
   return [createTerminologyIssue({
@@ -137,12 +159,64 @@ function buildInactiveIssues(
     message: inactiveIssue?.message
       || result.message
       || `The concept '${coding.code}' is inactive and its use should be reviewed`,
-    path: resultPath(path, index, isArrayInput, 'code'),
+    path: inactiveIssue?.source === 'local-code-system'
+      ? (isArrayInput ? `${path}[${index}]` : path)
+      : resultPath(path, index, isArrayInput, 'code'),
     details: {
       code: coding.code,
       system: coding.system,
       ...(result.display ? { display: result.display } : {}),
+      ...(inactiveIssue?.source === 'local-code-system' ? {
+        terminologySource: inactiveIssue.source,
+        lifecyclePolicy: 'fhir-validator-6.9.11-properties',
+        conceptPropertyPaths: inactiveIssue.expression,
+      } : {}),
     },
+  })];
+}
+
+function buildRetiredIssues(
+  coding: CodingValue,
+  serverIssues: CodeSystemValidationIssue[],
+  path: string,
+  index: number,
+  isArrayInput: boolean,
+): ValidationIssue[] {
+  const retired = serverIssues.find(issue => issue.code === 'code-retired');
+  if (!retired) return [];
+  return [createTerminologyIssue({
+    severity: 'warning',
+    code: 'terminology-code-retired',
+    message: retired.message,
+    path: isArrayInput ? `${path}[${index}]` : path,
+    details: {
+      code: coding.code,
+      system: coding.system,
+      conceptStatus: 'retired',
+      ...(retired.source ? { terminologySource: retired.source } : {}),
+      ...(retired.source === 'local-code-system' ? {
+        lifecyclePolicy: 'fhir-validator-6.9.11-properties',
+        conceptPropertyPaths: retired.expression,
+      } : {}),
+    },
+  })];
+}
+
+function buildDeprecatedIssues(
+  coding: CodingValue,
+  serverIssues: CodeSystemValidationIssue[],
+  path: string,
+  index: number,
+  isArrayInput: boolean,
+): ValidationIssue[] {
+  const deprecated = serverIssues.find(issue => issue.code === 'code-deprecated');
+  if (!deprecated) return [];
+  return [createTerminologyIssue({
+    severity: 'warning',
+    code: 'terminology-code-deprecated',
+    message: deprecated.message,
+    path: isArrayInput ? `${path}[${index}]` : path,
+    details: { code: coding.code, system: coding.system },
   })];
 }
 
@@ -170,6 +244,11 @@ function buildInvalidCodeIssues(
       system: coding.system,
       ...(coding.display ? { display: coding.display } : {}),
       ...(result.reason ? { reason: result.reason } : {}),
+      ...(systemUnresolvable || result.incompleteCodeSystem ? {
+        validationComplete: false,
+        validationStatus: 'incomplete',
+        ...(coding.version ? { codeSystemVersion: coding.version } : {}),
+      } : {}),
       ...(loinc ? {
         loincCheckDigitStatus: 'invalid',
         expectedCheckDigit: loinc.expectedCheckDigit,

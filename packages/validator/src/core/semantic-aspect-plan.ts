@@ -22,6 +22,28 @@ export function projectSemanticAspectResult(
   result: MultiAspectValidateResult,
   plan: SemanticAspectPlan,
 ): MultiAspectValidateResult {
+  const missingBaseTypeEvidence = !result.structureDef ? result.aspects.flatMap(aspect =>
+    (aspect.evidenceIssues ?? aspect.issues).filter(issue => issue.aspect === 'structural'
+      && issue.code === 'structural-resource-type-mismatch' && typeof issue.details === 'object'
+      && issue.details?.validatedAgainstBase === false
+      && issue.details?.validationComplete === false)) : [];
+  if (missingBaseTypeEvidence.length > 0) {
+    // The type failure is already proved; missing base rules leave requested lanes unchecked.
+    const available = new Set(result.aspects.map(aspect => aspect.aspect));
+    const aspects: MultiAspectValidateResult['aspects'] = [
+      ...result.aspects.filter(aspect => plan.requested.has(aspect.aspect))
+        .map(aspect => ({ ...aspect, isValid: false })),
+      ...[...plan.requested].filter(aspect => !available.has(aspect))
+        .map(aspect => ({ aspect, issues: [], evidenceIssues: [], validationTime: 0, isValid: false })),
+    ];
+    if (!plan.requested.has('structural')) {
+      // Dependency evidence keeps its owner without publishing an unrequested finding.
+      for (const aspect of aspects) {
+        aspect.evidenceIssues = [...(aspect.evidenceIssues ?? aspect.issues), ...missingBaseTypeEvidence];
+      }
+    }
+    return { ...result, isValid: false, aspects };
+  }
   const incomplete = new Set<string>();
   const markDependentAspects = (dependency: string) => {
     for (const requested of plan.requested) {

@@ -1,36 +1,31 @@
+// The reference validator's lists (XhtmlValidator in 6.10.0): the HTML 4.0
+// formatting elements narrative may use, without the deprecated ones (u, s,
+// strike) and the change marks of section 9.4 (ins, del). XHTML names are
+// case-sensitive.
 const ALLOWED_ELEMENTS = new Set([
-  'div', 'p', 'br', 'span',
-  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-  'ul', 'ol', 'li', 'dl', 'dt', 'dd',
-  'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption', 'colgroup', 'col',
-  'b', 'i', 'u', 's', 'strike', 'em', 'strong', 'small', 'big', 'sub', 'sup', 'tt', 'code', 'pre',
-  'blockquote', 'q', 'dfn', 'abbr', 'acronym', 'cite', 'samp', 'kbd', 'var', 'ins', 'del',
-  'a', 'img', 'hr',
+  'p', 'br', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'span', 'b', 'em', 'i', 'strong',
+  'small', 'big', 'tt', 'dfn', 'q', 'var', 'abbr', 'acronym', 'cite', 'blockquote', 'hr', 'address', 'bdo',
+  'kbd', 'sub', 'sup', 'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'pre', 'table', 'caption', 'colgroup', 'col',
+  'thead', 'tr', 'tfoot', 'tbody', 'th', 'td', 'code', 'samp', 'img', 'map', 'area',
 ]);
 
-const ALLOWED_ATTRIBUTES: Record<string, Set<string>> = {
-  '*': new Set(['id', 'class', 'style', 'title', 'lang', 'xml:lang', 'dir', 'xmlns']),
-  a: new Set(['href', 'name', 'rel', 'rev', 'target']),
-  img: new Set(['src', 'alt', 'height', 'width', 'longdesc', 'usemap']),
-  table: new Set(['border', 'cellpadding', 'cellspacing', 'summary', 'width']),
-  th: new Set(['colspan', 'rowspan', 'headers', 'scope', 'abbr', 'axis', 'align', 'valign']),
-  td: new Set(['colspan', 'rowspan', 'headers', 'abbr', 'axis', 'align', 'valign']),
-  col: new Set(['span', 'width', 'align', 'valign']),
-  colgroup: new Set(['span', 'width', 'align', 'valign']),
-  ol: new Set(['start', 'type']),
-  ul: new Set(['type']),
-  li: new Set(['value']),
-  blockquote: new Set(['cite']),
-  q: new Set(['cite']),
-  ins: new Set(['cite', 'datetime']),
-  del: new Set(['cite', 'datetime']),
-};
+const GLOBAL_ATTRIBUTES = new Set([
+  'title', 'style', 'class', 'id', 'lang', 'xml:lang', 'dir', 'accesskey', 'tabindex',
+  'span', 'width', 'align', 'valign', 'char', 'charoff', 'abbr', 'axis', 'headers', 'scope', 'rowspan', 'colspan',
+  // Only a hint there, not a finding.
+  'xml:space',
+]);
+
+const ELEMENT_ATTRIBUTES = new Set([
+  'a.href', 'a.name', 'a.charset', 'a.type', 'a.hreflang', 'a.rel', 'a.rev', 'a.shape', 'a.coords',
+  'img.src', 'img.border', 'img.alt', 'img.longdesc', 'img.height', 'img.width', 'img.usemap', 'img.ismap',
+  'div.xmlns', 'blockquote.cite', 'q.cite', 'map.name',
+  'area.shape', 'area.coords', 'area.href', 'area.nohref', 'area.alt',
+  'table.summary', 'table.width', 'table.border', 'table.frame', 'table.rules', 'table.cellspacing',
+  'table.cellpadding', 'pre.space', 'td.nowrap',
+]);
 
 const FORBIDDEN_PATTERNS = [/<script[\s>]/i, /javascript:/i];
-const VOID_ELEMENTS = new Set([
-  'br', 'hr', 'img', 'area', 'base', 'col', 'embed',
-  'input', 'link', 'meta', 'param', 'source', 'track', 'wbr',
-]);
 
 export function findXxeDeclarations(div: string): Array<'doctype' | 'entity'> {
   const scannable = withoutCommentsAndCdata(div);
@@ -47,14 +42,14 @@ export function isNarrativeXhtmlWellformed(div: string): boolean {
       return false;
     }
 
+    // XHTML is XML: an empty element such as <br> must close itself.
     const openTags: string[] = [];
     const tagRegex = /<\/?((?:[a-zA-Z][a-zA-Z0-9]*:)?[a-zA-Z][a-zA-Z0-9]*)[^>]*\/?>/g;
     let match: RegExpExecArray | null;
     while ((match = tagRegex.exec(scannable)) !== null) {
       const fullMatch = match[0];
-      const tagName = match[1].toLowerCase();
-      const localName = tagName.includes(':') ? tagName.split(':')[1] : tagName;
-      if (fullMatch.endsWith('/>') || VOID_ELEMENTS.has(localName)) continue;
+      const tagName = match[1];
+      if (fullMatch.endsWith('/>')) continue;
       if (fullMatch.startsWith('</')) {
         if (openTags.length === 0 || openTags.pop() !== tagName) return false;
       } else {
@@ -93,7 +88,7 @@ export function findDisallowedNarrativeElements(div: string): string[] {
   const tagRegex = /<([a-zA-Z][a-zA-Z0-9]*:)?([a-zA-Z][a-zA-Z0-9]*)[^>]*>/g;
   let match: RegExpExecArray | null;
   while ((match = tagRegex.exec(div)) !== null) {
-    const tagName = match[2].toLowerCase();
+    const tagName = match[2];
     if (!ALLOWED_ELEMENTS.has(tagName) && !disallowed.includes(tagName)) {
       disallowed.push(tagName);
     }
@@ -108,18 +103,67 @@ export function findInvalidNarrativeAttributes(
   const tagRegex = /<([a-zA-Z][a-zA-Z0-9]*:)?([a-zA-Z][a-zA-Z0-9]*)([^>]*)>/g;
   let match: RegExpExecArray | null;
   while ((match = tagRegex.exec(div)) !== null) {
-    const tagName = match[2].toLowerCase();
-    for (const rawName of parseTagAttributeNames(match[3])) {
-      const attribute = rawName.toLowerCase();
-      if (attribute.startsWith('xmlns')) continue;
-      const globalAllowed = ALLOWED_ATTRIBUTES['*'];
-      const elementAllowed = ALLOWED_ATTRIBUTES[tagName] || new Set();
-      if (!globalAllowed.has(attribute) && !elementAllowed.has(attribute)) {
-        invalid.push({ element: tagName, attribute });
-      }
+    const tagName = match[2];
+    for (const attribute of parseTagAttributeNames(match[3])) {
+      if (attribute.startsWith('xmlns') || GLOBAL_ATTRIBUTES.has(attribute)) continue;
+      if (!ELEMENT_ATTRIBUTES.has(`${tagName}.${attribute}`)) invalid.push({ element: tagName, attribute });
     }
   }
   return invalid;
+}
+
+/**
+ * Ids and `<a name>` anchors that more than one node below the root carries,
+ * with how often, in the reference validator's order (checkForDuplicateIds):
+ * ids and anchor names share one namespace, and an anchor naming its own
+ * element's id counts once.
+ */
+export function findDuplicateNarrativeIds(div: string): Array<{ id: string; count: number }> {
+  const counts = new Map<string, number>();
+  const count = (id: string) => counts.set(id, (counts.get(id) ?? 0) + 1);
+  const tags = withoutCommentsAndCdata(div)
+    .matchAll(/<(?:[a-zA-Z][a-zA-Z0-9]*:)?([a-zA-Z][a-zA-Z0-9]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g);
+  let isRoot = true;
+  for (const [, tagName, attributeText] of tags) {
+    if (isRoot) {
+      isRoot = false;
+      continue;
+    }
+    const attributes = new Map(parseTagAttributes(attributeText));
+    const rawId = attributes.get('id');
+    const id = rawId === undefined ? undefined : decodeXhtmlEntities(rawId);
+    if (id !== undefined) count(id);
+    const rawName = tagName === 'a' ? attributes.get('name') : undefined;
+    const name = rawName === undefined ? undefined : decodeXhtmlEntities(rawName);
+    if (name !== undefined && name !== id) count(name);
+  }
+  return [...counts.keys()]
+    .filter(id => (counts.get(id) ?? 0) > 1)
+    .sort()
+    .map(id => ({ id, count: counts.get(id) ?? 0 }));
+}
+
+const URL_PUNCTUATION = new Set([...";?:@&=+$.,/%-_~#[]!'()*|"]);
+
+/**
+ * `<a href>` and `<img src>` values the reference validator rejects
+ * (UrlUtil.checkValidUrl): empty, or with a character that is no letter,
+ * digit or URL punctuation — a space, `"`, `<`, `{`. A `data:` URL answers to
+ * its own rules instead.
+ */
+export function findInvalidNarrativeUrls(div: string): Array<{ url: string; invalid: string[] }> {
+  const findings: Array<{ url: string; invalid: string[] }> = [];
+  const tags = withoutCommentsAndCdata(div)
+    .matchAll(/<(?:[a-zA-Z][a-zA-Z0-9]*:)?(a|img)\b((?:[^>"']|"[^"]*"|'[^']*')*)>/g);
+  for (const [, tagName, attributeText] of tags) {
+    const raw = new Map(parseTagAttributes(attributeText)).get(tagName === 'a' ? 'href' : 'src');
+    if (raw === undefined) continue;
+    const url = decodeXhtmlEntities(raw);
+    if (url.startsWith('data:')) continue;
+    const invalid = [...url].filter(ch => !/[\p{L}\p{Nl}\p{Nd}]/u.test(ch) && !URL_PUNCTUATION.has(ch));
+    if (url.length === 0 || invalid.length > 0) findings.push({ url, invalid });
+  }
+  return findings;
 }
 
 const NAMED_ENTITY_DECODINGS: Record<string, string> = {
@@ -146,6 +190,17 @@ function hasCharAboveSpace(text: string): boolean {
   return false;
 }
 
+/** The named references XML itself defines; FHIR parses narrative XHTML as XML, without the XHTML DTD. */
+const XML_ENTITY_NAMES = new Set(['amp', 'lt', 'gt', 'quot', 'apos']);
+
+/** HTML named entities (`&trade;`) no XML parser without the DTD resolves, as the reference validator reports them. */
+export function findIllegalXhtmlEntities(xhtml: string): string[] {
+  const names = [...withoutCommentsAndCdata(xhtml).matchAll(/&([a-zA-Z][a-zA-Z0-9]*);/g)]
+    .map(match => match[1])
+    .filter(name => !XML_ENTITY_NAMES.has(name));
+  return [...new Set(names)].map(name => `&${name};`);
+}
+
 function decodeXhtmlEntities(text: string): string {
   return text.replace(
     /&#x([0-9a-fA-F]+);|&#([0-9]+);|&([a-zA-Z][a-zA-Z0-9]*);/g,
@@ -168,7 +223,11 @@ function withoutCommentsAndCdata(value: string): string {
 }
 
 function parseTagAttributeNames(value: string): string[] {
-  const attributes: string[] = [];
+  return parseTagAttributes(value).map(([name]) => name);
+}
+
+function parseTagAttributes(value: string): Array<[name: string, value: string | undefined]> {
+  const attributes: Array<[string, string | undefined]> = [];
   let index = 0;
   while (index < value.length) {
     index = skipWhitespace(value, index);
@@ -183,22 +242,29 @@ function parseTagAttributeNames(value: string): string[] {
       index += 1;
       continue;
     }
-    attributes.push(value.slice(nameStart, index));
+    const name = value.slice(nameStart, index);
     index = skipWhitespace(value, index);
-    if (value[index] !== '=') continue;
+    if (value[index] !== '=') {
+      attributes.push([name, undefined]);
+      continue;
+    }
     index = skipWhitespace(value, index + 1);
     const quote = value[index];
     if (quote === '"' || quote === "'") {
-      index += 1;
+      const valueStart = index + 1;
+      index = valueStart;
       while (index < value.length && value[index] !== quote) index += 1;
+      attributes.push([name, value.slice(valueStart, index)]);
       if (index < value.length) index += 1;
     } else {
+      const valueStart = index;
       while (
         index < value.length
         && !isWhitespace(value[index])
         && value[index] !== '/'
         && value[index] !== '>'
       ) index += 1;
+      attributes.push([name, value.slice(valueStart, index)]);
     }
   }
   return attributes;

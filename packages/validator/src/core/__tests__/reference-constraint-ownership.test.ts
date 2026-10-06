@@ -1,9 +1,13 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDefaultValidationSettings, type ValidationIssue } from '@records-fhir/validation-types';
-import { RecordsValidator } from '../validator-engine';
+import type { RecordsValidator } from '../validator-engine.js';
+import { createIsolatedCoreValidationFixture, expectOwnCoreProfilesResolved } from './isolated-core-validation-fixture.js';
 
 describe('reference constraints across public execution paths', () => {
-  const validator = new RecordsValidator({ autoDownload: false, prewarmProfileSource: false });
+  let validator: RecordsValidator;
+  let fixture: Awaited<ReturnType<typeof createIsolatedCoreValidationFixture>>;
+
+  afterAll(async () => { await fixture?.dispose(); });
   const settings = createDefaultValidationSettings('R4');
   settings.packageDownload.autoDownload = false;
   settings.terminologyServers = [];
@@ -11,15 +15,20 @@ describe('reference constraints across public execution paths', () => {
   const aspects = ['structural', 'profile', 'invariant', 'reference'] as const;
 
   beforeAll(async () => {
-    await validator.waitForInitialization();
+    fixture = await createIsolatedCoreValidationFixture();
+    validator = fixture.validator;
   }, 30_000);
 
   async function validate(resource: Record<string, unknown>, batch: boolean): Promise<ValidationIssue[]> {
-    if (!batch) return validator.validate(resource, undefined, 'R4', settings);
+    if (!batch) {
+      const issues = await validator.validate(resource, undefined, 'R4', settings);
+      expectOwnCoreProfilesResolved(issues); return issues;
+    }
     const results = await validator.validateBatch([resource], { aspects: [...aspects], settings, fhirVersion: 'R4' });
     const result = results.get(resource);
     if (!result || Array.isArray(result)) throw new Error('Missing multi-aspect validation result');
-    return result.aspects.flatMap(aspect => aspect.issues);
+    const issues = result.aspects.flatMap(aspect => aspect.issues);
+    expectOwnCoreProfilesResolved(issues); return issues;
   }
 
   describe.each([false, true])('batch=%s', batch => {

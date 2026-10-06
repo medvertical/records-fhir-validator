@@ -81,6 +81,8 @@ function inferVerificationState(
   canonicalCode: string | undefined,
   message: string | undefined,
 ): ValidationIssueVerificationState {
+  // This finding verifies missing input; its message also describes the consequence for code lookup.
+  if (canonicalCode === 'terminology-coding-missing-system') return 'verified';
   const text = `${canonicalCode ?? ''} ${message ?? ''}`.toLowerCase();
   if (
     text.includes('unverified') ||
@@ -95,6 +97,7 @@ function inferIssueConfidence(
   canonicalCode: string | undefined,
   message: string | undefined,
 ): ValidationIssueConfidence {
+  if (canonicalCode === 'terminology-coding-missing-system') return 'high';
   const text = `${canonicalCode ?? ''} ${message ?? ''}`.toLowerCase();
   if (text.includes('server-failure') || text.includes('timeout')) return 'low';
   if (

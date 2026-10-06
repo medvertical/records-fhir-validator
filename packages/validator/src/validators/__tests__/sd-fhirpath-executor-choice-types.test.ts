@@ -639,11 +639,13 @@ describe('SD FHIRPath resource-root expression handling', () => {
     },
   } satisfies StructureDefinition;
 
-  it('evaluates absolute resource-root expressions from nested matches once', async () => {
+  // A leading type name filters the context, so on each name `Patient`
+  // selects nothing and the comparison is empty, as in the reference validator.
+  it('evaluates a nested invariant that names the resource at each match', async () => {
     const issues = await sdFHIRPathExecutor.execute({
       resource: {
         resourceType: 'Patient',
-        active: false,
+        active: true,
         name: [
           { family: 'Curie' },
           { family: 'Meitner' },
@@ -654,11 +656,9 @@ describe('SD FHIRPath resource-root expression handling', () => {
       fhirVersion: 'R4',
     });
 
-    expect(issues.filter(issue => issue.code === 'constraint-violation-root-active')).toHaveLength(1);
-    expect(issues).toContainEqual(expect.objectContaining({
-      code: 'constraint-violation-root-active',
-      path: 'Patient.name[0]',
-    }));
+    expect(issues
+      .filter(issue => issue.code === 'constraint-violation-root-active')
+      .map(issue => issue.path)).toEqual(['Patient.name[0]', 'Patient.name[1]']);
   });
 });
 
@@ -1301,10 +1301,9 @@ describe('SD FHIRPath choice-type casts', () => {
     expect(invalidIssues.filter(issue => issue.ruleId === 'cat-in-1')).toHaveLength(1);
   });
 
-  it('does not fail simple memberOf constraints when the ValueSet is unavailable', async () => {
+  it('reports simple memberOf constraints as unchecked when the ValueSet is unavailable', async () => {
     const missingValueSetUrl = 'http://example.org/fhir/ValueSet/not-installed';
     valueSetCache.setValueSetFile(`${missingValueSetUrl}|R4`, null);
-
     const conditionProfile: StructureDefinition = {
       resourceType: 'StructureDefinition',
       url: 'http://example.org/fhir/StructureDefinition/condition-missing-valueset',
@@ -1328,7 +1327,6 @@ describe('SD FHIRPath choice-type casts', () => {
         ],
       },
     };
-
     const issues = await sdFHIRPathExecutor.execute({
       resource: {
         resourceType: 'Condition',
@@ -1343,7 +1341,9 @@ describe('SD FHIRPath choice-type casts', () => {
       structureDef: conditionProfile,
       fhirVersion: 'R4',
     });
-
-    expect(issues.filter(issue => issue.ruleId === 'cat-missing-vs')).toHaveLength(0);
+    expect(issues.filter(issue => issue.ruleId === 'cat-missing-vs')).toEqual([expect.objectContaining({
+      severity: 'information', code: 'profile-constraint-evaluation-error',
+      aspect: 'profile', details: expect.objectContaining({ validationComplete: false }),
+    })]);
   });
 });

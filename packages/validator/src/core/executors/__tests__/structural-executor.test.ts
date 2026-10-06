@@ -569,7 +569,7 @@ describe('StructuralExecutor', () => {
       expect(issues).toEqual(expect.arrayContaining([
         expect.objectContaining({
           code: 'questionnaire-reference-not-resolved',
-          path: 'QuestionnaireResponse.questionnaire',
+          path: 'QuestionnaireResponse',
           severity: 'warning',
         }),
       ]));

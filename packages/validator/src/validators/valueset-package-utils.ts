@@ -6,8 +6,18 @@ export function preferredMajorFor(fhirVersion?: FhirVersion): string | undefined
 }
 
 export function versionedCacheKey(canonical: string, requestedVersion?: string, fhirVersion?: FhirVersion): string {
-    if (requestedVersion) return `${canonical}|${requestedVersion}`;
-    return fhirVersion ? `${canonical}|${fhirVersion}` : canonical;
+    return JSON.stringify(['definition', canonical, requestedVersion ?? null, fhirVersion ?? null]);
+}
+
+export function parseDefinitionCacheKey(key: string): { canonical: string; requestedVersion?: string; fhirVersion?: FhirVersion } | undefined {
+    if (!key.startsWith('["definition",')) return undefined;
+    try {
+        const value: unknown = JSON.parse(key);
+        if (!Array.isArray(value) || value.length !== 4 || value[0] !== 'definition' || typeof value[1] !== 'string'
+            || (value[2] !== null && typeof value[2] !== 'string')
+            || (value[3] !== null && value[3] !== 'R4' && value[3] !== 'R5' && value[3] !== 'R6')) return undefined;
+        return { canonical: value[1], requestedVersion: value[2] ?? undefined, fhirVersion: value[3] ?? undefined };
+    } catch { return undefined; }
 }
 
 function extractPackageVersion(packageName: string): string | undefined {
@@ -15,7 +25,7 @@ function extractPackageVersion(packageName: string): string | undefined {
     return hashIndex >= 0 ? packageName.slice(hashIndex + 1) : undefined;
 }
 
-function comparePackageVersions(candidate: string | undefined, current: string | undefined): number {
+export function comparePackageVersions(candidate: string | undefined, current: string | undefined): number {
     if (!candidate && !current) return 0;
     if (candidate && !current) return 1;
     if (!candidate && current) return -1;
@@ -97,4 +107,24 @@ export function isBetterPackageCandidate(
         extractPackageVersion(candidate.packageName),
         extractPackageVersion(current.packageName),
     ) > 0;
+}
+
+/**
+ * The first copy of a requested `url|version`, unless a dependency pin chose
+ * the package it comes from: then that package's copy, found wherever it sits.
+ */
+export class ExactVersionMatch<T> {
+    private first: T | null = null;
+
+    constructor(private readonly pinnedPackage: string | null) {}
+
+    /** Whether the search can stop at this copy. */
+    settles(parsed: T, packageName: string): boolean {
+        this.first ??= parsed;
+        return !this.pinnedPackage || packageName === this.pinnedPackage;
+    }
+
+    get value(): T | null {
+        return this.first;
+    }
 }

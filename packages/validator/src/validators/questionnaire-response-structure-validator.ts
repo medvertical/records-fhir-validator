@@ -62,9 +62,10 @@ export function validateQuestionnaireResponseItems(
 
     const question = questionMap.get(item.linkId);
     if (!question) {
+      // Reported, as the reference validator does, at the level holding the item.
       issues.push(createValidationIssue({
         code: 'not-found',
-        path: `${path}.linkId`,
+        path: path.replace(/\.item\[\d+\]$/, ''),
         resourceType: 'QuestionnaireResponse',
         customMessage: `LinkId '${item.linkId}' not found in questionnaire`,
         severityOverride: 'error',
@@ -89,6 +90,17 @@ export function validateQuestionnaireResponseItems(
         path,
         resourceType: 'QuestionnaireResponse',
         customMessage: "Items of type 'group' cannot have answers, only sub-items",
+        severityOverride: 'error',
+      }));
+    }
+
+    // An answered item may echo its question, but only verbatim.
+    if (typeof item.text === 'string' && item.text.length > 0 && item.text !== question.text) {
+      issues.push(createValidationIssue({
+        code: 'qr-item-text-mismatch',
+        path,
+        resourceType: 'QuestionnaireResponse',
+        customMessage: `If text exists, it must match the questionnaire definition for linkId ${item.linkId}`,
         severityOverride: 'error',
       }));
     }

@@ -5,5 +5,5 @@ export function canDelegateValueSetExpansion(config: TerminologyResolutionConfig
 }
 
 export function canDelegateCodeValidation(config: TerminologyResolutionConfig): boolean {
-  return config.serverDelegation?.validateCodes !== false;
+  return config.strategy !== 'local-only' && config.serverDelegation?.validateCodes !== false;
 }

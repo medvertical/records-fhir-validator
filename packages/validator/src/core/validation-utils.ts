@@ -6,6 +6,7 @@
  */
 
 import type { ValidationIssue } from '@records-fhir/validation-types';
+import { withoutElementLevelBindingDuplicates } from './binding-issue-repeat-dedupe.js';
 import { normalizeChoiceTypePath } from './choice-type-path.js';
 import { getPrimitiveSidecar, resolveFhirSegmentValue } from './fhir-primitive-sidecar.js';
 
@@ -126,8 +127,9 @@ export {
  * correct type — the two errors describe independent problems.
  */
 export function suppressRedundantBindingWarnings(
-  issues: ValidationIssue[],
+  reported: ValidationIssue[],
 ): ValidationIssue[] {
+  const issues = withoutElementLevelBindingDuplicates(reported);
   const typeMismatchPaths = new Set<string>();
   const missingRequiredElementPaths = new Set<string>();
   const invalidCodeBindingParentPaths = new Set<string>();
@@ -161,8 +163,8 @@ export function suppressRedundantBindingWarnings(
     }
     if (!isNonRequiredBindingIssue(issue)) return true;
     if (!issue.path) return true;
-    const normalizedPath = normalizeChoiceTypePath(issue.path);
-    if (invalidCodeBindingParentPaths.has(normalizedPath)) return false;
+    // Only the repeat holding the invalid code: its siblings are judged apart.
+    if (invalidCodeBindingParentPaths.has(normalizeChoiceTypePath(issue.path, { stripIndices: false }))) return false;
     return !typeMismatchPaths.has(normalizeChoiceTypePath(issue.path, { stripIndices: false }));
   });
 }
@@ -185,22 +187,22 @@ function isNonRequiredBindingIssue(issue: ValidationIssue): boolean {
 function parentBindingPathForInvalidCode(path: string): string | null {
   const codeableConceptParent = path.replace(/\.coding\[\d+\]\.code$/i, '');
   if (codeableConceptParent !== path) {
-    return normalizeChoiceTypePath(codeableConceptParent);
+    return normalizeChoiceTypePath(codeableConceptParent, { stripIndices: false });
   }
 
   const codeableConceptParentBySystem = path.replace(/\.coding\[\d+\]\.system$/i, '');
   if (codeableConceptParentBySystem !== path) {
-    return normalizeChoiceTypePath(codeableConceptParentBySystem);
+    return normalizeChoiceTypePath(codeableConceptParentBySystem, { stripIndices: false });
   }
 
   const codingParent = path.replace(/\.code$/i, '');
   if (codingParent !== path) {
-    return normalizeChoiceTypePath(codingParent);
+    return normalizeChoiceTypePath(codingParent, { stripIndices: false });
   }
 
   const codingParentBySystem = path.replace(/\.system$/i, '');
   if (codingParentBySystem !== path) {
-    return normalizeChoiceTypePath(codingParentBySystem);
+    return normalizeChoiceTypePath(codingParentBySystem, { stripIndices: false });
   }
 
   return null;

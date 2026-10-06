@@ -47,6 +47,58 @@ describe('constraint context resolver', () => {
     });
   });
 
+  it('navigates a concrete choice element so its value keeps its FHIR type', () => {
+    const observation = {
+      resourceType: 'Observation',
+      effectiveDateTime: '2024-10-01T09:30:00Z',
+      component: [{ valueQuantity: { value: 4, unit: 'mg' } }],
+    };
+
+    expect(resolveConstraintContext(
+      observation,
+      'Observation.effectiveDateTime',
+      '($this as dateTime).toString().length() >= 8',
+    )).toEqual({
+      context: observation,
+      expression: 'effective.all(($this as dateTime).toString().length() >= 8)',
+    });
+    expect(resolveConstraintContext(
+      observation,
+      'Observation.component[0].valueQuantity',
+      'value.exists()',
+    )).toEqual({
+      context: observation,
+      expression: 'component[0].value.all(value.exists())',
+    });
+  });
+
+  it('navigates a concrete choice element from the resource that contains it', () => {
+    const observation = { resourceType: 'Observation', effectiveDateTime: '2024-10-01' };
+    const bundle = { resourceType: 'Bundle', entry: [{ resource: observation }] };
+
+    expect(resolveConstraintContext(
+      bundle,
+      'Bundle.entry[0].resource.effectiveDateTime',
+      '$this.exists()',
+    )).toEqual({
+      context: observation,
+      expression: 'effective.all($this.exists())',
+    });
+  });
+
+  it('does not treat an ordinary element with a type-like suffix as a choice', () => {
+    const patient = { resourceType: 'Patient', birthDate: '1970-01-01' };
+
+    expect(resolveConstraintContext(
+      patient,
+      'Patient.birthDate',
+      '$this.exists()',
+    )).toEqual({
+      context: '1970-01-01',
+      expression: '$this.exists()',
+    });
+  });
+
   it('returns all repeated scalar contexts instead of silently using the root', () => {
     const patient = {
       resourceType: 'Patient',

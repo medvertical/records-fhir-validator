@@ -43,6 +43,7 @@ export interface SingleResourceProfilePreparationResult {
   declaredProfileUrl: string;
   structureDef: StructureDefinition | null;
   profileFallbackIssue: ValidationIssue | null;
+  profileLoadIssue?: ValidationIssue;
   /** Set when the profile was selected from Observation.code, not by the caller or resource. */
   codeInferredProfile: CodeInferredProfileMatch | null;
   contextQuestionnaire?: Record<string, unknown>;
@@ -104,24 +105,25 @@ export async function prepareSingleResourceProfile(
     profileSourceContext,
     settings,
   );
-  if (!loadResult.structureDef) {
-    return {
-      declaredProfileUrl,
-      structureDef: null,
-      profileFallbackIssue: null,
-      codeInferredProfile,
-    };
-  }
-
   const profileFallbackIssue = loadResult.incompatibleProfileType
     ? createProfileResourceTypeMismatchIssue(
       declaredProfileUrl,
       resource.resourceType,
       loadResult.incompatibleProfileType,
+      loadResult.usedBaseFallback,
     )
     : loadResult.usedBaseFallback
       ? createProfileFallbackIssue(declaredProfileUrl, resource.resourceType, sdLoader)
       : null;
+  if (!loadResult.structureDef) {
+    return {
+      declaredProfileUrl,
+      structureDef: null,
+      profileFallbackIssue,
+      ...(loadResult.baseLoadIssue ? { profileLoadIssue: loadResult.baseLoadIssue } : {}),
+      codeInferredProfile: profileFallbackIssue ? null : codeInferredProfile,
+    };
+  }
   const contextQuestionnaire = resource.resourceType === 'QuestionnaireResponse'
     ? await resolveContextQuestionnaire(
       resource,
@@ -135,6 +137,7 @@ export async function prepareSingleResourceProfile(
     declaredProfileUrl,
     structureDef: loadResult.structureDef,
     profileFallbackIssue,
+    ...(loadResult.baseLoadIssue ? { profileLoadIssue: loadResult.baseLoadIssue } : {}),
     // A fallback means validation ran against the base SD after all, so the
     // inferred profile must not claim the resulting findings.
     codeInferredProfile: profileFallbackIssue ? null : codeInferredProfile,

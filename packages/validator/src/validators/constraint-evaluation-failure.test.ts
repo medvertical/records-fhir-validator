@@ -19,7 +19,7 @@ const constraint = {
 describe('constraint evaluation failure policy', () => {
   afterEach(() => vi.clearAllMocks());
 
-  it('records and skips explicit engine capability limitations', () => {
+  it('records explicit engine capability limitations with case-bound unchecked evidence', () => {
     const record = vi.fn();
 
     const issues = handleConstraintEvaluationFailure({
@@ -31,7 +31,10 @@ describe('constraint evaluation failure policy', () => {
       resourceType: 'Patient',
     });
 
-    expect(issues).toEqual([]);
+    expect(issues).toEqual([expect.objectContaining({
+      code: 'profile-constraint-evaluation-error', severity: 'information',
+      details: expect.objectContaining({ validationComplete: false }),
+    })]);
     expect(record).toHaveBeenCalledWith(
       'async-function',
       constraint,

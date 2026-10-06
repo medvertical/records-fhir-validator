@@ -29,6 +29,7 @@ interface CodeSystemValidationRequestOptions {
   codeSystemVersion?: string;
   config: TerminologyResolutionConfig;
   display?: string;
+  displayLanguage?: string;
   override?: TerminologyServerOverride;
   operationCache: TerminologyOperationCache;
   requestConfigBuilder: TerminologyRequestConfigBuilder;
@@ -75,6 +76,7 @@ export async function executeCodeSystemValidateCodeRequest({
   codeSystemVersion,
   config,
   display,
+  displayLanguage,
   override,
   operationCache,
   requestConfigBuilder,
@@ -87,6 +89,7 @@ export async function executeCodeSystemValidateCodeRequest({
       code,
       ...(codeSystemVersion ? { version: codeSystemVersion } : {}),
       ...(display ? { display } : {}),
+      ...(displayLanguage ? { displayLanguage } : {}),
       _format: 'json',
     };
 

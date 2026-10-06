@@ -1,3 +1,4 @@
+import { selectedProfileLookup } from './profile-reference-authority.js';
 import { applyResourcePinToCanonical } from '../package/canonical-pin-context.js';
 import type { ProfileSourceContext } from '../persistence/index.js';
 import type { ReferenceResourceFetcher } from '../reference/reference-fetch-deadline.js';
@@ -25,6 +26,7 @@ import {
 } from './profile-loader-utils.js';
 import type { StructureDefinition } from './structure-definition-types.js';
 import { createValidationErrorIssue } from './validation-utils.js';
+import { normalizeIssuesByAspect } from './multi-aspect-issue-normalization.js';
 
 type ResourcePreparationDeps = Pick<
   MultiAspectDeps,
@@ -57,11 +59,14 @@ export interface MultiAspectResourceContext {
   enclosingBundle?: Record<string, unknown>;
   contextQuestionnaire?: Record<string, unknown>;
   referenceResolver?: ReferenceResolver | null;
+  /** Resolves only what the validated content holds: Bundle entries and contained resources. */
+  localReferenceResolver?: ReferenceResolver | null;
 }
 
 export type MultiAspectResourcePreparationResult =
   | {
     kind: 'ready';
+    profileLoadIssue?: ValidationIssue;
     context: MultiAspectResourceContext;
     profileSourceContext: ProfileSourceContext;
     profileFallbackIssue: ValidationIssue | null;
@@ -105,10 +110,14 @@ export class MultiAspectResourcePreparation {
     );
     const loadResult = await this.loadProfile(resolutionProfileUrl, resourceType, fhirVersion);
     this.options.throwIfStopped?.();
+    const profileFallbackIssue = this.createFallbackIssue(loadResult, profileUrl, resourceType);
     if (!loadResult.structureDef) {
       return {
         kind: 'missing-profile',
-        result: createMissingProfileResult(resourceRecord, profileUrl, fhirVersion),
+        result: createMissingProfileResult(resourceRecord, profileUrl, fhirVersion, [
+          ...(profileFallbackIssue ? [profileFallbackIssue] : []),
+          ...(loadResult.baseLoadIssue ? [loadResult.baseLoadIssue] : []),
+        ]),
       };
     }
 
@@ -133,8 +142,9 @@ export class MultiAspectResourcePreparation {
 
     return {
       kind: 'ready',
+      ...(loadResult.baseLoadIssue ? { profileLoadIssue: loadResult.baseLoadIssue } : {}),
       profileSourceContext,
-      profileFallbackIssue: this.createFallbackIssue(loadResult, profileUrl, resourceType),
+      profileFallbackIssue,
       context: {
         resource: resourceRecord,
         resourceType,
@@ -145,6 +155,7 @@ export class MultiAspectResourcePreparation {
         settings: this.options.settings,
         enclosingBundle,
         contextQuestionnaire,
+        localReferenceResolver: bundleReferenceResolver,
         referenceResolver: combineReferenceResolvers(
           combineReferenceResolvers(
             bundleReferenceResolver,
@@ -185,7 +196,7 @@ export class MultiAspectResourcePreparation {
     resourceType: string,
     fhirVersion: 'R4' | 'R5' | 'R6',
   ): Promise<ProfileLoadResult> {
-    const key = `${fhirVersion}|${profileUrl}|${resourceType}`;
+    const key = `${fhirVersion}|${profileUrl}|${resourceType}|${selectedProfileLookup(profileUrl, fhirVersion)?.key ?? ''}`;
     let promise = this.profileLoadCache.get(key);
     if (!promise) {
       const deps = this.options.deps;
@@ -219,6 +230,7 @@ export class MultiAspectResourcePreparation {
         profileUrl,
         resourceType,
         loadResult.incompatibleProfileType,
+        loadResult.usedBaseFallback,
       );
     }
     return loadResult.usedBaseFallback
@@ -231,6 +243,7 @@ function createMissingProfileResult(
   resource: Record<string, unknown>,
   profileUrl: string,
   fhirVersion: 'R4' | 'R5' | 'R6',
+  preparationIssues: ValidationIssue[] = [],
 ): MultiAspectValidateResult {
   const issue = createValidationErrorIssue(
     'profile',
@@ -239,13 +252,14 @@ function createMissingProfileResult(
     { profile: profileUrl },
     'meta.profile',
   );
+  const aspect = {
+    aspect: 'profile',
+    issues: withIssuesSchemaVersion([issue, ...preparationIssues], fhirVersion),
+    validationTime: 0,
+    isValid: false,
+  };
   return {
     isValid: false,
-    aspects: [{
-      aspect: 'profile',
-      issues: withIssuesSchemaVersion([issue], fhirVersion),
-      validationTime: 0,
-      isValid: false,
-    }],
+    aspects: preparationIssues.length > 0 ? normalizeIssuesByAspect([aspect]) : [aspect],
   };
 }

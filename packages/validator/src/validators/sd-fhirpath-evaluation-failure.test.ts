@@ -19,7 +19,7 @@ const constraint = {
 describe('StructureDefinition FHIRPath evaluation failure policy', () => {
   afterEach(() => vi.clearAllMocks());
 
-  it('skips only explicit asynchronous capability limitations', () => {
+  it('retains unchecked evidence for asynchronous capability limitations', () => {
     const issues = handleSDFHIRPathEvaluationFailure({
       constraint,
       error: new Error('asynchronous function memberOf is not allowed'),
@@ -28,7 +28,10 @@ describe('StructureDefinition FHIRPath evaluation failure policy', () => {
       resourceType: 'Patient',
     });
 
-    expect(issues).toEqual([]);
+    expect(issues).toEqual([expect.objectContaining({
+      code: 'profile-constraint-evaluation-error', severity: 'information',
+      details: expect.objectContaining({ validationComplete: false }),
+    })]);
     expect(logs.debug).toHaveBeenCalledWith(
       '[SDFHIRPathExecutor] Skipping unsupported async function',
       expect.any(Object),

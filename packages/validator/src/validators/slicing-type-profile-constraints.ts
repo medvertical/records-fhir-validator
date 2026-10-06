@@ -1,5 +1,7 @@
 import type { StructureDefinition } from '../core/structure-definition-types.js';
 import { isFhirResource } from '../core/fhir-resource.js';
+import { getValidationTargets } from '../business-rules/element-validation-targets.js';
+import { focusResourceOf } from './sd-fhirpath-focus-resource.js';
 import type { FhirVersionFamily } from '../core/sd-loader-version-utils.js';
 import { logger } from '../logger.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
@@ -9,6 +11,7 @@ import type { SliceDefinition } from './slice-types.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
 import { resolveValueOccurrences } from './slicing-content-paths.js';
+import { precomputeProfileConformance, type ProfileConformanceCheck } from './sd-fhirpath-profile-conformance.js';
 
 type TypeSpec = { code: string; profile?: string[]; targetProfile?: string[] };
 
@@ -28,6 +31,8 @@ export async function validateSliceTypeProfileConstraints(
   typeProfileResolver: TypeProfileResolver | null,
   constraintValidator: ConstraintValidator,
   rootResource?: unknown,
+  profileConformance?: ProfileConformanceCheck,
+  locateContextInRoot = false,
 ): Promise<ValidationIssue[]> {
   if (!typeProfileResolver) return [];
   const issues: ValidationIssue[] = [];
@@ -42,6 +47,8 @@ export async function validateSliceTypeProfileConstraints(
       constraintValidator,
       rootResource,
       visitedProfiles,
+      profileConformance,
+      locateContextInRoot,
     }));
   }
   return issues;
@@ -81,6 +88,8 @@ async function validateTargetTypeProfiles(input: {
   constraintValidator: ConstraintValidator;
   rootResource?: unknown;
   visitedProfiles: Set<string>;
+  profileConformance?: ProfileConformanceCheck;
+  locateContextInRoot: boolean;
 }): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
   for (const typeSpec of input.target.typeSpecs) {
@@ -98,14 +107,34 @@ async function validateTargetTypeProfiles(input: {
         // The slice value is wrapped as a pseudo-resource so element paths
         // match the type profile, but FHIRPath `%resource` must still see the
         // resource that contains the slice (e.g. gender-amtlich-1 reads
-        // `%resource.gender` from the Patient, not from the Extension).
+        // `%resource.gender` from the Patient, not from the Extension). A
+        // value that is a resource itself (a Bundle in Parameters) is its own
+        // `%resource`, which bdl-3 reads for the Bundle type.
+        const rootResource = isFhirResource(input.rootResource)
+          && (input.locateContextInRoot || !isFhirResource(input.target.value)) ? input.rootResource : undefined;
+        const ownFocus = isFhirResource(input.target.value) ? input.target.value : undefined;
+        const owners = new Set(rootResource ? getValidationTargets(rootResource, input.target.path)
+          .filter(target => target.value === input.target.value)
+          .map(target => focusResourceOf(rootResource, target.fullPath)).filter(isFhirResource) : []);
+        const focusResource = ownFocus ?? (owners.size === 1 ? [...owners][0] : undefined);
+        // A resource of the profile's type is validated as itself, so what
+        // conformsTo() establishes about it holds for the same instance; a
+        // datatype in resource clothing is no resource to validate.
+        const ownResource = isFhirResource(input.target.value) && input.target.value.resourceType === typeRoot;
+        const value = ownResource ? input.target.value : { ...asRecord(input.target.value), resourceType: typeRoot };
+        const profileConformance = ownResource && input.profileConformance
+          ? await precomputeProfileConformance(constraintElements, value, input.profileConformance)
+          : undefined;
         const profileIssues = await input.constraintValidator.validate(
-          { ...asRecord(input.target.value), resourceType: typeRoot },
+          value,
           constraintElements,
           typeProfile.url,
           {
             fhirVersion: input.fhirVersion,
-            ...(isFhirResource(input.rootResource) ? { rootResource: input.rootResource } : {}),
+            ...(rootResource ? { rootResource } : {}),
+            ...(input.locateContextInRoot && rootResource
+              ? { focusResource: isFhirResource(focusResource) ? focusResource : null } : {}),
+            ...(profileConformance ? { profileConformance } : {}),
           },
         );
         issues.push(...profileIssues.map(issue => {

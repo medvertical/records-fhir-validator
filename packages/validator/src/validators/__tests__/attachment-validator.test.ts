@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { AttachmentValidator } from '../attachment-validator';
+import { AttachmentValidator, checkAttachmentHasContent } from '../attachment-validator';
 
 describe('AttachmentValidator', () => {
   const validator = new AttachmentValidator();
@@ -53,6 +53,21 @@ describe('AttachmentValidator', () => {
     expect(validator.validate(resource)).toHaveLength(0);
   });
 
+  // Core example Media/example wraps its content data into lines; Binary/example
+  // does the same, but a Binary is no Attachment.
+  it('fails attachment data wrapped into lines, but not a Binary', () => {
+    const data = 'R0lGODlhEwARAPcAAAAAAAAA/+9aAO+1AP/WAP/eAP/eCP/eEP/eGP/nAP/nCP/nEP/n\nIf/nKf/nUv/nWv/vAP/vCP/vEP/v';
+    const media = { resourceType: 'Media', content: { contentType: 'image/gif', data } };
+    const binary = { resourceType: 'Binary', contentType: 'image/gif', data };
+
+    expect(validator.validate(media)).toEqual([expect.objectContaining({
+      code: 'structural-invalid-base64-format',
+      severity: 'error',
+      path: 'Media.content',
+    })]);
+    expect(validator.validate(binary)).toEqual([]);
+  });
+
   it('terminates safely for cyclic object graphs', () => {
     const resource: Record<string, unknown> = { resourceType: 'DocumentReference' };
     resource.self = resource;
@@ -89,7 +104,7 @@ describe('AttachmentValidator', () => {
     expect(validator.validate(resource)).toHaveLength(0);
   });
 
-  it('does not warn for extension-only or empty attachment slots', () => {
+  it('does not warn for empty attachments or ones stating why their content is absent', () => {
     const resource = {
       resourceType: 'DiagnosticReport',
       presentedForm: [{
@@ -97,10 +112,34 @@ describe('AttachmentValidator', () => {
           url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason',
           valueCode: 'masked',
         }],
-      }],
+      }, {}],
     };
 
     expect(validator.validate(resource)).toHaveLength(0);
+  });
+
+  it('warns for an attachment that carries only other extensions', () => {
+    const resource = {
+      resourceType: 'DiagnosticReport',
+      presentedForm: [{
+        extension: [{ url: 'http://example.org/fhir/StructureDefinition/rendering', valueCode: 'print' }],
+      }],
+    };
+
+    expect(validator.validate(resource)).toEqual([
+      expect.objectContaining({ code: 'attachment-no-content', path: 'DiagnosticReport.presentedForm[0]' }),
+    ]);
+  });
+
+  it('counts a content element carried only by its extensions as present', () => {
+    const attachment = {
+      title: 'Scanned report',
+      _contentType: { extension: [{ url: 'http://hl7.org/fhir/StructureDefinition/data-absent-reason', valueCode: 'unknown' }] },
+    };
+
+    expect(checkAttachmentHasContent(attachment, 'DiagnosticReport.presentedForm[0]')).toBeNull();
+    expect(checkAttachmentHasContent({ title: 'Scanned report' }, 'DiagnosticReport.presentedForm[0]'))
+      .toEqual(expect.objectContaining({ code: 'attachment-no-content', severity: 'warning' }));
   });
 
   it('reports att-1 when data is present without contentType', () => {

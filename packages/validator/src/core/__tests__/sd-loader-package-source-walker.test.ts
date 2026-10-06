@@ -1,8 +1,8 @@
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { promises as fs } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { observePackageFileReads } from './fixtures/package-file-read-observer';
 import { scanPackageDirectory, walkPackageSource } from '../sd-loader-package-source-walker';
 
 describe('sd-loader package source walker', () => {
@@ -23,13 +23,13 @@ describe('sd-loader package source walker', () => {
       filename: 'StructureDefinition-test.json', resourceType: 'StructureDefinition',
       url: 'http://example.org/profile', version: '1.0.0',
     }] }));
-    const read = vi.spyOn(fs, 'readFile');
+    const reads = observePackageFileReads();
     const profiles = new Set<string>();
 
     await scanPackageDirectory(packageDir, profiles);
 
     expect(profiles).toEqual(new Set(['http://example.org/profile', 'http://example.org/profile|1.0.0']));
-    expect(read.mock.calls.map(([file]) => path.basename(String(file))))
+    expect(reads.map(file => path.basename(file)))
       .toEqual(['.index.json']);
 
     const onProfile = vi.fn();
@@ -56,7 +56,7 @@ describe('sd-loader package source walker', () => {
     expect(profiles).toEqual(new Set(['http://example.org/profile', 'http://example.org/profile|1.0.0']));
   });
 
-  it('discovers, selects, and scans package versions without owning index policy', async () => {
+  it('scans the newest release and keeps canonicals only an older release carries discoverable', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'records-package-source-walker-'));
     tempDirs.push(root);
     await addPackage(root, 'example.fhir#1.0.0', 'http://example.org/old');
@@ -76,12 +76,50 @@ describe('sd-loader package source walker', () => {
     expect(result.sourceProfiles).toEqual(new Set([
       'http://example.org/latest',
       'http://example.org/latest|2.0.0',
+      'http://example.org/old',
+      'http://example.org/old|1.0.0',
     ]));
     expect(availableProfiles).toEqual(new Set([
       'http://example.org/external',
       'http://example.org/latest',
       'http://example.org/latest|2.0.0',
+      'http://example.org/old',
+      'http://example.org/old|1.0.0',
     ]));
+  });
+
+  it('keeps an older release published under another package canonical discoverable', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'records-package-source-walker-'));
+    tempDirs.push(root);
+    await addPackage(root, 'example.fhir#1.0.0', 'http://example.org/v1/old', 'http://example.org/v1');
+    await addPackage(root, 'example.fhir#2.0.0', 'http://example.org/latest');
+
+    const result = await walkPackageSource(root, new Set<string>(), {
+      packageVersionPins: {},
+      deduplicateEnabled: true,
+    });
+
+    expect(result.sourceProfiles).toEqual(new Set([
+      'http://example.org/latest',
+      'http://example.org/latest|2.0.0',
+      'http://example.org/v1/old',
+      'http://example.org/v1/old|1.0.0',
+    ]));
+  });
+
+  it('leaves a pinned package\'s other releases out', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'records-package-source-walker-'));
+    tempDirs.push(root);
+    await addPackage(root, 'example.fhir#1.0.0', 'http://example.org/old');
+    await addPackage(root, 'example.fhir#2.0.0', 'http://example.org/latest');
+    const availableProfiles = new Set<string>();
+
+    const result = await walkPackageSource(root, availableProfiles, {
+      packageVersionPins: { 'example.fhir': '2.0.0' },
+      deduplicateEnabled: true,
+    });
+
+    expect(result.sourceProfiles).toEqual(new Set(['http://example.org/latest', 'http://example.org/latest|2.0.0']));
   });
 });
 
@@ -89,10 +127,12 @@ async function addPackage(
   root: string,
   packageName: string,
   profileUrl: string,
+  canonical = 'http://example.org',
 ): Promise<void> {
   const packageDir = path.join(root, packageName, 'package');
   const version = packageName.split('#')[1];
   await mkdir(packageDir, { recursive: true });
+  await writeFile(path.join(packageDir, 'package.json'), JSON.stringify({ name: packageName.split('#')[0], version, canonical }));
   await writeFile(
     path.join(packageDir, 'StructureDefinition-test.json'),
     JSON.stringify({

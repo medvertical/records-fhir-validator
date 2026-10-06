@@ -8,6 +8,7 @@ import type { Hl7IssueType } from './operation-outcome-issue-types.js';
 export const QUESTIONNAIRE_PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType]> = [
   ['questionnaire-invariant-', 'invariant'],
   ['questionnaire-reference-wrong-type', 'invalid'],
+  ['questionnaire-reference-not-resolved', 'required'],
   ['questionnaire-missing-', 'structure'],
   ['questionnaire-duplicate-', 'invariant'],
   // SDC minOccurs/maxOccurs → invalid (Java uses code=invalid for count violations)
@@ -17,6 +18,8 @@ export const QUESTIONNAIRE_PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType
   // use the `invariant` HL7 category because Java flags them as
   // constraint violations (see R4.date-min-max-qr-base.json).
   ['questionnaire-sdc-', 'invariant'],
+  ['questionnaire-enablewhen-', 'business-rule'],
+  ['questionnaire-authored-outside-period', 'business-rule'],
   ['questionnaire-', 'structure'],
   ['qr-missing-', 'structure'],
   // Coding answer display disagrees with the canonical display for the
@@ -36,6 +39,8 @@ export const QUESTIONNAIRE_PREFIX_TO_HL7_ISSUE_TYPE: Array<[string, Hl7IssueType
   ['qr-type-mismatch', 'invariant'],
   // Non-repeating items with multiple answers (Java: code=invalid)
   ['qr-repeats-violation', 'invalid'],
+  // Item text that differs from the question's (Java: code=invalid)
+  ['qr-item-text-mismatch', 'invalid'],
   // Required group with no sub-items (Java: code=invariant)
   ['qr-required-group', 'invariant'],
   ['qr-unknown-linkid', 'structure'],

@@ -4,6 +4,7 @@
 
 import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
+import { applyBestPracticeSeverity } from '../strictness/best-practice-severity.js';
 
 type FhirRecord = Record<string, unknown>;
 
@@ -161,9 +162,7 @@ export function validateBestPractices(
     settings?: BestPracticeSettings,
 ): ValidationIssue[] {
     if (settings?.enableBestPracticeChecks === false) return [];
-    const issues = validator.validate(context);
-    if (settings?.bestPracticeSeverity !== 'warning') return issues;
-    return issues.map(issue => ({ ...issue, severity: 'warning' as const }));
+    return applyBestPracticeSeverity(validator.validate(context), settings?.bestPracticeSeverity);
 }
 
 function createBestPracticeIssue(

@@ -10,6 +10,7 @@ import type { ReferenceFormatValidation } from './reference-types.js';
 import { KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE } from './reference-resource-types.js';
 import { findReferencesInResource } from './bundle-reference-finder.js';
 import { createReferenceValidationIssue } from './reference-utils.js';
+import { isOtherSchemeAbsoluteUri } from './reference-url-parser.js';
 
 export interface ReferenceFormatContext {
   path?: string;
@@ -132,6 +133,10 @@ export function validateReferenceFormat(
     return { isValid: false, referenceType: 'logical', issues };
   }
 
+  if (isOtherSchemeAbsoluteUri(normalizedReference)) {
+    return { isValid: true, referenceType: 'absolute', issues };
+  }
+
   // Conditional reference: ResourceType?search-params (used in transaction bundles)
   if (/^[A-Z][a-zA-Z]+\?.+$/.test(normalizedReference)) {
     referenceType = 'relative'; // conditional refs are a form of relative reference
@@ -144,7 +149,8 @@ export function validateReferenceFormat(
   // keep this aligned with the broader ReferenceTypeExtractor parser.
   const relativePattern =
     /^([A-Z][a-zA-Z]+)\/([A-Za-z0-9\-._]{1,64})(?:\/_history\/([A-Za-z0-9\-._]{1,64}))?$/;
-  const match = normalizedReference.match(relativePattern);
+  const match = normalizedReference.match(relativePattern)
+    ?? matchPathPrefixedRelative(normalizedReference, relativePattern);
 
   if (match) {
     referenceType = 'relative';
@@ -174,6 +180,17 @@ export function validateReferenceFormat(
   }));
 
   return { isValid: false, referenceType: 'invalid', issues };
+}
+
+/**
+ * A path before ResourceType/id (`/fhir/Patient/1/_history/1`) still makes a
+ * relative URL; like the HL7 validator, take type and id from its last
+ * segments. The format rule warns that it only resolves on a matching base.
+ */
+function matchPathPrefixedRelative(reference: string, relativePattern: RegExp): RegExpMatchArray | null {
+  const tail = reference.match(/^\/?(?:[^/\s?#:]+\/)+?([A-Z][a-zA-Z]+\/.+)$/)?.[1];
+  const match = tail?.match(relativePattern);
+  return match && KNOWN_FHIR_RESOURCE_TYPES_BY_LOWERCASE.get(match[1].toLowerCase()) === match[1] ? match : null;
 }
 
 function createFormatIssue(input: {

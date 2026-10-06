@@ -1,3 +1,4 @@
+import { namesElement } from './extension-logical-paths.js';
 import type { StructureDefinition } from '../core/structure-definition-types.js';
 import { isRecord } from '../core/fhir-resource.js';
 
@@ -11,6 +12,12 @@ export interface ExtensionUsageSite {
   elementPath: string;
   attachment: 'resource-root' | 'element' | 'nested-extension';
   parentExtensionUrl?: string;
+  /**
+   * Every name the element answers to, resolved from its definitions (see
+   * extension-logical-paths.ts). Present only when the whole path resolved;
+   * element contexts can then be refuted, not just confirmed.
+   */
+  logicalPaths?: readonly string[];
 }
 
 export interface NormalizedExtensionContext {
@@ -76,7 +83,7 @@ function matchContextEntry(
 ): EntryVerdict {
   switch (context.type) {
     case 'element':
-      return matchElementExpression(context.expression, site);
+      return matchElementExpression(context.expression, site, true);
     case 'extension':
       return site.parentExtensionUrl === context.expression ? 'match' : 'no-match';
     case 'fhirpath':
@@ -97,7 +104,11 @@ const ABSTRACT_RESOURCE_BASES = new Set(['CanonicalResource', 'MetadataResource'
 
 const SIMPLE_PATH_PATTERN = /^[A-Za-z][A-Za-z0-9]*(\.[A-Za-z][A-Za-z0-9]*(\[x\])?)*$/;
 
-function matchElementExpression(expression: string, site: ExtensionUsageSite): EntryVerdict {
+function matchElementExpression(
+  expression: string,
+  site: ExtensionUsageSite,
+  byLogicalPaths = false,
+): EntryVerdict {
   // Canonical URLs / logical-model targets are out of scope for this matcher.
   if (expression.includes(':')) return 'unknown';
   if (expression === 'Element' || expression === 'Any' || expression === '*') return 'match';
@@ -112,6 +123,13 @@ function matchElementExpression(expression: string, site: ExtensionUsageSite): E
     return isRoot && !NON_DOMAIN_RESOURCES.has(site.resourceType) ? 'match' : 'no-match';
   }
   if (!SIMPLE_PATH_PATTERN.test(expression)) return 'unknown';
+
+  // FHIRPath contexts may name a choice element without [x]
+  // (`Observation.value`), which logical paths do not spell; they keep the
+  // literal comparison below.
+  if (byLogicalPaths && site.logicalPaths && !isRoot && !ABSTRACT_RESOURCE_BASES.has(expression.split('.')[0])) {
+    return namesElement(site.logicalPaths, expression) ? 'match' : 'no-match';
+  }
 
   if (!expression.includes('.')) {
     if (!isRoot) {

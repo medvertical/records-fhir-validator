@@ -140,4 +140,43 @@ describe('slice content rules', () => {
       }),
     ]);
   });
+  // CH EPR's BirthName requires the BR qualifier on the primitive family,
+  // which the name carries in its `_family` sidecar.
+  it('counts the extensions of a primitive in its sidecar', () => {
+    const birthNameProfile = {
+      ...practitionerProfile,
+      type: 'Patient',
+      snapshot: { element: [{ id: 'Patient.name:BirthName.family.extension', path: 'Patient.name.family.extension', min: 1, max: '2' }] },
+    } as StructureDefinition;
+    const birthName: SliceDefinition = { sliceName: 'BirthName', path: 'Patient.name', min: 0, max: '1' };
+    const qualifier = { url: 'http://hl7.org/fhir/StructureDefinition/iso21090-EN-qualifier', valueCode: 'BR' };
+
+    expect(validateSliceContentConstraints(
+      { family: 'Muster', _family: { extension: [qualifier] } }, birthName, 'Patient.name[1]', birthNameProfile,
+    )).toEqual([]);
+    expect(validateSliceContentConstraints(
+      { family: 'Muster' }, birthName, 'Patient.name[1]', birthNameProfile,
+    )).toContainEqual(expect.objectContaining({ code: 'structural-cardinality-min', path: 'Patient.name[1].family.extension' }));
+  });
+
+  // KBV's Mutterpass allows one entry in section:Epikrise.section:Schwangerschaft;
+  // the slice's children are named by their nested element ids.
+  it('holds the children of a nested slice to their maximum', () => {
+    const schwangerschaft: SliceDefinition = {
+      sliceName: 'Schwangerschaft',
+      path: 'Composition.section.section.section',
+      min: 0,
+      max: '1',
+      childMax: new Map([['entry', 1]]),
+    };
+    const section = { title: 'Schwangerschaft', entry: [1, 2, 3].map(index => ({ reference: `Observation/${index}` })) };
+
+    expect(validateSliceContentConstraints(section, schwangerschaft, 'Composition.section[2].section[0].section[0]', practitionerProfile))
+      .toContainEqual(expect.objectContaining({
+        code: 'structural-cardinality-max',
+        path: 'Composition.section[2].section[0].section[0].entry',
+        message: expect.stringContaining('expected at most 1, found 3'),
+      }));
+  });
 });
+

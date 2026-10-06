@@ -13,34 +13,8 @@
 
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/index.js';
+import { extractAnchorTargets, validateNarrativeImageSources, validateNarrativeTextLinks } from './narrative-fragment-targets.js';
 import { validateNarrativeDiv } from './narrative-xhtml-rules.js';
-
-/**
- * Extract every fragment-link target from an xhtml fragment: `id="…"`
- * attribute values plus legacy `<a name="…">` anchors. The IG-publisher's
- * generated narratives anchor contained resources and questionnaire options
- * with `<a name>` (e.g. `hc<resourceId>/<containedId>`, `opt-item.<linkId>`),
- * and the HL7 validator resolves local hyperlinks against both anchor forms.
- * Also used by the textLink-extension check to verify that a `htmlid`
- * sub-extension actually points at an anchor in the rendered narrative.
- */
-function extractAnchorTargets(div: string): Set<string> {
-    const targets = new Set<string>();
-    if (typeof div !== 'string' || div.length === 0) return targets;
-    const scannable = div
-        .replace(/<!--[\s\S]*?-->/g, '')
-        .replace(/<!\[CDATA\[[\s\S]*?\]\]>/g, '');
-    const tagPattern = /<(?!\/|!|\?)[A-Za-z][A-Za-z0-9:.-]*\b[^>]*>/g;
-    for (const tag of scannable.match(tagPattern) ?? []) {
-        const idMatch = tag.match(/\bid\s*=\s*(["'])([^"']+)\1/i);
-        if (idMatch?.[2]) targets.add(idMatch[2]);
-        if (!/^<a\b/i.test(tag)) continue;
-        // `[^\w-]` guard keeps attribute lookalikes such as data-name out.
-        const nameMatch = tag.match(/[^\w-]name\s*=\s*(["'])([^"']+)\1/i);
-        if (nameMatch?.[2]) targets.add(nameMatch[2]);
-    }
-    return targets;
-}
 
 // ============================================================================
 // Narrative Validator
@@ -50,7 +24,7 @@ export class NarrativeValidator {
     /**
      * Validate narrative content of a resource
      */
-    validateNarrative(resource: unknown, resourceType: string): ValidationIssue[] {
+    validateNarrative(resource: unknown, resourceType: string, enclosingBundle?: Record<string, unknown>): ValidationIssue[] {
         const issues: ValidationIssue[] = [];
 
         if (!isRecord(resource) || !isRecord(resource.text)) {
@@ -78,6 +52,7 @@ export class NarrativeValidator {
         if (typeof div === 'string' && div.length > 0) {
             issues.push(...validateNarrativeDiv(div, basePath, resourceType));
             issues.push(...validateLocalNarrativeHyperlinks(div, `${basePath}.div`, resourceType));
+            issues.push(...validateNarrativeImageSources(div, resource, `${basePath}.div`, resourceType));
 
             // Language tag check: if the resource has .language, the div
             // should have matching lang AND xml:lang attributes (FHIR rule,
@@ -151,17 +126,13 @@ export class NarrativeValidator {
             }));
         }
 
-        // textLink extensions on Narrative pin a Reference field's `data`
-        // URI to an `id`-attribute target inside the rendered xhtml. Java
-        // emits three diagnostics per broken textLink — one each for the
-        // missing html anchor, the unresolved data target, and the bad
-        // URL value. See ips-link baseline.
+        // The two textLink targets belong to different identity domains.
         const textExtensions: unknown[] = Array.isArray(resource.text.extension)
             ? resource.text.extension
             : [];
         if (textExtensions.length > 0) {
-            issues.push(...this.validateTextLinkExtensions(
-                resource, basePath, resourceType, textExtensions, typeof div === 'string' ? div : '',
+            issues.push(...validateNarrativeTextLinks(
+                resource, typeof div === 'string' ? div : '', textExtensions, basePath, resourceType, enclosingBundle,
             ));
         }
 
@@ -178,6 +149,7 @@ export class NarrativeValidator {
                 resource.section,
                 `${resourceType}.section`,
                 new WeakSet<object>(),
+                enclosingBundle,
             ));
         }
 
@@ -194,6 +166,7 @@ export class NarrativeValidator {
         sections: unknown[],
         basePath: string,
         ancestors: WeakSet<object>,
+        enclosingBundle?: Record<string, unknown>,
     ): ValidationIssue[] {
         const issues: ValidationIssue[] = [];
         for (let i = 0; i < sections.length; i++) {
@@ -211,12 +184,9 @@ export class NarrativeValidator {
                     }
                     const sectionTextExt: unknown[] = Array.isArray(text.extension) ? text.extension : [];
                     if (sectionTextExt.length > 0) {
-                        issues.push(...this.validateTextLinkExtensions(
-                            rootResource,
-                            textPath,
-                            'Composition',
-                            sectionTextExt,
-                            typeof text.div === 'string' ? text.div : '',
+                        issues.push(...validateNarrativeTextLinks(
+                            rootResource, typeof text.div === 'string' ? text.div : '',
+                            sectionTextExt, textPath, 'Composition', enclosingBundle,
                         ));
                     }
                 }
@@ -227,6 +197,7 @@ export class NarrativeValidator {
                         section.section,
                         `${sectionPath}.section`,
                         ancestors,
+                        enclosingBundle,
                     ));
                 }
             } finally {
@@ -236,77 +207,6 @@ export class NarrativeValidator {
         return issues;
     }
 
-    /**
-     * Validate `Narrative.extension` entries with the HL7-defined
-     * `textLink` URL. Each instance must carry sub-extensions `htmlid`
-     * (string) and `data` (uri); the htmlid value should appear as an
-     * `id="…"` attribute in the rendered xhtml, and the data uri (when it
-     * starts with `#`) should resolve to an id in that same xhtml.
-     */
-    private validateTextLinkExtensions(
-        resource: Record<string, unknown>,
-        basePath: string,
-        resourceType: string,
-        textExtensions: unknown[],
-        div: string,
-    ): ValidationIssue[] {
-        const issues: ValidationIssue[] = [];
-        const htmlIds = extractAnchorTargets(div);
-        const TEXTLINK_URL = 'http://hl7.org/fhir/StructureDefinition/textLink';
-
-        for (let i = 0; i < textExtensions.length; i++) {
-            const ext = textExtensions[i];
-            if (!isRecord(ext) || ext.url !== TEXTLINK_URL) continue;
-            const subs: unknown[] = Array.isArray(ext.extension) ? ext.extension : [];
-            const htmlidExtension = subs.find(sub =>
-                isRecord(sub) && sub.url === 'htmlid'
-            );
-            const htmlid = isRecord(htmlidExtension)
-                ? htmlidExtension.valueString
-                : undefined;
-            const dataIdx = subs.findIndex(sub =>
-                isRecord(sub) && sub.url === 'data'
-            );
-            const dataExtension = dataIdx >= 0 ? subs[dataIdx] : undefined;
-            const dataUri = isRecord(dataExtension)
-                ? dataExtension.valueUri
-                : undefined;
-
-            if (typeof htmlid === 'string' && htmlid.length > 0 && !htmlIds.has(htmlid)) {
-                issues.push(createValidationIssue({
-                    code: 'narrative-textlink-htmlid-not-found',
-                    path: basePath,
-                    resourceType,
-                    customMessage: `The html id '${htmlid}' was not found in the xhtml`,
-                    severityOverride: 'error',
-                }));
-            }
-
-            if (typeof dataUri === 'string' && dataUri.startsWith('#')) {
-                const targetId = dataUri.substring(1);
-                if (targetId.length > 0 && !htmlIds.has(targetId)) {
-                    issues.push(createValidationIssue({
-                        code: 'narrative-textlink-target-not-found',
-                        path: basePath,
-                        resourceType,
-                        customMessage:
-                            `The target of the textLink data reference '${dataUri}' was not found in the resource`,
-                        severityOverride: 'error',
-                    }));
-                    issues.push(createValidationIssue({
-                        code: 'narrative-textlink-uri-no-target',
-                        path: `${basePath}.extension[${i}].extension[${dataIdx}].value.ofType(uri)`,
-                        resourceType,
-                        customMessage:
-                            `The URL value '${dataUri}' is invalid because there is no matching target`,
-                        severityOverride: 'error',
-                    }));
-                }
-            }
-        }
-
-        return issues;
-    }
 
 }
 
