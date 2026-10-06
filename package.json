@@ -19,6 +19,7 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "typecheck": "npm run typecheck --workspaces",
+    "pretest": "node scripts/oss/portable-validator-test-fixtures.mjs",
     "test": "vitest run --config vitest.config.mjs",
     "pack:dry": "npm run pack:dry --workspace @records-fhir/validation-types && npm run pack:dry --workspace @records-fhir/validator",
     "oss:audit-validator": "node scripts/oss/audit-validator-boundary.mjs",

@@ -27,9 +27,12 @@ Before installing, add this override to your application's root `package.json`:
 It pins the patched CSV parser in the transitive UCUM dependency. npm does not
 inherit library overrides into consuming applications. See [the dependency
 security note](./SECURITY.md#transitive-csv-parser) for the advisory and scope.
+Existing consumer locks can also retain an affected transitive `js-yaml` version;
+see [the lock-refresh guidance](./SECURITY.md#dependency-checks-for-080--6-october-2026) for the
+upstream correction permitted by the existing dependency ranges.
 
 ```sh
-npm install @records-fhir/validator @records-fhir/validation-types
+npm install @records-fhir/validator@0.8.0 @records-fhir/validation-types@0.1.13
 ```
 
 Run the CLI against a JSON, XML, or NDJSON input:
@@ -59,7 +62,7 @@ const issues = await recordsValidator.validateRequest({
 Gate pull requests with the GitHub Action:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0
+- uses: medvertical/records-fhir-validator@v0.8.0
   with:
     paths: resources/**/*.json
     fhir-version: R4
@@ -68,8 +71,10 @@ Gate pull requests with the GitHub Action:
 
 ## Repository Boundary
 
-This package is designed to be published from the separate public repository
-`medvertical/records-fhir-validator`.
+The source of truth is the Records monorepo under `packages/validator` and
+`packages/validation-types`. Publication runs from a checked monorepo release
+revision; [`medvertical/records-fhir-validator`](https://github.com/medvertical/records-fhir-validator)
+is its generated public source mirror.
 
 Included in the public boundary:
 
@@ -92,14 +97,17 @@ Excluded from the public boundary:
 ## Install
 
 ```sh
-npm install @records-fhir/validator @records-fhir/validation-types
+npm install @records-fhir/validator@0.8.0 @records-fhir/validation-types@0.1.13
 ```
 
-For offline profile validation, install the optional profile bundle:
+For local profile validation, supply the exact FHIR Core and implementation-guide
+packages required by your inputs. Optional bundled profiles retain their upstream
+licenses and notices; `@records-fhir/bundled-profiles` is excluded from the default
+public export until that license review is complete.
 
-```sh
-npm install @records-fhir/bundled-profiles
-```
+Installing the validator alone does not provide every profile or complete
+terminology content. Package downloads are enabled by default; configure profile
+sources and terminology independently when you require offline operation.
 
 ### Pinning
 
@@ -109,7 +117,7 @@ depending on your trade-off between freshness and stability:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Always-latest within current major | `medvertical/records-fhir-validator@v0` | Force-moved on every stable release; never advances onto a prerelease |
-| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.5.0` | Immutable once published |
+| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.8.0` | Immutable once published |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | For audit / forensic builds |
 
 The `validator-v<semver>` tag you may see on the public repo's release
@@ -117,6 +125,11 @@ page is the **npm tarball mirror** identifier — it titles the GitHub
 release and lets you cross-reference a public-repo commit against an
 npm tarball. It is not intended as a consumer pin; use `v<semver>` for
 Action references.
+
+For 0.8.0, the [public release](https://github.com/medvertical/records-fhir-validator/releases/tag/validator-v0.8.0)
+and `validator-v0.8.0`, `v0.8.0`, and `v0` identify public commit
+`2c6e342bd1828565b52c3c56833a4854f9edc2a7`. Both published npm packages
+record monorepo source `25f74670af7bd54b82ce668094c4bb79ee1c76fa`.
 
 ## Examples
 
@@ -144,7 +157,7 @@ Common options:
 
 | Option | Default | Purpose |
 |---|---|---|
-| `--profile-url <url>` | base profile for each `resourceType` | Validate every resource against one canonical profile. |
+| `--profile-url <url>` | declared or FHIR-implied profiles, then the base profile | Override profile selection with one canonical profile for every resource. |
 | `--fhir-version R4\|R4B\|R5\|R6` | `R4` | Select the public FHIR version. |
 | `--fail-on error\|warning\|none` | `error` | Control the process exit threshold. |
 | `--format text\|json` | `text` | Print human-readable lines or structured JSON. |
@@ -484,7 +497,16 @@ The package does not import Records server modules, database code, Express handl
 - `setCustomRulesSource()` for user-defined business rules.
 - `setEngineLogger()` for host logging.
 
-Without these integrations, the validator uses no-op defaults and runs as a standalone offline validator.
+Without host integrations, the validator runs standalone with its default profile
+source and no-op custom-rule hooks. Standalone use does not imply offline use:
+`autoDownload` is enabled by default. For controlled offline validation, provide
+exact local package directories and version pins through
+`createFilesystemProfileSource({ packageDirs, packageVersionPins })`, configure
+`packageCachePath` and `bundledProfilesPath`, and disable downloads in both the
+validator configuration and request `settings.packageDownload.autoDownload`.
+Configure terminology package directories and local-only terminology separately;
+missing or incomplete content must remain unverifiable rather than count as a
+complete terminology check.
 
 ## Practical Scope
 
@@ -500,15 +522,27 @@ SHC, DSIG, JSON5 harnesses, legacy STU3/DSTU versions, logical models, and
 site-level MII certification remain outside the current headline support scope
 unless called out by a dedicated conformance lane.
 
-## Release acceptance — 5 October 2026
+## Published 0.8.0 release — 6 October 2026
 
-The explicitly selected [current release contract](../../conformance-results/validator-current-release.json) binds the candidate package versions, built runtime, maintained measurement tools, dependency manifests and original corpora to SHA-256-pinned evidence. The release check recomputes every original R4 JSON comparison and each admitted reference contract from the captured SDK results. Replay after committing the measured content preserves the original measurement epoch; it is not a fresh validator measurement.
+[`@records-fhir/validator@0.8.0`](https://www.npmjs.com/package/@records-fhir/validator/v/0.8.0) and [`@records-fhir/validation-types@0.1.13`](https://www.npmjs.com/package/@records-fhir/validation-types/v/0.1.13) are published. The [public source release](https://github.com/medvertical/records-fhir-validator/releases/tag/validator-v0.8.0) preserves the immutable npm source revision listed above.
 
-The R4 scope contains 390 original cases: **390/390 accepted by the scoped acceptance policy**, comprising **387/390 unchanged raw passes** and three separately proved contracts. The original raw regression gate remains red, with zero skips and runtime errors. Unknown ASK/PZN membership, the declared Java message cap and the independently proved local ValueSet conflict remain explicitly qualified; independent clinical errors are preserved. This is not 100% diagnostic identity or universal HAPI/MII parity.
+The explicitly selected [release contract](../../conformance-results/validator-current-release.json) binds package versions, built runtime, maintained measurement tools, dependency manifests and original corpora to SHA-256-pinned evidence. Replay preserves its measurement epoch; it is not a fresh validator measurement.
 
-The MII clean corpus records **442/442 clean fixtures with 110 existing exclusions**. Eleven ICU profile claims and one duplicated Laboratory business version were corrected to their own definitions; all other fixture fields remain unchanged. This is scoped clean-corpus precision, not complete terminology validation, reference parity or site certification. The Laboratory example retains an explicitly incomplete terminology check.
+| Measured lane | Result | Qualification |
+|---|---|---|
+| Offline R4 raw comparison | **387/390** | Unchanged 0.7 threshold; zero skips or runtime errors. |
+| Offline R4 bounded acceptance | **390/390** | Three independently checked contracts, with three Unknown boundaries preserved. |
+| MII clean-corpus precision | **442/442** | **110 explicit exclusions**; scoped precision, not complete terminology validation or site certification. |
+| General R4 quality gate | **185/186** | No exclusions; original 99% threshold. |
+| Separate live comparison | **385 passes / 2 failures / 3 skips** | Zero runtime errors; skips require unavailable national SNOMED editions. Offline contracts are not applied to live rows. |
 
-Public release preparation verifies the current acceptance contract and the independently installed SDK/CLI tarballs. Historical public figures below retain their own source and measurement limits.
+The MII measurement corrects eleven ICU profile claims and one duplicated Laboratory business version to their own definitions; all other fixture fields remain unchanged.
+
+The three offline contracts qualify unknown ASK/PZN membership, the declared Java message cap and an independently proved local ValueSet conflict; independent clinical errors remain errors. The raw R4 regression gate remains red. The MII Laboratory example retains an incomplete terminology check. These results do not establish diagnostic identity or universal HAPI/MII parity.
+
+The successful [publication run](https://github.com/medvertical/records/actions/runs/37428589959) passed type checks, packaged-consumer checks and seven isolated quality gates with zero network attempts. It used authenticated finite original package stores with downloads disabled. Historical measurements that allowed a home-directory FHIR cache fallback do not acquire that isolation proof retroactively; these stores also do not establish a complete terminology dependency graph.
+
+As of 6 October 2026, the initial [public CI](https://github.com/medvertical/records-fhir-validator/actions/runs/37430716971) failed **13 of 6,737 tests** because four original Core definitions were absent from its test setup. The repaired cold export passes **6,737/6,737 tests in 632 files without skips**, typecheck, build, packaged-consumer smoke and the boundary audit. The targeted development-lock refresh records zero npm audit vulnerabilities. This local pass is separate from public CI on the actual development commit; consult the [public CI workflow](https://github.com/medvertical/records-fhir-validator/actions/workflows/ci.yml) for its current status. The root README’s CI badge tracks the development branch, while immutable release tags retain their published snapshot.
 
 ## Historical Conformance Evidence
 
@@ -526,9 +560,11 @@ used for this update was
 `conformance-results/report-2026-07-23.json`.
 
 The upstream manifest contains more than 900 entries. Records does not claim
-that all manifest entries are executable in the current TypeScript validator
-mode. The reported 100.0% applies to the JSON resource validation subset that
-can be compared against the Java validator's expected `OperationOutcome`.
+that all manifest entries were executable in that archived TypeScript validator
+mode. The earlier reported 100.0% referred to the JSON resource validation subset
+that could be compared against the Java validator's expected `OperationOutcome` in
+that archived lane. Its detailed table below records 531 raw passes and two
+failures; the earlier 100.0% headline is not a current release claim.
 
 | Stage | Count | Meaning |
 |---|---:|---|
@@ -546,7 +582,8 @@ failed to load and both cases validated against the base spec — they counted a
 passes because validation had not happened. Reading them correctly exposed real
 divergences at that measurement epoch. The superseded 536/536 headline included both.
 
-Reproduce the headline lane locally with:
+The archived lane used the following command. A new run measures the current
+code and terminology service; it does not recreate the 23 July snapshot:
 
 ```sh
 npm run conformance -- --tx-server https://tx-dev.fhir.org/r4 --output-file conformance-results/report-local.json
@@ -602,16 +639,17 @@ product scope with actual JSON resource validation correctness.
 
 For that reason, the headline number should be read as:
 
-> Records matches the Java validator on 531 of the 533 currently in-scope FHIR
-> JSON resource validation comparisons.
+> The archived 23 July 2026 run matched the Java validator on 531 of its 533
+> executed FHIR JSON resource validation comparisons.
 
 It should not be read as:
 
 > Records implements every format, protocol, legacy version, and adjacent
 > standard represented somewhere in the upstream manifest.
 
-The spec dispatch coverage report is also at 100% for the R4 base package
-constraints measured by `quality:spec-coverage`.
+The archived spec dispatch report recorded 100% coverage for the R4 base package
+constraints measured by `quality:spec-coverage`. Dispatch coverage measures
+constraint routing, independently of validator parity or diagnostic correctness.
 
 ### MII 2026 Reference Scope
 
@@ -650,7 +688,7 @@ The converter and graph executor are exposed through the experimental
 dual-path experiments. This does not make the graph path the default runtime
 validator.
 
-The current all-scope MII dual-path lane covers 555 real fixtures. Of those, 512
+The archived 23 July 2026 all-scope MII dual-path lane covers 555 real fixtures. Of those, 512
 have Java/reference coverage through the attached Java CLI supplement
 (`conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json`).
 The final report is
@@ -663,7 +701,9 @@ normalized Java/reference issue keys respectively. Twelve normalized issue-key
 gaps across the 11 graph-only cases are explicitly deferred because the
 reference-slice discriminator requires an external target that is unavailable
 to the standalone fixture; Records reports those slices as unverifiable instead
-of declaring the resources invalid. No other Java-confirmed runtime gap remains.
+of declaring the resources invalid. That report recorded no other Java-confirmed
+runtime gap within its measured comparison set; it does not certify the current
+release.
 
 Reference coverage is reported separately from graph-vs-Records correctness. The
 remaining 43 reference-coverage gaps are fixtures without an explicit
@@ -693,7 +733,7 @@ This lane is therefore an implementation-reduction and convergence signal. It
 does not broaden the public headline parity claim beyond the explicitly measured
 FHIR JSON comparison lanes.
 
-The release gate for this lane is:
+The stored-report gate for this archived lane is:
 
 ```bash
 npm run quality:fhir-schema-gate -- \

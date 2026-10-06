@@ -1,0 +1,69 @@
+{
+  "schema": "records.validator.portable-test-fixtures.v1",
+  "scope": {
+    "purpose": "Original FHIR definitions required by portable terminology unit tests.",
+    "partialPackage": true,
+    "testFixturesOnly": true,
+    "originalDefinitionBytesChanged": false,
+    "includesFullPackage": false,
+    "includesDeclaredDependencyClosure": false,
+    "runtimeTerminologyAuthorityClaimed": false,
+    "description": "This is a five-file test subset, not a complete FHIR package, release-quality report, terminology authority, or replacement for an installed package catalog. No package index, user cache, clinical examples, or downloads are included."
+  },
+  "package": {
+    "id": "hl7.fhir.r4.core",
+    "version": "4.0.1",
+    "fhirVersion": "R4",
+    "declaredLicense": "CC0-1.0",
+    "originalManifestUnchanged": true
+  },
+  "provenance": {
+    "inventoryPath": "conformance-results/validator-release-inventory-loop114-g8-2026-10-06.json",
+    "inventorySha256": "982cda9dd90fd93b591be00ce266771592a6b06227487a6b7b1405da0d089923",
+    "description": "Every original source path and SHA-256 below is present in the previously authenticated G8 release inventory. The inventory pin authenticates provenance; it does not turn this partial test subset into a complete package."
+  },
+  "files": [
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/package.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/package.json",
+      "sha256": "e5c114ff04776789c7c6647862d49efbaf395d419c3f507574e7292aca471f62",
+      "sizeBytes": 443
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/ValueSet-communication-category.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/ValueSet-communication-category.json",
+      "sha256": "a480f969c96cbe32edc17b979d5ee475201bf581b9752ee317052f98bff2c25b",
+      "sizeBytes": 1161,
+      "resourceType": "ValueSet",
+      "canonical": "http://hl7.org/fhir/ValueSet/communication-category",
+      "resourceVersion": "4.0.1"
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/ValueSet-marital-status.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/ValueSet-marital-status.json",
+      "sha256": "71940ae426fd58f5a7d34c3436c72d1f6c7578bf1e96819bc3c4856378ea0c1e",
+      "sizeBytes": 1287,
+      "resourceType": "ValueSet",
+      "canonical": "http://hl7.org/fhir/ValueSet/marital-status",
+      "resourceVersion": "4.0.1"
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/CodeSystem-administrative-gender.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/CodeSystem-administrative-gender.json",
+      "sha256": "928e86ab4bd68d6c4d2a306f97b6c28f0ac5e5d11e1c1d5e7a72b96fa5cc3b7f",
+      "sizeBytes": 2561,
+      "resourceType": "CodeSystem",
+      "canonical": "http://hl7.org/fhir/administrative-gender",
+      "resourceVersion": "4.0.1"
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/CodeSystem-audit-source-type.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/CodeSystem-audit-source-type.json",
+      "sha256": "76caf8fff64045947d89a2f6f9fff4098938b34aec0ecff8569464df44c2e6d7",
+      "sizeBytes": 1884,
+      "resourceType": "CodeSystem",
+      "canonical": "http://terminology.hl7.org/CodeSystem/security-source-type",
+      "resourceVersion": "4.0.1"
+    }
+  ]
+}

@@ -113,3 +113,31 @@ package must add the override to their own root manifest and refresh their lock
 file. A bare installation without it can still report this upstream advisory.
 The consumer smoke test audits the resulting production dependency graph as
 well as exercising the packaged validator.
+
+## Dependency checks for 0.8.0 — 6 October 2026
+
+The published validator depends on FHIRPath, which declares `js-yaml ^4.1.1`
+as a production dependency. Existing consumer lockfiles can retain js-yaml 4.1.1.
+The maintainer's [YAML merge-source advisory](https://github.com/nodeca/js-yaml/security/advisories/GHSA-2883-xcg3-v3hh)
+is fixed in 4.3.2, which fits that existing range. Inspect the installed tree:
+
+```bash
+npm ls js-yaml
+npm audit
+```
+
+Refresh the lock within the existing dependency range so the selected js-yaml
+4.x version is at least 4.3.2, review the lockfile diff, and repeat these checks.
+The inspected FHIRPath 4.11.0 code imports js-yaml only in its own CLI for YAML
+output; a vulnerable YAML loading path in the validator was not observed.
+This dependency finding does not establish that every validator application can
+trigger the upstream denial of service.
+
+The public development repository also retained esbuild 0.27.7 through its Vite
+and tsx development dependencies. The maintainer's [Windows development-server
+advisory](https://github.com/evanw/esbuild/security/advisories/GHSA-g7r4-m6w7-qqqr)
+is fixed in 0.28.1. A targeted development-lock refresh can update tsx and esbuild
+within the existing declared ranges. The repaired lock records js-yaml 4.3.2, tsx 4.23.15 and esbuild 0.28.2. Its
+installed graph passed all 6,737 cold unit tests, build and packaged-consumer
+checks, with zero npm audit vulnerabilities. esbuild is not a dependency of
+either published npm package.

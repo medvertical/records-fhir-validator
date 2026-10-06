@@ -74,6 +74,9 @@ It selects the patched CSV parser required by the transitive UCUM dependency
 ([GHSA-8cw4-87c7-c6xx](https://github.com/advisories/GHSA-8cw4-87c7-c6xx)).
 The exported repository includes this override. npm does not inherit a library's
 overrides into a consuming application; consumers must set it at their root.
+Existing consumer locks can also retain an affected transitive js-yaml version.
+Follow the [dependency refresh guidance](./packages/validator/SECURITY.md#dependency-checks-for-080--6-october-2026)
+within the dependency's existing range.
 
 ```json
 {
@@ -102,7 +105,7 @@ Useful CLI options:
 
 | Option | Default | Purpose |
 |---|---|---|
-| `--profile-url <url>` | base profile for each `resourceType` | Validate every resource against one canonical profile. |
+| `--profile-url <url>` | declared or FHIR-implied profiles, then the base profile | Override profile selection with one canonical profile for every resource. |
 | `--fhir-version R4\|R4B\|R5\|R6` | `R4` | Select the public FHIR version. |
 | `--fail-on error\|warning\|none` | `error` | Control the process exit threshold. |
 | `--format text\|json` | `text` | Print human-readable lines or structured JSON. |
@@ -131,9 +134,16 @@ const issues = await recordsValidator.validateRequest({
 });
 ```
 
-Optional offline profile packages can be loaded through the package APIs. The
-default public repository export intentionally excludes bundled third-party IG
-artifacts until their upstream licenses and notices have been reviewed.
+Supply the exact FHIR Core and implementation-guide packages required by your
+inputs through the package APIs. Standalone use does not imply offline use:
+package downloads are enabled by default. For controlled offline validation,
+configure local package directories and version pins, disable downloads in the
+validator and request settings, and configure local terminology separately.
+Missing or incomplete content remains unverifiable.
+
+The default public export excludes bundled third-party IG artifacts until their
+upstream licenses and notices have been reviewed; installing the validator alone
+does not provide every profile or complete terminology content.
 
 ## Output Shape
 
@@ -319,6 +329,41 @@ Oracle identities are declared per lane; unrecorded executable versions remain u
 </details>
 
 
+## 0.8.0 Publication Record — 6 October 2026
+
+[Validator 0.8.0](https://www.npmjs.com/package/@records-fhir/validator/v/0.8.0)
+and [validation-types 0.1.13](https://www.npmjs.com/package/@records-fhir/validation-types/v/0.1.13)
+were published from monorepo source
+`25f74670af7bd54b82ce668094c4bb79ee1c76fa`. The
+[public release](https://github.com/medvertical/records-fhir-validator/releases/tag/validator-v0.8.0)
+and tags `validator-v0.8.0`, `v0.8.0`, and `v0`
+identify generated commit `2c6e342bd1828565b52c3c56833a4854f9edc2a7`.
+
+The offline R4 lane records **387/390 raw passes** at the unchanged 0.7
+threshold, with zero skips or runtime errors. **390/390 bounded acceptance**
+includes three independently checked contracts with three preserved Unknown
+boundaries. MII clean-corpus precision is **442/442 with 110 explicit exclusions**.
+The separate General R4 gate records **185/186**, with no exclusions and its
+original 99% threshold. These results do not establish universal HAPI/MII parity.
+
+The separate live lane records **385 passes, 2 failures and 3 national SNOMED
+skips**, with zero runtime errors. Offline acceptance contracts are not applied
+to those live comparisons. Seven isolated publication quality gates passed with
+zero network attempts using authenticated finite original package stores and
+disabled downloads. Earlier reports that allowed home-directory FHIR cache
+fallback retain that limitation; finite stores do not prove a complete
+terminology dependency graph.
+
+As of this date, the initial [public CI](https://github.com/medvertical/records-fhir-validator/actions/runs/37430716971)
+failed **13 of 6,737 tests** because four original FHIR Core definitions were
+missing from the test setup. The repaired cold export passes
+**6,737/6,737 tests in 632 files without skips**, typecheck, build, packaged-consumer
+smoke and the boundary audit.
+Its targeted development-lock refresh records zero npm audit vulnerabilities.
+This local pass is separate from public CI on the actual development commit. The CI
+badge tracks the development branch. Immutable release tags retain the original
+published snapshot.
+
 ## Examples
 
 - [Standalone validation](./packages/validator/examples/standalone-validate.mjs)
@@ -332,6 +377,7 @@ The package-level README contains the fuller API guide:
 
 ```sh
 npm install
+npm test
 npm run typecheck
 npm run build
 npm run oss:audit-validator
@@ -360,6 +406,7 @@ npm test
 ```
 
 These commands execute every portable package unit test against the workspace source.
+Test startup authenticates the included partial CC0 FHIR R4 Core fixtures and copies them into a fresh repository-owned test store. Tests use this store through `FHIR_PACKAGE_CACHE_PATH`, independently of the developer's FHIR cache. [tests/fixtures/fhir-packages/manifest.json](./tests/fixtures/fhir-packages/manifest.json) records the five original files, hashes and scope. This is a finite test prerequisite, not a complete terminology package or a runtime dependency; no fixture downloads occur.
 The published SDK and CLI retain their declared Node.js 20.0 minimum.
 The exact test scope is recorded in [tests/test-scope.json](./tests/test-scope.json).
 The explicitly listed profile integration tests remain in the Records monorepo's existing profile-contract lane, with their original assertions and fixture identities. They require the licensed profile catalog or private corpus and are not exported. Synthetic package controls separately cover Quantity bindings, filesystem lookup, issue anchors and expression cache behavior. No private corpus is bundled with this repository.
