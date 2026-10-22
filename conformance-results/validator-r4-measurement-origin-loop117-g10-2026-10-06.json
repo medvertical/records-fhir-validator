@@ -1,9 +1,9 @@
 {
   "schema": "records.validator.r4-acceptance-measurement.v1",
-  "before": "cd9b977d53009eee937efa0154f7d5ad8b8bf334aa2d013f956c1cf931235167",
-  "after": "cd9b977d53009eee937efa0154f7d5ad8b8bf334aa2d013f956c1cf931235167",
-  "startedAt": "2026-10-05T22:39:28.855Z",
-  "finishedAt": "2026-10-05T22:42:32.470Z",
+  "before": "01ffc1d144084213bc9aee3d94bc6804e3781c916ceaa3b739f6c960576cd95f",
+  "after": "01ffc1d144084213bc9aee3d94bc6804e3781c916ceaa3b739f6c960576cd95f",
+  "startedAt": "2026-10-06T10:08:07.329Z",
+  "finishedAt": "2026-10-06T10:20:52.529Z",
   "command": [
     "env",
     "TSX_TSCONFIG_PATH=tsconfig.conformance-built.json",
@@ -37,11 +37,11 @@
     "--terminology-default-case",
     "no.gastronet.message-limit",
     "--output-file",
-    "conformance-results/validator-r4-raw-loop111-g1-2026-10-05.json",
+    "conformance-results/validator-r4-raw-loop117-g10-2026-10-06.json",
     "--acceptance-evidence-output",
-    "conformance-results/validator-r4-receipts-loop111-g1-2026-10-05.json"
+    "conformance-results/validator-r4-receipts-loop117-g10-2026-10-06.json"
   ],
   "exitCode": 0,
-  "rawReportSha256": "2c797459ed123d6e7bba6b00265eabe03c3d126c85e65cc9699524b81d72648d",
-  "measurementSha256": "0287d12dbd2c3ae0d7037ebccc09242ce5c5129aefbb9182b41bf282979478bd"
+  "rawReportSha256": "fc5b877de201edd676858c175d6699dd94135bc299af04d4fb1933e1571c7c62",
+  "measurementSha256": "08504b70a772644e3dc8a394d8d8854a6eeccbd07242d23be5c027bfc4fb9644"
 }

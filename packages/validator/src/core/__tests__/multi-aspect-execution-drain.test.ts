@@ -32,6 +32,97 @@ function executionOptions(deps: MultiAspectDeps, aspects: string[]) {
 }
 
 describe('multi-aspect admitted work drainage', () => {
+  it('starts reference reads during profile validation but publishes them after the prerequisite', async () => {
+    const profile = deferred();
+    const reference = deferred();
+    const referenceExecutor = vi.fn(() => reference.promise);
+    const deps = {
+      sdLoader: {},
+      profileExecutor: { validate: vi.fn(() => profile.promise) },
+      terminologyExecutor: { getFHIRPathTerminologyResolver: () => undefined },
+      referenceExecutor: { validate: referenceExecutor },
+      invariantExecutor: { validate: vi.fn(async () => []) },
+    } as unknown as MultiAspectDeps;
+    const options = executionOptions(deps, ['profile', 'reference', 'invariant']);
+    options.skipTargetProfileConformance = true;
+
+    const execution = executeSelectedAspects(options);
+    expect(referenceExecutor).toHaveBeenCalledOnce();
+    reference.resolve([]);
+    await setImmediate();
+    expect(options.collectedAspects.map(aspect => aspect.aspect)).not.toContain('reference');
+
+    profile.resolve([]);
+    await execution;
+    expect(options.collectedAspects.map(aspect => aspect.aspect).sort()).toEqual(['invariant', 'profile', 'reference']);
+  });
+
+  it('drains an early reference read when the profile prerequisite is aborted', async () => {
+    const profile = deferred();
+    const reference = deferred();
+    const deps = {
+      sdLoader: {},
+      profileExecutor: { validate: () => profile.promise },
+      terminologyExecutor: { getFHIRPathTerminologyResolver: () => undefined },
+      referenceExecutor: { validate: () => reference.promise },
+      invariantExecutor: { validate: vi.fn(async () => []) },
+    } as unknown as MultiAspectDeps;
+    const options = executionOptions(deps, ['profile', 'reference', 'invariant']);
+    options.skipTargetProfileConformance = true;
+    let settled = false;
+    const execution = executeSelectedAspects(options);
+    void execution.finally(() => { settled = true; }).catch(() => undefined);
+
+    profile.reject(new BatchValidationAbortedError());
+    await setImmediate();
+    expect(settled).toBe(false);
+    reference.resolve([]);
+    await expect(execution).rejects.toBeInstanceOf(BatchValidationAbortedError);
+  });
+
+  it('routes an early reference failure through the existing aspect policy', async () => {
+    const profile = deferred();
+    const reference = deferred();
+    const deps = {
+      sdLoader: {},
+      profileExecutor: { validate: () => profile.promise },
+      terminologyExecutor: { getFHIRPathTerminologyResolver: () => undefined },
+      referenceExecutor: { validate: () => reference.promise },
+      invariantExecutor: { validate: vi.fn(async () => []) },
+    } as unknown as MultiAspectDeps;
+    const options = executionOptions(deps, ['profile', 'reference', 'invariant']);
+    options.skipTargetProfileConformance = true;
+    const execution = executeSelectedAspects(options);
+
+    reference.reject(new Error('read failed'));
+    await setImmediate();
+    expect(options.collectedAspects.map(aspect => aspect.aspect)).not.toContain('reference');
+    profile.resolve([]);
+    await execution;
+    expect(options.collectedAspects.find(aspect => aspect.aspect === 'reference')?.issues)
+      .toEqual([expect.objectContaining({ code: 'internal-error' })]);
+  });
+
+  it('routes a synchronous early reference failure through the existing aspect policy', async () => {
+    const profile = deferred();
+    const deps = {
+      sdLoader: {},
+      profileExecutor: { validate: () => profile.promise },
+      terminologyExecutor: { getFHIRPathTerminologyResolver: () => undefined },
+      referenceExecutor: { validate: () => { throw new Error('read failed immediately'); } },
+      invariantExecutor: { validate: vi.fn(async () => []) },
+    } as unknown as MultiAspectDeps;
+    const options = executionOptions(deps, ['profile', 'reference', 'invariant']);
+    options.skipTargetProfileConformance = true;
+    const execution = executeSelectedAspects(options);
+
+    expect(options.collectedAspects.map(aspect => aspect.aspect)).not.toContain('reference');
+    profile.resolve([]);
+    await execution;
+    expect(options.collectedAspects.find(aspect => aspect.aspect === 'reference')?.issues)
+      .toEqual([expect.objectContaining({ code: 'internal-error' })]);
+  });
+
   it.each(['before-invariant', 'parallel'] as const)(
     'retains the resource until a sibling settles after %s cancellation', async phase => {
       const failing = deferred();

@@ -1,5 +1,6 @@
 import { profileDefinitionSourceKey } from './profile-reference-authority.js';
 import type { ElementDefinition, StructureDefinition } from './structure-definition-types.js';
+import { cloneSnapshotElements } from './snapshot-type-profile-authority.js';
 
 /** Bounded insertion-ordered cache for generated profile snapshots. */
 export class SnapshotCache {
@@ -10,19 +11,19 @@ export class SnapshotCache {
     this.maxEntries = Math.max(1, Math.trunc(maxEntries));
   }
 
-  get(profile: StructureDefinition, ownerKey?: string, requestedFamily?: 'R4' | 'R5' | 'R6', basisKey?: string): ElementDefinition[] | undefined {
-    return this.entries.get(this.keyFor(profile, ownerKey, requestedFamily, basisKey));
+  get(key: string): ElementDefinition[] | undefined {
+    const elements = this.entries.get(key);
+    return elements && cloneSnapshotElements(elements);
   }
 
-  set(profile: StructureDefinition, snapshot: ElementDefinition[], ownerKey?: string, requestedFamily?: 'R4' | 'R5' | 'R6', basisKey?: string): void {
-    const key = this.keyFor(profile, ownerKey, requestedFamily, basisKey);
+  set(key: string, snapshot: ElementDefinition[]): void {
     this.entries.delete(key);
     while (this.entries.size >= this.maxEntries) {
       const oldestKey = this.entries.keys().next().value;
       if (oldestKey === undefined) break;
       this.entries.delete(oldestKey);
     }
-    this.entries.set(key, snapshot);
+    this.entries.set(key, cloneSnapshotElements(snapshot));
   }
 
   clear(): void {
@@ -42,7 +43,7 @@ export class SnapshotCache {
     return { size: this.entries.size, profiles: [...this.entries.keys()] };
   }
 
-  private keyFor(profile: StructureDefinition, ownerKey?: string, requestedFamily?: 'R4' | 'R5' | 'R6', basisKey?: string): string {
+  keyFor(profile: StructureDefinition, ownerKey?: string, requestedFamily?: 'R4' | 'R5' | 'R6', basisKey?: string): string {
     const version = (profile as { version?: string }).version ?? 'unversioned';
     const fhirVersion = requestedFamily ?? profile.fhirVersion ?? 'fhir-any';
     const source = profileDefinitionSourceKey(profile);

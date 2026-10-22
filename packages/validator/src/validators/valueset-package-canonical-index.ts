@@ -136,6 +136,7 @@ export class PackageCanonicalIndex {
     });
     return generation.building;
   }
+
 }
 
 /**

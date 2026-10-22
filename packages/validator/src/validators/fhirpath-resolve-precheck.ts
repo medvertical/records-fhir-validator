@@ -3,6 +3,7 @@ import {
   type SynchronousFHIRPathExpressionCache,
 } from './constraint-expression-cache.js';
 import { createFHIRPathContext, resolveFunction } from './fhirpath-functions.js';
+import type { ReferenceResolver } from './slice-types.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 type ObjectRecord = Record<string, unknown>;
@@ -25,6 +26,7 @@ export interface ResolvePrecheckOptions {
   fhirVersion?: FhirVersion;
   bundle?: BundleResourceInput;
   expressionCache?: SynchronousFHIRPathExpressionCache;
+  referenceResolver?: ReferenceResolver | null;
 }
 
 /**
@@ -49,7 +51,7 @@ export function evaluateResolveExistsConstraint(
   const expectedType = match[2];
   const predicate = match[3]?.trim();
   const fhirVersion = options.fhirVersion ?? 'R4';
-  const fhirPathContext = createFHIRPathContext(options.rootResource, options.bundle);
+  const fhirPathContext = createFHIRPathContext(options.rootResource, options.bundle, undefined, undefined, options.referenceResolver);
   const rootResourceType = isObjectRecord(options.rootResource) &&
     typeof options.rootResource.resourceType === 'string'
     ? options.rootResource.resourceType
@@ -72,7 +74,7 @@ export function evaluateResolveExistsConstraint(
       continue;
     }
 
-    if (!isDeterministicallyUnresolvable(value, options.bundle)) {
+    if (!options.referenceResolver && !isDeterministicallyUnresolvable(value, options.bundle)) {
       unresolvedNeedsExternalResolution = true;
     }
   }

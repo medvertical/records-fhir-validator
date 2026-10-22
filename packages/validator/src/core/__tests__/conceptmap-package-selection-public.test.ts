@@ -117,6 +117,7 @@ for (const api of ['single', 'multi'] as const) {
         })]);
         else expect(codeIssues).toEqual([]);
       }
-    }, 30_000);
+    // Setup and two public calls each retain the validator's own 30-second budget.
+    }, 90_000);
   });
 }

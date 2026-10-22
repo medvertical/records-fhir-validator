@@ -10,10 +10,12 @@ import type {
 import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import type { AnomalyDetectorConfig, AnomalyFinding } from './validators/anomaly-detector.js';
 import type { TerminologyResolutionConfig } from './validators/valueset-validator.js';
+import type { CustomRuleSelectedRelease } from './custom-rules/applicability.js';
 
 export type RecordsBatchValidationOptions =
-  Omit<NonNullable<Parameters<RecordsValidator['validateBatch']>[1]>, 'fhirVersion'> & {
+  Omit<NonNullable<Parameters<RecordsValidator['validateBatch']>[1]>, 'fhirVersion' | 'selectedRelease'> & {
     fhirVersion?: PublicFhirVersion;
+    selectedRelease?: CustomRuleSelectedRelease | null;
   };
 
 export interface RecordsValidatorRuntimeLease {

@@ -162,6 +162,7 @@ export async function loadProfilesForCanonical(
   return indexCache.loadProfilesForCanonical(packagePath, packageName, targetUrl);
 }
 
+
 export async function loadPackageProfileIndex(
   packagePath: string,
   packageName: string,

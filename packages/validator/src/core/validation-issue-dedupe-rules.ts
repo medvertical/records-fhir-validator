@@ -103,7 +103,7 @@ function createConstraintRules(context: DedupeContext): DedupeSuppressionRule[] 
     rule('extension-max-over-slice-max', issue =>
       isRedundantExtensionSliceMaxIssue(issue, context.profileExtensionMaxKeys)),
     rule('mustsupport-over-best-practice-presence', issue =>
-      isRedundantMustSupportBestPracticeIssue(issue, context.mustSupportPaths)),
+      isRedundantMustSupportBestPracticeIssue(issue, context.mustSupportIssuesByPath)),
     rule('specific-pattern-mismatch-over-parent', issue =>
       isRedundantParentPatternMismatchIssue(issue, context.patternMismatchPaths)),
   ];

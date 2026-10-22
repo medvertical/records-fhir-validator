@@ -291,6 +291,10 @@ export {
   type QualityRulePackDraftManifest,
   type QualityRulePackDraftTestSummary,
 } from './quality-rule-pack-draft.js';
+export { EXTERNAL_QUALITY_LICENSE_STATUSES, EXTERNAL_QUALITY_SOURCE_STATES,
+  externalQualitySourceSchema, parseExternalQualitySource,
+  type ExternalQualityLicenseStatus, type ExternalQualitySource, type ExternalQualitySourceState,
+} from './external-quality-source.js';
 
 // ============================================================================
 // DTOs and Utility Functions

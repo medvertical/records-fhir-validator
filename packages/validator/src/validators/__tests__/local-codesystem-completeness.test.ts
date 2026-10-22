@@ -36,4 +36,18 @@ describe('local CodeSystem completeness', () => {
     expect(issues).toEqual([expect.objectContaining({ severity: 'error' })]);
     expect(issues[0].details).not.toHaveProperty('validationComplete');
   });
+
+  it.each([['https://records.test/compositional', true], ['http://unitsofmeasure.org', false]] as const)(
+    'does not reject unlisted grammar expressions for %s', async (url, compositional) => {
+      const dependencies = deps('complete');
+      dependencies.cache.setCodeSystem(url, { resourceType: 'CodeSystem', url, content: 'complete',
+        compositional, count: 1, concept: [{ code: 'known', display: 'Known' }] });
+      expect(await validateCodeInLocalCodeSystem(dependencies, 'known', url)).toMatchObject({ valid: true });
+      const result = await validateCodeInLocalCodeSystem(dependencies, 'known+other', url);
+      expect(result).toMatchObject({ valid: false, reason: 'code-unknown', incompleteCodeSystem: true });
+      const issues = buildCodeSystemResultIssues({ system: url, code: 'known+other' }, result!, 'Observation.code', 0, false);
+      expect(issues).toEqual([expect.objectContaining({ severity: 'warning',
+        details: expect.objectContaining({ validationComplete: false }) })]);
+    },
+  );
 });

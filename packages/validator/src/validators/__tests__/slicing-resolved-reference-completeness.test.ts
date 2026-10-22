@@ -90,7 +90,7 @@ for (const type of ['value', 'pattern'] as const) describe(`resolved Reference t
     const expected = provedMin || provedMax || closed ? false : incomplete ? undefined : true;
     expect(await conforms(resource, definition.url!)).toBe(expected);
     expect(await conforms(resource, definition.url!)).toBe(expected);
-    expect(calls).toBe(incomplete ? 2 : 1);
+    expect(calls).toBe(2);
     expect(onIncomplete).toHaveBeenCalledTimes(incomplete ? 2 : 0);
     for (const [receipt] of onIncomplete.mock.calls) expect(receipt).toMatchObject({
       aspect: 'profile', code: 'profile-conformance-incomplete', severity: 'info', details: {

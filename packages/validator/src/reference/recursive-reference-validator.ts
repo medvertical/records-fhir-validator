@@ -23,6 +23,7 @@ import {
   type RecursiveValidationConfig,
 } from './recursive-reference-config.js';
 import { fetchReferenceWithinDeadline, ReferenceFetchTimeoutError, type ReferenceResourceFetcher } from './reference-fetch-deadline.js';
+import { ReferenceHierarchyTracker, type ReferenceHierarchyCycle } from './reference-hierarchy-cycles.js';
 
 export type { RecursiveValidationConfig } from './recursive-reference-config.js';
 
@@ -33,6 +34,8 @@ export interface RecursiveValidationContext {
   startTime: number;
   config: RecursiveValidationConfig;
   resourceIdentities: ResourceIdentityRegistry;
+  hierarchyTracker: ReferenceHierarchyTracker;
+  hierarchyIsLocalCurrent: boolean;
 }
 
 export interface RecursiveValidationResult {
@@ -41,6 +44,7 @@ export interface RecursiveValidationResult {
   referencesFollowed: number;
   unresolvedReferences: string[];
   circularReferences: string[][];
+  hierarchicalCircularReferences?: ReferenceHierarchyCycle[];
   validationTimeMs: number;
   timedOut: boolean;
 }
@@ -61,6 +65,8 @@ export class RecursiveReferenceValidator {
       startTime: Date.now(),
       config: fullConfig,
       resourceIdentities: new ResourceIdentityRegistry(),
+      hierarchyTracker: new ReferenceHierarchyTracker(),
+      hierarchyIsLocalCurrent: true,
     };
 
     const result: RecursiveValidationResult = {
@@ -86,6 +92,9 @@ export class RecursiveReferenceValidator {
     );
 
     result.validationTimeMs = Date.now() - context.startTime;
+    result.hierarchicalCircularReferences = context.hierarchyTracker.findCycles(
+      getResourceIdentifier(resource, context.resourceIdentities),
+    );
 
     const logCompletion = result.validationTimeMs > 100 ? logger.info.bind(logger) : logger.debug.bind(logger);
     logCompletion(
@@ -137,6 +146,11 @@ export class RecursiveReferenceValidator {
 
     const references = extractReferencesToValidate(resourceRecord, resourceId, context.currentDepth);
     const filteredReferences = filterReferences(references, context);
+    if (context.hierarchyIsLocalCurrent) {
+      const selectedTargets = new Set(filteredReferences.map(reference => reference.reference));
+      context.hierarchyTracker.observe(resourceRecord,
+        references.filter(reference => selectedTargets.has(reference.reference)));
+    }
 
     for (const ref of filteredReferences) {
       const shouldContinue = await this.processReference(
@@ -173,7 +187,7 @@ export class RecursiveReferenceValidator {
         return true;
       }
 
-      logger.warn('[RecursiveReferenceValidator] Circular reference detected', {
+      logger.debug('[RecursiveReferenceValidator] Repeated resource stopped recursive traversal', {
         chainLength: currentChain.length + 1,
       });
       result.circularReferences.push([...currentChain, refIdentifier]);
@@ -214,7 +228,7 @@ export class RecursiveReferenceValidator {
     result.referencesFollowed++;
     await this.validateResourceRecursively(
       resourceRecord,
-      this.createChildContext(context, currentChain),
+      this.createChildContext(context, currentChain, ref),
       result,
       resourceFetcher,
     );
@@ -251,11 +265,14 @@ export class RecursiveReferenceValidator {
   private createChildContext(
     context: RecursiveValidationContext,
     currentChain: string[],
+    ref: ReferenceToValidate,
   ): RecursiveValidationContext {
     return {
       ...context,
       currentDepth: context.currentDepth + 1,
       referenceChain: currentChain,
+      hierarchyIsLocalCurrent: context.hierarchyIsLocalCurrent
+        && /^[A-Z][A-Za-z0-9]+\/[A-Za-z0-9.-]{1,64}$/.test(ref.reference),
     };
   }
 

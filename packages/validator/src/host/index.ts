@@ -11,6 +11,8 @@
  */
 
 export { setEngineLogger } from '../logger.js';
+export { getFhirPathModel } from '../core/fhirpath-context.js';
+export type { FhirPathModel } from '../core/fhirpath-context.js';
 export { createValidationDependencySnapshot } from '../validation-dependency-snapshot.js';
 export type { EngineLogger } from '../logger.js';
 
@@ -34,6 +36,7 @@ export { resetWarmupState } from '../core/profile-cache-warmup.js';
 export { ProfileWarmupCoordinator } from '../core/profile-warmup-coordinator.js';
 export type { ProfileWarmupResult } from '../core/profile-warmup-coordinator.js';
 export {
+  dedupeExactIssues,
   dedupeIssues,
   dedupeIssuesWithTrace,
   suppressRedundantBindingWarnings,
@@ -56,6 +59,7 @@ export type {
 export { detailedResultToOperationOutcome } from '../core/operation-outcome-converter.js';
 export { isPrimitiveType } from '../core/executors/structural-executor-helpers.js';
 export { CustomRuleExecutor } from '../core/executors/custom-rule-executor.js';
+export { isCustomRuleApplicable } from '../core/executors/custom-rule-applicability.js';
 export { RuleRegistry } from '../business-rules/rule-registry.js';
 export { getCombinedFHIRPathCacheStats } from '../validator-singleton.js';
 export {
@@ -66,6 +70,8 @@ export { isKnownSecurityLabelCode } from '../metadata/security-validators.js';
 export { scanCacheDirectory } from '../core/sd-loader-package-scanner.js';
 export type { ScanCacheDirectoryOptions } from '../core/sd-loader-package-scanner.js';
 export { loadFromPersistentIndex } from '../core/sd-loader-persistent-index.js';
+export { createProfileIndexWriter } from '../core/sd-loader-persistent-index.js';
+export type { ProfileIndexWriter } from '../core/sd-loader-persistent-index.js';
 export type { PersistentIndexOptions } from '../core/sd-loader-persistent-index.js';
 export {
   isPackageAllowed,

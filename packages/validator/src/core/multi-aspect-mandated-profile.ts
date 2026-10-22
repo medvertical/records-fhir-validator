@@ -1,4 +1,5 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
+import { withoutSupersededSliceMinimums } from './bundle-document-context.js';
 import { BatchValidationAbortedError } from './batch-validator.js';
 import { imposedProfilesBeside, mandatedProfileAdditions, mandatedProfileBeside } from './mandated-profile-pass.js';
 import type { AspectResult, ValidateOneFn } from './multi-aspect-types.js';
@@ -52,18 +53,19 @@ async function appendBesideProfileResults(
     resource,
     mandatedProfileUrl,
     fhirVersion,
-    recursionDepth + 1,
+    recursionDepth,
     enclosingBundle,
     true,
     containingResource,
+    true,
   );
   if (shouldStop?.()) throw new BatchValidationAbortedError();
 
   const alreadyReported = collectedAspects.flatMap(aspect => aspect.issues);
   const alreadyRecorded = collectedAspects.flatMap(aspect => aspect.evidenceIssues ?? aspect.issues);
   for (const aspect of mandated.aspects) {
-    const additions = mandatedProfileAdditions(alreadyReported, aspect.issues, mandatedProfileUrl);
-    const evidence = mandatedProfileAdditions(alreadyRecorded, aspect.evidenceIssues ?? aspect.issues, mandatedProfileUrl);
+    const additions = mandatedProfileAdditions(alreadyReported, withoutSupersededSliceMinimums(aspect.issues, alreadyReported), mandatedProfileUrl);
+    const evidence = mandatedProfileAdditions(alreadyRecorded, withoutSupersededSliceMinimums(aspect.evidenceIssues ?? aspect.issues, alreadyRecorded), mandatedProfileUrl);
     if (additions.length === 0 && evidence.length === 0) continue;
     alreadyReported.push(...additions);
     alreadyRecorded.push(...evidence);

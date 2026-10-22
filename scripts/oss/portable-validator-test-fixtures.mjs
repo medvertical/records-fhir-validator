@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const MODULE_PATH = fileURLToPath(import.meta.url);
 const SOURCE_STORE = fileURLToPath(new URL('./fixtures/fhir-core-test-packages/', import.meta.url));
 const EXPORTED_STORE = 'tests/fixtures/fhir-packages';
-const MANIFEST_SHA256 = '7948303d2468fb648f5c7038fddb9ac64e6589a84b9cdcdf86043971c6549b7f';
+const MANIFEST_SHA256 = 'c62161c5411783e312b102f3404883c8dd24763ff97c07636df5c071399c4cd3';
 const INVENTORY_SHA256 = '982cda9dd90fd93b591be00ce266771592a6b06227487a6b7b1405da0d089923';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -32,7 +32,7 @@ async function fixtureManifest(storeRoot) {
     && manifest.package?.id === 'hl7.fhir.r4.core' && manifest.package?.version === '4.0.1'
     && manifest.package?.declaredLicense === 'CC0-1.0' && manifest.package?.originalManifestUnchanged === true
     && manifest.provenance?.inventorySha256 === INVENTORY_SHA256
-    && Array.isArray(manifest.files) && manifest.files.length === 5, 'Fixture scope or original provenance differs');
+    && Array.isArray(manifest.files) && manifest.files.length === 12, 'Fixture scope or original provenance differs');
   return manifest;
 }
 
@@ -68,7 +68,7 @@ export async function verifyPortableValidatorTestFixtures(storeRoot) {
   await regularDirectory(storeRoot);
   const manifest = await fixtureManifest(storeRoot);
   const expectedFiles = new Set(['manifest.json', ...manifest.files.map(file => file.path)]);
-  requireCondition(expectedFiles.size === 6 && manifest.files.every(file => record(file)
+  requireCondition(expectedFiles.size === 13 && manifest.files.every(file => record(file)
     && typeof file.path === 'string' && file.path.startsWith('hl7.fhir.r4.core#4.0.1/package/')
     && file.path.split('/').every(part => part && part !== '.' && part !== '..') && !file.path.includes('\\')
     && Number.isSafeInteger(file.sizeBytes) && file.sizeBytes > 0 && /^[a-f0-9]{64}$/.test(file.sha256)),
@@ -88,7 +88,7 @@ export async function verifyPortableValidatorTestFixtures(storeRoot) {
       && parsed.license === manifest.package.declaredLicense, 'Original FHIR package metadata differs');
   }
   return { schema: 'records.validator.portable-test-fixtures-verification.v1', storeRoot,
-    files: manifest.files.length, originalDefinitions: 4, originalBytes: manifest.files.reduce((sum, file) => sum + file.sizeBytes, 0),
+    files: manifest.files.length, originalDefinitions: 11, originalBytes: manifest.files.reduce((sum, file) => sum + file.sizeBytes, 0),
     manifestSha256: MANIFEST_SHA256, inventorySha256: INVENTORY_SHA256, partialTestFixtures: true };
 }
 

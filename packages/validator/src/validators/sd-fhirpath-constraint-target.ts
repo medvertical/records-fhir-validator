@@ -15,6 +15,7 @@ import type { FHIRPathBundleInput } from './fhirpath-functions.js';
 import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology.js';
 import type { ValueSetCache } from './valueset-cache.js';
 import type { SynchronousFHIRPathExpressionCache } from './constraint-expression-cache.js';
+import type { ReferenceResolver } from './slice-types.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 
@@ -32,6 +33,7 @@ export interface ConstraintTargetEvaluation {
   profileUrl?: string;
   fhirVersion: FhirVersion;
   bundle?: FHIRPathBundleInput;
+  referenceResolver?: ReferenceResolver | null;
   checkHtml?: boolean;
   memberOfValueSetLoader: ValueSetPackageLoader;
   valueSetCache: ValueSetCache;
@@ -89,6 +91,7 @@ export async function evaluateConstraintTarget(
     fhirVersion: target.fhirVersion,
     bundle: target.bundle,
     expressionCache: target.expressionCache,
+    referenceResolver: target.referenceResolver,
   });
   if (resolveExists !== null) {
     return resultIssues(target, resolveExists);

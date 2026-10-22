@@ -26,12 +26,15 @@ import type { FhirResource } from './fhir-resource.js';
 import { recordPatientNarrativeOrigins, carryPatientNarrativeOrigins } from './patient-narrative-issue-reconciliation.js';
 import { shouldRunCustomRules } from './validation-settings-predicates.js';
 import type { SingleResourceProfileConformance } from './single-resource-profile-conformance.js';
+import type { CustomRuleSelectedRelease } from '../custom-rules/applicability.js';
 
 export interface ValidationOrchestratorContext {
   resource: FhirResource;
   resourceType: string;
   profileUrl: string;
   fhirVersion: 'R4' | 'R5' | 'R6';
+  selectedRelease?: CustomRuleSelectedRelease | null;
+  profileResolutionFallback?: boolean;
   structureDef: StructureDefinition;
   strictMode: boolean;
   settings?: ValidationSettings;
@@ -166,6 +169,9 @@ async function runAllAspectValidationsScoped(
     const customRuleIssues = await customRuleExecutor.validate({
       resource: context.resource,
       structureDef: context.structureDef,
+      fhirVersion: context.fhirVersion,
+      selectedRelease: context.selectedRelease,
+      profileResolutionFallback: context.profileResolutionFallback,
       organizationId: context.organizationId,
     });
     issues.push(...customRuleIssues);

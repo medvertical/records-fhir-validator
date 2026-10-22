@@ -24,4 +24,9 @@ describe('validator engine cache capacity', () => {
     expect(resolveRecordsValidatorConfig({ prewarmProfileSource: false }).prewarmProfileSource)
       .toBe(false);
   });
+
+  it('keeps package discovery eager unless an on-demand source is explicitly configured', () => {
+    expect(resolveRecordsValidatorConfig({}).preloadPackageInventory).toBe(true);
+    expect(resolveRecordsValidatorConfig({ preloadPackageInventory: false }).preloadPackageInventory).toBe(false);
+  });
 });

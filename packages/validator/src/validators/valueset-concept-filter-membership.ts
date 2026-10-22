@@ -13,6 +13,9 @@ interface Hierarchy {
   closed: boolean;
 }
 const propertyPrefix = 'http://hl7.org/fhir/concept-properties#';
+const isoCodePatterns = new Map([['[A-Z]{2}', /^[A-Z]{2}$/], ['[A-Z]{3}', /^[A-Z]{3}$/], ['[0-9]{3}', /^[0-9]{3}$/]]);
+const isoCodePattern = (codeSystem: CodeSystem | null, filter: Filter) => codeSystem?.url === 'urn:iso:std:iso:3166'
+  && filter.property === 'code' && filter.op === 'regex' ? isoCodePatterns.get(filter.value) : undefined;
 const annotationExtensions = new Set(['structuredefinition-wg', 'structuredefinition-fmm',
   'structuredefinition-standards-status', 'structuredefinition-normative-version']
   .map(name => `http://hl7.org/fhir/StructureDefinition/${name}`));
@@ -36,6 +39,7 @@ export function hasUnknownTerminologyModifiers(raw: unknown): boolean {
 
 export function supportsLocalFilter(codeSystem: CodeSystem | null, filter: Filter): boolean {
   if (!record(filter) || hasUnknownTerminologyModifiers(filter)) return false;
+  if (isoCodePattern(codeSystem, filter)) return Boolean(codeSystem && !hasUnknownTerminologyModifiers(codeSystem));
   if (filter.property === 'concept') return ['=', 'is-a', 'descendent-of', 'is-not-a'].includes(filter.op);
   return Boolean(codeSystem && !hasUnknownTerminologyModifiers(codeSystem)
     && canMatchDeclaredPropertyEquality(codeSystem, filter, hasUnknownTerminologyModifiers));
@@ -56,6 +60,8 @@ export function createConceptFilterEvaluator(): typeof conceptFilterMembership {
     }
     let hierarchy = hierarchies.get(codeSystem);
     if (!hierarchy) { hierarchy = buildHierarchy(codeSystem); hierarchies.set(codeSystem, hierarchy); }
+    const codePattern = isoCodePattern(codeSystem, filter);
+    if (codePattern) return hierarchy.concepts.has(code) && !hierarchy.ambiguous.has(code) ? codePattern.test(code) : null;
     if (filter.property === 'concept') return evaluateHierarchy(hierarchy, code, filter);
     return hierarchy.ambiguous.has(code) ? null
       : propertyFilterMembership(codeSystem, hierarchy.concepts.get(code), filter, hasUnknownTerminologyModifiers);

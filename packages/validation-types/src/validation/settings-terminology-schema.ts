@@ -78,6 +78,7 @@ export const AdvancedTerminologyConfigSchema = z.object({
 });
 
 export const TerminologyResolutionSchema = z.object({
+  snapshot: z.object({ sha256: z.string().regex(/^[a-f0-9]{64}$/) }).strict().optional(),
   strategy: z.enum(['local-first', 'server-first', 'local-only']),
   serverDelegation: z.object({
     expandValueSets: z.boolean(),

@@ -15,14 +15,11 @@ import {
   type ProfileSourceContext,
 } from '../../persistence/index.js';
 import { BoundedLruCache } from '../../cache/bounded-lru-cache.js';
-
 type CodeSystemReferenceMode = 'syntax' | 'not-found';
-
 type CodeSystemLookupCacheEntry = {
   lookup: Promise<boolean | null>;
   expiresAt: number;
 };
-
 const HOST_CODE_SYSTEM_NEGATIVE_CACHE_TTL_MS = 60_000;
 
 export class CodeSystemReferenceLookupCache {
@@ -74,6 +71,7 @@ export async function validateCodeSystemReference(
   if (!codingRecord || typeof codingRecord.system !== 'string') return issues;
   const system = codingRecord.system;
   const code = typeof codingRecord.code === 'string' ? codingRecord.code : undefined;
+  const codeSystemVersion = typeof codingRecord.version === 'string' ? codingRecord.version : undefined;
   const display = typeof codingRecord.display === 'string' ? codingRecord.display : undefined;
 
   const correctedSystem = KNOWN_INCORRECT_CODE_SYSTEM_URLS[system];
@@ -150,6 +148,7 @@ export async function validateCodeSystemReference(
       details: {
         ...(code ? { code } : {}),
         system,
+        ...(codeSystemVersion ? { codeSystemVersion } : {}),
         ...(display ? { display } : {}),
         ...buildCodeSystemUrlDetails(system),
       },

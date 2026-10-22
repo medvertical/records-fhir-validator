@@ -51,6 +51,7 @@ export interface AdvisorRule {
   expiresAt?: string;
   origin?: 'builtin' | 'local' | 'pack';
   sourcePackRef?: string;
+  source?: { profileReference?: string; packageId?: string; packageVersion?: string; path?: string; ruleKey?: string };
 }
 
 export type ProfileApplicationSource =

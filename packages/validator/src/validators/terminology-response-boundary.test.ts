@@ -15,6 +15,22 @@ import {
 } from './terminology-code-system-result';
 
 describe('terminology response boundaries', () => {
+  it('preserves the unavailable SNOMED version instead of replacing it with a generic error', () => {
+    const message = "A definition for CodeSystem 'http://snomed.info/sct' version 'http://snomed.info/sct/900000000000207008/version/20260701' could not be found, so the code cannot be validated.";
+    const issue = { severity: 'error', code: 'not-found', details: { text: `${message} Valid versions: older-edition` } };
+    const parameters = { resourceType: 'Parameters', parameter: [
+      { name: 'result', valueBoolean: false },
+      { name: 'message', valueString: `${message} Valid versions: older-edition` },
+      { name: 'issues', resource: { resourceType: 'OperationOutcome', issue: [issue] } },
+    ] };
+    expect(parseCodeSystemValidationParameters(parameters, '53741008', 'http://snomed.info/sct'))
+      .toMatchObject({ valid: false, reason: 'system-unresolvable', message: `${message} Valid versions: older-edition` });
+    expect(operationOutcomeToCodeSystemResult({ resourceType: 'OperationOutcome', issue: [issue] }, '53741008', 'http://snomed.info/sct'))
+      .toMatchObject({ valid: false, reason: 'system-unresolvable', message: `${message} Valid versions: older-edition` });
+    expect(parseCodeSystemValidationParameters({ ...parameters, parameter: parameters.parameter.filter(entry => entry.name !== 'message') }, '53741008', 'http://snomed.info/sct').message)
+      .toBe(`${message} Valid versions: older-edition`);
+  });
+
   it('treats unsupported CodeSystem wording as missing terminology coverage', () => {
     const message = 'The terminology server does not support this code system';
     expect(parseCodeSystemValidationParameters({ resourceType: 'Parameters', parameter: [
@@ -87,7 +103,12 @@ describe('terminology response boundaries', () => {
       { name: 'result', valueBoolean: false },
       { name: 'message', valueString: message },
       { name: 'issues', resource: { resourceType: 'OperationOutcome', issue: [{ severity: 'error', code: 'not-found' }] } },
-    ] }, '38266002', 'http://snomed.info/sct')).toEqual({ valid: false, reason: 'system-unresolvable', message });
+    ] }, '38266002', 'http://snomed.info/sct')).toEqual({
+      valid: false,
+      reason: 'system-unresolvable',
+      message,
+      issues: [{ severity: 'error', code: 'not-found', message: 'Terminology server reported a code issue' }],
+    });
   });
 
   it('distinguishes an unknown CodeSystem from a rejected code', () => {

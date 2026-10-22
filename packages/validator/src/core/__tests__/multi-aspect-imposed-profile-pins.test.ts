@@ -45,8 +45,24 @@ describe('profiles imposed by an IG profile', () => {
       sourceProfile);
 
     expect(validateOne).toHaveBeenCalledWith(
-      { resourceType: 'Observation' }, `${EU_RESULT}|0.1.1`, 'R4', 1, undefined, true, undefined,
+      { resourceType: 'Observation' }, `${EU_RESULT}|0.1.1`, 'R4', 0, undefined, true, undefined, true,
     );
+  });
+  it.each([false, true])('preserves causal slice evidence when an imposed profile is evaluated later: context=%s', async hasContext => {
+    const cause = { aspect: 'profile', severity: 'error', code: 'profile-slice-min-cardinality',
+      path: 'Bundle', message: 'Composition target failed', ruleId: 'slice-min-composition-conformance',
+      details: { sliceName: 'composition', reason: 'composition-entry-target-profile-match-failed' } };
+    const bareMinimum = { ...cause, path: 'Bundle.entry', ruleId: 'slice-min-composition',
+      message: 'Composition slice minimum not met', details: { sliceName: 'composition' } };
+    const aspects = hasContext ? [{ aspect: 'profile', issues: [cause], evidenceIssues: [cause],
+      isValid: false, validationTime: 0 }] : [];
+    const validateOne = vi.fn(async () => ({ isValid: false, aspects: [{ aspect: 'profile',
+      issues: [bareMinimum], evidenceIssues: [bareMinimum], isValid: false, validationTime: 0 }] }) as MultiAspectValidateResult);
+    const profile = { url: 'https://example.test/Bundle', extension: [{ url: IMPOSE_PROFILE, valueCanonical: EU_RESULT }] };
+    await appendMandatedProfileValidationResults({ resourceType: 'Bundle' }, profile.url, 'R4', 0,
+      validateOne, aspects as never, undefined, undefined, undefined, profile);
+    expect(aspects.flatMap(aspect => aspect.issues)).toEqual([hasContext ? cause : expect.objectContaining(bareMinimum)]);
+    expect(aspects.flatMap(aspect => aspect.evidenceIssues)).toEqual([hasContext ? cause : expect.objectContaining(bareMinimum)]);
   });
 });
 

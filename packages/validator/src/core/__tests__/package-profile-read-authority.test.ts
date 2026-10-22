@@ -82,6 +82,24 @@ describe('physical package profile and index authority', () => {
     expect(await readProfileFileResult(f.folder, 'A.json')).toEqual({ status: 'read', profile: definition(canonical, min),
       sha256: createHash('sha256').update(bytes).digest('hex') });
   });
+  it('reuses only a verified profile while keeping returned definitions independent', async () => {
+    const f = await fixture();
+    const first = await readProfileFileResult(f.folder, 'A.json');
+    expect(first.status).toBe('read');
+    if (first.status !== 'read') return;
+    first.profile.snapshot!.element[2].min = 0;
+    const second = await readProfileFileResult(f.folder, 'A.json');
+    expect(second).toMatchObject({ status: 'read', profile: definition() });
+    await fs.writeFile(f.file, JSON.stringify(definition(canonical, 0)));
+    expect(await readProfileFileResult(f.folder, 'A.json')).toMatchObject({ status: 'read', profile: definition(canonical, 0) });
+  });
+  it('refuses replacement between stat and open even with a prior verified profile', async () => {
+    const f = await fixture();
+    expect((await readProfileFileResult(f.folder, 'A.json')).status).toBe('read');
+    const triggered = afterStat(f.file, () => change(f, 'replace'));
+    expect(await readProfileFileResult(f.folder, 'A.json')).toMatchObject({ status: 'unavailable', cause: 'source-changed' });
+    expect(triggered()).toBe(true);
+  });
   it.each(modes)('refuses %s between stat and physical open', async mode => {
     const f = await fixture(); const triggered = afterStat(f.file, () => change(f, mode));
     expect(await readProfileFileResult(f.folder, 'A.json')).toMatchObject({ status: 'unavailable', cause: 'source-changed' });

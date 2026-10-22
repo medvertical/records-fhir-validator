@@ -13,6 +13,7 @@ import { SDFHIRPathExpressionCache } from './sd-fhirpath-expression-cache.js';
 import { evaluateCompiledSDFHIRPath } from './sd-fhirpath-runtime.js';
 import type { ValueSetCache } from './valueset-cache.js';
 import { ValueSetPackageLoader } from './valueset-package-loader.js';
+import { SDFHIRPathPrimitiveContext } from './sd-fhirpath-primitive-context.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 
@@ -24,6 +25,7 @@ export type SDFHIRPathTargetEvaluation = Omit<
 /** Owns the executable FHIRPath and terminology dependencies for constraint targets. */
 export class SDFHIRPathExpressionRuntime {
   private readonly asyncExpressionCache = new AsyncFHIRPathTerminologyCache();
+  private readonly primitiveContext = new SDFHIRPathPrimitiveContext();
   private readonly memberOfValueSetLoader: ValueSetPackageLoader;
 
   constructor(
@@ -41,7 +43,11 @@ export class SDFHIRPathExpressionRuntime {
       memberOfValueSetLoader: this.memberOfValueSetLoader,
       valueSetCache: this.valueSetCache,
       expressionCache: this.expressionCache,
-      evaluateExpression: (...args) => this.evaluateExpression(...args),
+      evaluateExpression: (expression, context, ...args) => this.evaluateExpression(
+        expression,
+        this.primitiveContext.resolve(context, target.resolveRootResource, target.path, target.fhirVersion),
+        ...args,
+      ),
     });
   }
 

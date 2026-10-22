@@ -66,7 +66,8 @@ function handleCodeSystemValidationError(
     ...validationFailureMetadata(error),
     ...(typeof axiosResponse?.status === 'number' ? { status: axiosResponse.status } : {}),
   });
-  return { valid: true };
+  return { valid: false, reason: 'server-failure',
+    message: 'The terminology server request failed; CodeSystem validation could not be completed.' };
 }
 
 export async function executeCodeSystemValidateCodeRequest({

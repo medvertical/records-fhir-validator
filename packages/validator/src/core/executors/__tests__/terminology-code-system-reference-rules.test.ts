@@ -168,7 +168,7 @@ describe('terminology CodeSystem reference rules', () => {
     const definitionLookup = new ValueSetValidator(cache, undefined, []).getDefinitionLookup();
     expect(definitionLookup.packageLoader.getPackageDirectories()).toEqual([]);
     const issues = await validateCodeSystemReference(
-      { system: 'http://fhir.de/CodeSystem/ask', code: '1234' },
+      { system: 'http://fhir.de/CodeSystem/ask', code: '1234', version: '2027.0.0-ballot' },
       'Medication.ingredient.itemCodeableConcept.coding',
       0,
       false,
@@ -184,6 +184,7 @@ describe('terminology CodeSystem reference rules', () => {
       severity: 'warning',
       code: 'terminology-codesystem-unresolvable',
       path: 'Medication.ingredient.itemCodeableConcept.coding.system',
+      details: expect.objectContaining({ codeSystemVersion: '2027.0.0-ballot' }),
     }));
     expect(hasCodeSystem).toHaveBeenCalledOnce();
   });

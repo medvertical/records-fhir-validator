@@ -4,6 +4,7 @@ import type {
   StructureDefinition,
 } from '../core/structure-definition-types.js';
 import { extractFixedEntry } from './slice-utils.js';
+import { normalizeChoiceDiscriminatorPath } from './slice-discriminator-path.js';
 
 export type TypeSpec = {
   code: string;
@@ -88,7 +89,7 @@ export function collectChildBindingDiscriminatorPaths(
   const paths = new Set<string>();
   for (const discriminator of slicing.discriminator ?? []) {
     const path = normalizeChildBindingDiscriminatorPath(discriminator.path);
-    if (path) paths.add(path);
+    if (path) paths.add(normalizeChoiceDiscriminatorPath(path, 'definition'));
   }
   return paths;
 }
@@ -132,12 +133,12 @@ export function getNonEmptyString(value: unknown): string | undefined {
 
 function normalizeElements(value: unknown): ElementDefinition[] {
   if (!Array.isArray(value)) return [];
-  return value.flatMap(candidate => {
+  const elements: ElementDefinition[] = [];
+  for (const candidate of value) {
     const record = toRecord(candidate);
-    return typeof record?.path === 'string' && record.path.length > 0
-      ? [record as ElementDefinition]
-      : [];
-  });
+    if (typeof record?.path === 'string' && record.path.length > 0) elements.push(record as ElementDefinition);
+  }
+  return elements;
 }
 
 function isDiscriminatorType(

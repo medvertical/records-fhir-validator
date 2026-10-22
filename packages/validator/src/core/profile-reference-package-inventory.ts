@@ -3,6 +3,7 @@ import path from 'node:path';
 import { captureValidationDependency } from '../validation-dependency-snapshot.js';
 import { readStablePackageFile } from '../package/package-file-read-authority.js';
 import { readProfileFileResult } from './sd-loader-package-profile-reader.js';
+import { readFallbackInventory, type ProfileDescriptor } from './profile-reference-fallback-catalog.js';
 import { profileMatchesCanonical } from './sd-loader-profile-identity.js';
 import { selectBetterUnversionedProfile } from './sd-loader-package-profile-index.js';
 import { parseProfileCanonical, type FhirVersionFamily } from './sd-loader-version-utils.js';
@@ -15,9 +16,6 @@ export interface ProfileReferenceCaptureOwner {
 export type PackageReference = { status: 'found'; profile: StructureDefinition; filename: string }
   | { status: 'absent' } | { status: 'unavailable'; cause: string };
 interface ProfileIdentity { resourceType: 'StructureDefinition'; url: string; version?: string; fhirVersion?: unknown }
-interface ProfileDescriptor { sd: ProfileIdentity; filename: string; sha256: string }
-type FallbackInventory = { status: 'read'; boundary: string; profiles: ProfileDescriptor[] }
-  | { status: 'unavailable'; cause: string };
 interface IndexDeclaration { resourceType: string; url?: string; filename?: string; version?: string }
 type PackageIndex = { status: 'read'; files: IndexDeclaration[]; boundary: string } | { status: 'absent'; boundary: string }
   | { status: 'unavailable'; cause: string };
@@ -93,28 +91,6 @@ async function readIndexedReference(
     }
   }
   return selected ? { status: 'found', profile: selected.sd, filename: selected.filename } : { status: 'absent' };
-}
-
-async function readFallbackInventory(directory: string): Promise<FallbackInventory> {
-  try {
-    const boundary = await fs.realpath(directory);
-    const filenames = (await fs.readdir(directory)).filter(file =>
-      file.endsWith('.json') && file !== 'package.json' && file !== '.index.json').sort();
-    const profiles: ProfileDescriptor[] = [];
-    for (let offset = 0; offset < filenames.length; offset += 8) {
-      const chunk = filenames.slice(offset, offset + 8);
-      const results = await Promise.all(chunk.map(filename => readProfileFileResult(directory, filename, boundary)));
-      for (const [position, filename] of chunk.entries()) {
-        const result = results[position];
-        if (result.status === 'unavailable') return result;
-        if (result.status === 'not-profile') continue;
-        const { resourceType, url, version, fhirVersion } = result.profile;
-        profiles.push({ filename, sha256: result.sha256, sd: { resourceType, url,
-          ...(version !== undefined ? { version } : {}), ...(fhirVersion !== undefined ? { fhirVersion } : {}) } });
-      }
-    }
-    return { status: 'read', boundary, profiles };
-  } catch { return { status: 'unavailable', cause: 'package-unreadable' }; }
 }
 
 async function readFallbackReference(

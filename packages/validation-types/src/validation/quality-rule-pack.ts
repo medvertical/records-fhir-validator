@@ -13,7 +13,6 @@ import {
   qualityRuleSourceSchema,
 } from './quality-rule-schema-foundations.js';
 import { qualityThresholdSchema } from './quality-threshold.js';
-
 export { qualityAdvisoryRuleDefinitionSchema } from './quality-advisory-rule.js';
 export type { QualityAdvisoryRuleDefinition } from './quality-advisory-rule.js';
 export { qualityPolicyLayerSchema, qualityRuleOverrideSchema } from './quality-policy-layer.js';
@@ -28,7 +27,6 @@ export {
   boundedQualityRuleId,
   qualityRuleSourceSchema,
 } from './quality-rule-schema-foundations.js';
-
 export type QualityRuleScope = typeof QUALITY_RULE_SCOPES[number];
 export type QualityRuleOutcome = typeof QUALITY_RULE_OUTCOMES[number];
 export type QualityNormativeStatus = typeof QUALITY_NORMATIVE_STATUSES[number];
@@ -36,7 +34,6 @@ export type QualityRuleSeverity = typeof QUALITY_RULE_SEVERITIES[number];
 export type QualityAdvisoryAction = typeof QUALITY_ADVISORY_ACTIONS[number];
 export type QualityFindingDisposition = typeof QUALITY_FINDING_DISPOSITIONS[number];
 export type QualityComparisonClass = 'common-baseline' | 'local-extension';
-
 export const boundedQualityRuleVersion = z.string()
   .min(1)
   .max(64)
@@ -50,13 +47,22 @@ const supportedPackageVersionRange = z.string().min(1).max(128).refine(value => 
 ), {
   message: 'Package version ranges must be *, an exact version, N.x, or N.N.x',
 });
-
+const profilePopulationSelectionSchema = z.object({
+  mode: z.enum(['include-prefix', 'include-exact', 'exclude-prefix']),
+  canonicals: z.array(z.string().url().max(2_048)).min(1).max(64)
+    .refine(values => new Set(values).size === values.length, { message: 'Population canonicals must be unique' }),
+}).strict();
 const qualityApplicabilitySchema = z.object({
   resourceTypes: z.array(boundedQualityResourceType).max(64).default([]),
   fhirVersions: z.array(z.enum(['R4', 'R4B', 'R5', 'R6'])).max(4).default([]),
   profilesAny: z.array(z.string().url().max(2_048)).max(64).default([]),
-}).strict();
-
+  profileSelection: profilePopulationSelectionSchema.optional(),
+  documentPopulation: z.literal('eu-laboratory-document').optional(),
+}).strict().superRefine((applicability, context) => {
+  if (applicability.documentPopulation && (applicability.resourceTypes.length !== 1 || applicability.resourceTypes[0] !== 'Bundle')) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['documentPopulation'], message: 'Document populations require the Bundle resource type' });
+  }
+});
 const presenceImplementationSchema = z.object({
   kind: z.literal('path-presence'),
   path: boundedQualityPath,
@@ -78,12 +84,28 @@ const cohortRateImplementationSchema = z.object({
   denominatorExpression: boundedExpression.optional(),
 }).strict();
 
+const boundedTemporalPath = boundedQualityPath.refine(value => (
+  /^[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*){0,11}$/.test(value)
+  && !value.split('.').some(segment => ['__proto__', 'constructor', 'prototype'].includes(segment))
+), { message: 'Temporal comparisons require bounded relative field paths without functions or array traversal' });
+const cohortTemporalImplementationSchema = z.object({
+  kind: z.literal('cohort-temporal-comparison'),
+  leftPath: boundedTemporalPath,
+  rightPaths: z.array(boundedTemporalPath).min(1).max(8).refine(paths => new Set(paths).size === paths.length,
+    { message: 'Temporal comparison choice paths must be unique' }),
+  nonTemporalRightPaths: z.array(boundedTemporalPath).max(8).optional(),
+  operator: z.literal('not-before'),
+  comparisonModel: z.literal('cql-execution-3.3.2-utc'),
+}).strict();
+
 const cohortDistributionImplementationSchema = z.object({
   kind: z.literal('cohort-distribution'),
   valueExpression: boundedExpression,
   maxStrata: z.number().int().min(1).max(512).default(100),
   valueMode: z.enum(['redacted', 'coded']).default('redacted'),
   codeSystem: z.string().url().max(2_048).optional(),
+  observationMode: z.enum(['single-structured', 'coding-collection', 'fhir-primitive', 'json-array-container']).optional(),
+  missingValuePolicy: z.enum(['not-evaluable', 'null-stratum']).optional(),
 }).strict();
 
 const uniquenessImplementationSchema = z.object({
@@ -95,6 +117,9 @@ const externalMembershipImplementationSchema = z.object({
   kind: z.literal('external-membership'),
   sourceId: boundedQualityRuleId,
   valueExpression: boundedExpression,
+  missingValuePolicy: z.enum(['not-evaluable', 'non-member', 'member']).optional(),
+  observationMode: z.enum(['single-codeable-concept', 'coding-collection', 'concept-collection-complement', 'fhir-primitive-code', 'first-coding-code']).optional(),
+  codeSystem: z.string().url().max(2_048).optional(),
 }).strict();
 
 export const qualityRuleImplementationSchema = z.discriminatedUnion('kind', [
@@ -102,10 +127,16 @@ export const qualityRuleImplementationSchema = z.discriminatedUnion('kind', [
   booleanImplementationSchema,
   referenceImplementationSchema,
   cohortRateImplementationSchema,
+  cohortTemporalImplementationSchema,
   cohortDistributionImplementationSchema,
   uniquenessImplementationSchema,
   externalMembershipImplementationSchema,
 ]).superRefine((implementation, context) => {
+  if (implementation.kind === 'cohort-temporal-comparison') {
+    const choicePaths = [...implementation.rightPaths, ...implementation.nonTemporalRightPaths ?? []];
+    if (new Set(choicePaths).size !== choicePaths.length) context.addIssue({ code: z.ZodIssueCode.custom,
+      path: ['nonTemporalRightPaths'], message: 'Temporal and non-temporal choice paths must be unique' });
+  }
   if (implementation.kind === 'cohort-distribution'
     && implementation.valueMode === 'coded'
     && !implementation.codeSystem) {
@@ -114,6 +145,43 @@ export const qualityRuleImplementationSchema = z.discriminatedUnion('kind', [
       path: ['codeSystem'],
       message: 'Coded distributions require a declared code system',
     });
+  }
+  if (implementation.kind === 'cohort-distribution'
+    && implementation.observationMode
+    && implementation.valueMode !== 'redacted') {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['valueMode'],
+      message: 'Structured distributions must retain hash-only evidence',
+    });
+  }
+  if (implementation.kind === 'cohort-distribution'
+    && (implementation.observationMode === 'fhir-primitive' || implementation.observationMode === 'json-array-container')
+    && (!/^[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*){0,11}$/.test(implementation.valueExpression)
+      || implementation.valueExpression.split('.').some(segment => ['__proto__', 'constructor', 'prototype'].includes(segment)))) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['valueExpression'],
+      message: `${implementation.observationMode === 'fhir-primitive' ? 'FHIR primitive' : 'JSON container'} observations require a bounded relative field path without functions or array traversal` });
+  }
+  if (implementation.kind === 'cohort-distribution' && implementation.observationMode === 'json-array-container'
+    && implementation.missingValuePolicy !== undefined) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['missingValuePolicy'],
+      message: 'JSON array-container observations use Boolean false for missing/null containers, not a configurable missing-value policy' });
+  }
+  if (implementation.kind === 'external-membership'
+    && (implementation.observationMode === 'fhir-primitive-code' || implementation.observationMode === 'first-coding-code')
+    && (!/^[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*){0,11}$/.test(implementation.valueExpression)
+      || implementation.valueExpression.split('.').some(segment => ['__proto__', 'constructor', 'prototype'].includes(segment)))) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['valueExpression'],
+      message: 'FHIR code membership requires a bounded relative field path without functions or parent array traversal' });
+  }
+  if (implementation.kind === 'external-membership') {
+    if (implementation.observationMode === 'first-coding-code') {
+      if (!implementation.codeSystem) context.addIssue({ code: z.ZodIssueCode.custom, path: ['codeSystem'],
+        message: 'First-coding-code membership requires an exact code-system filter' });
+      if (!implementation.valueExpression.endsWith('.coding')) context.addIssue({ code: z.ZodIssueCode.custom,
+        path: ['valueExpression'], message: 'First-coding-code membership requires a coding collection field path' });
+    } else if (implementation.codeSystem !== undefined) context.addIssue({ code: z.ZodIssueCode.custom,
+      path: ['codeSystem'], message: 'A code-system filter is only supported by first-coding-code membership' });
   }
 });
 
@@ -222,6 +290,7 @@ export const qualityRulePackManifestSchema = z.object({
     }
     if (rule.scope === 'cohort'
       && rule.implementation.kind !== 'cohort-rate'
+      && rule.implementation.kind !== 'cohort-temporal-comparison'
       && rule.implementation.kind !== 'cohort-distribution'
       && rule.implementation.kind !== 'cohort-uniqueness') {
       context.addIssue({
@@ -229,6 +298,11 @@ export const qualityRulePackManifestSchema = z.object({
         path: ['rules', index, 'implementation'],
         message: 'Cohort rules require a cohort implementation',
       });
+    }
+    if (rule.implementation.kind === 'cohort-temporal-comparison'
+      && (rule.applicability.fhirVersions.length !== 1 || rule.applicability.fhirVersions[0] !== 'R4')) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['rules', index, 'applicability', 'fhirVersions'],
+        message: 'CQL reference date-time comparisons require explicit pinned FHIR R4 applicability' });
     }
     if (rule.implementation.kind === 'cohort-distribution' && rule.threshold) {
       context.addIssue({

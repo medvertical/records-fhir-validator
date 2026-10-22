@@ -15,9 +15,10 @@ export function extensionDefinitionCacheKey(profile: StructureDefinition, family
 }
 
 export async function loadExtensionProfile(
-  loader: StructureDefinitionLoader, url: string, source: ProfileReferenceSource | undefined,
+  loader: StructureDefinitionLoader, url: string, source: ProfileReferenceSource | null | undefined,
   family: 'R4' | 'R5' | 'R6',
 ): Promise<StructureDefinition | null> {
+  if (!source) return loader.loadProfile(url, family);
   if (loader.loadReferencedProfile) return loader.loadReferencedProfile(url, source, family);
   const pinned = await loader.pinProfileReference?.(url, source, family) ?? url;
   return (pinned !== url ? await loader.loadProfile(pinned, family) : null) ?? loader.loadProfile(url, family);

@@ -3,8 +3,9 @@ import { getValidationTargets } from '../business-rules/element-validation-targe
 export function getEvaluationContext(
   resource: unknown,
   elementPath: string,
+  getTargets: typeof getValidationTargets = getValidationTargets,
 ): unknown {
-  const values = getValidationTargets(resource, elementPath)
+  const values = getTargets(resource, elementPath)
     .map(target => target.value)
     .filter(isPresent);
 
@@ -15,18 +16,20 @@ export function getEvaluationContext(
 export function elementExistsInResource(
   resource: unknown,
   elementPath: string,
+  getTargets: typeof getValidationTargets = getValidationTargets,
 ): boolean {
   if (!elementPath) return false;
-  return getValidationTargets(resource, elementPath)
+  return getTargets(resource, elementPath)
     .some(target => isPresent(target.value));
 }
 
 export function hasEmptyBackboneElement(
   resource: unknown,
   elementPath: string,
+  getTargets: typeof getValidationTargets = getValidationTargets,
 ): boolean {
   if (!elementPath) return false;
-  return getValidationTargets(resource, elementPath)
+  return getTargets(resource, elementPath)
     .some(target => isEmptyBackboneValue(target.value));
 }
 

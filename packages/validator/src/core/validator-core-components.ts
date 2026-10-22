@@ -46,6 +46,7 @@ export function createValidatorCoreRuntime(
       packageVersionPins: config.packageVersionPins,
       maxCacheEntries: profileCacheMaxEntries,
       prewarmProfileSource: config.prewarmProfileSource,
+      preloadPackageInventory: config.preloadPackageInventory,
     },
   );
   const typeValidator = new TypeValidator();

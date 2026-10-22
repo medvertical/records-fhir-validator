@@ -11,6 +11,26 @@ const issue = (overrides: Partial<ValidationIssue> = {}): ValidationIssue => ({
 });
 
 describe('applyAdvisorRules', () => {
+  it('keeps canonical profile, element and invariant scopes separate from similarly named rules', () => {
+    const rule: AdvisorRule = { id: 'local', action: 'suppress', match: { profile: 'https://example.test/patient', path: 'Patient.name', ruleId: 'local-1' } };
+    const matching = issue({ profile: 'https://example.test/patient|2026', path: 'Patient.name[0].family', ruleId: 'local-1' });
+    for (const other of [{ profile: 'https://example.test/patient-extra' }, { path: 'Patient.nameText' }, { ruleId: 'local-10' }]) {
+      expect(applyAdvisorRules([{ ...matching, ...other }], [rule]).suppressedCount).toBe(0);
+    }
+    expect(applyAdvisorRules([matching], [rule]).suppressedCount).toBe(1);
+  });
+  it('matches resource-qualified roots and exact resource types without name collisions', () => {
+    const rule: AdvisorRule = { id: 'root', action: 'suppress', match: { path: 'Patient', resourceType: 'Patient' } };
+    expect(applyAdvisorRules([issue({ path: 'Patient.name[0]', resourceType: 'Patient' })], [rule]).suppressedCount).toBe(1);
+    expect(applyAdvisorRules([issue({ path: 'PatientRecord.name' })], [rule]).suppressedCount).toBe(0);
+    expect(applyAdvisorRules([issue({ resourceType: 'Observation' })], [rule]).suppressedCount).toBe(0);
+  });
+  it('matches explicitly declared profile namespaces at a path boundary', () => {
+    const rule: AdvisorRule = { id: 'family', action: 'suppress', match: { profile: 'https://example.test/modul-person/' } };
+    expect(applyAdvisorRules([issue({ profile: 'https://example.test/modul-person/StructureDefinition/Patient|2026' })], [rule]).suppressedCount).toBe(1);
+    expect(applyAdvisorRules([issue({ profile: 'https://example.test/modul-person-extra/StructureDefinition/Patient' })], [rule]).suppressedCount).toBe(0);
+    expect(applyAdvisorRules([issue({ profile: 'https://different.test/modul-person/StructureDefinition/Patient' })], [rule]).suppressedCount).toBe(0);
+  });
   it('suppresses issues matching by code', () => {
     const rules: AdvisorRule[] = [{
       id: 'r1',

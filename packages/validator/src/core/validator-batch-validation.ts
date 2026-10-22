@@ -26,9 +26,10 @@ import type { SDFHIRPathExecutor } from '../validators/sd-fhirpath-executor.js';
 import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator.js';
 import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator.js';
 import { groupResourcesByProfile } from './batch-resource-planning.js';
-import type { ProfileSourceContext } from '../persistence/index.js';
 import type { RecordsValidatorComponents } from './validator-engine-components.js';
 import { isRecord } from './fhir-resource.js';
+import { isCustomRuleReleaseModelCoherent, type CustomRuleSelectedRelease } from '../custom-rules/applicability.js';
+import { createValidationSourceContext } from './validator-terminology-snapshot-context.js';
 
 export interface RecordsBatchValidationContext {
   sdLoader: StructureDefinitionLoader;
@@ -55,6 +56,7 @@ export interface RecordsBatchValidationContext {
     fhirClient?: FhirClientLike,
     organizationId?: number,
     serverId?: number,
+    selectedRelease?: CustomRuleSelectedRelease | null,
   ) => Promise<ValidationIssue[]>;
 }
 
@@ -91,6 +93,10 @@ export async function validateRecordsBatch(
   options: BatchValidationOptions,
   context: RecordsBatchValidationContext,
 ): Promise<Map<unknown, ValidationIssue[]> | Map<unknown, MultiAspectValidateResult>> {
+  if (!isCustomRuleReleaseModelCoherent(options.selectedRelease, options.fhirVersion ?? 'R4')) {
+    throw new Error('Selected validation release is incompatible with the validator model');
+  }
+  const selectedRelease = options.selectedRelease === undefined ? options.fhirVersion ?? 'R4' : options.selectedRelease;
   if (options.aspects && options.aspects.length > 0 && options.settings) {
     logger.info(`[RecordsValidator] ⚡ Starting MULTI-ASPECT batch validation for ${resources.length} resources`);
     logger.info(`[RecordsValidator] 📋 Aspects: ${options.aspects.join(', ')}`);
@@ -127,6 +133,7 @@ export async function validateRecordsBatch(
         options.referenceResolver,
         options.serverId,
         profileSourcesByResource(resources, options),
+        selectedRelease,
       ),
     });
   }
@@ -144,6 +151,7 @@ export async function validateRecordsBatch(
       options.fhirClient,
       options.organizationId,
       options.serverId,
+      selectedRelease,
     ),
   });
 }
@@ -153,6 +161,9 @@ export async function validateRecordsAspects(
   options: BatchValidationOptions,
   context: RecordsBatchValidationContext,
 ): Promise<MultiAspectValidateResult> {
+  if (!isCustomRuleReleaseModelCoherent(options.selectedRelease, options.fhirVersion ?? 'R4')) {
+    throw new Error('Selected validation release is incompatible with the validator model');
+  }
   if (options.profileSources && options.profileSources.length !== 1) {
     throw new Error('Direct aspect validation requires one profile source');
   }
@@ -161,11 +172,7 @@ export async function validateRecordsAspects(
   }
   if (options.shouldStop?.()) throw new BatchValidationAbortedError();
   const fhirVersion = options.fhirVersion ?? 'R4';
-  const profileSourceContext: ProfileSourceContext = {
-    organizationId: options.organizationId,
-    serverId: options.serverId,
-    fhirVersion,
-  };
+  const profileSourceContext = createValidationSourceContext({ ...options, fhirVersion });
   context.sdLoader.setProfileResolutionContext(
     profileSourceContext,
     options.settings,
@@ -202,6 +209,7 @@ export async function validateRecordsAspects(
     options.referenceResolver,
     options.serverId,
     profileSourcesByResource([resource], options),
+    options.selectedRelease === undefined ? fhirVersion : options.selectedRelease,
   );
   const execute = () => validate(resource, profileUrl, fhirVersion);
   const result = options.scheduleValidation

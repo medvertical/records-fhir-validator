@@ -9,7 +9,7 @@ export function createConstraintViolation(
   resourceType: string,
   profileUrl?: string,
 ): ValidationIssue {
-  return createValidationIssue({
+  const issue = createValidationIssue({
     code: `constraint-violation-${constraint.key}`,
     path,
     resourceType,
@@ -22,8 +22,10 @@ export function createConstraintViolation(
       expression: constraint.expression,
       constraintKey: constraint.key,
       originalSeverity: constraint.severity,
+      ...(constraint.source ? { source: constraint.source } : {}),
     },
   });
+  return constraint.source ? { ...issue, definitionProfile: constraint.source } : issue;
 }
 
 export function createConstraintEvaluationError(
@@ -34,7 +36,7 @@ export function createConstraintEvaluationError(
   profileUrl?: string,
 ): ValidationIssue {
   const message = getEvaluationErrorMessage(error);
-  return createValidationIssue({
+  const issue = createValidationIssue({
     code: 'profile-constraint-evaluation-error',
     path,
     resourceType,
@@ -48,6 +50,7 @@ export function createConstraintEvaluationError(
     details: {
       expression: constraint.expression,
       constraintKey: constraint.key,
+      ...(constraint.source ? { source: constraint.source } : {}),
       evaluationError: message,
       // The data was not checked, so the result is incomplete rather than
       // conformant; the quality lanes read this to tell the two apart.
@@ -55,6 +58,7 @@ export function createConstraintEvaluationError(
       validationComplete: false,
     },
   });
+  return constraint.source ? { ...issue, definitionProfile: constraint.source } : issue;
 }
 
 export function getEvaluationErrorMessage(error: unknown): string {

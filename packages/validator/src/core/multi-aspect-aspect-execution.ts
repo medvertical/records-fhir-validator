@@ -14,12 +14,14 @@ import type { createMultiAspectRunner } from './multi-aspect-runner.js';
 import { getValueAtPath } from './validation-utils.js';
 import type { ReferenceResourceFetcher } from '../reference/reference-fetch-deadline.js';
 import { validateValueSetIncludeSystemOids } from '../validators/valueset-include-oid-rule.js';
+import type { CustomRuleSelectedRelease } from '../custom-rules/applicability.js';
 
 interface ExecuteSelectedAspectsOptions {
   deps: MultiAspectDeps;
   selectedAspects: ReadonlySet<string>;
   settings?: ValidationSettings;
   organizationId?: number;
+  selectedRelease?: CustomRuleSelectedRelease | null;
   profileSourceContext: ProfileSourceContext;
   profileFallbackIssue: ValidationIssue | null;
   runCustomRules: boolean;
@@ -112,41 +114,62 @@ async function executeSelectedAspectsScoped(options: ExecuteSelectedAspectsOptio
     ]), true);
   }
 
+  // Reference reads can overlap the profile prerequisites without publishing
+  // their issues before the invariant context is ready.
+  const earlyReferenceIssues = preInvariantAspects.length > 0 && selectedAspects.has('reference')
+    ? startEarlyReferenceIssues(options) : undefined;
+  // The prerequisite phase may fail before the reference result is consumed.
+  void earlyReferenceIssues?.catch(() => undefined);
   try {
     if (preInvariantAspects.length > 0) {
       await Promise.all(preInvariantAspects);
       options.throwIfStopped();
     }
-    scheduleParallelAspects(options, parallelAspects);
+    scheduleParallelAspects(options, parallelAspects, earlyReferenceIssues);
     if (parallelAspects.length > 0) {
       await Promise.all(parallelAspects);
       options.throwIfStopped();
     }
   } finally {
     // A cancellation rejects one runner while its admitted siblings may still own I/O.
-    await Promise.allSettled([...preInvariantAspects, ...parallelAspects]);
+    await Promise.allSettled([...preInvariantAspects, ...parallelAspects,
+      ...(earlyReferenceIssues ? [earlyReferenceIssues] : [])]);
   }
+}
+
+function startEarlyReferenceIssues(options: ExecuteSelectedAspectsOptions): Promise<ValidationIssue[]> {
+  try {
+    return validateReferenceIssues(options);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
+function validateReferenceIssues(options: ExecuteSelectedAspectsOptions): Promise<ValidationIssue[]> {
+  const { context: ctx, deps } = options;
+  return deps.referenceExecutor.validate({
+    fhirClient: deps.fhirClient,
+    resource: ctx.resource,
+    fhirVersion: ctx.fhirVersion,
+    settings: options.settings,
+    resourceFetcher: async (reference, fetchOptions) => {
+      fetchOptions?.signal?.throwIfAborted();
+      return ctx.referenceResolver?.(reference)
+        ?? await options.referenceResourceFetcher?.(reference, fetchOptions)
+        ?? null;
+    },
+  });
 }
 
 function scheduleParallelAspects(
   options: ExecuteSelectedAspectsOptions,
   parallelAspects: Promise<void>[],
+  earlyReferenceIssues?: Promise<ValidationIssue[]>,
 ): void {
   const { context: ctx, deps, selectedAspects, runAspect } = options;
   if (selectedAspects.has('reference')) {
     parallelAspects.push(runAspect('reference', async () => {
-      const referenceIssues = await deps.referenceExecutor.validate({
-        fhirClient: deps.fhirClient,
-        resource: ctx.resource,
-        fhirVersion: ctx.fhirVersion,
-        settings: options.settings,
-        resourceFetcher: async (reference, fetchOptions) => {
-          fetchOptions?.signal?.throwIfAborted();
-          return ctx.referenceResolver?.(reference)
-            ?? await options.referenceResourceFetcher?.(reference, fetchOptions)
-            ?? null;
-        },
-      });
+      const referenceIssues = await (earlyReferenceIssues ?? validateReferenceIssues(options));
       if (options.skipTargetProfileConformance) return referenceIssues;
 
       const incompleteIssues: ValidationIssue[] = [];
@@ -170,7 +193,7 @@ function scheduleParallelAspects(
         }),
         onIncomplete: issue => incompleteIssues.push(issue),
         loadReferenceTargetDefinition: (url, source) => deps.sdLoader.loadReferencedProfile(url, source, ctx.fhirVersion),
-        loadExtensionDefinition: url => loadExtensionTargetDefinition(deps.sdLoader, deps.snapshotGenerator, url, ctx.structureDef, ctx.fhirVersion),
+        loadExtensionDefinition: (url, parent) => loadExtensionTargetDefinition(deps.sdLoader, deps.snapshotGenerator, url, parent ?? ctx.structureDef, ctx.fhirVersion),
         pinExtensionProfile: (url, definition) => deps.sdLoader.referencedProfileUrl(url, definition, ctx.fhirVersion),
       });
       return [...referenceIssues, ...conformanceIssues, ...incompleteIssues];
@@ -192,6 +215,8 @@ function scheduleParallelAspects(
       structureDef: ctx.structureDef,
       fhirVersion: ctx.fhirVersion,
       organizationId: options.organizationId,
+      selectedRelease: options.selectedRelease,
+      profileResolutionFallback: Boolean(options.profileFallbackIssue),
     }) : []));
   }
   if (selectedAspects.has('metadata')) {

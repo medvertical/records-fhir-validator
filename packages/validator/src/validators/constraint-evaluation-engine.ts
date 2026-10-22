@@ -16,6 +16,7 @@ import type { ConstraintValidationState, FhirResource } from './constraint-valid
 import { ValueSetCache } from './valueset-cache.js';
 import { ConstraintExpressionCache } from './constraint-expression-cache.js';
 import { handleConstraintEvaluationFailure } from './constraint-evaluation-failure.js';
+import { SDFHIRPathPrimitiveContext } from './sd-fhirpath-primitive-context.js';
 
 type ConstraintFHIRPathEvaluator = typeof evaluateConstraintFHIRPath;
 
@@ -23,6 +24,7 @@ export class ConstraintEvaluationEngine {
   private readonly prechecks: ConstraintEvaluationPrecheckPipeline;
   private readonly diagnosticTracker = new FHIRPathConstraintDiagnosticTracker();
   private readonly asyncExpressionCache = new AsyncFHIRPathTerminologyCache();
+  private readonly primitiveContext = new SDFHIRPathPrimitiveContext();
 
   constructor(
     private readonly terminologyResolver?: FHIRPathTerminologyResolver,
@@ -103,7 +105,7 @@ export class ConstraintEvaluationEngine {
     if (precheck.handled) return precheck.issues;
 
     const result = await this.evaluateFHIRPath(
-      precheck.context,
+      this.primitiveContext.resolve(precheck.context, resource, elementPath, state.fhirVersion),
       precheck.expression,
       state.rootResource ?? resource,
       state.fhirVersion,

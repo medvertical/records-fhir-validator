@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setProfileSource } from '../persistence';
 import type { StructureDefinition } from './structure-definition-types';
 import { StructureDefinitionLoader } from './structure-definition-loader';
+import { DEFAULT_VALIDATION_SETTINGS_R4 } from '@records-fhir/validation-types';
+import { createValidationDependencySnapshot } from '../validation-dependency-snapshot.js';
 
 describe('StructureDefinitionLoader policy changes', () => {
   const tempDirs: string[] = [];
@@ -130,6 +132,35 @@ describe('StructureDefinitionLoader policy changes', () => {
     expect(loader.getAllowedPackages()).toEqual(['example.fhir']);
     expect(loader.getPinnedCanonicalCount()).toBe(1);
     expect(loader.getPinnedCanonicalFingerprint()).toEqual(fingerprint);
+  });
+
+  it('retains initiating tenant/settings for an in-flight reference and isolates host mutations', async () => {
+    const loader = createLoader(await createRoot());
+    await loader.waitForInitialization();
+    const canonical = 'https://example.org/fhir/StructureDefinition/scoped-patient';
+    let releaseOld!: () => void;
+    const oldGate = new Promise<void>(resolve => { releaseOld = resolve; });
+    setProfileSource({ resolveProfile: async (_url, _version, settings, context) => {
+      if (context?.organizationId === 7) await oldGate;
+      const selected = profile(canonical, String(settings!.performance.batchSize));
+      settings!.performance.batchSize = 999;
+      return selected;
+    } });
+    const originalSettings = structuredClone(DEFAULT_VALIDATION_SETTINGS_R4);
+    originalSettings.performance.batchSize = 10;
+    const originalContext = { organizationId: 7 };
+    loader.setProfileResolutionContext(originalContext, originalSettings);
+    const pending = createValidationDependencySnapshot().run(() => loader.loadReferencedProfile(canonical, null));
+    originalContext.organizationId = 99;
+    originalSettings.performance.batchSize = 99;
+    const nextSettings = structuredClone(DEFAULT_VALIDATION_SETTINGS_R4);
+    nextSettings.performance.batchSize = 20;
+    loader.setProfileResolutionContext({ organizationId: 8 }, nextSettings);
+    await expect(loader.loadReferencedProfile(canonical, null)).resolves.toMatchObject({ version: '20' });
+    releaseOld();
+    await expect(pending).resolves.toMatchObject({ version: '10' });
+    loader.clearCache();
+    await expect(loader.loadReferencedProfile(canonical, null)).resolves.toMatchObject({ version: '20' });
   });
 
   async function createRoot(): Promise<string> {

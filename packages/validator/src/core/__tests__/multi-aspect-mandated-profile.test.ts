@@ -33,7 +33,7 @@ describe('mandated profile validation', () => {
     expect(collected[0].evidenceIssues).toMatchObject([warning, suppressed]);
     expect(collected[0].isValid).toBe(true);
     expect(validate).toHaveBeenCalledWith(systolicObservation,
-      'http://hl7.org/fhir/StructureDefinition/bp', 'R4', 1, undefined, true, containing);
+      'http://hl7.org/fhir/StructureDefinition/bp', 'R4', 0, undefined, true, containing, true);
   });
 
   it('keeps an audit-only finding when the mandated result was suppressed', async () => {

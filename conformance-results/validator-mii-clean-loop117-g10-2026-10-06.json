@@ -1,0 +1,4117 @@
+{
+  "generatedAt": "2026-10-06T10:34:45.836Z",
+  "corpusRoot": "quality-corpus/r4/profiled/mii-2026",
+  "fhirVersion": "R4",
+  "summary": {
+    "fixtures": 442,
+    "clean": 442,
+    "noisy": 0,
+    "precisionPct": 100,
+    "totalFalsePositives": 0,
+    "excluded": 110
+  },
+  "exclusions": [
+    {
+      "file": "mii-2026-bildgebung-body-structure-body-structure-mii-exa-bildgebung-koerperstruktur.json",
+      "category": "profile-example-drift",
+      "reason": "Example states a code the bound ValueSet does not enumerate: Code '7771000' from system 'http://snomed.info/sct' is not in value set 'http://hl7.eu/fhir/base/ValueSet/siteQualifier-eu'."
+    },
+    {
+      "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-nm.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example states a code under a system that does not define it: Invalid UCUM code 'BQML'."
+    },
+    {
+      "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-pt.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example states a code under a system that does not define it: Invalid UCUM code 'BQML'."
+    },
+    {
+      "file": "mii-2026-consent-consent-example-mii-consent-einwilligung-1.json",
+      "category": "profile-example-drift",
+      "reason": "Example carries the concept display from an earlier CodeSystem version than the one the pinned package ships."
+    },
+    {
+      "file": "mii-2026-consent-consent-example-mii-consent-einwilligung-2.json",
+      "category": "profile-example-drift",
+      "reason": "Example carries the concept display from an earlier CodeSystem version than the one the pinned package ships."
+    },
+    {
+      "file": "mii-2026-consent-consent-example-mii-consent-einwilligung.json",
+      "category": "profile-example-drift",
+      "reason": "Example carries the concept display from an earlier CodeSystem version than the one the pinned package ships."
+    },
+    {
+      "file": "mii-2026-consent-consent-example-mii-consent-result-type-consent-status.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example writes a bare OID in Consent.policy.uri instead of the urn:oid: form."
+    },
+    {
+      "file": "mii-2026-icu-device-metric-mii-exa-icu-ect-dm-ecmo-eingestellt.json",
+      "category": "profile-example-drift",
+      "reason": "Example states a code the bound ValueSet does not enumerate: Code '182744004' from system 'http://snomed.info/sct' is not in value set 'https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/ValueSet/mii-vs-icu-devicemetric-extrakorporale-verfahren|2026.0.0'."
+    },
+    {
+      "file": "mii-2026-icu-device-metric-mii-exa-icu-ect-dm-ecmo-gemessen.json",
+      "category": "profile-example-drift",
+      "reason": "Example states a code the bound ValueSet does not enumerate: Code '182744004' from system 'http://snomed.info/sct' is not in value set 'https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/ValueSet/mii-vs-icu-devicemetric-extrakorporale-verfahren|2026.0.0'."
+    },
+    {
+      "file": "mii-2026-icu-device-metric-mii-exa-icu-vent-dm-beatmung-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-devicemetric-eingestellte-gemessene-parameter-beatmung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-device-metric-mii-exa-icu-vent-dm-beatmung-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-devicemetric-eingestellte-gemessene-parameter-beatmung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-abnahme-haemofiltration-einzelmesswerte.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-bilanz-abnahme-haemofiltration-einzelmesswerte, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-drainage-generisch.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-fluessigkeit-gesamt.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-gallenfluessigkeit.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-magensonde.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-opdrainage.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-bilanz-ausfuhr-opdrainage, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-pankreasdrainage.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-stuhlgang.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-urin.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-ausfuhr-wunddrainage.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-blutverlust.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-bilanz-blutverlust, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-abgepumpte-muttermilch.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-bilanz-einfuhr-abgepumpte-muttermilch, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-enterale-fluessigkeit.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-fluessigkeit-gesamt.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-muttermilch.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-bilanz-einfuhr-muttermilch, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-oraler-fluessigkeit.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-bilanz-einfuhr-oraler-fluessigkeit, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-saeuglingsnahrung.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-bilanz-einfuhr-saeuglingsnahrung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-einfuhr-spendermilch.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-bilanz-einfuhr-spendermilch, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-bilanz-tagesbilanz-fluessigkeit.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.valueQuantity.unit."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-blutfluss-durch-cardiovasculaeres-geraet-eingestellt.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (68)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-blutfluss-durch-cardiovasculaeres-geraet-gemessen.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (65)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-blutfluss-extrakorporaler-gasaustausch-eingestellt.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (66)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-blutflussindex-extrakorporaler-gasaustausch-eingestellt.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (71)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-blutflussindex-extrakorporaler-gasaustausch-gemessen.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (68)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-kern.json",
+      "category": "profile-example-drift",
+      "reason": "Example codings do not match the slice patterns the profile declares, so its required slices stay unmatched."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-linksatrialer-druck.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example states a code under a system that does not define it: Unknown code 'vital-signs' in CodeSystem 'http://hl7.org/fhir/secondary-finding' version '4.0.1'."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-linksventri-schlagvolumen-durch-indikatorverduennung.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (68)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-linksventri-schlagvolumenindex-durch-indikatorverd.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (66)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-linksventrikulaerer-druck.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example states a code under a system that does not define it: Unknown code 'vital-signs' in CodeSystem 'http://hl7.org/fhir/secondary-finding' version '4.0.1'."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-linksventrikulaerer-herzindex-durch-indikatorverduennung.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (72)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-linksventrikulaerer-herzindex.json",
+      "category": "profile-example-drift",
+      "reason": "Example value does not match the pattern the profile fixes: expected 'L/min/m2', found 'L/(min.m2)'."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-linksventrikulaeres-schlagvolumen.json",
+      "category": "profile-example-drift",
+      "reason": "Example codings do not match the slice patterns the profile declares, so its required slices stay unmatched."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-o2saettigung-im-arteriellen-blut-durch-pulsoxymetrie.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (68)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-o2saettigung-im-blut-postduktal-durch-pulsoxymetrie.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (67)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-o2saettigung-im-blut-preduktal-durch-pulsoxymetrie.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example carries a resource id past the 64-character FHIR limit (66)."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-pulmonalarterieller-blutdruck.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example states a code under a system that does not define it: Unknown code 'vital-signs' in CodeSystem 'http://hl7.org/fhir/secondary-finding' version '4.0.1'."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-pulmonalvaskulaerer-widerstandsindex.json",
+      "category": "profile-example-drift",
+      "reason": "Example value does not match the pattern the profile fixes: expected 'dyn.s/cm5/m2', found 'dyn.s/(cm5.m2)'."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-rechtsatrialer-druck.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example states a code under a system that does not define it: Unknown code 'vital-signs' in CodeSystem 'http://hl7.org/fhir/secondary-finding' version '4.0.1'."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-rechtsventrikulaerer-druck.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example states a code under a system that does not define it: Unknown code 'vital-signs' in CodeSystem 'http://hl7.org/fhir/secondary-finding' version '4.0.1'."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-sonstige-pulsatile-druecke-generisch.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example omits an element the profile requires: Observation.code.coding[1].code."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-systemischer-vaskulaerer-widerstandsindex.json",
+      "category": "profile-example-drift",
+      "reason": "Example value does not match the pattern the profile fixes: expected 'dyn.s/cm5/m2', found 'dyn.s/(cm5.m2)'."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-score-rass.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-score-rass, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillenbefund.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-untersuchung-pupillenbefund, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillenform.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-untersuchung-pupillenform, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillengroesse.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-untersuchung-pupillengroesse, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillenlichtreaktion-direkt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-untersuchung-pupillenlichtreaktion-direkt, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillenlichtreaktion-indirekt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-untersuchung-pupillenlichtreaktion-indirekt, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-untersuchung-pupillensymmetrie.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-untersuchung-pupillensymmetrie, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-atemwegsdruck-bei-mittlerem-expiratorischem-gasfluss-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-atemwegsdruck-bei-mitl-exspiratorischem-gasfluss, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-atemwegsdruck-bei-null-exspiratorischem-gasfluss-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-atemwegsdruck-bei-null-exspiratorischem-gasfluss, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-atemwegsdruck-bei-null-exspiratorischem-gasfluss-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-atemwegsdruck-bei-null-exspiratorischem-gasfluss, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-atemzugvolumen-einstellung-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-atemzugvolumen-einstellung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-atemzugvolumen-waehrend-beatmung-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-atemzugvolumen-waehrend-beatmung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-beatmungsvolumen-pro-minute-maschineller-beatmung-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-beatmungsvolumen-pro-minute-maschineller, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-beatmungszeit-auf-hohem-druck-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-beatmungszeit-hohem-druck, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-beatmungszeit-auf-niedrigem-druck-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-beatmungszeit-niedrigem-druck, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-druckdifferenz-beatmung-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-druckdifferenz-beatmung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-dynamische-kompliance-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-dynamische-kompliance, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-eingestellter-inspiratorischer-gasfluss.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-eingestellter-inspiratorischer-gasfluss, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-einstellung-ausatmungszeit-beatmung-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-einstellung-ausatmungszeit-beatmung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-einstellung-einatmungszeit-beatmung-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-einstellung-einatmungszeit-beatmung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-endexspiratorischer-kohlendioxidpartialdruck-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-endexspiratorischer-kohlendioxidpartialdruck, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-exspiratorischer-gasfluss-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-exspiratorischer-gasfluss, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-exspiratorischer-sauerstoffpartialdruck-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-exspiratorischer-sauerstoffpartialdruck, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-horowitz-in-arteriellem-blut-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-horowitz-in-arteriellem-blut, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-inspiratorische-sauerstofffraktion-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-inspiratorische-sauerstofffraktion-eingestellt, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-inspiratorische-sauerstofffraktion-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-inspiratorische-sauerstofffraktion-gemessen, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-inspiratorischer-gasfluss-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-inspiratorischer-gasfluss, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-maximaler-beatmungsdruck-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-maximaler-beatmungsdruck, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-maximaler-beatmungsdruck-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-maximaler-beatmungsdruck, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-mechanische-atemfrequenz-beatmet-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-mechanische-atemfrequenz-beatmet, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-mittlerer-beatmungsdruck-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-mittlerer-beatmungsdruck, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-mittlerer-beatmungsdruck-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-mittlerer-beatmungsdruck, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-parameter-von-beatmung.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-parameter-von-beatmung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-positiv-endexpiratorischer-druck-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-positiv-endexspiratorischer-druck, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-positiv-endexpiratorischer-druck-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-positiv-endexspiratorischer-druck, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-spontane-atemfrequenz-beatmet-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-spontane-atemfrequenz-beatmet, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-spontane-mechanische-atemfrequenz-beatmet-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-spontane-mechanische-atemfrequenz-beatmet, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-spontanes-atemzugvolumen-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-spontanes-atemzugvolumen, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-spontanes-mechanisches-atemzugvolumen-waehrend-beatmung-gemessen.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-spontanes-mechanisches-atemzugvolumen-waehrend, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-unterstuetzungsdruck-beatmung-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-unterstuetzungsdruck-beatmung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-vent-zeitverhaeltnis-ein-ausatmung-eingestellt.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-zeitverhaeltnis-ein-ausatmung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-icu-procedure-mii-exa-icu-vent-beatmung.json",
+      "category": "package-version-drift",
+      "reason": "Fixture declares https://www.medizininformatik-initiative.de/fhir/ext/modul-icu/StructureDefinition/mii-pr-icu-vent-beatmung, which the pinned bundled de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2 does not contain; the examples come from a later ICU release."
+    },
+    {
+      "file": "mii-2026-medikation-medication-statement-medication-statement-mii-exa-medikation-medication-statement-caelyx.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example provides Dosage.timing without doseAndRate, which the module's own DosageStructuredRequiresBoth invariant forbids."
+    },
+    {
+      "file": "mii-2026-medikation-medication-statement-medication-statement-mii-exa-medikation-medication-statement-intravenous-use.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example provides Dosage.timing without doseAndRate, which the module's own DosageStructuredRequiresBoth invariant forbids."
+    },
+    {
+      "file": "mii-2026-medikation-medication-statement-medication-statement-mii-exa-medikation-medication-statement-offset.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example provides Dosage.timing without doseAndRate, which the module's own DosageStructuredRequiresBoth invariant forbids."
+    },
+    {
+      "file": "mii-2026-medikation-medication-statement-medication-statement-mii-exa-medikation-medication-statement-periodisches-intervall.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example provides Dosage.timing without doseAndRate, which the module's own DosageStructuredRequiresBoth invariant forbids."
+    },
+    {
+      "file": "mii-2026-molgen-risk-assessment-risk-assessment-mii-exa-molgen-prs-brca1.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example states a RiskAssessment probability above 100, which ras-2 forbids."
+    },
+    {
+      "file": "mii-2026-molgen-task-task-mii-exa-molgen-folgemassnahme-1.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example writes the reference resource type in lower case ('servicerequest/example'); the FHIR reference grammar is case-sensitive."
+    },
+    {
+      "file": "mii-2026-molgen-task-task-mii-exa-molgen-medikationsempfehlung-1.json",
+      "category": "known-upstream-invalid",
+      "reason": "Example writes the reference resource type in lower case ('servicerequest/example'); the FHIR reference grammar is case-sensitive."
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-folfox-phase1.json",
+      "category": "profile-example-drift",
+      "reason": "Example uses the CodeSystem name from before the module renamed it; the profile slice fixes the new one."
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-folfox-procedure.json",
+      "category": "profile-example-drift",
+      "reason": "Example uses the CodeSystem name from before the module renamed it; the profile slice fixes the new one."
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-lv5fu2-phase2.json",
+      "category": "profile-example-drift",
+      "reason": "Example uses the CodeSystem name from before the module renamed it; the profile slice fixes the new one."
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-strahlentherapie-nuklearmedizin-1.json",
+      "category": "profile-example-drift",
+      "reason": "Example uses the CodeSystem name from before the module renamed it; the profile slice fixes the new one."
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-strahlentherapie-strahlentherapie-1.json",
+      "category": "profile-example-drift",
+      "reason": "Example uses the CodeSystem name from before the module renamed it; the profile slice fixes the new one."
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-systemische-therapie-1.json",
+      "category": "profile-example-drift",
+      "reason": "Example uses the CodeSystem name from before the module renamed it; the profile slice fixes the new one."
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-systemic-therapy-1.json",
+      "category": "profile-example-drift",
+      "reason": "Example uses the CodeSystem name from before the module renamed it; the profile slice fixes the new one."
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-systemic-therapy-2.json",
+      "category": "profile-example-drift",
+      "reason": "Example uses the CodeSystem name from before the module renamed it; the profile slice fixes the new one."
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-systemic-therapy-3.json",
+      "category": "profile-example-drift",
+      "reason": "Example uses the CodeSystem name from before the module renamed it; the profile slice fixes the new one."
+    }
+  ],
+  "fhirPathConstraintDiagnostics": {
+    "skippedConstraints": {
+      "total": 0,
+      "byReason": {
+        "async-function": 0,
+        "disallowed-function": 0,
+        "unsupported-engine-capability": 0,
+        "evaluation-error": 0
+      },
+      "byConstraintKey": {},
+      "byProfile": {},
+      "samples": []
+    }
+  },
+  "fixtures": [
+    {
+      "file": "mii-2026-base-condition-condition-mii-exa-diagnose-appendicitis.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-condition-condition-mii-exa-diagnose-condition-elbow-contusion.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-condition-condition-mii-exa-diagnose-condition-multiple-codings.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 6,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-condition-condition-mii-exa-diagnose-mehrfachcodierung-primaercode.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 7,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-condition-condition-mii-exa-diagnose-mehrfachcodierung-sekundaercode.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-condition-condition-mii-exa-person-condition-todesursache.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-1.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-10.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-11.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-2.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-3.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-4.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-5.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-6.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-7.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-8.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-gesundheitseinrichtung-9.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-in-progress-status.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-onleave-status.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-encounter-encounter-mii-exa-fall-kontakt-unknown-status.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-observation-observation-mii-exa-person-observation-vitalstatus-discharge.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-observation-observation-mii-exa-person-observation-vitalstatus.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-patient-patient-mii-exa-person-patient-1.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-patient-patient-mii-exa-person-patient-pseudonymisiert.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-procedure-procedure-mii-exa-prozedur-imaging.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-procedure-procedure-mii-exa-prozedur-procedure-2.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-base-procedure-procedure-mii-exa-prozedur-procedure.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-care-plan-care-plan-mii-exa-bildgebung-behandlungsempfehlung.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-composition-composition-mii-exa-bildgebung-semistrukt-befundbericht.json",
+      "resourceType": "Composition",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-device-device-mii-exa-bildgebung-geraet.json",
+      "resourceType": "Device",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-diagnostic-report-diagnostic-report-mii-exa-bildgebung-radiologischer-befund.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-cr.json",
+      "resourceType": "ImagingStudy",
+      "errorCount": 0,
+      "warningCount": 8,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-ct.json",
+      "resourceType": "ImagingStudy",
+      "errorCount": 0,
+      "warningCount": 7,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-mr-series.json",
+      "resourceType": "ImagingStudy",
+      "errorCount": 0,
+      "warningCount": 6,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-mr.json",
+      "resourceType": "ImagingStudy",
+      "errorCount": 0,
+      "warningCount": 7,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-us.json",
+      "resourceType": "ImagingStudy",
+      "errorCount": 0,
+      "warningCount": 7,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-medication-administration-medication-administration-mii-exa-bildgebung-kontrastmittelgabe.json",
+      "resourceType": "MedicationAdministration",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-observation-observation-mii-exa-bildgebung-radiologische-beobachtung.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-procedure-procedure-mii-exa-bildgebung-bildgebungsprozedur.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-procedure-procedure-mii-exa-bildgebung-radiologische-befundungsprozedur.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-procedure-procedure-mii-exa-bildgebung-tnm-radiologische-befundungsprozedur.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-bildgebung-service-request-service-request-mii-exa-bildgebung-anforderung-bildgebung.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-document-reference-document-reference-kulturprotokoll.json",
+      "resourceType": "DocumentReference",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-document-reference-document-reference-protocol-crisprtp53.json",
+      "resourceType": "DocumentReference",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-observation-observation-dnaconcentration-obs1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-observation-observation-karyotyp-organoid-lunge.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-observation-observation-morphologie-organoid-lunge.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-observation-observation-proliferation-organoid-lunge.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-observation-observation-qualitaetspruefung-buffy-coat.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-observation-observation-qualitaetspruefung-plasma.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-observation-observation-wachstumstyp-organoid-lunge.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-organization-organization-biobank-musterstadt.json",
+      "resourceType": "Organization",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-organization-organization-mustersammlung.json",
+      "resourceType": "Organization",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-service-request-service-request-gewebe-biopsie.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-specimen-specimen-aliquot-buffy-coat1.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 6,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-specimen-specimen-aliquot-buffy-coat2.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 8,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-specimen-specimen-aliquotgruppe-buffy-coat.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 7,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-specimen-specimen-aliquotgruppe-dna.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 6,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-specimen-specimen-aliquotgruppe-plasma.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 7,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-specimen-specimen-musterprobe-fluessig.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 9,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-specimen-specimen-musterprobe-gewebe.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 11,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-specimen-specimen-organoid-lunge.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 7,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-biobank-substance-substance-heparin.json",
+      "resourceType": "Substance",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-consent-document-reference-example-mii-consent-document-reference.json",
+      "resourceType": "DocumentReference",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-consent-provenance-example-mii-consent-provenance.json",
+      "resourceType": "Provenance",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-blutfluss-extrakorporaler-gasaustausch-gemessen.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-dauer-extrakorporaler-gasaustausch-gemessen.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-dauer-haemodialysesitzung-gemessen.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-gasfluss-eingestellt.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-haemodialyse-blutfluss-eingestellt.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-haemodialyse-blutfluss-gemessen.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-ionisiertes-kalzium-aus-nierenersatzverfahren-gemessen.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-substituatfluss-eingestellt.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-substituatvolumen-eingestellt.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-ect-venoeser-druck-gemessen.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-arterieller-blutdruck.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-atemfrequenz.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-herzfrequenz.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-herzzeitvolumen.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-ideales-koerpergewicht.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-intrakranieller-druck-icp.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpergewicht-percentile-altersabhaengig.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpergroesse-percentile-altersabhaengig.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpergroesse.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-achsel.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-atemwege.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-blut.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-brust.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-brustwirbelsaeule.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-gelenk.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-generisch.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-halswirbelsaeule.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-harnblase.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-leiste.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-lendenwirbelsaeule.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-myokard.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-nasal.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-nasen-rachen-raum.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-rektal.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-speiseroehre.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-stirn.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-trommelfell.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-unter-der-zunge.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-koerpertemperatur-vaginal.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-kopfumfang.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-linksventri-herzzeitvolumen-durch-indikatorverd.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-linksventrikulaeres-schlagvolumenindex.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-pulmonalarterieller-wedge-blutdruck.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-puls.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-observation-mii-exa-icu-muv-zentralvenoeser-blutdruck.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-icu-procedure-mii-exa-icu-ecmo.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-laborbefund-diagnostic-report-diagnostic-report-mii-exa-labor-laborbefund.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-laborbefund-observation-observation-mii-exa-labor-laborwert-data-absent-reason.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-laborbefund-observation-observation-mii-exa-labor-laborwert-range.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-laborbefund-observation-observation-mii-exa-labor-laborwert-ratio.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-laborbefund-observation-observation-mii-exa-labor-laborwert.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-laborbefund-service-request-service-request-mii-exa-labor-laboranforderung.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-list-list-mii-exa-medikation-list-admission.json",
+      "resourceType": "List",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-list-list-mii-exa-medikation-medikationsliste-aktuelle-therapie.json",
+      "resourceType": "List",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-list-list-mii-exa-medikation-medikationsliste-aufnahmemedikation.json",
+      "resourceType": "List",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-administration-medication-administration-mii-exa-medikation-medication-administration.json",
+      "resourceType": "MedicationAdministration",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-medication-mii-exa-medikation-medication-ass-100.json",
+      "resourceType": "Medication",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-medication-mii-exa-medikation-medication-caelyx.json",
+      "resourceType": "Medication",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-medication-mii-exa-medikation-medication-calcium.json",
+      "resourceType": "Medication",
+      "errorCount": 0,
+      "warningCount": 9,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-medication-mii-exa-medikation-medication-dolomo-nacht.json",
+      "resourceType": "Medication",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-medication-mii-exa-medikation-medication-dolomo-tag.json",
+      "resourceType": "Medication",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-medication-mii-exa-medikation-medication-dolomo.json",
+      "resourceType": "Medication",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-medication-mii-exa-medikation-medication-glucoseloesung.json",
+      "resourceType": "Medication",
+      "errorCount": 0,
+      "warningCount": 7,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-medication-mii-exa-medikation-medication-propofol.json",
+      "resourceType": "Medication",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-medication-mii-exa-medikation-medication-rezeptur.json",
+      "resourceType": "Medication",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-medication-mii-exa-medikation-medication-thiotepa.json",
+      "resourceType": "Medication",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-request-medication-request-mii-exa-medikation-medication-request-caelyx.json",
+      "resourceType": "MedicationRequest",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-statement-medication-statement-mii-exa-medikation-medication-statement-concor.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 13,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-statement-medication-statement-mii-exa-medikation-medication-statement-hct.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-statement-medication-statement-mii-exa-medikation-medication-statement-ibuprofen.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-statement-medication-statement-mii-exa-medikation-medication-statement-zopiclon.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 13,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-medication-statement-medication-statement-mii-exa-medikation-medication-statement.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-medikation-procedure-procedure-mii-exa-medikation-procedure-thiotepa.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-charge-item-charge-item-mii-exa-molgen-chargeitem-ebm-21.json",
+      "resourceType": "ChargeItem",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-charge-item-charge-item-mii-exa-molgen-chargeitem-ebm-22.json",
+      "resourceType": "ChargeItem",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-charge-item-charge-item-mii-exa-molgen-chargeitem-ebm-23.json",
+      "resourceType": "ChargeItem",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-charge-item-charge-item-mii-exa-molgen-chargeitem-ebm-24.json",
+      "resourceType": "ChargeItem",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-condition-condition-mii-exa-molgen-bundle-befund-2-nipbl-condition-lab.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-condition-condition-mii-exa-molgen-condition-nipbl-clinical.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-device-device-mii-exa-molgen-device-illumina-novaseq.json",
+      "resourceType": "Device",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-device-device-mii-exa-molgen-device-sequencer-2.json",
+      "resourceType": "Device",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-device-device-mii-exa-molgen-device-sequencer-nextseq.json",
+      "resourceType": "Device",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-device-device-mii-exa-molgen-device-sequencer.json",
+      "resourceType": "Device",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-device-device-mii-exa-molgen-device-thermofisher-ionchef.json",
+      "resourceType": "Device",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-befundbericht-comprehensive-wes.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-1.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-2.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-fgfr2-fusion.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-srcc.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-trurisk-panel.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-tumorboard-3.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-document-reference-document-reference-mii-exa-molgen-documentreference-bed-file.json",
+      "resourceType": "DocumentReference",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-document-reference-document-reference-mii-exa-molgen-documentreference-fastq.json",
+      "resourceType": "DocumentReference",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-family-member-history-family-member-history-mii-exa-molgen-family-member-history-1.json",
+      "resourceType": "FamilyMemberHistory",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-family-member-history-family-member-history-mii-exa-molgen-family-member-history-2.json",
+      "resourceType": "FamilyMemberHistory",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-family-member-history-family-member-history-mii-exa-molgen-family-member-history-diabetes.json",
+      "resourceType": "FamilyMemberHistory",
+      "errorCount": 0,
+      "warningCount": 8,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-family-member-history-family-member-history-mii-exa-molgen-family-member-history-mi.json",
+      "resourceType": "FamilyMemberHistory",
+      "errorCount": 0,
+      "warningCount": 12,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-family-member-history-family-member-history-mii-exa-molgen-family-member-history-retinal.json",
+      "resourceType": "FamilyMemberHistory",
+      "errorCount": 0,
+      "warningCount": 7,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-family-member-history-family-member-history-mii-exa-molgen-family-member-history-srcc.json",
+      "resourceType": "FamilyMemberHistory",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-media-media-mii-exa-molgen-media-coverage-plot.json",
+      "resourceType": "Media",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-brca1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-cnv-4.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-comprehensive.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-fgfr2-fusion.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-srcc-ctnna1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-genotyp-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-genotyp-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-genotyp-brca1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-mikrosatelliteninstabilitaet-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-molekulare-konsequenz-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-molekulare-konsequenz-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-molekulare-konsequenz-brca1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-molekulare-konsequenz-cnv-4.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-mutationslast-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-phenotypic-feature-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-phenotypic-feature-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-phenotypic-feature-3.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-phenotypic-feature-4.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-therapeutische-implikation-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-therapeutische-implikation-fgfr2-fusion.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-variante-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 8,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-variante-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 10,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-variante-brca1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 10,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-variante-cnv-4.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 8,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-variante-comprehensive-pathogenic.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-variante-fgfr2-fusion.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 8,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-variante-srcc-ctnna1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 10,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-patient-patient-mii-exa-molgen-patient-2.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-patient-patient-mii-exa-molgen-patient-brca1.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-patient-patient-mii-exa-molgen-patient-fgfr2-fusion.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-patient-patient-mii-exa-molgen-patient-srcc.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-patient-patient-mii-exa-molgen-patient.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 6,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-plan-definition-plan-definition-mii-exa-molgen-protocol-agilent-sureselect.json",
+      "resourceType": "PlanDefinition",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-practitioner-practitioner-mii-exa-molgen-practitioner-lab.json",
+      "resourceType": "Practitioner",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-practitioner-practitioner-mii-exa-molgen-practitioner-ordering.json",
+      "resourceType": "Practitioner",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-practitioner-practitioner-mii-exa-molgen-practitioner-physician.json",
+      "resourceType": "Practitioner",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-1.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-analysis-braf.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-analysis-cornelia-de-lange.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-analysis-trurisk-panel.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-analysis-wes-bioinformatics.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-analysis-wes-library-prep.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-analysis-wes-sequencing.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-comprehensive-wes.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-cornelia-de-lange.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-trurisk-panel.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-service-request-service-request-mii-exa-molgen-anforderung-1.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-service-request-service-request-mii-exa-molgen-anforderung-2.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-service-request-service-request-mii-exa-molgen-anforderung-fgfr2-fusion.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-service-request-service-request-mii-exa-molgen-anforderung-srcc.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-service-request-service-request-mii-exa-molgen-anforderung-trurisk-panel.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-service-request-service-request-mii-exa-molgen-anforderung-wes.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-specimen-specimen-mii-exa-molgen-specimen-1.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-specimen-specimen-mii-exa-molgen-specimen-2.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-specimen-specimen-mii-exa-molgen-specimen-blood-edta.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-specimen-specimen-mii-exa-molgen-specimen-brca1.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-specimen-specimen-mii-exa-molgen-specimen-dna-library.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-specimen-specimen-mii-exa-molgen-specimen-srcc-2.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-specimen-specimen-mii-exa-molgen-specimen-srcc.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-task-task-mii-exa-molgen-folgemassnahme-brca1.json",
+      "resourceType": "Task",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-molgen-task-task-mii-exa-molgen-medikationsempfehlung-fgfr2-fusion.json",
+      "resourceType": "Task",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-adverse-event-adverse-event-mii-exa-onko-oxaliplatin-neuropathy.json",
+      "resourceType": "AdverseEvent",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-adverse-event-adverse-event-mii-pr-onko-nebenwirkung-0.json",
+      "resourceType": "AdverseEvent",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-adverse-event-adverse-event-mii-pr-onko-nebenwirkung-text.json",
+      "resourceType": "AdverseEvent",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-mii-exa-onko-tumorkonferenz-01.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-mii-exa-onko-tumorkonferenz-02.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-mii-exa-onko-tumorkonferenz-folfox-modification.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-mii-exa-onko-tumorkonferenz-folfox.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-mii-exa-onko-tumorkonferenz-mixed-approach.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-mii-exa-onko-tumorkonferenz-molekular.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-mii-exa-onko-tumorkonferenz-pure-molecular.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-patient-kim-musterperson-tumorkonferenz-1.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-patient-kim-musterperson-tumorkonferenz-2.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-patient-kim-musterperson-tumorkonferenz-3.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-care-plan-care-plan-patient-kim-musterperson-tumorkonferenz-4.json",
+      "resourceType": "CarePlan",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-ascending-colon-cancer-diagnosis.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-colorectal-cancer-diagnosis.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-diagnose.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 11,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-fruehere-tumorerkrankung-cervix.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-fruehere-tumorerkrankung-freetext.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-fruehere-tumorerkrankung-mamma.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-fruehere-tumorerkrankung-prostata.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-krk-diagnose.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-mamma-diagnose.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-melanom-diagnose.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-prostata-diagnose.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-patient-kim-musterperson-diagnosis-1.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-patient-kim-musterperson-primary-diagnosis-2.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-condition-condition-primaertumor-example.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-diagnostic-report-diagnostic-report-mii-exa-onko-befund-1.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-diagnostic-report-diagnostic-report-patient-kim-musterperson-patho-report-1.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-encounter-encounter-mii-exa-onko-krk-bundle-encounter.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-encounter-encounter-mii-exa-onko-mamma-bundle-encounter.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-encounter-encounter-mii-exa-onko-melanom-bundle-encounter.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-encounter-encounter-mii-exa-onko-prostata-bundle-encounter.json",
+      "resourceType": "Encounter",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-list-list-mii-exa-onko-liste-evidenz-erstdiagnose-1.json",
+      "resourceType": "List",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-request-medication-request-mii-exa-onko-cdk46-class-medication.json",
+      "resourceType": "MedicationRequest",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-request-medication-request-mii-exa-onko-folfox-5fu-request.json",
+      "resourceType": "MedicationRequest",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-request-medication-request-mii-exa-onko-folfox-leucovorin-request.json",
+      "resourceType": "MedicationRequest",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-request-medication-request-mii-exa-onko-folfox-oxaliplatin-request.json",
+      "resourceType": "MedicationRequest",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-request-medication-request-mii-exa-onko-modification-5fu-request.json",
+      "resourceType": "MedicationRequest",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-request-medication-request-mii-exa-onko-modification-leucovorin-request.json",
+      "resourceType": "MedicationRequest",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-request-medication-request-mii-exa-onko-modification-oxaliplatin-request.json",
+      "resourceType": "MedicationRequest",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-request-medication-request-mii-exa-onko-tdm1-option.json",
+      "resourceType": "MedicationRequest",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-request-medication-request-mii-exa-onko-tucatinib-option.json",
+      "resourceType": "MedicationRequest",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-folfox-5fu-statement.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-folfox-leucovorin-statement.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-folfox-oxaliplatin-statement.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-medikation-iberdomide-unii.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-medikation-imatinib-atc-version-transition.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-modification-5fu-phase1.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-modification-5fu-phase2.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-modification-leucovorin-phase1.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-modification-leucovorin-phase2.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-modification-oxaliplatin-phase1.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-systemische-therapie-medikation1.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-systemische-therapie-medikation2.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-patient-kim-musterperson-systemic-therapy-medication-1a.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-patient-kim-musterperson-systemic-therapy-medication-1b.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-patient-kim-musterperson-systemic-therapy-medication-2a.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-patient-kim-musterperson-systemic-therapy-medication-2b.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-medication-statement-medication-statement-patient-kim-musterperson-systemic-therapy-medication-3.json",
+      "resourceType": "MedicationStatement",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-allgemeiner-leistungszustand-ecog.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-allgemeiner-leistungszustand-karnofsky.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-anzahl-befallene-lymphknoten-0.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-anzahl-befallene-sentinel-lymphknoten-0.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-anzahl-untersuchte-lymphknoten-23.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-anzahl-untersuchte-sentinel-lymphknoten-0.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-asa-klassifikation.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-ascending-colon-tnm-m.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-ascending-colon-tnm-n.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-ascending-colon-tnm-t.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-ascending-colon-tnm.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-colorectal-tnm-m.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-colorectal-tnm-n.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-colorectal-tnm-t.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-colorectal-tnm.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-fernmetastasen-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-folfox-verlauf-6months.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-genetische-variante-braf.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-grading-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-histologie-icdo3.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-krk-abstand-circumferelle-resektionsebene.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-krk-abstand-mesorektale-fascie.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-krk-abstand-resektionsrand-aboral.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-krk-abstand-tumor-anokutanlinie.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-krk-anastomoseninsuffizienz.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-mamma-her2neu-status.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-mamma-menopause-status-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-mamma-rezeptorstatus-estrogen-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-mamma-rezeptorstatus-progesteron-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-mamma-tumorgroesse-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-melanom-breslow-tiefe.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-melanom-ldh.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-melanom-sicherheitsabstand.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-melanom-ulzeration.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-modification-verlauf-6months.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-prostata-anzahl-positiver-stanzen-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-prostata-anzahl-stanzen-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-prostata-ca-befall-stanze-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-prostata-gleason-pattern-grade-group-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-prostata-gleason-pattern-primary-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-prostata-gleason-pattern-secondary-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-prostata-psa-diagnose-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-prostata-psa-verlauf-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-prostata-surgical-complication-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-residualstatus-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-studienteilnahme-prob.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-studienteilnahme.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-klassifikation-tis-n0m0.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-klassifikation-u-t2a2p-n0023i-snc-m1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-l-kategorie-l.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-l-kategorie-l1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-m-kategorie-c-m1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-m-kategorie-m0.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-n-kategorie-n0.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-n-kategorie-p-n0i-sn.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-pn-kategorie-pn1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-s-kategorie-s1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-t-kategorie-tis.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-t-kategorie-u-t2a2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tnm-v-kategorie-v1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tod-j.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tod-n.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tod-u.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-tumorgroesse.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-verlauf-tumor.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-weitere-klassifikationen-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-weitere-klassifikationen-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-weitere-klassifikationen-3.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-mii-exa-onko-weitere-klassifikationen-4.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-patient-kim-musterperson-verlauf-2022-01-22.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-tnm-klassifikation-observation-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-tnm-l-observation-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-tnm-m-observation-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-tnm-pn-observation-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-tnm-t-observation-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-tnm-v-observation-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-observation-observation-tnm-y-symbol-observation-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-patient-patient-mii-exa-onko-folfox-patient.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-patient-patient-mii-exa-onko-krk-bundle-patient.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-patient-patient-mii-exa-onko-mamma-bundle-patient.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-patient-patient-mii-exa-onko-melanom-bundle-patient.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-patient-patient-mii-exa-onko-molecular-board-patient.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-patient-patient-mii-exa-onko-prostata-bundle-patient.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-patient-patient-patient-kim-musterperson.json",
+      "resourceType": "Patient",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-krk-operation.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-krk-stoma-markierung.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-mamma-praeoperative-markierung-1.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-melanom-exzision-oberarm.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-melanom-exzision-ruecken.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-operation-1.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-palbociclib-therapie.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 4,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-pertuzumab-therapie.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-prostata-operation-prostatektomie.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-prostata-operation-turp.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-prostata-surgery-1.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-prostata-surgery-2.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-right-hemicolectomy.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-sigmoid-resection-part1.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-sigmoid-resection-part2.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-sigmoid-resection-part3.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-sigmoid-resection.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-strahlentherapie-2014-mamma-mit-lk.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-strahlentherapie-2014-prostata-mit-lk.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-strahlentherapie-2021-mamma-lymphknoten.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-strahlentherapie-2021-mamma-primaer.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-strahlentherapie-bestrahlung-nuklearmedizin-1.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-strahlentherapie-bestrahlung-strahlentherapie-1.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-mii-exa-onko-trastuzumab-therapie.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-procedure-1.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-procedure-2.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-procedure-3.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-procedure-4.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-procedure-4a.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-procedure-4b.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-procedure-4c.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-procedure-procedure-patient-kim-musterperson-procedure-4d.json",
+      "resourceType": "Procedure",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-request-group-request-group-mii-exa-onko-folfox-requestgroup-modification.json",
+      "resourceType": "RequestGroup",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-request-group-request-group-mii-exa-onko-folfox-requestgroup.json",
+      "resourceType": "RequestGroup",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-request-group-request-group-mii-exa-onko-molecular-cdk46-protocol.json",
+      "resourceType": "RequestGroup",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-request-group-request-group-mii-exa-onko-molecular-her2-alternatives.json",
+      "resourceType": "RequestGroup",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-research-study-research-study-mii-exa-onko-studie-prob.json",
+      "resourceType": "ResearchStudy",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-service-request-service-request-mii-exa-onko-molecular-surgery-request.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-specimen-specimen-mii-exa-onko-krk-specimen.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-specimen-specimen-mii-exa-onko-specimen-1.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-onkologie-specimen-specimen-patient-kim-musterperson-specimen-1.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-composition-composition-mii-exa-patho-composition.json",
+      "resourceType": "Composition",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-condition-condition-mii-exa-patho-problem-list-item-1.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-condition-condition-mii-exa-patho-problem-list-item-2.json",
+      "resourceType": "Condition",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-diagnostic-report-diagnostic-report-mii-exa-patho-report.json",
+      "resourceType": "DiagnosticReport",
+      "errorCount": 0,
+      "warningCount": 2,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-list-list-mii-exa-patho-active-problems-list.json",
+      "resourceType": "List",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-list-list-mii-exa-patho-history-of-present-illness.json",
+      "resourceType": "List",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-media-media-mii-exa-patho-attached-image.json",
+      "resourceType": "Media",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-biopsy-site-a.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-diagnostic-conclusion-1.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-diagnostic-conclusion-2.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-diagnostic-conclusion-3.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-diagnostic-conclusion-grouper.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-gleason-pattern-a.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-histologic-type-a.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-macro-grouper-a.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-micro-grouper-a.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-p63-a.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 0,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-observation-observation-mii-exa-patho-tissue-length-a.json",
+      "resourceType": "Observation",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-service-request-service-request-mii-exa-patho-request.json",
+      "resourceType": "ServiceRequest",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-specimen-specimen-mii-exa-patho-prostate-biopsy-block.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 6,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-specimen-specimen-mii-exa-patho-prostate-biopsy-schnitt-he.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 6,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-specimen-specimen-mii-exa-patho-prostate-biopsy-schnitt-p63.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 6,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-specimen-specimen-mii-exa-patho-prostate-tru-cut-biopsy-sample.json",
+      "resourceType": "Specimen",
+      "errorCount": 0,
+      "warningCount": 5,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-substance-substance-mii-exa-patho-eosin-y.json",
+      "resourceType": "Substance",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-substance-substance-mii-exa-patho-hematoxylin-stain.json",
+      "resourceType": "Substance",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-substance-substance-mii-exa-patho-microscope-slide-mounting-medium.json",
+      "resourceType": "Substance",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-substance-substance-mii-exa-patho-neutral-buffered-formalin.json",
+      "resourceType": "Substance",
+      "errorCount": 0,
+      "warningCount": 1,
+      "falsePositives": [],
+      "clean": true
+    },
+    {
+      "file": "mii-2026-patho-substance-substance-mii-exa-patho-p63-immunostain.json",
+      "resourceType": "Substance",
+      "errorCount": 0,
+      "warningCount": 3,
+      "falsePositives": [],
+      "clean": true
+    }
+  ]
+}

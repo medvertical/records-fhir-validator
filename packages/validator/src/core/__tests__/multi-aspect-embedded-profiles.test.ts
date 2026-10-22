@@ -38,6 +38,25 @@ function dependencies() {
 }
 
 describe('all embedded profiles participate in validation', () => {
+  it.each(['Patient', 'Bundle', 'Observation', 'Parameters'])('keeps distinct releases of the same canonical inside %s', async resourceType => {
+    const earlier = `${isik.split('|')[0]}|5.0.0`;
+    const child = patient([earlier, isik, earlier]);
+    const resource = resourceType === 'Patient' ? child : { resourceType,
+      ...(resourceType === 'Bundle' ? { type: 'collection', entry: [{ resource: child }] }
+        : resourceType === 'Observation' ? { contained: [child] }
+          : { parameter: [{ name: 'patient', resource: child }] }),
+    };
+    const { deps, validate } = dependencies();
+    const run = buildMultiAspectValidateCallback(deps, ['structural'], settings);
+    const result = await run(resource, resourceType === 'Patient' ? earlier : `http://hl7.org/fhir/StructureDefinition/${resourceType}`, 'R4');
+    expect(result.isValid).toBe(false);
+    expect(validate.mock.calls.filter(([, context]) => context.resourceType === 'Patient')
+      .map(([, context]) => context.profileUrl)).toEqual([earlier, isik]);
+    expect(result.aspects.flatMap(aspect => aspect.issues)).toEqual([
+      expect.objectContaining({ profile: isik, code: issue.code }),
+    ]);
+  });
+
   it.each(['Bundle', 'Observation', 'Parameters'])('checks the added Patient profile inside %s', async resourceType => {
     const child = patient([declared, isik, isik]);
     const resource = { resourceType,
@@ -81,6 +100,17 @@ describe('all embedded profiles participate in validation', () => {
     expect(onEmbedded.mock.calls.map(([resource]) => resource.resourceType)).toEqual(['Patient', 'Bundle']);
   });
 
+  it('still applies the code-mandated profile at the embedding depth limit', async () => {
+    const { deps, validate } = dependencies();
+    const callback = buildMultiAspectValidateCallback(deps, ['structural'], settings);
+    const observation = { resourceType: 'Observation', meta: { profile: ['urn:declared'] },
+      code: { coding: [{ system: 'http://loinc.org', code: '8480-6' }] } };
+    const wrap = (resource: unknown) => ({ resourceType: 'Bundle', entry: [{ resource }] });
+    await callback(wrap(wrap(wrap(observation))), 'http://hl7.org/fhir/StructureDefinition/Bundle', 'R4');
+    expect(validate.mock.calls.filter(([, context]) => context.resourceType === 'Observation')
+      .map(([, context]) => context.profileUrl)).toContain('http://hl7.org/fhir/StructureDefinition/bp');
+  });
+
   it('retains suppressed evidence from the additional profile', async () => {
     const { deps } = dependencies();
     const callback = buildMultiAspectValidateCallback(deps, ['structural'], { ...settings,
@@ -103,6 +133,7 @@ describe('all embedded profiles participate in validation', () => {
       entry: [{ resource: patient([declared, isik]) }] }, 'R4', 0, deps);
     expect(issues.map(finding => finding.profile)).toEqual([declared, isik]);
     expect(validateResource).toHaveBeenCalledTimes(2);
+    expect(validateResource.mock.calls.map(call => call[3])).toEqual([false, true]);
   });
 
   it.each(['contained', 'parameters'])('keeps all profiles in the single-aspect %s fallback', async kind => {
@@ -113,18 +144,47 @@ describe('all embedded profiles participate in validation', () => {
       ? await validateContainedResourceTree({ resourceType: 'Observation', contained: [child] }, options)
       : await validateParametersResourceTree({ resourceType: 'Parameters', parameter: [{ name: 'patient', resource: child }] }, options);
     expect(issues.map(finding => finding.profile)).toEqual([declared, isik]);
+    expect(validate.mock.calls.map(call => call[3])).toEqual([false, true]);
   });
 });
 
 describe('versioned and unversioned declarations of one profile', () => {
-  it('validates X|version and X once, against the declared release', async () => {
+  it('checks the unversioned claim separately from the explicitly declared release', async () => {
     const { deps, validate } = dependencies();
     const run = buildMultiAspectValidateCallback(deps, ['structural'], settings);
 
     await run(patient([isik, isik.split('|')[0]]), isik, 'R4');
 
     const validatedProfiles = validate.mock.calls.map(call => (call[1] as MultiAspectResourceContext).profileUrl);
-    expect(validatedProfiles).toEqual([isik]);
+    expect(validatedProfiles).toEqual([isik, isik.split('|')[0]]);
+  });
+});
+
+describe('a finding every declared profile reports', () => {
+  it('is reported once, at the strictest severity a profile gives it', async () => {
+    const { deps } = dependencies();
+    (deps.structuralExecutor as unknown as { validate: unknown }).validate = vi.fn(
+      async (_resource: unknown, context: MultiAspectResourceContext) =>
+        [{ ...issue, severity: context.profileUrl === isik ? 'error' : 'warning' }]);
+    const run = buildMultiAspectValidateCallback(deps, ['structural'], settings);
+
+    const result = await run(patient([declared, isik]), declared, 'R4');
+
+    expect(result.aspects.flatMap(aspect => aspect.issues)).toEqual([
+      expect.objectContaining({ code: issue.code, severity: 'error', profile: isik }),
+    ]);
+  });
+});
+
+describe('versioned and unversioned declarations of one profile', () => {
+  it('checks the unversioned claim separately from the explicitly declared release', async () => {
+    const { deps, validate } = dependencies();
+    const run = buildMultiAspectValidateCallback(deps, ['structural'], settings);
+
+    await run(patient([isik, isik.split('|')[0]]), isik, 'R4');
+
+    const validatedProfiles = validate.mock.calls.map(call => (call[1] as MultiAspectResourceContext).profileUrl);
+    expect(validatedProfiles).toEqual([isik, isik.split('|')[0]]);
   });
 });
 

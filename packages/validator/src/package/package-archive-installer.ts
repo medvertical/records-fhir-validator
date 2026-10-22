@@ -34,6 +34,8 @@ export class PackageArchiveInstaller {
       if (!await this.installationStore.verifyPackage(temporaryDirectory, packageId, version)) {
         throw new Error('Package verification failed');
       }
+      // Extracted files cannot recreate the original archive's provenance.
+      await fs.writeFile(path.join(temporaryDirectory, 'package.tgz'), tarball);
       await invalidatePackageProfileIndex(this.cachePath);
       await replaceInstalledPackageDirectory({
         cachePath: this.cachePath,

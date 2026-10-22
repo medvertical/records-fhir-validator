@@ -34,14 +34,17 @@ export function buildRecursiveReferenceIssues(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  for (const chain of recursiveResult.circularReferences) {
+  for (const { chain, relationship, sourcePath } of recursiveResult.hierarchicalCircularReferences ?? []) {
+    const referencePath = sourcePath
+      ? `${resourceType}.${sourcePath}`
+      : chain.flatMap(reference => referencePathsByValue.get(reference) ?? [])[0] ?? resourceType;
     issues.push(createReferenceValidationIssue({
       code: 'reference-circular',
       severity: 'warning',
-      message: `Circular reference chain detected: ${chain.join(' → ')}`,
-      humanReadable: `Circular reference detected in chain: ${chain.join(' → ')}`,
-      path: '',
-      details: { chain, resourceType },
+      message: `Reference cycle violates the strict hierarchy ${relationship}: ${chain.join(' → ')}`,
+      humanReadable: `The strict hierarchy ${relationship} returns to the same resource: ${chain.join(' → ')}`,
+      path: referencePath,
+      details: { chain, relationship, referencePath, resourceType },
       resourceType,
     }));
   }

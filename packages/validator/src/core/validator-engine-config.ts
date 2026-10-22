@@ -20,6 +20,11 @@ export interface RecordsValidatorConfig {
   profileCacheMaxEntries?: number;
   /** Skip eager database profile loading for short-lived scoped validators. */
   prewarmProfileSource?: boolean;
+  /**
+   * Skip catalog enumeration for short-lived validators with an on-demand profile source.
+   * Inventory-based isAvailable() may remain false; individual validations still resolve their dependencies.
+   */
+  preloadPackageInventory?: boolean;
   /** Instance-local filesystem stores for ValueSet/CodeSystem package resolution; [] disables default stores. */
   terminologyPackageDirectories?: string[];
 }
@@ -49,6 +54,7 @@ export function resolveRecordsValidatorConfig(config: RecordsValidatorConfig): R
       DEFAULT_PROFILE_CACHE_MAX_ENTRIES,
     ),
     prewarmProfileSource: config.prewarmProfileSource !== false,
+    preloadPackageInventory: config.preloadPackageInventory !== false,
     terminologyPackageDirectories: config.terminologyPackageDirectories ? [...config.terminologyPackageDirectories] : undefined,
     bundledProfilesPath: config.bundledProfilesPath !== undefined
       ? config.bundledProfilesPath
@@ -63,4 +69,12 @@ function resolvePositiveInteger(
 ): number {
   const value = configured ?? (raw?.trim() ? Number(raw) : fallback);
   return Number.isSafeInteger(value) && value > 0 ? value : fallback;
+}
+
+export interface ValidationContext {
+  resource: unknown;
+  resourceType: string;
+  profileUrl?: string;
+  fhirVersion: 'R4' | 'R5' | 'R6';
+  strictMode: boolean;
 }

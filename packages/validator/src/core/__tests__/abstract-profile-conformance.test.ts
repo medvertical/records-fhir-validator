@@ -72,17 +72,17 @@ describe('abstract resource profile applicability by request family', () => {
     }));
   });
 
-  it('retains a genuinely evaluated hard failure and reuses only the completed verdict', async () => {
+  it('retains a genuinely evaluated hard failure while rechecking its dependencies', async () => {
     const profile = definition('DomainResource', '4.0.1');
     const validateOne = complete(true);
     const check = createProfileConformanceCheck({ sdLoader: loader(profile), validateOne, fhirVersion: 'R4', recursionDepth: 0 })!;
     const resource = { resourceType: 'Patient' };
     await expect(check(resource, profile.url)).resolves.toBe(false);
     await expect(check(resource, profile.url)).resolves.toBe(false);
-    expect(validateOne).toHaveBeenCalledTimes(1);
+    expect(validateOne).toHaveBeenCalledTimes(2);
   });
 
-  it('rechecks unsupported publication before caching the evaluated result', async () => {
+  it('rechecks unsupported publication and a later evaluated result', async () => {
     const profile = definition('DomainResource', '5.0.0');
     const load = loader(profile);
     const validateOne = complete();
@@ -94,7 +94,7 @@ describe('abstract resource profile applicability by request family', () => {
     await expect(check(resource, profile.url)).resolves.toBe(true);
     await expect(check(resource, profile.url)).resolves.toBe(true);
     expect(load.loadProfile).toHaveBeenCalledTimes(3);
-    expect(validateOne).toHaveBeenCalledTimes(1);
+    expect(validateOne).toHaveBeenCalledTimes(2);
     expect(onIncomplete).toHaveBeenCalledTimes(1);
   });
 });

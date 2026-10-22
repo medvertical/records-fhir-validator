@@ -120,15 +120,12 @@ export class ExtensionValidationRuntime {
           options: this.resourceWalkOptions(embedded, issues) };
       },
       resolveExtensionUrl: async (url, family) => {
-        let undetermined = scope.incomplete;
-        for (const source of sources) {
-          const resolution = await this.urlResolver.resolveKnown(url, family, source);
-          if (resolution === 'resolvable') { owners.set(url, source); return resolution; }
-          undetermined ||= resolution === 'undetermined';
-        }
-        return undetermined ? 'undetermined' : 'unresolvable';
+        // An instance URL is independent of the containing profile's declared dependencies.
+        const resolution = await this.urlResolver.resolveKnown(url, family);
+        return resolution === 'unresolvable' && scope.incomplete ? 'undetermined' : resolution;
       },
       getDeclaredContexts: async (url, family) => {
+        if (!scope.knownUrls.has(url)) return this.urlResolver.getDeclaredContexts(url, family);
         if (owners.has(url)) return this.urlResolver.getDeclaredContexts(url, family, owners.get(url));
         for (const source of sources) {
           if (await this.urlResolver.resolveKnown(url, family, source) !== 'resolvable') continue;
@@ -140,9 +137,10 @@ export class ExtensionValidationRuntime {
       resolveLogicalPaths: site => this.logicalPaths.resolve(site, scope.context.fhirVersion),
       validateAgainstDefinition: async (extension, url, path) => {
         if (!sources.length) return [];
-        const context = owners.has(url) ? { ...scope.context, profileSD: owners.get(url) ?? scope.context.profileSD } : scope.context;
+        const context = scope.context;
         return [
           ...await validateAgainstExtensionProfile({ extension, profileUrl: url, path, context,
+            referencingProfile: null,
             sdLoader: this.instanceValidationDependencies.sdLoader,
             typeValidator: this.instanceValidationDependencies.typeValidator,
             valueSetValidator: this.instanceValidationDependencies.valueSetValidator,
@@ -150,7 +148,7 @@ export class ExtensionValidationRuntime {
             profileCache: this.instanceValidationDependencies.extensionProfileCache,
             sdFHIRPathExecutor: this.instanceValidationDependencies.sdFHIRPathExecutor,
           }),
-          ...await validateOwnSubExtensions(this.instanceValidationDependencies, extension, url, path, context),
+          ...await validateOwnSubExtensions(this.instanceValidationDependencies, extension, url, path, context, null),
         ];
       },
     };

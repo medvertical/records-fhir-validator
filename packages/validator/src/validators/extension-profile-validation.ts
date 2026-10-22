@@ -33,7 +33,7 @@ interface ValidateExtensionProfileParams {
   profileCache: ExtensionProfileCache<StructureDefinition>;
   sdFHIRPathExecutor: SDFHIRPathExecutor;
   /** The profile naming `profileUrl`; the validated profile unless nested. */
-  referencingProfile?: ProfileReferenceSource;
+  referencingProfile?: ProfileReferenceSource | null;
 }
 
 export async function validateAgainstExtensionProfile({

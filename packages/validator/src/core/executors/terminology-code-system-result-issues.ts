@@ -56,17 +56,20 @@ function buildUnverifiedIssues(
   index: number,
   isArrayInput: boolean,
 ): ValidationIssue[] {
-  if (!['remote-budget-exhausted', 'national-extension-unverified', 'delegation-disabled', 'no-server', 'circuit-open'].includes(result.reason ?? '')) {
+  if (!['remote-budget-exhausted', 'national-extension-unverified', 'delegation-disabled', 'no-server', 'circuit-open', 'snapshot-unavailable'].includes(result.reason ?? '')) {
     return [];
   }
   const codingPath = resultPath(path, index, isArrayInput, 'code');
   const nationalExtension = result.reason === 'national-extension-unverified';
   const delegationDisabled = result.reason === 'delegation-disabled';
+  const snapshotUnavailable = result.reason === 'snapshot-unavailable';
   const unavailable = result.reason === 'no-server' || result.reason === 'circuit-open';
   return [createTerminologyIssue({
     severity: 'information',
     code: 'terminology-codesystem-unverified',
-    message: unavailable
+    message: snapshotUnavailable
+      ? result.message ?? 'CodeSystem membership could not be verified from the selected terminology snapshot.'
+      : unavailable
       ? result.message ?? 'CodeSystem membership was not verified because no eligible terminology server could be asked.'
       : delegationDisabled
       ? result.message ?? 'CodeSystem membership was not verified because terminology code validation delegation is disabled.'
@@ -79,12 +82,15 @@ function buildUnverifiedIssues(
     details: {
       code: coding.code,
       system: coding.system,
+      ...(coding.version ? { codeSystemVersion: coding.version } : {}),
       ...(coding.display ? { display: coding.display } : {}),
       reason: result.reason,
       validationComplete: false,
       validationStatus: 'incomplete',
       ...(coding.version ? { codeSystemVersion: coding.version } : {}),
-      fixHint: unavailable
+      fixHint: snapshotUnavailable
+        ? 'Acquire the required terminology authority and qualify a new snapshot before validating again.'
+        : unavailable
         ? 'Provide a complete local CodeSystem, or configure an enabled terminology server for this FHIR release and validate again when it is available.'
         : delegationDisabled
         ? 'Provide a complete local CodeSystem or explicitly enable terminology code validation delegation.'
@@ -229,19 +235,23 @@ function buildInvalidCodeIssues(
 ): ValidationIssue[] {
   if (result.valid || result.reason === 'display-mismatch') return [];
   const systemUnresolvable = result.reason === 'system-unresolvable';
+  const serverFailure = result.reason === 'server-failure';
   const loinc = getLoincCheckDigitDiagnostic(coding.system, coding.code);
   return [createTerminologyIssue({
-    severity: systemUnresolvable || result.incompleteCodeSystem ? 'warning' : 'error',
-    code: systemUnresolvable ? 'terminology-codesystem-unresolvable' : 'terminology-code-invalid',
+    severity: systemUnresolvable || serverFailure || result.incompleteCodeSystem ? 'warning' : 'error',
+    code: serverFailure ? 'terminology-server-failure'
+      : systemUnresolvable ? 'terminology-codesystem-unresolvable' : 'terminology-code-invalid',
     message: buildInvalidCodeMessage(coding, result, loinc),
     // An unresolvable system is a remark about `Coding.system`, not about the
     // code: nothing was found to check the code against. The other producer of
     // this issue code already anchors it there, and so does the reference
     // validator, so the same finding used to land on two different elements.
-    path: resultPath(path, index, isArrayInput, systemUnresolvable ? 'system' : 'code'),
+    path: resultPath(path, index, isArrayInput, systemUnresolvable || serverFailure ? 'system' : 'code'),
     details: {
       code: coding.code,
       system: coding.system,
+      ...(coding.version ? { codeSystemVersion: coding.version } : {}),
+      ...(serverFailure ? { checkOutcome: 'execution-failure' } : {}),
       ...(coding.display ? { display: coding.display } : {}),
       ...(result.reason ? { reason: result.reason } : {}),
       ...(systemUnresolvable || result.incompleteCodeSystem ? {

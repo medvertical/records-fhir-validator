@@ -1,0 +1,4728 @@
+{
+  "schema": "records.conformance.acceptance-report.v1",
+  "generatedAt": "2026-10-06T02:15:46.830Z",
+  "epoch": {
+    "sourceSha256": "12f675c61db7a4504dcb0f7166d240e6f49012f332da6fec34b1beb18ec0bdbe",
+    "runtimeSha256": "3151602730dec44d0b45a7dc1c1015257e3194a193e051b3fe502af7c84407f2",
+    "harnessSha256": "7766372981206f945dfbfef999a24f949ccfd46e7e62c0da9d940f3ab2daaa5c",
+    "corpusSha256": "5975ad8e63f47430afb9d3c1b28fc68421dac08cf8906b897f35b4caaca89e39"
+  },
+  "rawReport": {
+    "path": "conformance-results/validator-r4-raw-loop113-g7-2026-10-06.json",
+    "sha256": "1fcb7a488a3dab069c5a1ab1a9b6c32e489a9b3ddca3713404caff9745ea4cda"
+  },
+  "measurement": {
+    "path": "conformance-results/validator-r4-receipts-loop113-g7-2026-10-06.json",
+    "sha256": "0eee08f323f77fc5371814b41049bd0842f157294d5adcf4c6ebcecc4d33304e"
+  },
+  "status": "passed",
+  "issues": [],
+  "acceptedCases": [
+    {
+      "caseKey": {
+        "testName": "allergy",
+        "module": "tx",
+        "file": "allergy.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "80f2acbd7ecc8e741e781aba88d90753bf776d38a757a9846cf8515dab631818"
+    },
+    {
+      "caseKey": {
+        "testName": "attachment-with-invalid-binary",
+        "module": "general",
+        "file": "attachment-with-invalid-binary.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "cec65f2f4d2b30faeddd93a0e865aa65c6404a0a533fcfb91a5fc51695f012bb"
+    },
+    {
+      "caseKey": {
+        "testName": "attachment-with-wrong-size",
+        "module": "general",
+        "file": "attachment-with-wrong-size.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6fcaa3d1c718a6f05e4350e99dec0685dd7b0ee54974b2df976995462d7106ef"
+    },
+    {
+      "caseKey": {
+        "testName": "fixed-quantity-binding-observation",
+        "module": "profile",
+        "file": "fixed-quantity-binding-observation.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "17ff1d590dfff1ea8eabc2a2a3564c001ca5d8c07ac84376fc08590d4528727e"
+    },
+    {
+      "caseKey": {
+        "testName": "fixed-quantity-binding-observation-2",
+        "module": "profile",
+        "file": "fixed-quantity-binding-observation-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "69e4c882fae2cdcfae432c442814bf48260771f4470a8ad99150ce9315c71805"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-document-versioned-references-good",
+        "module": "references",
+        "file": "bundle-document-versioned-references-good.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6b14c64cbf8e39ee368338974eabb7355f70e19ccb7acf7142a597e3736ec16c"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-document-versioned-references-bad",
+        "module": "references",
+        "file": "bundle-document-versioned-references-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c00d81a9900bed6dc78b14cc997a65ea32b5fca13f74c7f1ca76c7dd5ce26f38"
+    },
+    {
+      "caseKey": {
+        "testName": "contained",
+        "module": "references",
+        "file": "contained.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e02bfed6207a140fc86addc2af5a15de0f9724d5d1b742b6b9d038cfc7e522a6"
+    },
+    {
+      "caseKey": {
+        "testName": "synthea",
+        "module": "general",
+        "file": "synthea.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b00016650c68982366518cafae9b86fca9fd1f6524cd18838da17418ab51dcc6"
+    },
+    {
+      "caseKey": {
+        "testName": "practitioner-role-example",
+        "module": "tx",
+        "file": "practitioner-role-example.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4a857998b67cb4b82c3f589388329a9975234a1011c1d2babae0d20db1a2a704"
+    },
+    {
+      "caseKey": {
+        "testName": "snomed-ca",
+        "module": "tx",
+        "file": "snomed-ca.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "57d33e19146d7e70d34672c63d1995a504ff16490331d416d9c1863bdf60196a"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-example-ra4",
+        "module": "general",
+        "file": "patient-example-ra4.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2b887c8de2803adb299a760ca9502051dded096edfc39be6c0a1eaaede142b6a"
+    },
+    {
+      "caseKey": {
+        "testName": "dr-example-org",
+        "module": "general",
+        "file": "dr-example-org.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "56ad8f6a90618d8a8021c4ae7fc87bd535cf7e483f314095354b14e16b246371"
+    },
+    {
+      "caseKey": {
+        "testName": "dr-example-org-2",
+        "module": "general",
+        "file": "dr-example-org-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9c06420f2663ccb71271f468b0dbce39b9dc92b12242d94a9140a8f6dc1d23e5"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-unit-profile",
+        "module": "sd",
+        "file": "obs-unit-profile.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d5bb38924b2c9cdd6acfdcbfa68bafe5734ebf6d7f2f2a321ba7620baa54629e"
+    },
+    {
+      "caseKey": {
+        "testName": "medstmt-ips",
+        "module": "profile",
+        "file": "medstmt-ips.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "69c7d2cd12debce31f05ffc4f093357462ad2d09aef6fe7a1aa6018d7c26cbf3"
+    },
+    {
+      "caseKey": {
+        "testName": "mycommunication.invalid",
+        "module": "profile",
+        "file": "mycommunication.invalid.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "3b8b87a414eeb7f5a045e35fe57572019d3a0b1077970f5a3a44d15b8d225214"
+    },
+    {
+      "caseKey": {
+        "testName": "mycommunication.valid.example",
+        "module": "profile",
+        "file": "mycommunication.valid.example.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "286b1d960d681103b743ac3e762a81404c99ecc0f7fe11386d061f95596d3223"
+    },
+    {
+      "caseKey": {
+        "testName": "capstmt",
+        "module": "api",
+        "file": "capstmt.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "dd9ffa09eb8276ca860301dbde80a21e1d0002a33f4725af0d9931bcb98df497"
+    },
+    {
+      "caseKey": {
+        "testName": "questionnaire-enableWhen-dw",
+        "module": "questionnaire",
+        "file": "questionnaire-enableWhen-dw.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5c5e293fa77cfad8c6063953e2f78699e52c7fe23e1da064cc62533c385543c3"
+    },
+    {
+      "caseKey": {
+        "testName": "care-plan",
+        "module": "general",
+        "file": "care-plan.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7cdbb685188ade3b33985275b73277afc53c77130256aeb519ecbd8f7d78b661"
+    },
+    {
+      "caseKey": {
+        "testName": "jv-patient-good",
+        "module": "profile",
+        "file": "jv-patient-good.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "fa1e58b157724f351e0f6dead5e9a2005e559858c92b969c7afe1dda1091fee7"
+    },
+    {
+      "caseKey": {
+        "testName": "jv-patient-bad",
+        "module": "profile",
+        "file": "jv-patient-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "93f56b3aba037de1b822acd60751cf8626346ddd680a292b0ddd0789619bbffd"
+    },
+    {
+      "caseKey": {
+        "testName": "cs-meta-profile",
+        "module": "tx",
+        "file": "cs-meta-profile.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a5f7bf771724893da41886844a2bd0d97b767b773b57b234b475e68e4b5bdd32"
+    },
+    {
+      "caseKey": {
+        "testName": "mr-covid-m",
+        "module": "measure",
+        "file": "mr-covid-m.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2c2149ceee0613e7bd040e9db395cad54702349e392df35e4715752004759127"
+    },
+    {
+      "caseKey": {
+        "testName": "mr-covid-m2",
+        "module": "measure",
+        "file": "mr-covid-m2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4e7c231d150da64ea88adb2ef4eb237e7d209f6c489c4b9cebd25a27abb6dc0f"
+    },
+    {
+      "caseKey": {
+        "testName": "mr-covid-m3",
+        "module": "measure",
+        "file": "mr-covid-m3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e88088003368347292d6abdb7e4f4453445636d4faf1429790ed90e974cedf29"
+    },
+    {
+      "caseKey": {
+        "testName": "mr-covid-m4",
+        "module": "measure",
+        "file": "mr-covid-m4.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e25c6770c4204556e5cf88c9671705755cda1865edab6686f7c837b00c8d07c6"
+    },
+    {
+      "caseKey": {
+        "testName": "mr-covid-m5",
+        "module": "measure",
+        "file": "mr-covid-m5.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ec0fc7d4e519d8aba1ca9e29f9e3278b4733fafc0fbca98c601571e783876be1"
+    },
+    {
+      "caseKey": {
+        "testName": "mr-covid-mr1",
+        "module": "measure",
+        "file": "mr-covid-mr1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1315c07076b2618bbe25df5423dfc434e1ec3ebfa73cbffcc3ef1c3fcb41d0a4"
+    },
+    {
+      "caseKey": {
+        "testName": "mr-covid-bnd1",
+        "module": "bundle",
+        "file": "mr-covid-bnd1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "cca4a248957c4605f7ddf52bbdaf478c327993eda289865312041a53f0f79ca0"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-jurisdiction",
+        "module": "tx",
+        "file": "vs-jurisdiction.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7570b74fa99c091fd7b0492d3bbc9290f2b355bbcf178c4478ffbf86fc374bd0"
+    },
+    {
+      "caseKey": {
+        "testName": "q-enablewhen-me-wrong",
+        "module": "questionnaire",
+        "file": "q-enablewhen-me-wrong.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9625cc1e3e7201799513cbab67d190a31bb94509a859d757ac8560fd9ce3cc83"
+    },
+    {
+      "caseKey": {
+        "testName": "qr-enablewhen-me",
+        "module": "questionnaire",
+        "file": "qr-enablewhen-me.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6650fe9a2a819232fbd2ec55f563074c4f9b23118d9abb4530c4434b7c742fe1"
+    },
+    {
+      "caseKey": {
+        "testName": "pat-security-good1",
+        "module": "security",
+        "file": "pat-security-good1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "0f7cdc1f4dd160427688f510e0c4c4a50a5f37c9f3c79ce662821147a4baa0a2"
+    },
+    {
+      "caseKey": {
+        "testName": "pat-security-good2",
+        "module": "security",
+        "file": "pat-security-good2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "878d44c9c57c8c790dc999581f8368fe3a2c0c6f459a0bf85af171aab4a4456a"
+    },
+    {
+      "caseKey": {
+        "testName": "pat-security-good3",
+        "module": "security",
+        "file": "pat-security-good3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "af45a3c312826907593635d8f1308cbfc5eaee679d5cd12a7e4dae24cae4de39"
+    },
+    {
+      "caseKey": {
+        "testName": "pat-security-bad-xhtml",
+        "module": "xhtml",
+        "file": "pat-security-bad-xhtml.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "58f5f66e1fb19fe5e25769a5bcb18a9c0523b3aff09a0e711fec209e399365b3"
+    },
+    {
+      "caseKey": {
+        "testName": "pat-security-bad-string",
+        "module": "security",
+        "file": "pat-security-bad-string.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2baed964418c49c02c219f1e6bd96e6f7a316f8dc26eae941525e310fe74813c"
+    },
+    {
+      "caseKey": {
+        "testName": "qr-vr",
+        "module": "questionnaire",
+        "file": "qr-vr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2dd772f505ba10ca0e20411256ca18870424aefcdcebc81316ae1a912786e079"
+    },
+    {
+      "caseKey": {
+        "testName": "sp-diff-expression",
+        "module": "api",
+        "file": "sp-diff-expression.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a553fae229a42a16833494a2504a486f63f24cee6dfd70fe6880b60e782e0ffa"
+    },
+    {
+      "caseKey": {
+        "testName": "sp-diff-type",
+        "module": "api",
+        "file": "sp-diff-type.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "95c8ade515dfa5a0167d2091a48a7aa8f71dec87c6b43450a453e00aac52819d"
+    },
+    {
+      "caseKey": {
+        "testName": "sp-diff-base",
+        "module": "api",
+        "file": "sp-diff-base.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9041e75bc8953d7e063b6af4f774a8474820bf88365e9987c10a106003f95e80"
+    },
+    {
+      "caseKey": {
+        "testName": "dr-eh",
+        "module": "references",
+        "file": "dr-eh.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4201ba7d5a4183d9bccc5a6f884304b5cd26b3d65304e108b94a9c2170992b78"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-bad-code",
+        "module": "tx",
+        "file": "vs-bad-code.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7f4d04233875b204ee74af640ce7471071abfedd8bf181f4a09b27e4a262a641"
+    },
+    {
+      "caseKey": {
+        "testName": "bb-obs-value-is-not-quantity",
+        "module": "profile",
+        "file": "bb-obs-value-is-not-quantity.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b32cbfcf304534b18c9a1001370f4242feb747230f0082192410e8f26b7f7de9"
+    },
+    {
+      "caseKey": {
+        "testName": "bb-obs-value-is-not-in-valueset",
+        "module": "profile",
+        "file": "bb-obs-value-is-not-in-valueset.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ce26d53380f70711bf68b9ba713c133d49c595cbcfe3249d23a941b4d216923e"
+    },
+    {
+      "caseKey": {
+        "testName": "bb-obs-value-is-not-quantity-or-string",
+        "module": "profile",
+        "file": "bb-obs-value-is-not-quantity-or-string.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c7b76165705cbe7dce4f840d1403f0687bcca681b1e65d7d0fb4cff4597ee68d"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-temp",
+        "module": "profile",
+        "file": "obs-temp.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7f7754bcc5a8a3d874ea08d1c0bf11fe2490aafcbb1f117c0ea82117a503b807"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-temp-bad",
+        "module": "profile",
+        "file": "obs-temp-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e968e80a464a5a13efe3d3dd5f0c1ea25d6fcdf9f0b564565c06360144cc1707"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-ig-good",
+        "module": "profile",
+        "file": "patient-ig-good.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "512fbc837a50133dce9ee902681dd9481f1acc11ef72c269cfef4a7d2a61b03f"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-ig-bad",
+        "module": "profile",
+        "file": "patient-ig-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "645471ec4de0795e5239e335ec1091c43315196b8c611fc28621e48a44f9aa81"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-min-none",
+        "module": "profile",
+        "file": "patient-min-none.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5705d9611518cc4407fb092b9420b80497620e652882f4defdeaa917136d5a9c"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-min-none1",
+        "module": "profile",
+        "file": "patient-min-none1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "10445795ddf13e662b3b51816c56433d01ddbb138b9bdfb1eae1b0deeb1b0ae5"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-min-fixed",
+        "module": "profile",
+        "file": "patient-min-fixed.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "895c7ebdc0b10fbf8651260d0048d7c80813c116c7bda34a7b4445880f88832b"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-min-fixed1",
+        "module": "profile",
+        "file": "patient-min-fixed1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "912cf297db5b771272684c70ba9a64a62fefcdf929e213665c2483df2fa08c14"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-min-pattern",
+        "module": "profile",
+        "file": "patient-min-pattern.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "dcfb72914924779ca3c8c55bbf68d9933cf3789f3d91c37ef0c68fdb7de7e488"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-min-pattern1",
+        "module": "profile",
+        "file": "patient-min-pattern1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "279ed5d6018521ef5d44a95246eadd548b0837e7b2f523d571c07f52096ae14c"
+    },
+    {
+      "caseKey": {
+        "testName": "parameters-reference",
+        "module": "references",
+        "file": "parameters-reference.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9bcae76c5d45865e01aaba2f346e00d42728fc74587c746e05022ba2c5c40c56"
+    },
+    {
+      "caseKey": {
+        "testName": "parameters-reference-bad",
+        "module": "references",
+        "file": "parameters-reference-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "61c575daf08c665ed12da29075a36c1ccea313e35dfc12f84145d8da33788df0"
+    },
+    {
+      "caseKey": {
+        "testName": "parameters-profiled-resource-valid",
+        "module": "profile",
+        "file": "parameters-profiled-resource-valid.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8771aa2c1dd9c13e6917870c93fe8c49f273ea2c79c31353f539e353aed3bbb2"
+    },
+    {
+      "caseKey": {
+        "testName": "parameters-profiled-resource-invalid",
+        "module": "profile",
+        "file": "parameters-profiled-resource-invalid.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "be2ca6c8284b067cf675ec6be728b4d076ce8afc680d656989a5895a59094b2a"
+    },
+    {
+      "caseKey": {
+        "testName": "parameters-profiled-resource-multiple",
+        "module": "profile",
+        "file": "parameters-profiled-resource-multiple.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "cdc9c1f3bf747e06b2807da057ac58f4f535eadc80d569d5141c74498f22928f"
+    },
+    {
+      "caseKey": {
+        "testName": "canonical-url",
+        "module": "tx",
+        "file": "canonical-url.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b2aeb0dd3186df7ef83b4f12ccae59c74271f9bf7b6ffc3e63bf333faec658ee"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-duplicate-id",
+        "module": "bundle",
+        "file": "bundle-duplicate-id.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "416be9f05004064dc390b9c39cc6fa16f262a73b0177ec039abe99d99a74ef5a"
+    },
+    {
+      "caseKey": {
+        "testName": "mni-patientOverview-bundle-example1",
+        "module": "bundle",
+        "file": "mni-patientOverview-bundle-example1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "85d4485c065da9d90623ca3dfb3e662b7591b7ce5cb75fc99f5b0c57ca0eabc9"
+    },
+    {
+      "caseKey": {
+        "testName": "mni-patientOverview-bundle-example1b",
+        "module": "bundle",
+        "file": "mni-patientOverview-bundle-example1b.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "81a0a33c8633afe598dd18c13de64212303ffd8e8462c234e8e9505f9771c678"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-hgvs",
+        "module": "tx",
+        "file": "obs-hgvs.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "128cca8a16bbccbffa321562ef02c1517d152f02a7212628230a6cc76b73b69d"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-hgvs-bad",
+        "module": "tx",
+        "file": "obs-hgvs-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "16900a6e8faf829ddc9fac13ebd4fa8627ada110181475ee8df0fde0cacaaf29"
+    },
+    {
+      "caseKey": {
+        "testName": "ad-practitioner-resource",
+        "module": "profile",
+        "file": "ad-practitioner-resource.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2a46989eb857c537a880194dea36b62f81cc10879eca5ccc061cbbba0a3feae9"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-duplicate-ids-not",
+        "module": "bundle",
+        "file": "bundle-duplicate-ids-not.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ec1bca97f32d42c3fed2f7f1ac1c444d4fbc3b365eb9d6a97c5e28852ac7f822"
+    },
+    {
+      "caseKey": {
+        "testName": "empty-array",
+        "module": "general",
+        "file": "empty-array.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8170fbb521461b2c602228ed358f73ca700d771f71190d725a7edf4a9f0fbed9"
+    },
+    {
+      "caseKey": {
+        "testName": "sdoh-type-slice",
+        "module": "profile",
+        "file": "sdoh-type-slice.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2c12670f39cca2a79dd396b23c29e1ffc54695e3b4362e975a83baebc8e5eee0"
+    },
+    {
+      "caseKey": {
+        "testName": "hakan-se",
+        "module": "references",
+        "file": "hakan-se.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "79494be3612d4ef4c6e3da265c459bba192880b80230697e78ed4ca125ec2b7f"
+    },
+    {
+      "caseKey": {
+        "testName": "hakan-se-nofetch",
+        "module": "references",
+        "file": "hakan-se.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "96f64a881248d2321462bd4d85728c14d2838ccc828cf72a4748b4c97aee3291"
+    },
+    {
+      "caseKey": {
+        "testName": "hakan-se-2",
+        "module": "references",
+        "file": "hakan-se-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "cfa013722fc434b33cea3402032183eecac1002685c90694849d5b60b3eee91b"
+    },
+    {
+      "caseKey": {
+        "testName": "qr-bad-ref1",
+        "module": "questionnaire",
+        "file": "qr-bad-ref1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d8359c9a7323bfbd5fb02733b9b92407fa1582420eeadb18af1f2b7416abd252"
+    },
+    {
+      "caseKey": {
+        "testName": "qr-bad-ref2",
+        "module": "questionnaire",
+        "file": "qr-bad-ref2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "cbf9abac5ace3f13acd34c2c01e6bdabfb5ec50e148894aefa67bf530ad6191c"
+    },
+    {
+      "caseKey": {
+        "testName": "qr-bad-ref3",
+        "module": "questionnaire",
+        "file": "qr-bad-ref3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "fc242f9be74c3c32bc34938061ccae7497c0cbda29eec0460f0d17c1d6d6a669"
+    },
+    {
+      "caseKey": {
+        "testName": "supplement-1",
+        "module": "tx",
+        "file": "supplement-obs.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b125209e5f06c15ac96aa72eaf31d1965a1c60ffe9269b1bd9238680b1d86296"
+    },
+    {
+      "caseKey": {
+        "testName": "supplement-1a",
+        "module": "tx",
+        "file": "supplement-obs-1a.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b245c6034acc65137fcf2c382c2195d200a374ad68edb73304300d176e662de0"
+    },
+    {
+      "caseKey": {
+        "testName": "supplement-1b",
+        "module": "tx",
+        "file": "supplement-obs-1b.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ad970480499943cf13a5bb8e201515808ad27584cdd09539a3c11f52d2c6f2dd"
+    },
+    {
+      "caseKey": {
+        "testName": "supplement-2",
+        "module": "tx",
+        "file": "supplement-cs.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5c8d80d9ce3d5f784affc83a99ad97d8ab936792cb634497f6afbca792903d8d"
+    },
+    {
+      "caseKey": {
+        "testName": "qr-validation-issue",
+        "module": "questionnaire",
+        "file": "me-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "37083ff19a7edced4cd0e842314507e7407100400cb95dc21ea40896a73234c6"
+    },
+    {
+      "caseKey": {
+        "testName": "pat-dob-ext",
+        "module": "extensions",
+        "file": "pat-dob-ext.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d7bfa997797a282c7c670af6ba0444b116c54a5212096e060f7c8312b9743b53"
+    },
+    {
+      "caseKey": {
+        "testName": "target-ref-profile-empty",
+        "module": "references",
+        "file": "target-ref-profile-empty.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "044cebd5ae22c4715daaad7eea019307e43ade41a4729da36f523a79f8b7c040"
+    },
+    {
+      "caseKey": {
+        "testName": "us-docref.json",
+        "module": "fmt",
+        "file": "us-docref.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "26d3757040e7a3b1c2c2a3ee656e11199cf429194ccddc941bac0c3939bfe8b7"
+    },
+    {
+      "caseKey": {
+        "testName": "cvx",
+        "module": "tx",
+        "file": "cvx.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "3be91fa977c49f1b015497292a015ab2ba9bf21f61363013678dd25356cc9a84"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-id-1",
+        "module": "bundle",
+        "file": "bundle-id-search-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ea8c68151b319c971b98698792b42402cf2897be1436f27ae09fd94f9909970c"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-id-2",
+        "module": "bundle",
+        "file": "bundle-id-search-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9d0699050e64a8887fb182a289ac6726d60f2d90124dafa1bbc90f14f83a4efb"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-id-3",
+        "module": "bundle",
+        "file": "bundle-id-search-3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "16a8efa58c9db6b05d05f669fd3b2c58bc10ed31a13b42a21a411bb5e314bcd8"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-id-4",
+        "module": "bundle",
+        "file": "bundle-id-search-4.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4204d8f46a270b4ae8cc788a085f1c8d61d0431d00374bd3043e180cdaf49b92"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-id-5",
+        "module": "bundle",
+        "file": "bundle-id-collection.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "67f157bdf1da025894773216ecb0dfb91bf8b0908aafdc9c164bc2d30fe2627d"
+    },
+    {
+      "caseKey": {
+        "testName": "us-cond",
+        "module": "general",
+        "file": "us-cond.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8ff81592e7f03e469073f5731f8d5cdd811d7a519814e2cd41b28531c20e25ee"
+    },
+    {
+      "caseKey": {
+        "testName": "line-pattern-card-test",
+        "module": "general",
+        "file": "linePatternTestPatient.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2b5e41fbcb5e012c1da8a514952c71e35e165a9b26e0fe8beea453b113f74d8f"
+    },
+    {
+      "caseKey": {
+        "testName": "condition-with-extensions-on-pattern",
+        "module": "extensions",
+        "file": "condition-extensions-on-pattern.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f7067cac47ba87a70c9d442ea55375cf3078e3a49a842ce09c652c828de1531e"
+    },
+    {
+      "caseKey": {
+        "testName": "pat-example-extensions",
+        "module": "extensions",
+        "file": "pat-example-ext.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c030d7b622539c486d4c4055ae117f470aed30ec57503ee2c584512e73bd4e1d"
+    },
+    {
+      "caseKey": {
+        "testName": "resource-invalid-id-0",
+        "module": "general",
+        "file": "resource-invalid-id-0.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "12d85b34881cef284c8fe3f14cf311c241318884e5dcb58a61fff26d1c9d5983"
+    },
+    {
+      "caseKey": {
+        "testName": "resource-invalid-id-1",
+        "module": "general",
+        "file": "resource-invalid-id-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5c41e05bb1c2881dff66eb0ed3887205efedc5805b9d1d554f3c4ebc0b5d41de"
+    },
+    {
+      "caseKey": {
+        "testName": "resource-invalid-id-2",
+        "module": "general",
+        "file": "resource-invalid-id-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f7959af7e410541d35f8fcb9871a7f539bdf30ddda8f48bda4b5dfdfc05b72e7"
+    },
+    {
+      "caseKey": {
+        "testName": "resource-invalid-id-3",
+        "module": "general",
+        "file": "resource-invalid-id-3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9f7efa59e8f99df578fc67193e8383bcf16b062ee0c08b08ac7ccf31abb10914"
+    },
+    {
+      "caseKey": {
+        "testName": "resource-invalid-eid-0",
+        "module": "general",
+        "file": "resource-invalid-eid-0.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "0db3616e78c653cbfcc14914da44204295ba6bae10e797cca9ba7695ca26c641"
+    },
+    {
+      "caseKey": {
+        "testName": "resource-invalid-eid-1",
+        "module": "general",
+        "file": "resource-invalid-eid-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e82083265dd9b567cba89f0a5a1a0b7a96c1df171560e06318b52d98e0e141f0"
+    },
+    {
+      "caseKey": {
+        "testName": "resource-invalid-eid-2",
+        "module": "general",
+        "file": "resource-invalid-eid-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5f155bc5d8c2d6a2ddee8c753bbc060525d5a9ce59ddee4687997c3ec28f97d3"
+    },
+    {
+      "caseKey": {
+        "testName": "document-manifest",
+        "module": "general",
+        "file": "document-manifest-4.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "70b9ac7818cc2ebdb0891b6c5e499d1b77dd20d2c05b925eb6d83016f6cd8934"
+    },
+    {
+      "caseKey": {
+        "testName": "params-empty-r4",
+        "module": "general",
+        "file": "params-empty.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "55462466e8d020346a06eb235fd2552d0b4cd2ac7ddbf77e3ac88e0a1909ccc0"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-with-contained",
+        "module": "bundle",
+        "file": "bundle-with-contained.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d4b912427401f78f8082f299fad5350511869dc5f569c4e80c6bfc3caf5a6fc2"
+    },
+    {
+      "caseKey": {
+        "testName": "sct-version-issue",
+        "module": "tx",
+        "file": "sct-version-issue.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f69da9271cab771b751b0d7e5073931330c3ba53f7c338ba091d785d0b2c7b6c"
+    },
+    {
+      "caseKey": {
+        "testName": "risk-assessment-probability-range",
+        "module": "general",
+        "file": "risk-assessment-probability-range.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "056d89a6d37b1aff9485d41495835d48b28283488ca01906bdc636559ee4dc1d"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-canonical-good",
+        "module": "tx",
+        "file": "vs-canonical-good.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e5bd32a7bf46abd5db152d3b20165402d31c67fd1a4ca7adceb0362be9e46a3f"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-canonical-bad-2",
+        "module": "tx",
+        "file": "vs-canonical-bad-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8f187c39646de7f034d78ad5b0b427edcb5b99b9081e7e58ab0f562ee44b37e0"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-canonical-bad",
+        "module": "tx",
+        "file": "vs-canonical-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "29e8614b3439cfda83d8f46c5c3292749c8333732d557492873d0406df96106a"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-canonical-urn",
+        "module": "tx",
+        "file": "vs-canonical-urn.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "379fea44a8e403f7aa0eba678da35ca2a4ba8c25b9ba1ec3f4766d9f1bc9bb87"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-canonical-urn-bad",
+        "module": "tx",
+        "file": "vs-canonical-urn-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ed9f5eb84c1744b9b11163e302e940d5309005223fe90797334ff619964115a3"
+    },
+    {
+      "caseKey": {
+        "testName": "uk-msg",
+        "module": "bundle",
+        "file": "uk-msg.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "823b3a59fec43ca07fb4f786d833a2d8c5c34520f3d5f38ec9d6196064751b7c"
+    },
+    {
+      "caseKey": {
+        "testName": "contained-resource-bad-id",
+        "module": "references",
+        "file": "contained-resource.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "bc10bae821c15ea5d809ee9f9ce0bce867c4e30f7abac591611d64a894c07a3e"
+    },
+    {
+      "caseKey": {
+        "testName": "contained-resource-bad-id-ignore",
+        "module": "references",
+        "file": "contained-resource.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "80ed3d6bcf2fe49a3d723c2c5bcda54247e3f731b5b7908ecd2a846e32f6b125"
+    },
+    {
+      "caseKey": {
+        "testName": "type-subtype-slicing1",
+        "module": "profile",
+        "file": "type-subtype-slicing1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f7ea949b5c672944ab4f1a788ec02ba3ad81704864a98401c1edb7d135e2a482"
+    },
+    {
+      "caseKey": {
+        "testName": "type-subtype-slicing2",
+        "module": "profile",
+        "file": "type-subtype-slicing2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "0014eb2c507b8626c240ebb12d64088135b400ec11a1a9d838d5271eba860097"
+    },
+    {
+      "caseKey": {
+        "testName": "type-subtype-slicing3",
+        "module": "profile",
+        "file": "type-subtype-slicing3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "740882b2176573b73f2250110a80a7df6fbea5305663c2b1020bf7be8dbec6a8"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-conformsto",
+        "module": "bundle",
+        "file": "bundle-conformsto.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "55653058a1c91d18f097393bb5df288fe88775516e29ffb2f29cf5379ee00958"
+    },
+    {
+      "caseKey": {
+        "testName": "no.gastronet",
+        "module": "bundle",
+        "file": "no.gastronet.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ee9a0fa39792b68d9789246157948bd910c7270b6e3d0b2306fea4e96aeb4d14"
+    },
+    {
+      "caseKey": {
+        "testName": "no.gastronet.message-limit",
+        "module": "bundle",
+        "file": "no.gastronet.json"
+      },
+      "rawStatus": "fail",
+      "via": "verified-contract",
+      "membership": "unknown",
+      "rawRowSha256": "da10487c5900a3c900b38f63ef64e2f8ffdb4b77d17bed8295392595134c988e",
+      "resultKind": "reference-output-boundary",
+      "evidenceSha256": "b1acb094598c8cd643ca15f158e57a04eb5c16bc02990d9505989d444b145ba1"
+    },
+    {
+      "caseKey": {
+        "testName": "nested-questionnaire-nested-valueset",
+        "module": "questionnaire",
+        "file": "nested-questionnaire-nested-valueset.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d91e1a0590d9bd1f15c3688bcd5cdde51df88c9b116d63bd1e9cce44f5a4a0d7"
+    },
+    {
+      "caseKey": {
+        "testName": "encounter-period",
+        "module": "invariants",
+        "file": "encounter-period.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b8554d1bea489a76ddc351641b73a4fb9647c738c7474167b8fd1ab989e7ba3e"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-value-min",
+        "module": "profile",
+        "file": "obs-value-min.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f1e83c043cd4e2fc0ca67d9dcb314916fd003a62beeb4e831b16450d2ae7d32f"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-value-min-g",
+        "module": "profile",
+        "file": "obs-value-min-g.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "bd35643d51f639763d5152c7256e5cb4c719ee39073ac154e261764ee1451309"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-value-max-g",
+        "module": "profile",
+        "file": "obs-value-max-g.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "06608f1ccd6947bf2f9d848cc4d760f26290814147708a59d86cf23582db08ef"
+    },
+    {
+      "caseKey": {
+        "testName": "structureDefinition-11179-objectClass-R4",
+        "module": "sd",
+        "file": "StructureDefinition-11179-objectClass.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "74fd389d5131d01e164141155d7bde7dc8ebeabbef21d64b3c57e2cabfc1cf04"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-enrl",
+        "module": "bundle",
+        "file": "bundle-enrl.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e14e9351d1d34d5b1278ad086a83bd246812263ddd7d6cb3fb29a573f9c41294"
+    },
+    {
+      "caseKey": {
+        "testName": "mimic",
+        "module": "general",
+        "file": "mimic/encounter.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ba864f8706c9be13c3bf1caf105b0b47fcae1308e29d135d09da93272e71ab7f"
+    },
+    {
+      "caseKey": {
+        "testName": "valueset-import-legacy-test",
+        "module": "profile",
+        "file": "valueset-import-legacy-test.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8879830480a8f97f2558177164a5a97341039a1cce7d5e0493413aa0af38d618"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-id-bad-1 / R4",
+        "module": "general",
+        "file": "patient-id-bad-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "82e866e8e8bc5dc1b5cf489bed090820d7159121028501b55877d110bf76509a"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-id-bad-3 / R4",
+        "module": "general",
+        "file": "patient-id-bad-3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "95435fdeb97c0031bec0efc3e167845fdeb52800945ae514c05c549e03ff4a14"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-id-bad-2 / R4",
+        "module": "general",
+        "file": "patient-id-bad-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "02701b89b6834c96d3cd1c1b640dffbd87bb1ff7f361f6f133d4b199d209494b"
+    },
+    {
+      "caseKey": {
+        "testName": "bad-markdown",
+        "module": "xhtml",
+        "file": "bad-markdown.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7bb340e1220d6feca8eeb4aadd821144c009066c268e200898a4c0e04d3253a0"
+    },
+    {
+      "caseKey": {
+        "testName": "bad-markdown-no-html",
+        "module": "xhtml",
+        "file": "bad-markdown.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "84289e800845e45aa5d76029bd1ac655a52a369e310842831b30ece84b58f527"
+    },
+    {
+      "caseKey": {
+        "testName": "uuid-extension",
+        "module": "extensions",
+        "file": "uuid.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8f2da9f57dac476c1736624294479be57d42dc906cb437028628d3446f8cae44"
+    },
+    {
+      "caseKey": {
+        "testName": "PulseOxBundle_25Oct2022",
+        "module": "profile",
+        "file": "PulseOxBundle_25Oct2022.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9fa06d54daf28bf1a8cd338c05f3d26beb17c5f41bd791d4b4d0527a0ae55285"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-ea-testcase",
+        "module": "bundle",
+        "file": "bundle-ea-testcase.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d599bb0881ae498e2cb4525aa5ff33232cf63b0b9e3539d4b36a82689f035a76"
+    },
+    {
+      "caseKey": {
+        "testName": "xml-bad-entities-json",
+        "module": "fmt",
+        "file": "xml-bad-entities.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ff09b731664d70ee8b12c5c825824b719f3a6cc6808c737de48f389b09de1c31"
+    },
+    {
+      "caseKey": {
+        "testName": "json-good",
+        "module": "fmt",
+        "file": "json-good.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a8fba6cef7734aa5193e63ab790b044d950248c0a7b0797567a9f39a6d2bf6f6"
+    },
+    {
+      "caseKey": {
+        "testName": "comments-4",
+        "module": "fmt",
+        "file": "json-comments.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a0bc879a576f9375dd245d06ea9513f684a164eb90ef815482da3a9e8b6b1f90"
+    },
+    {
+      "caseKey": {
+        "testName": "versioned-extension",
+        "module": "extensions",
+        "file": "versioned-extension.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "0e20bed843dcad892872b7c3993c8bd1289eff652fca1c441ba6d4ff4661b8fd"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-profiles",
+        "module": "bundle",
+        "file": "bundle-profiles.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b2206ac41b303b9af02ef4b09e3e48ab411d0bf31f4b5755036db7908f4ab2e9"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-urn",
+        "module": "bundle",
+        "file": "bundle-urn.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4a692d11c498aac3a27edbfc5eedd6449c9c8458dcf354acbfa6a8be0a232771"
+    },
+    {
+      "caseKey": {
+        "testName": "ext-ccuk",
+        "module": "sd",
+        "file": "ext-ccuk.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "996315b20252a3472a91d79cd86882fca9b64a791af66138ccf46774ee49ed56"
+    },
+    {
+      "caseKey": {
+        "testName": "maiden-name-extension",
+        "module": "extensions",
+        "file": "maiden-name.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1284291f9aa81c605ef61cf80bcf4529486a8a68f8fbeb38e365f3db5909d703"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-mz",
+        "module": "sd",
+        "file": "obs-mz.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1a7dabaf06d4cbbe993be04136caf58ea871cb7e7c03ecec9c8dd64c6c4e417a"
+    },
+    {
+      "caseKey": {
+        "testName": "ai1",
+        "module": "general",
+        "file": "ai1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b1f2f3b0dfff0e65620126acce7cadd9a2e415469779dbd28e90187be9f7c7ea"
+    },
+    {
+      "caseKey": {
+        "testName": "ai2",
+        "module": "general",
+        "file": "ai2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c276099c70cdabbbcd0c2d25568df85c027b00c69b6b39b08aa2736e7bb8bff2"
+    },
+    {
+      "caseKey": {
+        "testName": "ai3",
+        "module": "general",
+        "file": "ai3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2462f37003d76f3242ef55a12cb782e7b9b922653fa614de6f3bd678e9f8554e"
+    },
+    {
+      "caseKey": {
+        "testName": "ai4",
+        "module": "general",
+        "file": "ai4.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "744f993374760805345aa63a7b9e8887e7f8c0677bc80c1bad4e1409824fbf25"
+    },
+    {
+      "caseKey": {
+        "testName": "ai5",
+        "module": "general",
+        "file": "ai5.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f380180a610de8323c3b0ce274db6182ebe37bfa56c780a44a649e9197ac011d"
+    },
+    {
+      "caseKey": {
+        "testName": "ai6",
+        "module": "general",
+        "file": "ai6.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4275d6ef7ea2b1d92c283fcd9097686c95876a4b6e5732bc8ea3744f525e80f6"
+    },
+    {
+      "caseKey": {
+        "testName": "ai7",
+        "module": "general",
+        "file": "ai7.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "49a63e452846cf081626bcbc21b1d51b70c3605f9314df286c13b6c45fdbd0bd"
+    },
+    {
+      "caseKey": {
+        "testName": "ai8",
+        "module": "general",
+        "file": "ai8.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1d268470eab57119706ec00247b44ebb07bc2e7670e5e0c23dafe59ccf4648b3"
+    },
+    {
+      "caseKey": {
+        "testName": "StructureDefinition-Slice23",
+        "module": "general",
+        "file": "slice23/StructureDefinition-Slice23-original.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "efd34f7d508d52d09e94acf112bcb0b11e2393e93fbb9032f98fd23947560627"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-de",
+        "module": "profile",
+        "file": "obs-de.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "cbb09f6639d74f54993df09992f134da42342fc9f0ba283d60e1261daaeb830a"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-de-notx",
+        "module": "profile",
+        "file": "obs-de.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f03a556d606a8c6e2376b0146041f962d707a4b4f6a094119ebbc7ceb0fe4793"
+    },
+    {
+      "caseKey": {
+        "testName": "attachment-tx",
+        "module": "general",
+        "file": "parameters-attachment.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c96680ab266d97884bb1c7b7a14ff30626f72750ca01726e22c1e889db9e5363"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-quantity-us",
+        "module": "profile",
+        "file": "obs-quantity.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9a5126b6947b80deb87853de8eb52f1455c57c0f414608dedf2f379da9816c0c"
+    },
+    {
+      "caseKey": {
+        "testName": "sd-device",
+        "module": "general",
+        "file": "sd-device.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "11e23cb5ce848d7ea155bb543346adc930a59aaedf24c276ce50bb27e9d5ff07"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-invariant",
+        "module": "invariants",
+        "file": "bundle-invariant-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7778cca41d91764e569745f2b8ca5da32c23faf6fa7904312ebf823332405662"
+    },
+    {
+      "caseKey": {
+        "testName": "contained-invariant",
+        "module": "references",
+        "file": "contained-invariant-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e1861fb370e35467d4aac659ace4f08d468c548b8009e23b885a278db2e6b5a7"
+    },
+    {
+      "caseKey": {
+        "testName": "med-example",
+        "module": "bundle",
+        "file": "med-example.json"
+      },
+      "rawStatus": "fail",
+      "via": "verified-contract",
+      "membership": "unknown",
+      "rawRowSha256": "ea980799053f199a928cf3f3562506faa07b7402a405aadd11ff6597bbd0303a",
+      "resultKind": "unknown-agreement",
+      "evidenceSha256": "fb40f32b4fe7eac38f27c7811fc261b574e135a63c75c2ba28c4bfff14446af5"
+    },
+    {
+      "caseKey": {
+        "testName": "cm",
+        "module": "tx",
+        "file": "cm.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6402a54bbfa0b6a55d6ddb06b28ef66c6a4553ca760ab39f572903a65cf74f30"
+    },
+    {
+      "caseKey": {
+        "testName": "cm2",
+        "module": "tx",
+        "file": "cm.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f0554130baf75c0008f271048d4140a1c92ff38411a97df2d95b17a8fbc49a5f"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-with-turvakielto",
+        "module": "tx",
+        "file": "patient-with-turvakielto.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7cdb68074dc55fb3146ccca2714899dae1806b061642cba13522f0052140fe63"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-vs-1",
+        "module": "tx",
+        "file": "obs-vs-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6646013807e1396b5d2dfb49a7a4dbf5d2814767dbd0371af7f3483d2b08fd39"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-vs-2",
+        "module": "tx",
+        "file": "obs-vs-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2c4eb16358d3461be774b5edb72dd371228c80977cb082aa05c0f06a3d6670a3"
+    },
+    {
+      "caseKey": {
+        "testName": "ips-nz-pj",
+        "module": "bundle",
+        "file": "ips-nz-pj.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8e1cfff65e1135f55d3751c7dafb130e59e0615ab26ba094472a8f4184e8368e"
+    },
+    {
+      "caseKey": {
+        "testName": "sp-composite",
+        "module": "api",
+        "file": "sp-composite.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d58d2df86847584e4a704851af3e5075ca86c65edb5554be08e2ec2bc3d163fb"
+    },
+    {
+      "caseKey": {
+        "testName": "ips-htmlrefs-backwards",
+        "module": "bundle",
+        "file": "ips-htmlrefs-backwards.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7c05759c3f7dbd710ab516fa8d009083d297dbe800ae9aa0862b5dbc14d09261"
+    },
+    {
+      "caseKey": {
+        "testName": "ips-htmlrefs-forwards",
+        "module": "bundle",
+        "file": "ips-htmlrefs-forwards.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "bfd293a75e41eb70fcee6ac4028e7fa73c331565fd57f275b7345b1081fd991f"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-fio2",
+        "module": "profile",
+        "file": "obs-fio2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f35bc98ac8f2e08d12c4a7ab94e6a1256eb9b3c9ee0569efd972f5ea54449b6e"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-temp-code2",
+        "module": "tx",
+        "file": "obs-temp-code2.json"
+      },
+      "rawStatus": "fail",
+      "via": "verified-contract",
+      "membership": "unknown",
+      "rawRowSha256": "a87003f804fea596b22df867c3b240a2750879b8288b819c6d9f75accd778b6d",
+      "resultKind": "reference-definition-conflict",
+      "evidenceSha256": "9084deea07a4f8fde4d531c9f520c0d872fb6dbaaf0727861e9854efea6dd60e"
+    },
+    {
+      "caseKey": {
+        "testName": "res-inv-example-good",
+        "module": "profile",
+        "file": "res-inv-example-good.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "856ace0b8d511776a0386e9d400cedc90c807082f5cfe27fdf3ac2e82c61fa6e"
+    },
+    {
+      "caseKey": {
+        "testName": "res-inv-example-bad",
+        "module": "profile",
+        "file": "res-inv-example-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "17e72658964ae74764b09ac9ab5d392ea90e45b005c25512f876d7a82b0c9e1b"
+    },
+    {
+      "caseKey": {
+        "testName": "qr-internal-refs",
+        "module": "questionnaire",
+        "file": "qr-internal-refs.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "19139b4c7c6a9cdbf7a083c0c11a4409785b90c88c467c4e391972918d6f904e"
+    },
+    {
+      "caseKey": {
+        "testName": "Observation-ex-pain.json",
+        "module": "fmt",
+        "file": "Observation-ex-pain.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "73f65c146cf03ac4069eee2bad0198b530a224352cce0d3bbc7919e4ff745a0f"
+    },
+    {
+      "caseKey": {
+        "testName": "cs-bad-props",
+        "module": "tx",
+        "file": "cs-bad-props.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "bfe9d0aef3ada3a762b8fa30573513530b2edb1db43090d55fba22cf3fd2fc91"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-bad-props",
+        "module": "tx",
+        "file": "vs-bad-props.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "220b46bd81870add9b67e8e1eb1be96effeac626edd7be66a6e00aa68126da04"
+    },
+    {
+      "caseKey": {
+        "testName": "ext-derived",
+        "module": "sd",
+        "file": "ext-derived.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "bed3d59e217a6a076fdb58cb087375a151b2de80cc994321ec631bb1ad1ee9a8"
+    },
+    {
+      "caseKey": {
+        "testName": "ext-derived-circle",
+        "module": "sd",
+        "file": "ext-derived-circle.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9aae123110920dc69758313fa05603742632b1edbdb312bc4d07d4bd55de966f"
+    },
+    {
+      "caseKey": {
+        "testName": "additional-bindings-observation-2",
+        "module": "profile",
+        "file": "additional-bindings-observation.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "36ecbd972b158307f8751f9fc3ce5ec4cd102ad7c0fd7dbad3d1883d7f2bbbfc"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-vital-signs-mdc",
+        "module": "profile",
+        "file": "obs-vital-signs-mdc.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "809fc91f520f3dbd0f285897098b414025ab2753570767e92f08526b2d393264"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-simple-0.1.0-good",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-sct.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ce13ba50718b35c83b8592d1151dc5993ef474c1f5c3dad01a27b02a7591c455"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-simple-0.1.0-bad",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-loinc.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b42f512fcdcb7aca921fe66c4a8d267a6c509c3c4ece246311e8282bc31ba277"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-simple-0.2.0-good",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-loinc.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "537ed511a0789b965b1fcc3e37171db4bcfdb07071e72bd5402ae3cad747308b"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-simple-0.2.0-bad",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-sct.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "454ecbba59c26a3839714b4e7844863bafc0694275537e62cece1d8e39c32ec6"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-wrapped-0.1.0-good",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-sct.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8b79194e25ba7e597ded11a86d5bed129d077001ba7df4b8708e310358ee5049"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-wrapped-0.1.0-bad",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-loinc.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "39b1bbb80a5226b4df91ed9846e2aeaea653fbcf511748b77a08f6ee0e3ede64"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-wrapped-0.2.0-good",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-loinc.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8dc6fa6f65d606d55e1d851185b0534e420d5775bab41435c9c20b9fd77f8fbf"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-wrapped-0.2.0-bad",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-sct.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "61d5f5e998d1071bb3fd018c40ddc2860512335199e2a743a21725aa34a62637"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-wrapped2-0.1.0-good",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-sct-other.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "45a464d249c9355e1bc5e851e8aeb733889c1aa8eeef0adfb85810355880b0e6"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-wrapped2-0.1.0-bad",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-loinc-other.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "20b64f514b4532cd947e7050230e5b36d99ed11798b30b5f4eb464c245837590"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-wrapped2-0.2.0-good",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-loinc-other.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "cfd1f34e9f6666f575516180f080f7fe32cf181a4bc8e9d90c4e51d69c7d3408"
+    },
+    {
+      "caseKey": {
+        "testName": "package-versioning-wrapped2-0.2.0-bad",
+        "module": "package-versioning",
+        "file": "nested-package-version-dependencies/obs-sct-other.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "106531a7d656d405bdb461fc65f2b647afe0db36f87e1e237c6b9d671ed86b6f"
+    },
+    {
+      "caseKey": {
+        "testName": "test-ndjson",
+        "module": "fmt",
+        "file": "test-ndjson.ndjson"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1eea835f63e167c2a8cf04fab753b7664621760d8b1ed1401345a44f9a8fea04"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-percent",
+        "module": "profile",
+        "file": "obs-percent.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "856d9fd6f66be8cc105b0df288094615ff7ef955b87c25dbc62d56ac9d05fa67"
+    },
+    {
+      "caseKey": {
+        "testName": "params-recursion",
+        "module": "general",
+        "file": "params-recursion.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "185d7fa328c46c745bb1a9cff7a1ec1eecb18d0079b1a6c0c93b1b64e3aa7b10"
+    },
+    {
+      "caseKey": {
+        "testName": "ips-link",
+        "module": "bundle",
+        "file": "ips-link.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2d1a83a9e0f79d7dab7028ae945e08db931018f2f386c41d2d20a65aa733a3c3"
+    },
+    {
+      "caseKey": {
+        "testName": "q_val_fail",
+        "module": "questionnaire",
+        "file": "q_val_fail.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ba71f8a97be1b3b9fcdaf78244dcec2049228ff87d10b6e81e09afa8c279020f"
+    },
+    {
+      "caseKey": {
+        "testName": "ab-list-slicing",
+        "module": "profile",
+        "file": "ab/List-ListExample.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a30d5bf8bfff174601276b032da20e616175d371445b4d2393202a73bdbc84ef"
+    },
+    {
+      "caseKey": {
+        "testName": "bad-json-close",
+        "module": "fmt",
+        "file": "bad-json-close-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7ef09461eec4e149467cfd60c555be059c6b62f0810a4a4e1d0cf788ba2f1692"
+    },
+    {
+      "caseKey": {
+        "testName": "bad-json-close-2",
+        "module": "fmt",
+        "file": "bad-json-close-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "25405c2c952beba6ec0ab042577ecc019e8f51f6b398bff6352fea1b329567da"
+    },
+    {
+      "caseKey": {
+        "testName": "bad-json-close-3",
+        "module": "fmt",
+        "file": "bad-json-close-3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6724b567f0af514d14bbdbe3d1d19be8ca9d1324428c4b1912938b5732d23247"
+    },
+    {
+      "caseKey": {
+        "testName": "type-slicing-multiple",
+        "module": "profile",
+        "file": "type-slicing-multiple-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "11784d79edfb9658f1a317337f4f7544f9d0958c4c2583d92fe2d6a7e6c40f40"
+    },
+    {
+      "caseKey": {
+        "testName": "type-slicing-multipleb",
+        "module": "profile",
+        "file": "type-slicing-multiple-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "91250074278d276042809a2e74be9effb252c5688f17609027572eb2da4c44ea"
+    },
+    {
+      "caseKey": {
+        "testName": "profile-slicing-multiple",
+        "module": "profile",
+        "file": "type-slicing-multiple-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "15b0b2cbeab6f2b9d3fb31e5f772d9f195da57a7c5144fbfd5fb953c8e117f44"
+    },
+    {
+      "caseKey": {
+        "testName": "profile-slicing-multipleb",
+        "module": "profile",
+        "file": "type-slicing-multiple-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "41258d8fd8bade480771520849c63c9769e29fd1359211751b3f84a082c3a263"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-loinc-filter",
+        "module": "tx",
+        "file": "vs-loinc-filter.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "30652385cbd8cef8babbe936acdc42f8455d5bafbe573a79f166910c45757a32"
+    },
+    {
+      "caseKey": {
+        "testName": "cs-filter",
+        "module": "tx",
+        "file": "cs-filter.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "46e59fd89a2b29806e84d752d13c0fbc80fa1f42f995f529a7fca7324e01f24d"
+    },
+    {
+      "caseKey": {
+        "testName": "cs-filter-bad",
+        "module": "tx",
+        "file": "cs-filter-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "37bef827e15097a383d6733be193aea0c048c65e77ccf9d05cec5516bc2c9aeb"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-filter-filter",
+        "module": "tx",
+        "file": "vs-filter-filter.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d9e42609efab39edb34d649b5a509b82c58440166e88380a99e37c26d2e25e0a"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-filter-property",
+        "module": "tx",
+        "file": "vs-filter-property.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "11d47a6618335560afc843843034a24483c6e949fdd7fdfc12d0437985329b37"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-filter-property-bad",
+        "module": "tx",
+        "file": "vs-filter-property-bad.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7a5bba440bd97fa3669c0c43ac8819632fba951b7d359e72dd8054d0ec34a008"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-filter-property-bad2",
+        "module": "tx",
+        "file": "vs-filter-property-bad2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f43d292a5357538b2c129341e7f3dd1c16eb188081d679d681dcb26e82e843c0"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-filter-int",
+        "module": "tx",
+        "file": "vs-filter-int.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "77960b2659671ae22618c21dbb122632cc1348d2e0047ebc387ebdc7f566df1f"
+    },
+    {
+      "caseKey": {
+        "testName": "cs-narrative-status",
+        "module": "xhtml",
+        "file": "cs-narrative-status.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e1cf9cae0146804369cf40eb00ae4bc484c5f3dc1213cce18417d1988c0ab09d"
+    },
+    {
+      "caseKey": {
+        "testName": "cs-narrative-status-pub",
+        "module": "tx",
+        "file": "cs-narrative-status.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c62fae2306f92c797ffcf6e1785c3f5feb7382b17f26dbcc8c1e982e618f39e1"
+    },
+    {
+      "caseKey": {
+        "testName": "params-reference-fullUrl-extension",
+        "module": "references",
+        "file": "params-reference-fullUrl-extension.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a6892dca192f1f8d1e567efebe12f9e409927852be9471ed649ce3bc3d01a3ec"
+    },
+    {
+      "caseKey": {
+        "testName": "params-reference-transaction-bundle",
+        "module": "references",
+        "file": "params-reference-transaction-bundle.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "765f645709a389a2859be21fa0de15f2b6bba81bc6d8a2ae2a62f4241d097938"
+    },
+    {
+      "caseKey": {
+        "testName": "params-reference-part-transaction",
+        "module": "references",
+        "file": "params-reference-part-transaction.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9c71e9b4a33b2a3df458abd2694d336009ba77595bbf638e280ab0edd21ff1a6"
+    },
+    {
+      "caseKey": {
+        "testName": "extension-version-restriction-range-r4",
+        "module": "extensions",
+        "file": "patient-version-range.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "16497629c83c97201ec2e9243eadb17ce121f9316c4810784a96a77a19501f9b"
+    },
+    {
+      "caseKey": {
+        "testName": "extension-version-restriction-range-ctxt-r4",
+        "module": "extensions",
+        "file": "patient-version-range.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9ef60af07a0be616a6e1c807655577d52a41bb5a4c999473d6307c4689cae709"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-pattern-1",
+        "module": "matchetype",
+        "file": "matchetype/matchetype-pattern.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e6bda9c2c12caa1a56122cc1afa23040532fcd33d16240d4218f91fbb3f4a240"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-pattern-2",
+        "module": "matchetype",
+        "file": "matchetype/matchetype-pattern.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "15abcc994750a0df14c438ef5ca59617df415d535488c5cb0402a15e870b8dad"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-ss-good",
+        "module": "matchetype",
+        "file": "matchetype/singleton-simple-good.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2f3bcfb2cd9cbd25497b24fd7840be31d81e1c481679bafbeeab4f74a8c8ddaf"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-ss-invalid",
+        "module": "matchetype",
+        "file": "matchetype/singleton-simple-invalid.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1d24c605143ef02987a850025a70e0b42320200bf993cc0b8904eee88f02a0d1"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-ss-missing",
+        "module": "matchetype",
+        "file": "matchetype/singleton-simple-missing.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "342a3bc2150df9f9cc9618c81281d6ed2f18f9c6667ae1a870fd3c2185f0b449"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-ss-wrong",
+        "module": "matchetype",
+        "file": "matchetype/singleton-simple-wrong.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "27a085cac12f41836390fa50514f03ae58c56c0a767c5c246c2887de73d3f21a"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-ss-opt-yes",
+        "module": "matchetype",
+        "file": "matchetype/singleton-simple-optional-yes.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1715cf8f2b9b6695fd033f023f3caad12384d1d8e2392e49ec7c1ac990cf926e"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-ss-opt-no",
+        "module": "matchetype",
+        "file": "matchetype/singleton-simple-optional-no.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5a5db7598a9326e1dddb3055bec043e2cbcf15f68d9b4304786622bf58531582"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-ss-opt-wrong",
+        "module": "matchetype",
+        "file": "matchetype/singleton-simple-optional-wrong.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "882af2e5853bc32b6ae7bac7346783eb170b8f1ab392cd7edfb203720822f6df"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-sc-good",
+        "module": "matchetype",
+        "file": "matchetype/singleton-complex-good.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "60c67182d4e726cce896e685f54f0070e2da66801cea1ab9d763a39fd72fa2c8"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-sc-invalid",
+        "module": "matchetype",
+        "file": "matchetype/singleton-complex-invalid.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5b77a2a45078c9337311d1d67580b219b6915db6fd11010e2e02434b9dca6b06"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-sc-missing",
+        "module": "matchetype",
+        "file": "matchetype/singleton-complex-missing.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "54dece0c62d2dbb38e93e82983bd99be64fd6cfdc2b71d00b1cd3f0b20fec7ef"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-sc-wrong",
+        "module": "matchetype",
+        "file": "matchetype/singleton-complex-wrong.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "3f42aba0c941bc4e0378184ac12e23d91e22954c7e75f2891a61a0333634b437"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-sc-opt-yes",
+        "module": "matchetype",
+        "file": "matchetype/singleton-complex-optional-yes.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5f805925396b1b09896c8afd89f0d5a17a08802bfc992792dcf02b5b8fae4e7b"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-sc-opt-no",
+        "module": "matchetype",
+        "file": "matchetype/singleton-complex-optional-no.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "47f93938f6efeb930c97aa5f73cfbbf798318ea93c2e1b11efd98dafde44c645"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-sc-opt-wrong",
+        "module": "matchetype",
+        "file": "matchetype/singleton-complex-optional-wrong.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "162e3b01d35727098901209f223c0f5b242f7ae9bcaf1e50673ae312d0afe1d3"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-single-present",
+        "module": "matchetype",
+        "file": "matchetype/list-single-present.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "000178989da3e39721390ccb0c7d737f438a4f0e29fd0b655f8175a95d23628f"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-single-extra",
+        "module": "matchetype",
+        "file": "matchetype/list-single-extra.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "67d642a32975a3f2ccd93218e29b58f54029c3c0e6bac9756fbe29ac9cfbace1"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-single-missing",
+        "module": "matchetype",
+        "file": "matchetype/list-single-missing.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "498dac160d7a839716cb95cfef1ff38da50313d48d1b7e953da3a88b2cb2bdf0"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-multiple-present",
+        "module": "matchetype",
+        "file": "matchetype/list-multiple-present.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "3aebc08c62c387ad8cf6fed5b02ebc04aeab50eaff44aae2eb890d7be5fd29dc"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-multiple-extra",
+        "module": "matchetype",
+        "file": "matchetype/list-multiple-extra.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2fb07011c1b57b7d26907e6ccccd039728d28cdabb495b47fefd02fc0e8044d9"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-multiple-missing-1",
+        "module": "matchetype",
+        "file": "matchetype/list-multiple-missing-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ce00561dd44e44c9a1d05a5b4fe0ed4d38b3cfa53d6c53b453c71c53fefd6ab1"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-multiple-missing-2",
+        "module": "matchetype",
+        "file": "matchetype/list-multiple-missing-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b81636095e9aeecee06c1505def453d7852bbc9b48fe2550be452b6e607f28d4"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-optional-start-yes",
+        "module": "matchetype",
+        "file": "matchetype/list-optional-start-yes.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "02f82abbec6253413a984d0662c901ed2815e2878d1f46f5d8a7406bdc6b9f59"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-optional-start-no",
+        "module": "matchetype",
+        "file": "matchetype/list-optional-start-no.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "41381efac711d319e799ea2b1ebaa69e9a699da64c13f677abc0ffe30670082e"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-optional-start-other",
+        "module": "matchetype",
+        "file": "matchetype/list-optional-start-other.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4c9d22bb16ffcd58fe6ec54866db11d323ee277dd677d39310d4477172968174"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-optional-middle-yes",
+        "module": "matchetype",
+        "file": "matchetype/list-optional-middle-yes.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f6cbe68eda2c1f270fc61e5520ad6c2545ca7f9ff3149371c2f29cb316824876"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-optional-middle-no",
+        "module": "matchetype",
+        "file": "matchetype/list-optional-middle-no.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7e16ef2169ee1dc418b699bd226e1c580a2fb5c89064388d036c8cd3800d545a"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-optional-middle-other",
+        "module": "matchetype",
+        "file": "matchetype/list-optional-middle-other.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ad0b07d33e3e097c35b55556f5bc5e8b2e789748442ed1f40def0dff7cc06fce"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-optional-end-yes",
+        "module": "matchetype",
+        "file": "matchetype/list-optional-end-yes.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c8c8efb9a29f5a6395d07c7de3c67686b4a5d56b1374286d907c4ae52c63c48d"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-optional-end-no",
+        "module": "matchetype",
+        "file": "matchetype/list-optional-end-no.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "bcd5776adf84f6ae64b8b2634e4bede77a9151450f523616571fa8413136c7ab"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-optional-end-other",
+        "module": "matchetype",
+        "file": "matchetype/list-optional-end-other.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "80e873a072d465d0bd932918a6a5ca9045e8fac1961cbcd5635e596fd332d146"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-count-yes",
+        "module": "matchetype",
+        "file": "matchetype/list-count-yes.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "0c7f345c8229885a9e18d92be3921f075c083e9d0a9fb374e668059e4b492696"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-count-no",
+        "module": "matchetype",
+        "file": "matchetype/list-count-no.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f194fac5af928e7bb50c1dfdc3e4652cdf12540eae64c96df75fee44b1b71207"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-sort-yes",
+        "module": "matchetype",
+        "file": "matchetype/list-sort-yes.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c1627278efc4d593d3c9724961529133fa36f4a7cd961ac0ad3a156e3efba786"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-list-sort-no",
+        "module": "matchetype",
+        "file": "matchetype/list-sort-no.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9d6202899ee4f8b09e5d324643d1c289f725607f5c6f86f58831b0dcda0efd81"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-pattern-singleton",
+        "module": "matchetype",
+        "file": "matchetype/pattern-singleton.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4ae4a35af9accfac75526f2e5e1fe137c2f5d893dab7a763080b198f044f426d"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-pattern-list",
+        "module": "matchetype",
+        "file": "matchetype/pattern-list.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ecdc0e9224686e4745010183e6f5a9f4430b94737c079cb70bf37dd5c49ef40a"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-extension-1",
+        "module": "matchetype",
+        "file": "matchetype/extension-example-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "874123aad661b0f7a4cb8084455af41e54ba2501fb295b80912d0c7b66ed8beb"
+    },
+    {
+      "caseKey": {
+        "testName": "matchetype-extension-2",
+        "module": "matchetype",
+        "file": "matchetype/extension-example-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b9c9c74b51f77195f4b2342aeb71bd22e9205db45cabfd1f02eecd9fb21395cb"
+    },
+    {
+      "caseKey": {
+        "testName": "measure-report-ihe",
+        "module": "measure",
+        "file": "measure-report-ihe.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "052f0a375df0d4542122a4f62d72f64bf35e09ee5f578c126d4579b349a17986"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-params-1",
+        "module": "tx-advanced",
+        "file": "vs-params-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "69566050f52a90794950dbad8ebdef8f9514fc006d141bc3a9c4b002b8b8ddba"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-params-2",
+        "module": "tx-advanced",
+        "file": "vs-params-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4015a707d5dca0c8c3950e489511724037cfb882853cfe1efc7b7bd25002ca0d"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-params-3",
+        "module": "tx-advanced",
+        "file": "vs-params-3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f9193ef2afec4e010353b567a24bcdfac8a30285da6c74c166b21acab7709af7"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-params-4",
+        "module": "tx-advanced",
+        "file": "vs-params-4.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "556d3ccb2c9a83bf8dfec33f5249148d7ddd78cf402f57340e45543e986343da"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-params-q",
+        "module": "tx-advanced",
+        "file": "vs-params-q.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c0df539fa7cd5487bcd16e2c3b3b7fd1e195329550c2f93147369fa5eacd4028"
+    },
+    {
+      "caseKey": {
+        "testName": "profile-compliesWith",
+        "module": "profile",
+        "file": "profile-compliesWith-derived.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b5fc10e2dc6a49d6c4cb81f0ab0ea6ec295531f2b74c828cbc2788bdab21a55e"
+    },
+    {
+      "caseKey": {
+        "testName": "opdef-params",
+        "module": "sd",
+        "file": "opdef-params.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9bec1751815e8a4564c5dde743b1841e95d7555fa2e80824566bffdbd83122fb"
+    },
+    {
+      "caseKey": {
+        "testName": "opdef2-params",
+        "module": "sd",
+        "file": "opdef2-params.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b607484423c6456e9e1dabc51ca590fa1d8cd184243b69c0072f8d094b78256f"
+    },
+    {
+      "caseKey": {
+        "testName": "ref-policy-default-r4",
+        "module": "references",
+        "file": "ref-policy-r4.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "459e2f4b87c9b579fdf456a917ba3df02bd37fb73748116e4c393b29c4e0732b"
+    },
+    {
+      "caseKey": {
+        "testName": "ref-policy-default-apply-r5",
+        "module": "references",
+        "file": "ref-policy-r4.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1a67fb807d5daa77efaff2a27eb5dedca69827e7b01d46d2a9784550a7dde3d6"
+    },
+    {
+      "caseKey": {
+        "testName": "abstract-question-type-included-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/abstract-question-type-included-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6e9d21bfa0b1df21fa254d5decd81a9b265fd18dd0dcb0682415744b3c888b08"
+    },
+    {
+      "caseKey": {
+        "testName": "attachment-content-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/attachment-content-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c158b42c56bc907ac069fd22ece4d849f6b5eadebf807001ce1542e78ee8d4a9"
+    },
+    {
+      "caseKey": {
+        "testName": "attachment-inconsistent-size-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/attachment-inconsistent-size-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e2d3959628d8a6659d7712995b2bb2d3d13a8b151dd1f0a4f42cf393792cd717"
+    },
+    {
+      "caseKey": {
+        "testName": "attachment-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/attachment-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "fd49138c874913448b2dcfdc82962bccd560c4a64e5f2b0235059a09fbbbac8d"
+    },
+    {
+      "caseKey": {
+        "testName": "attachment-max-size-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/attachment-max-size-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5e1b400a72a8957d8405e96a8e48385683b1bb1e64e36e0f20b7640214cdfd7c"
+    },
+    {
+      "caseKey": {
+        "testName": "attachment-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/attachment-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d576bfc02a2406ad8871ea79b437cd7b611a91e16c5e84331abaa9278bed063f"
+    },
+    {
+      "caseKey": {
+        "testName": "boolean-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/boolean-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "bdd59e1573bb2173e80ba56ffc3f7d17c5065a685016447e0d6d2a63b14b5454"
+    },
+    {
+      "caseKey": {
+        "testName": "choice-answer-option-exclusive-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/choice-answer-option-exclusive-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "bfebaa643018dc71a9ccc04383edca770fc30da94be358f7380861159b210369"
+    },
+    {
+      "caseKey": {
+        "testName": "choice-answer-option-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/choice-answer-option-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1d5c2bf6465541830e2d94dade92c49469ae220f23cd4ad9a978befc7758fee1"
+    },
+    {
+      "caseKey": {
+        "testName": "choice-async-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/choice-async-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "0b31064d15ca85cfff7e79708972363656e41d08d316d40aed3fad8bc261b535"
+    },
+    {
+      "caseKey": {
+        "testName": "choice-gender-coding-async-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/choice-gender-coding-async-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "479a0dc7a09b157b36797d946311a0b99cd8fa291dff3616b3c1bde1021c1fa8"
+    },
+    {
+      "caseKey": {
+        "testName": "choice-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/choice-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d230e075196e8fe6406be6a2ae8764b7119410476825799d1fc1fadcfe50b179"
+    },
+    {
+      "caseKey": {
+        "testName": "choice-invalid-value-set-async-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/choice-invalid-value-set-async-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "69901131363670639ff10070fb2386bc99b59f954655740023284da66bc28ae6"
+    },
+    {
+      "caseKey": {
+        "testName": "date-answer-option-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/date-answer-option-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7d83d0545576aaf7458039d74ef2ae1296ce5f45313d72e4b0cc944c658860e0"
+    },
+    {
+      "caseKey": {
+        "testName": "date-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/date-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a568773461da2861bff59a2b5b28fbbf47c8fc703720cf7baafb41818998c5ff"
+    },
+    {
+      "caseKey": {
+        "testName": "date-min-max-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/date-min-max-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9046c8b481e081a8160ae13bf461effb341a696492ae653706c050a98e1c2741"
+    },
+    {
+      "caseKey": {
+        "testName": "date-time-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/date-time-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f7e8c9dfd0fe97b6cbb0905d0718f4a61fdfd4a06efc69430fe28f3a51e9950d"
+    },
+    {
+      "caseKey": {
+        "testName": "date-time-min-max-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/date-time-min-max-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1ccee79168054335ba8017c0e5a5c68b455ce78f10f767d292f11273890e162c"
+    },
+    {
+      "caseKey": {
+        "testName": "decimal-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/decimal-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6ec9c777d8f264067b5124137a3ef279c10b6334e644b071cf55d0b4bbe6fbee"
+    },
+    {
+      "caseKey": {
+        "testName": "decimal-max-decimal-places-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/decimal-max-decimal-places-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4f38a9abc87888ced69c27e1a21c18c889aaf8705191c8333fd150e49969b2a5"
+    },
+    {
+      "caseKey": {
+        "testName": "decimal-min-max-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/decimal-min-max-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ebefbaad58ccc2059d24f3219f2fc2773ec597c46016daac92a6f898dc4b9ce1"
+    },
+    {
+      "caseKey": {
+        "testName": "decimal-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/decimal-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "52596def589bd13c82cb97370d495c41f924ae28f5b508bdef52df4e83eb3ef4"
+    },
+    {
+      "caseKey": {
+        "testName": "display-answer-included-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/display-answer-included-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "73c4057f6e20ff2ae5ab6fedd26a081eeb143dae3c1d60bcf9a5e6afbc578b75"
+    },
+    {
+      "caseKey": {
+        "testName": "group-required-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/group-required-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "11a28d994e8c0746f7e624e8431e0af32563c9c0a8c438582505ff324653d39c"
+    },
+    {
+      "caseKey": {
+        "testName": "group-with-string-invalid-nesting-link-id-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/group-with-string-invalid-nesting-link-id-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5c9ea2ecaa4a31baf5fab753bee1b9c1d8b35983679ba551a0b9da971133ebf9"
+    },
+    {
+      "caseKey": {
+        "testName": "group-with-string-invalid-nesting-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/group-with-string-invalid-nesting-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "56a1658748aaec047d6702a4d578ca5287aed4689aa31360fe299a36ea9234d5"
+    },
+    {
+      "caseKey": {
+        "testName": "group-with-string-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/group-with-string-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8baa54e79b05a2e74879dae8d78f0147523b74e5a37ecefa36b715197315598d"
+    },
+    {
+      "caseKey": {
+        "testName": "integer-answer-option-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/integer-answer-option-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "caa6052be819d47e845a788b0c5ca57a43213158cdd7e852669190b7164fbc7a"
+    },
+    {
+      "caseKey": {
+        "testName": "integer-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/integer-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "372238d5b3ad6e7c710e12ef8df2511e02b6e63db88ab9c5ac5288903339a9cb"
+    },
+    {
+      "caseKey": {
+        "testName": "integer-min-max-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/integer-min-max-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "765d1b7d14f17985546da7d9e48c9d19f198e45b0880465667617a451ac520fa"
+    },
+    {
+      "caseKey": {
+        "testName": "integer-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/integer-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6144270c3effb1f9345b6a5377e965d1ddbcd9b5123abc2e2ba2c373e69acc90"
+    },
+    {
+      "caseKey": {
+        "testName": "invalid-link-id-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/invalid-link-id-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9fb5d48df8a98f6d256cf76788323bc01c3319400b5c4a05892ca5e57be2a039"
+    },
+    {
+      "caseKey": {
+        "testName": "open-choice-gender-coding-async-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/open-choice-gender-coding-async-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b577ce107fc0ba2ef4349be56d706eb63c7c1eefa929036d2e25ec739d0945f4"
+    },
+    {
+      "caseKey": {
+        "testName": "open-choice-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/open-choice-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "30620640a1432536accd3351f1b34e16d3c498f1cded94be7bea3707d6219db6"
+    },
+    {
+      "caseKey": {
+        "testName": "open-choice-string-async-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/open-choice-string-async-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c1238e17bce2cc076ca8d45bed279a972de6b9e7c04b3039006c6e9cc87347bf"
+    },
+    {
+      "caseKey": {
+        "testName": "quantity-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/quantity-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "4012a1e6f9a915c553162eebd36f9652c3e377ecdd0fcb0200e0bba91e0485d3"
+    },
+    {
+      "caseKey": {
+        "testName": "quantity-min-max-compat-units-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/quantity-min-max-compat-units-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7f7e545a538236fa5f901d2e52d4c06fde44394c15789ceb1f67e51dda0e8a31"
+    },
+    {
+      "caseKey": {
+        "testName": "quantity-min-max-incompat-units-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/quantity-min-max-incompat-units-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d283737b6fc4eaead9410e597363f3cd5be95eeca18a28a1a766f8b98976540f"
+    },
+    {
+      "caseKey": {
+        "testName": "quantity-min-max-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/quantity-min-max-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8ff9d98b6c7aab1d395d67fe4477e48b1f8f608dfb0508799eb5cada5332ddd2"
+    },
+    {
+      "caseKey": {
+        "testName": "quantity-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/quantity-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9beebcfd89d09d6224fae7c073153e58e08656da03b7733260658439b4d2bd15"
+    },
+    {
+      "caseKey": {
+        "testName": "quantity-units-in-value-set-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/quantity-units-in-value-set-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "9f600b286561af77a8849cfcd8fbf2640c1f2829a5231d98f9516e630147076e"
+    },
+    {
+      "caseKey": {
+        "testName": "quantity-units-invalid-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/quantity-units-invalid-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f8a2b104ef86c0ebf13d427ec456a20648decd24b11d1d2bf4a3cfe48eff8a02"
+    },
+    {
+      "caseKey": {
+        "testName": "quantity-units-not-in-value-set-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/quantity-units-not-in-value-set-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a5d25332426ca4216d34042b1b3a285e9a61789d9691df16bc2d572348b831ba"
+    },
+    {
+      "caseKey": {
+        "testName": "quantity-units-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/quantity-units-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "eb206c4941d8bcb284abde8c84084c5557ce644c21b278f1064f5d88320d5458"
+    },
+    {
+      "caseKey": {
+        "testName": "questionnaire-draft-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/questionnaire-draft-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "77d1619bbb17b955d98e01eaf5a9715c1112cbbc779d965ac0371ec09e6427fe"
+    },
+    {
+      "caseKey": {
+        "testName": "questionnaire-inactive-end-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/questionnaire-inactive-end-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f23dbae181ae998be039b0a4c987e05b1f3382d4c8e87dcbba46fc87b3ee4480"
+    },
+    {
+      "caseKey": {
+        "testName": "questionnaire-inactive-start-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/questionnaire-inactive-start-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a116f563e41c9f7216ebbe2812ef90eabc1ee54de34b5cbe5c441622eee52eda"
+    },
+    {
+      "caseKey": {
+        "testName": "questionnaire-not-resolved-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/questionnaire-not-resolved-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d5a552219f08827dd8a2b0508d0867694018db0d617bf3f1812309ebf7dbdd45"
+    },
+    {
+      "caseKey": {
+        "testName": "questionnaire-retired-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/questionnaire-retired-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f4e47960156d15fded4628a7c22850e95b094bfeb072edd3c4fcc684000404b4"
+    },
+    {
+      "caseKey": {
+        "testName": "reference-absolute-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/reference-absolute-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "777fff0ef62f5b50b568acbfc3805dad02539ece577f11efa2fb3464e0cc5e6b"
+    },
+    {
+      "caseKey": {
+        "testName": "reference-invalid-resource-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/reference-invalid-resource-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "5188ab112c4ee92e105584bb4ff9c5c5ac880fb1f10b9d4036ae4aa53ee611d0"
+    },
+    {
+      "caseKey": {
+        "testName": "reference-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/reference-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7cb4534a11d5733a3e29a0628003bcb91097579f6b7b2039ea665d53a5247822"
+    },
+    {
+      "caseKey": {
+        "testName": "reference-invalid-url-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/reference-invalid-url-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "cd268d7bb1b3db388bc94de8d7db5552a8b0d467a365cf7372937e736ba5817c"
+    },
+    {
+      "caseKey": {
+        "testName": "reference-relative-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/reference-relative-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "078c07a6f4913354029f4ec57c434c81b134866637e9e02f204a4ee45728f8e0"
+    },
+    {
+      "caseKey": {
+        "testName": "reference-unconstrained-resource-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/reference-unconstrained-resource-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "dbcd29c71ddaa01cea20b90332817dc364c96f6aaaefa486edac88ddd46665cc"
+    },
+    {
+      "caseKey": {
+        "testName": "string-answer-option-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-answer-option-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d23193d321165052b6da49cc09c5ae70e4b31f8c81cfe9b7bfcaadd2f873aee1"
+    },
+    {
+      "caseKey": {
+        "testName": "string-draft-downgrade-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-draft-downgrade-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "77b11ce360048b1c4c4ba893f1388b26b76599889a35e66b5abc9bcfc3f32c38"
+    },
+    {
+      "caseKey": {
+        "testName": "string-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1dbfe2d7ba60fee6bf1ca1a347d17641a88eaed45500c36141e009366718731a"
+    },
+    {
+      "caseKey": {
+        "testName": "string-max-occurs-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-max-occurs-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d29c6bb065ee971422c5e57debcef88b982d45064b8feac0fe02194b29f46005"
+    },
+    {
+      "caseKey": {
+        "testName": "string-min-max-length-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-min-max-length-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8bba30e9f623db0b0467a80881187d57dfb6b22c8ee8c61ae29cad2ff42f7a17"
+    },
+    {
+      "caseKey": {
+        "testName": "string-min-occurs-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-min-occurs-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8d7eeca0392793b608c6edc6a0c5065958185bc1b005456fa66935eb2cdb27ca"
+    },
+    {
+      "caseKey": {
+        "testName": "string-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "409186b67644462aa349457648ab956fa6982f466cf107611569d32ddec02d62"
+    },
+    {
+      "caseKey": {
+        "testName": "string-regex-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-regex-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f52227679a8e0c50fa875c2422f5e3dab8662717036091be0e2dac095485b423"
+    },
+    {
+      "caseKey": {
+        "testName": "string-required-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-required-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e63e832a1af6c254a933012253743f1a4f1e96b1f64bc3278de734bfce8ddc2f"
+    },
+    {
+      "caseKey": {
+        "testName": "string-vs-text-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-vs-text-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a26f210a5b0e7a04566a5dbb7b5be714ed789686884f74bcc9133e2d9ff96fe4"
+    },
+    {
+      "caseKey": {
+        "testName": "string-with-coding-async-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/string-with-coding-async-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e7dad30fd1a79ae30b52be7d091dd4a9840d085fb59a12adfccceccefc332712"
+    },
+    {
+      "caseKey": {
+        "testName": "text-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/text-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f0033ef372b1762a066ad9f4db59ba18b5c1722448131b8968ca54190debbf52"
+    },
+    {
+      "caseKey": {
+        "testName": "time-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/time-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "a2b08a17ca701e754ddea2af32a05d89d43fdf41791ab31d274384430fbbe8d6"
+    },
+    {
+      "caseKey": {
+        "testName": "time-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/time-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "370869bea0fe94272cc4cf2c3929e18a720b7ec17aa769b4de178ce2a9c7a304"
+    },
+    {
+      "caseKey": {
+        "testName": "url-invalid-type-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/url-invalid-type-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8208ad983bcdf9f0527be591790c8e5ac0aa39d5986dfedd466d5b7e3d6b0b92"
+    },
+    {
+      "caseKey": {
+        "testName": "url-value-qr",
+        "module": "questionnaire",
+        "file": "questionnaire/brianpos/url-value-qr.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "f0eb7c6532b61b92e874fa3fb698a3403be50efc20d99b7894436284593bc9bb"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-bad-ecl",
+        "module": "tx",
+        "file": "vs-bad-ecl.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6b9e527b2bc0f58fcd92d7e088e53ee4c5578211d186b22dc6963586efb2ddf2"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-bad-ecl-us",
+        "module": "tx",
+        "file": "vs-bad-ecl-us.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "6f4cf1f2260c4a711b4900ef287bb25c56e16f37f8e58e2a9fd473fda83dbe14"
+    },
+    {
+      "caseKey": {
+        "testName": "contract-binding-test",
+        "module": "tx",
+        "file": "contract-binding-test.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b923d26e39029284e808857558dab495465cbd101abc9d74c109e010eb7fc6ee"
+    },
+    {
+      "caseKey": {
+        "testName": "fr-regulee-finess",
+        "module": "tx",
+        "file": "fr-regulee-finess.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "cf5e2aa9178c023acf8374debb8743235c852fc013914fa086c1599b1d54f9bf"
+    },
+    {
+      "caseKey": {
+        "testName": "cs-order-prop-r4",
+        "module": "tx",
+        "file": "cs-order-prop.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "05d593e849a69797bafc3af92a822e174329bafcd06782c7ed96366786b5f8a8"
+    },
+    {
+      "caseKey": {
+        "testName": "cc-pattern-system-only",
+        "module": "profile",
+        "file": "cc-pattern-system-only-profile.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "33e10d37393b2c01c6904081ec5f772579e7c3969afdc0dc5e6c7fe19e3ab1ae"
+    },
+    {
+      "caseKey": {
+        "testName": "filter-display-error-with-path",
+        "module": "profile",
+        "file": "filter-display-error-with-path-observation.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d2cd807cb906852143af2ed6f9146317c47f478fd0c35046eb7e42ab96909645"
+    },
+    {
+      "caseKey": {
+        "testName": "standards-status-r4",
+        "module": "extensions",
+        "file": "cs-stds-status.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "942e1935e5e85cc00737f84eec87cf22c49fbe484c6ba5fb42c82bb7fde90938"
+    },
+    {
+      "caseKey": {
+        "testName": "standards-status-x-r4",
+        "module": "extensions",
+        "file": "cs-stds-status-x.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "21f7bac8df2832c53984d1ea205f197d16c42fef53fcb55232ed7167ceb1409b"
+    },
+    {
+      "caseKey": {
+        "testName": "filter-invalid-display",
+        "module": "profile",
+        "file": "filter-invalid-display-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "33b898f94277977f7279d0e7965e7c80f398909e63310adbf51fee87a3208433"
+    },
+    {
+      "caseKey": {
+        "testName": "bnd-slicing-cgm",
+        "module": "profile",
+        "file": "bnd-slicing-cgm.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "442444ea8bdbb3b0c35006137cd34753dc70d4464b3e9b29b7dbbc2fb5250eec"
+    },
+    {
+      "caseKey": {
+        "testName": "decimal-precision-questionnaire",
+        "module": "questionnaire",
+        "file": "questionnaire/QuestionnaireResponse-ExampleEntryValidationDecimalResponse.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "650b51459926e5d0b1ac64585daaac2f6777633a3d75648a8ac88e8ce7447015"
+    },
+    {
+      "caseKey": {
+        "testName": "scoring-test",
+        "module": "scoring",
+        "file": "scoring-test.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "7033e2e7e35ae11234df54cc77f44f44168f18a47d2bd5d2323a385613cc8267"
+    },
+    {
+      "caseKey": {
+        "testName": "bundle-resolve-deep",
+        "module": "profile",
+        "file": "bundle-resolve-deep.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "3239b9672f2de07b2f23913ce0d747a5b686db534705984e0d90e9e3ba7d9f93"
+    },
+    {
+      "caseKey": {
+        "testName": "sig-bundle.json",
+        "module": "security",
+        "file": "signatures/sig-bundle.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "8121fdec79b4dbeb46e1a7d70d48d6e69bd0d0344ed97c064e345862b5976d53"
+    },
+    {
+      "caseKey": {
+        "testName": "q-ca-implicit",
+        "module": "tx",
+        "file": "q-ca-implicit.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "76c715d5be49585bb6b23342292b938f984fea6bb16e36d22f7019da6cffac17"
+    },
+    {
+      "caseKey": {
+        "testName": "q-ca-explicit",
+        "module": "tx",
+        "file": "q-ca-explicit.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e7cbf8e6da4c237d25623b05e9e3002cf3fed8743da85f864f715268d5ddeece"
+    },
+    {
+      "caseKey": {
+        "testName": "q-ca-implicit-ca",
+        "module": "tx",
+        "file": "q-ca-implicit.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "d3ddb242f7342b1324ca4c63286a2cb999533bb781c4dbb1ca10c34587d25d27"
+    },
+    {
+      "caseKey": {
+        "testName": "q-ca-explicit-ca",
+        "module": "tx",
+        "file": "q-ca-explicit.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "fb4937ee692c9b589cc66bb40887f3cdfe277de4ca0194ce86dfab70c3d9e568"
+    },
+    {
+      "caseKey": {
+        "testName": "pat-fixed-date",
+        "module": "general",
+        "file": "pat-fixed-date.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1cfaa04353c8a09d6c2443fe7d552c4bf0b168dbee73a52e28bcf201541c6ec3"
+    },
+    {
+      "caseKey": {
+        "testName": "pat-minvalue-date",
+        "module": "general",
+        "file": "pat-fixed-date.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "97cf98b9084eb0099707f9a649ee4ef5834a4215198d94a48231f3c4b1486000"
+    },
+    {
+      "caseKey": {
+        "testName": "param-mintime",
+        "module": "general",
+        "file": "param-mintime-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b9ca234634b388bb3870e3f12f99660f27b25c5be9a82a2510defa3fd8fe0df8"
+    },
+    {
+      "caseKey": {
+        "testName": "obs-max-decimal",
+        "module": "general",
+        "file": "obs-max-decimal-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "b4145c4d1916c504c2804551d9ae467c4a3bdd01bc954e6b6e80aaa5fc6a1562"
+    },
+    {
+      "caseKey": {
+        "testName": "toplevel-minvalueduration-pass",
+        "module": "general",
+        "file": "toplevel-minvalueduration-pass.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "20784b1b13b66ca3dc4381bf30908f17cc36e3045eb65339035e57e6c5ff0042"
+    },
+    {
+      "caseKey": {
+        "testName": "toplevel-minvalueduration-fail",
+        "module": "general",
+        "file": "toplevel-minvalueduration-fail.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "1305cf455d1e72f09663a8a67ffdd6c9761ec4aa6cbb53a15f2535a57b3629d3"
+    },
+    {
+      "caseKey": {
+        "testName": "toplevel-maxvalueduration-pass",
+        "module": "general",
+        "file": "toplevel-maxvalueduration-pass.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "3bd993ce2741150da60c693ccb8a64cf585fcf5044db6d1ef47647b1b7aab0d5"
+    },
+    {
+      "caseKey": {
+        "testName": "toplevel-maxvalueduration-fail",
+        "module": "general",
+        "file": "toplevel-maxvalueduration-fail.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "dd230c0888e4c54e167b5f4655ac2cd58c4116bacba8162ec655cde0c61fda89"
+    },
+    {
+      "caseKey": {
+        "testName": "media-mime-type-tx",
+        "module": "general",
+        "file": "media-mime-type-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "0e32dde29965f9b819562c4c3ef65037f06685888b071a564a31961bb1e73be1"
+    },
+    {
+      "caseKey": {
+        "testName": "media-mime-type-notx",
+        "module": "general",
+        "file": "media-mime-type-instance.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "c266a09ec24574eb33ceddcf21e2d71d80ff84ba73c862b39f188039f20b821d"
+    },
+    {
+      "caseKey": {
+        "testName": "valueset-dependency-version-1",
+        "module": "profile",
+        "file": "valueset-dependency-version-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ebc7e4baa2e220f70097c2a739c4559e020757893ce00b730fd7e432a6c9742b"
+    },
+    {
+      "caseKey": {
+        "testName": "valueset-dependency-version-2",
+        "module": "profile",
+        "file": "valueset-dependency-version-2.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "24dd1792fdf1f8fa5fe4bf017e066b1a68f081dfbd98cede9b2fc6451de06694"
+    },
+    {
+      "caseKey": {
+        "testName": "valueset-dependency-version-3",
+        "module": "profile",
+        "file": "valueset-dependency-version-3.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ce4c74ab3fd5350c66bf492834c868e491e6747f977539be062852752dfa56de"
+    },
+    {
+      "caseKey": {
+        "testName": "valueset-dependency-version-4",
+        "module": "profile",
+        "file": "valueset-dependency-version-4.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "cc3655569d632ed1d2f457a11907435d8e52b5f7ed1577e8ceccf2f14688f8b3"
+    },
+    {
+      "caseKey": {
+        "testName": "valueset-dependency-version-5",
+        "module": "profile",
+        "file": "valueset-dependency-version-5.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "2bbbcfc87e58a6b6d15e54b7be871390bca80ead4092f0b1a8b0e8851d5bd9e0"
+    },
+    {
+      "caseKey": {
+        "testName": "valueset-dependency-version-6",
+        "module": "profile",
+        "file": "valueset-dependency-version-6.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "61d31791e431c6b3c51fb6ce7ef062083fedb4e73d6379cacacc0e6e62f3cc4e"
+    },
+    {
+      "caseKey": {
+        "testName": "sdc-inv-1",
+        "module": "profile",
+        "file": "sdc-inv-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "046a45a072310a275a6606747eb53f4255db6a39e50deee802f8a6d82359c35c"
+    },
+    {
+      "caseKey": {
+        "testName": "vs-expansion",
+        "module": "tx",
+        "file": "vs-expansion.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "ec3fb2fc56b5b425ae62cfba9b3b655663f5bd8b431e38aa88bc7ca0b403ee38"
+    },
+    {
+      "caseKey": {
+        "testName": "params-resource",
+        "module": "base",
+        "file": "params-resource.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "0792efabacdd5b860b28330cbe349565d8556da06128407a4a09cb83add7cc12"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-hs-1",
+        "module": "base",
+        "file": "patient-hs-1.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "32184d8fcfa504b64f334292bdb18b1d923886a9991c93af93ea47ab33f64f29"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-id-extensions",
+        "module": "base",
+        "file": "patient-id-extensions.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "e4602cb3d7e32e5543871280d376fbed5e9c0f887564c9adc77ef18d0a6cc0e9"
+    },
+    {
+      "caseKey": {
+        "testName": "patient-auto-profile",
+        "module": "profile",
+        "file": "patient-auto-profile.json"
+      },
+      "rawStatus": "pass",
+      "via": "raw",
+      "membership": "not-claimed",
+      "rawRowSha256": "896f1d9d4e79d07af28c0fc13a143b0c460a1f2a969fdeb3a4cf6fba8fe304b6"
+    }
+  ],
+  "summary": {
+    "expectedCount": 390,
+    "rawCount": 390,
+    "rawPassCount": 387,
+    "rawFailCount": 3,
+    "rawSkipCount": 0,
+    "rawErrorCount": 0,
+    "acceptedRawCount": 387,
+    "acceptedByContractCount": 3,
+    "acceptedCount": 390,
+    "rejectedCount": 0,
+    "unknownContractCount": 3
+  },
+  "certificateAuthority": "caller-authenticated-and-recomputed",
+  "evaluations": [
+    {
+      "caseKey": {
+        "testName": "no.gastronet.message-limit",
+        "module": "bundle",
+        "file": "no.gastronet.json"
+      },
+      "status": "accepted",
+      "kind": "reference-output-boundary",
+      "unknownMembership": true,
+      "rawStatusUnchanged": true,
+      "evidence": {
+        "epoch": {
+          "sourceSha256": "12f675c61db7a4504dcb0f7166d240e6f49012f332da6fec34b1beb18ec0bdbe",
+          "runtimeSha256": "3151602730dec44d0b45a7dc1c1015257e3194a193e051b3fe502af7c84407f2",
+          "harnessSha256": "7766372981206f945dfbfef999a24f949ccfd46e7e62c0da9d940f3ab2daaa5c",
+          "corpusSha256": "5975ad8e63f47430afb9d3c1b28fc68421dac08cf8906b897f35b4caaca89e39"
+        },
+        "caseKey": {
+          "testName": "no.gastronet.message-limit",
+          "module": "bundle",
+          "file": "no.gastronet.json"
+        },
+        "rawRowSha256": "da10487c5900a3c900b38f63ef64e2f8ffdb4b77d17bed8295392595134c988e",
+        "inputSha256": "ce0d6b7af6c8cd1aabecbf832696e1c6ac46a90ae7b7549c3fce4a05de6769b6",
+        "referenceSha256": "e4be20e8fde8439d9b92c5a4fdb807133de2541087b01fda67d68400b9b58b4f",
+        "comparison": {
+          "status": "pass",
+          "reason": "both-contracts-pass",
+          "rawDiff": {
+            "score": 0.22211956521739132,
+            "errorCountMatch": false,
+            "warningCountMatch": false,
+            "details": {
+              "recordsErrors": 19,
+              "javaErrors": 3,
+              "recordsWarnings": 4,
+              "javaWarnings": 1,
+              "recordsInfos": 47,
+              "javaInfos": 1,
+              "pathOverlap": 0.17391304347826086,
+              "matchedPaths": [
+                "entry.resource.extension.value.coding.code",
+                "entry.resource.category.coding.display",
+                "entry.resource.performer.function.coding.code",
+                "entry"
+              ],
+              "unmatchedRecordsPaths": [
+                "entry",
+                "entry.resource.extension",
+                "entry.resource.performer.function",
+                "entry.resource.performer.function",
+                "entry.resource.performer.function.coding.code",
+                "entry.resource.report",
+                "entry.resource.result",
+                "entry.resource.result",
+                "entry.resource.result",
+                "entry.resource.component.code.coding.code",
+                "entry.resource.component.code.coding.code",
+                "entry.resource.component.code.coding.code",
+                "entry.resource.component.code.coding.code",
+                "entry.resource.code.coding.code",
+                "entry.resource.meta.profile",
+                "entry.resource.meta.profile",
+                "entry.resource.meta.profile",
+                "entry.resource.meta.profile",
+                "entry.resource"
+              ],
+              "unmatchedJavaPaths": [],
+              "categoryOverlap": 0.125,
+              "matchedCategories": [
+                "invalid",
+                "invalid",
+                "invalid"
+              ],
+              "unmatchedRecordsCategories": [
+                "structure",
+                "structure",
+                "invalid",
+                "invalid",
+                "invalid",
+                "invalid",
+                "structure",
+                "structure",
+                "structure",
+                "structure",
+                "invalid",
+                "invalid",
+                "invalid",
+                "invalid",
+                "invalid",
+                "structure",
+                "structure",
+                "structure",
+                "structure",
+                "structure"
+              ],
+              "unmatchedJavaCategories": [
+                "processing"
+              ]
+            }
+          },
+          "fullDiff": {
+            "score": 0.7959153318077804,
+            "errorCountMatch": false,
+            "warningCountMatch": false,
+            "details": {
+              "recordsErrors": 19,
+              "javaErrors": 18,
+              "recordsWarnings": 4,
+              "javaWarnings": 1,
+              "recordsInfos": 47,
+              "javaInfos": 21,
+              "pathOverlap": 0.8260869565217391,
+              "matchedPaths": [
+                "entry.resource.extension",
+                "entry.resource.performer.function",
+                "entry.resource.performer.function",
+                "entry.resource.extension.value.coding.code",
+                "entry.resource.category.coding.display",
+                "entry.resource.performer.function.coding.code",
+                "entry.resource.performer.function.coding.code",
+                "entry.resource.report",
+                "entry.resource.result",
+                "entry.resource.result",
+                "entry.resource.result",
+                "entry.resource.component.code.coding.code",
+                "entry.resource.component.code.coding.code",
+                "entry.resource.component.code.coding.code",
+                "entry.resource.component.code.coding.code",
+                "entry.resource.code.coding.code",
+                "entry",
+                "entry",
+                "entry.resource"
+              ],
+              "unmatchedRecordsPaths": [
+                "entry.resource.meta.profile",
+                "entry.resource.meta.profile",
+                "entry.resource.meta.profile",
+                "entry.resource.meta.profile"
+              ],
+              "unmatchedJavaPaths": [],
+              "categoryOverlap": 0.8260869565217391,
+              "matchedCategories": [
+                "structure",
+                "structure",
+                "invalid",
+                "invalid",
+                "invalid",
+                "invalid",
+                "invalid",
+                "invalid",
+                "invalid",
+                "structure",
+                "structure",
+                "structure",
+                "structure",
+                "invalid",
+                "invalid",
+                "invalid",
+                "invalid",
+                "invalid",
+                "structure"
+              ],
+              "unmatchedRecordsCategories": [
+                "structure",
+                "structure",
+                "structure",
+                "structure"
+              ],
+              "unmatchedJavaCategories": []
+            }
+          },
+          "fullReference": {
+            "testName": "no.gastronet"
+          },
+          "capValidity": {
+            "maxMessages": 5,
+            "fullIssueCount": 40,
+            "cappedIssueCount": 5,
+            "status": "pass",
+            "reason": "overflow-prefix-and-footer-verified",
+            "prefixIssueCount": 4
+          }
+        },
+        "fullCaseKey": {
+          "testName": "no.gastronet",
+          "module": "bundle",
+          "file": "no.gastronet.json"
+        },
+        "fullRawRowSha256": "ee9a0fa39792b68d9789246157948bd910c7270b6e3d0b2306fea4e96aeb4d14",
+        "sameCompleteRawRecords": true,
+        "sameCompleteNormalizedRecords": true
+      }
+    },
+    {
+      "caseKey": {
+        "testName": "med-example",
+        "module": "bundle",
+        "file": "med-example.json"
+      },
+      "status": "accepted",
+      "kind": "unknown-agreement",
+      "unknownMembership": true,
+      "rawStatusUnchanged": true,
+      "evidence": {
+        "epoch": {
+          "sourceSha256": "12f675c61db7a4504dcb0f7166d240e6f49012f332da6fec34b1beb18ec0bdbe",
+          "runtimeSha256": "3151602730dec44d0b45a7dc1c1015257e3194a193e051b3fe502af7c84407f2",
+          "harnessSha256": "7766372981206f945dfbfef999a24f949ccfd46e7e62c0da9d940f3ab2daaa5c",
+          "corpusSha256": "5975ad8e63f47430afb9d3c1b28fc68421dac08cf8906b897f35b4caaca89e39"
+        },
+        "caseKey": {
+          "testName": "med-example",
+          "module": "bundle",
+          "file": "med-example.json"
+        },
+        "rawRowSha256": "ea980799053f199a928cf3f3562506faa07b7402a405aadd11ff6597bbd0303a",
+        "inputSha256": "6e5dc322e1da1326817e832e48d9b094a929e28ee3276dfd640b96ca56e83d08",
+        "referenceSha256": "56be8a28b8a5edd0f19b790d9224df18aa5065e50759afdce3c9f3be05deb628",
+        "unknownAgreement": {
+          "status": "unknown-equivalent",
+          "reason": "unique-input-owned-unknown-bijection",
+          "completeness": "unknown",
+          "membershipValidated": false,
+          "fullConformanceDetermined": false,
+          "matches": [
+            {
+              "path": "Bundle.entry[0].resource.code.coding[1]",
+              "ownPath": "Medication.code.coding[1]",
+              "ownerType": "Medication",
+              "system": "http://fhir.de/CodeSystem/ifa/pzn",
+              "code": "07115663",
+              "recordsIndex": 11,
+              "javaIndex": 0
+            },
+            {
+              "path": "Bundle.entry[0].resource.ingredient[0].itemCodeableConcept.coding[0]",
+              "ownPath": "Medication.ingredient[0].itemCodeableConcept.coding[0]",
+              "ownerType": "Medication",
+              "system": "http://fhir.de/CodeSystem/ask",
+              "code": "05482",
+              "recordsIndex": 12,
+              "javaIndex": 1
+            },
+            {
+              "path": "Bundle.entry[0].resource.ingredient[1].itemCodeableConcept.coding[0]",
+              "ownPath": "Medication.ingredient[1].itemCodeableConcept.coding[0]",
+              "ownerType": "Medication",
+              "system": "http://fhir.de/CodeSystem/ask",
+              "code": "06225",
+              "recordsIndex": 13,
+              "javaIndex": 2
+            },
+            {
+              "path": "Bundle.entry[0].resource.ingredient[2].itemCodeableConcept.coding[0]",
+              "ownPath": "Medication.ingredient[2].itemCodeableConcept.coding[0]",
+              "ownerType": "Medication",
+              "system": "http://fhir.de/CodeSystem/ask",
+              "code": "1234",
+              "recordsIndex": 14,
+              "javaIndex": 3
+            },
+            {
+              "path": "Bundle.entry[0].resource.ingredient[3].itemCodeableConcept.coding[0]",
+              "ownPath": "Medication.ingredient[3].itemCodeableConcept.coding[0]",
+              "ownerType": "Medication",
+              "system": "http://fhir.de/CodeSystem/ask",
+              "code": "10669",
+              "recordsIndex": 15,
+              "javaIndex": 4
+            },
+            {
+              "path": "Bundle.entry[0].resource.ingredient[4].itemCodeableConcept.coding[0]",
+              "ownPath": "Medication.ingredient[4].itemCodeableConcept.coding[0]",
+              "ownerType": "Medication",
+              "system": "http://fhir.de/CodeSystem/ask",
+              "code": "03800",
+              "recordsIndex": 16,
+              "javaIndex": 5
+            },
+            {
+              "path": "Bundle.entry[0].resource.ingredient[5].itemCodeableConcept.coding[0]",
+              "ownPath": "Medication.ingredient[5].itemCodeableConcept.coding[0]",
+              "ownerType": "Medication",
+              "system": "http://fhir.de/CodeSystem/ask",
+              "code": "06226",
+              "recordsIndex": 17,
+              "javaIndex": 6
+            }
+          ],
+          "mandatoryClinicalErrorChecks": {
+            "recordsIndices": [
+              0
+            ],
+            "javaIndices": [
+              13
+            ]
+          },
+          "remainingRecordsIndices": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "remainingJavaIndices": [
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13
+          ]
+        },
+        "independentClinicalProof": {
+          "predicate": "Bundle.fullUrl.absolute-uri",
+          "independentlyReproducedErrors": 1,
+          "unmatchedClinicalErrorsOrWarnings": 0,
+          "matchedUnknownWarningsExcluded": 7
+        },
+        "membershipValidated": false,
+        "fullConformanceDetermined": false
+      }
+    },
+    {
+      "caseKey": {
+        "testName": "obs-temp-code2",
+        "module": "tx",
+        "file": "obs-temp-code2.json"
+      },
+      "status": "accepted",
+      "kind": "reference-definition-conflict",
+      "unknownMembership": true,
+      "rawStatusUnchanged": true,
+      "evidence": {
+        "epoch": {
+          "sourceSha256": "12f675c61db7a4504dcb0f7166d240e6f49012f332da6fec34b1beb18ec0bdbe",
+          "runtimeSha256": "3151602730dec44d0b45a7dc1c1015257e3194a193e051b3fe502af7c84407f2",
+          "harnessSha256": "7766372981206f945dfbfef999a24f949ccfd46e7e62c0da9d940f3ab2daaa5c",
+          "corpusSha256": "5975ad8e63f47430afb9d3c1b28fc68421dac08cf8906b897f35b4caaca89e39"
+        },
+        "caseKey": {
+          "testName": "obs-temp-code2",
+          "module": "tx",
+          "file": "obs-temp-code2.json"
+        },
+        "rawRowSha256": "a87003f804fea596b22df867c3b240a2750879b8288b819c6d9f75accd778b6d",
+        "inputSha256": "ac984fb7bbcd9b9c35d0e8bc1e2e9b9753e79a5d76b7acb9cc723fedf1f331f2",
+        "referenceSha256": "0ad2a048c53aff44e4f7c16f61894d942aeb9e113762903cc26241083e0132d9",
+        "definitionConflict": {
+          "kind": "reference-definition-conflict",
+          "referenceIssueIndex": 2,
+          "bindingPath": "Observation.code",
+          "profile": "http://hl7.org/fhir/StructureDefinition/bodytemp|4.0.1",
+          "valueSet": "http://hl7.org/fhir/ValueSet/observation-vitalsignresult|4.0.1",
+          "positiveCoding": {
+            "system": "http://loinc.org",
+            "code": "8310-5"
+          },
+          "positiveCodingQualification": "unversioned-explicit-member",
+          "authorityRole": "reference-definition-authority-load",
+          "runtimeBindingSelectionObserved": false,
+          "remainingReferenceObligations": [
+            0
+          ],
+          "actualIndependentIssueIndices": [
+            2
+          ],
+          "actualUnknownIssueIndices": [
+            1
+          ],
+          "rawIssueCount": 6,
+          "originalInputSha256": "ac984fb7bbcd9b9c35d0e8bc1e2e9b9753e79a5d76b7acb9cc723fedf1f331f2",
+          "referenceOutcomeSha256": "0ad2a048c53aff44e4f7c16f61894d942aeb9e113762903cc26241083e0132d9",
+          "rawObservationSha256": "84073cd7447f176f0f89b81de4b715b34d9bf941cc10c3ee7ad1426534327237"
+        },
+        "authorityRole": "reference-definition-authority-load",
+        "runtimeBindingSelectionObserved": false,
+        "noTransportScope": "file-only-proof-consumption",
+        "upstreamRuntimeTransportObserved": false
+      }
+    }
+  ],
+  "limits": [
+    "Acceptance is the original raw criterion plus independently recomputed reference contracts.",
+    "Raw message parity is unchanged. Unknown terminology membership remains unknown.",
+    "This gate does not assert complete FHIR conformance or universal HAPI/MII parity."
+  ]
+}

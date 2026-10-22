@@ -48,7 +48,8 @@ export function validateSlicingMatchSet({
   // warning where the slice depends on the target's profile or content.
   if (
     hasUnresolvedReferenceDiscriminator && (
-      slices.some(slice => (cardinalityMatches.get(slice.sliceName)?.length ?? 0) < slice.min)
+      unresolvedDiscriminatorReadsTarget
+      || slices.some(slice => (cardinalityMatches.get(slice.sliceName)?.length ?? 0) < slice.min)
       || (slicing.rules === 'closed' && unmatchedElementCount > 0)
       || provedUnmatchedElements != null
     )

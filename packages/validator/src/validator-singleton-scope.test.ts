@@ -83,6 +83,13 @@ import {
 } from './validator-singleton';
 
 describe('Records validator runtime scope registry', () => {
+  it('preserves explicit unknown selected release for public requests and batches', async () => {
+    await recordsValidator.validateRequest({ resource: { resourceType: 'Patient' }, fhirVersion: 'R4', selectedRelease: null, runtimeScopeKey: '71:10:unknown-release' });
+    expect(mocks.validate.mock.lastCall?.[9]).toBeNull();
+    await recordsValidator.validateBatch([{ resourceType: 'Patient' }], { fhirVersion: 'R4B', selectedRelease: null, runtimeScopeKey: '71:10:unknown-release-batch' });
+    expect(mocks.validateBatch.mock.lastCall?.[1]).toMatchObject({ fhirVersion: 'R4', selectedRelease: null });
+    await recordsValidator.clearTerminologyCache({ runtimeScopePrefix: '71:10:unknown-release' });
+  });
   it('rotates only the requested tenant runtimes through terminology invalidation', async () => {
     const validate = (organizationId: number) => recordsValidator.validateRequest({
       resource: { resourceType: 'Patient' }, fhirVersion: 'R4', organizationId,
@@ -264,6 +271,8 @@ describe('Records validator runtime scope registry', () => {
       undefined,
       undefined,
       undefined,
+      0,
+      'R4B',
     );
     expect(mocks.setPackageVersionPins).toHaveBeenCalledWith({
       'hl7.fhir.r4b.core': '4.3.0',
@@ -282,6 +291,7 @@ describe('Records validator runtime scope registry', () => {
       [{ resourceType: 'Patient' }],
       expect.objectContaining({
         fhirVersion: 'R4',
+        selectedRelease: 'R4B',
         runtimeScopeKey: '31:10:direct-batch:release:R4B',
       }),
     );
@@ -318,6 +328,7 @@ describe('Records validator runtime scope registry', () => {
     const questionnaire: { resourceType: string; id: string; item?: unknown } = {
       resourceType: 'Questionnaire',
       id: 'r4b-questionnaire',
+      item: [],
     };
     await recordsValidator.registerQuestionnaire(questionnaire, 'R4B', runtimeScopeKey);
     expect(mocks.prewarmQuestionnaireAnswerValueSets).toHaveBeenCalledWith(questionnaire, 'R4');

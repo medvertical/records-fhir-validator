@@ -97,6 +97,9 @@ export interface QualityAssessmentSnapshot {
   timeWindowFingerprint: `sha256:${string}`;
   observedResources: number;
   expectedResources: number;
+  observationMode?: 'outer-resources' | 'validation-units';
+  observedUnits?: number;
+  deduplicatedUnits?: number;
   findingCount: number;
   truncatedFindingCount: number;
   metrics: QualityMetric[];

@@ -4,7 +4,6 @@ import type { StructureDefinitionLoader } from './structure-definition-loader.js
 import type { SnapshotGenerator } from './snapshot-generator.js';
 import { buildBundleDocumentContextIssues, type BundleDocumentContextChildResult } from './bundle-document-context.js';
 import { loadProfileWithSnapshot } from './profile-loader-utils.js';
-import { inferCodeBasedProfiles } from './code-inferred-profiles.js';
 import { getBundleEntryRequiredProfile } from './bundle-entry-slice-definitions.js';
 import { isFhirResource, type FhirResource } from './fhir-resource.js';
 import { validateBundleCompositionTargets } from './bundle-composition-target-validation.js';
@@ -25,8 +24,9 @@ export interface BundleEntryValidationDeps {
   };
   validateResource(
     resource: FhirResource,
-    profileUrl: string,
+    profileUrl: string | undefined,
     fhirVersion: 'R4' | 'R5' | 'R6',
+    skipEmbeddedValidation?: boolean,
   ): Promise<ValidationIssue[]>;
   validateNestedBundleEntries(
     bundle: FhirResource,
@@ -61,23 +61,21 @@ export async function validateBundleEntryResources(
     const entryResource = entry?.resource;
     if (!isFhirResource(entryResource)) continue;
 
-    // The base canonical is the last resort, not the second: between the two
-    // sit the profiles the specification implies from the resource's own code,
-    // and naming the base instead told the engine to stop looking.
+    // Let the nested validator infer profiles so it retains code-inferred provenance.
     const profileUrl = getDeclaredProfile(entryResource) || getBundleEntryRequiredProfile(
       { entryResource, resourceType: entryResource.resourceType },
       bundleStructureDef,
-    ) || inferCodeBasedProfiles(entryResource)[0]
-      || `http://hl7.org/fhir/StructureDefinition/${entryResource.resourceType}`;
+    ) || undefined;
 
     let entryIssues: ValidationIssue[];
     try {
       entryIssues = [];
-      for (const profile of new Set([profileUrl, ...getDeclaredProfiles(entryResource)])) {
-        entryIssues.push(...await deps.validateResource(entryResource, profile, fhirVersion));
+      const profiles = [...new Set([profileUrl, ...getDeclaredProfiles(entryResource)])];
+      for (const [index, profile] of profiles.entries()) {
+        entryIssues.push(...await deps.validateResource(entryResource, profile, fhirVersion, index > 0));
       }
       entryIssues.push(...deps.structuralExecutor.validateResourceIdAndArrays(entryResource, undefined, { enclosingBundle: bundle }));
-      if (entryResource.resourceType === 'Bundle' && recursionDepth < deps.maxDepth) {
+      if (entryResource.resourceType === 'Bundle' && recursionDepth + 1 < deps.maxDepth) {
         entryIssues.push(...(await deps.validateNestedBundleEntries(entryResource, fhirVersion, recursionDepth + 1)));
       }
     } catch {
@@ -112,7 +110,7 @@ export async function validateBundleEntryResources(
           deps.sdLoader,
           deps.profileCache,
           deps.snapshotGenerator,
-          profileUrl,
+          profileUrl ?? `http://hl7.org/fhir/StructureDefinition/${entryResource.resourceType}`,
           fhirVersion,
         ) ?? undefined
         : undefined,
@@ -127,7 +125,7 @@ export async function validateBundleEntryResources(
     if (structureDef?.type && structureDef.type !== resource.resourceType) {
       return { issues: [], resourceType: structureDef.type };
     }
-    const issues = await deps.validateResource(resource, profile, fhirVersion);
+    const issues = await deps.validateResource(resource, profile, fhirVersion, true);
     return { issues, resourceType: structureDef?.type, value: issues };
   });
   for (const { child, assessment } of additional) {

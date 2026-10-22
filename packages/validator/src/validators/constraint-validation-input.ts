@@ -7,6 +7,7 @@ import type { buildUserInvocationTable } from './fhirpath-custom-functions.js';
 import { isRecord } from '../core/fhir-resource.js';
 import type { FhirResource } from '../core/fhir-resource.js';
 import type { ProfileConformanceLookup } from './sd-fhirpath-profile-conformance.js';
+import type { ReferenceResolver } from './slice-types.js';
 
 export { isFhirResource, isRecord } from '../core/fhir-resource.js';
 export type { FhirResource } from '../core/fhir-resource.js';
@@ -18,12 +19,16 @@ export interface ConstraintValidationState {
   bundle?: BundleResourceInput;
   rootResource?: FhirResource;
   focusResource?: FhirResource | null;
+  referenceResolver?: ReferenceResolver | null;
+  /** Resolved paths belong to this validation only; inputs may change between calls. */
+  getEvaluationContext?: (path: string) => unknown;
 }
 
 export interface ConstraintValidationOptions {
   strictMode?: boolean;
   fhirVersion?: 'R4' | 'R5' | 'R6';
   bundle?: BundleResourceInput;
+  referenceResolver?: ReferenceResolver | null;
   /**
    * Outermost FHIRPath %rootResource. Legacy callers also use it as %resource;
    * slice callers supply focusResource separately when an embedded resource

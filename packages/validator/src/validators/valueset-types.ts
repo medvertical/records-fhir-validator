@@ -201,12 +201,19 @@ export interface ValueSet {
     version?: string;
     name?: string;
     status: string;
+    meta?: { tag?: Array<{ system?: string; code?: string }> };
+    extension?: Array<{ url: string; valueBoolean?: boolean }>;
     compose?: {
+        inactive?: boolean;
+        lockedDate?: string;
         include?: ValueSetComposeInclude[];
         exclude?: ValueSetComposeExclude[];
     };
     expansion?: {
         total?: number;
+        offset?: number;
+        extension?: Array<{ url: string; valueBoolean?: boolean }>;
+        parameter?: Array<{ name: string; valueBoolean?: boolean; valueString?: string; valueInteger?: number }>;
         contains?: ValueSetExpansionContains[];
     };
 }
@@ -215,6 +222,7 @@ export interface ValueSetExpansionContains {
     system?: string;
     version?: string;
     code: string;
+    abstract?: boolean;
     display?: string;
     contains?: ValueSetExpansionContains[];
 }
@@ -267,12 +275,16 @@ export interface CodeSystemFilterDefinition {
 }
 
 export interface CodeSystem {
+    compositional?: boolean;
     resourceType: 'CodeSystem';
     language?: string;
     hierarchyMeaning?: 'grouped-by' | 'is-a' | 'part-of' | 'classified-with';
     caseSensitive?: boolean;
     url: string;
     version?: string;
+    count?: number;
+    meta?: { tag?: Array<{ system?: string; code?: string }> };
+    extension?: Array<{ url: string; valueBoolean?: boolean }>;
     /**
      * `complete` | `example` | `fragment` | `not-present` | `supplement`.
      * A supplement only adds properties/designations to another CodeSystem.

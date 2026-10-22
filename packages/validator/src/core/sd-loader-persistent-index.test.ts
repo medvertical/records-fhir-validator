@@ -1,17 +1,20 @@
 import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { promises as fs } from 'node:fs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   loadFromPersistentIndex,
   PERSISTENT_INDEX_VERSION,
   saveToPersistentIndex,
+  createProfileIndexWriter,
 } from './sd-loader-persistent-index';
 
 describe('sd-loader persistent index safety', () => {
   const tempDirs: string[] = [];
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await Promise.all(tempDirs.map(dir => rm(dir, { recursive: true, force: true })));
     tempDirs.length = 0;
   });
@@ -27,6 +30,43 @@ describe('sd-loader persistent index safety', () => {
       'http://example.org/Profile/z',
     ]));
     expect((await readdir(root)).filter(name => name.endsWith('.tmp'))).toEqual([]);
+  });
+
+  it('binds an immutable writer to its resolved source without filesystem I/O', async () => {
+    const root = await createRoot();
+    const read = vi.spyOn(fs, 'readFile');
+    const list = vi.spyOn(fs, 'readdir');
+    const writer = createProfileIndexWriter(path.join(root, 'nested', '..'));
+
+    expect(writer.sourcePath).toBe(path.resolve(root));
+    expect(Object.isFrozen(writer)).toBe(true);
+    expect(read).not.toHaveBeenCalled();
+    expect(list).not.toHaveBeenCalled();
+    await writer.save(new Set(['http://example.org/Profile/a']), [], {});
+    await expect(loadFromPersistentIndex(root)).resolves.toEqual(new Set(['http://example.org/Profile/a']));
+  });
+
+  it('preserves the original writer error when temporary-file cleanup also fails', async () => {
+    const root = await createRoot();
+    const failure = new Error('source is read-only');
+    vi.spyOn(fs, 'writeFile').mockRejectedValue(failure);
+    vi.spyOn(fs, 'unlink').mockRejectedValue(new Error('cleanup denied'));
+
+    await expect(createProfileIndexWriter(root).save(new Set(), [], {})).rejects.toBe(failure);
+  });
+
+  it('cleans up its temporary file after rename failure without replacing an existing index', async () => {
+    const root = await createRoot();
+    await saveToPersistentIndex(root, new Set(['http://example.org/Profile/old']), []);
+    const failure = new Error('rename denied');
+    vi.spyOn(fs, 'rename').mockRejectedValue(failure);
+
+    await expect(createProfileIndexWriter(root).save(
+      new Set(['http://example.org/Profile/new']), [], {},
+    )).rejects.toBe(failure);
+
+    expect((await readdir(root)).filter(name => name.endsWith('.tmp'))).toEqual([]);
+    await expect(loadFromPersistentIndex(root)).resolves.toEqual(new Set(['http://example.org/Profile/old']));
   });
 
   it.each([

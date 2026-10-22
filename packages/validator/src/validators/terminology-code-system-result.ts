@@ -12,6 +12,10 @@ import { operationOutcomeCannotResolveBinding } from './terminology-parameters.j
 
 const SNOMED_SYSTEM = 'http://snomed.info/sct';
 
+function resolutionMessage(message: string | undefined, fallback: string): string {
+    return message?.trim() || fallback;
+}
+
 export function isSnomedNationalExtensionCode(code: string): boolean {
     if (!/^\d{10,}$/.test(code)) return false;
     return /1000\d{3}|1002\d{3}/.test(code);
@@ -48,6 +52,7 @@ export function parseCodeSystemValidationParameters(
     const resultParameters = entries.filter(parameter => parameter.name === 'result');
     const resultParam = resultParameters[0];
     const messageParam = entries.find(parameter => parameter.name === 'message');
+    const issues = extractTerminologyIssues(parameters);
     if (typeof resultParam?.valueBoolean !== 'boolean' || operationOutcomeCannotResolveBinding(parameters)) {
         // The server's own account names what it lacked (an unknown SNOMED
         // release comes with the releases it does hold).
@@ -55,11 +60,13 @@ export function parseCodeSystemValidationParameters(
             ? messageParam.valueString
             : undefined;
         return { valid: false, reason: 'system-unresolvable',
-            message: serverMessage ?? `Terminology server could not verify '${code}' in '${system}'` };
+            message: resolutionMessage(
+                serverMessage ?? issues[0]?.message,
+                `Terminology server could not verify '${code}' in '${system}'`,
+            ), ...(issues.length > 0 ? { issues } : {}) };
     }
     const inactiveParam = entries.find(parameter => parameter.name === 'inactive');
     const displayParam = entries.find(parameter => parameter.name === 'display');
-    const issues = extractTerminologyIssues(parameters);
     const hasDisplayMismatch = issues.some(issue => issue.code === 'invalid-display');
 
     if (resultParam?.valueBoolean === true) {
@@ -113,8 +120,10 @@ export function operationOutcomeToCodeSystemResult(
     system: string,
 ): CodeSystemValidationResult {
     if (operationOutcomeCannotResolveBinding(opOutcome)) {
+        const issues = mapOperationOutcomeIssues(opOutcome);
         return { valid: false, reason: 'system-unresolvable',
-            message: `Terminology server could not resolve CodeSystem '${system}'` };
+            message: resolutionMessage(issues[0]?.message, `Terminology server could not resolve CodeSystem '${system}'`),
+            ...(issues.length > 0 ? { issues } : {}) };
     }
     const issueValues = getOperationOutcomeIssueValues(opOutcome);
     if (issueValues && issueValues.length > 0) {

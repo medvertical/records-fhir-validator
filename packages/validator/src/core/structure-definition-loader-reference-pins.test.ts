@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -37,13 +37,25 @@ describe('StructureDefinitionLoader profile references', () => {
     const sourceProfile = await loader.loadProfile(SOURCE, 'R4');
     expect(sourceProfile).toMatchObject({ version: '1.0.0' });
     if (!sourceProfile) throw new Error('Fixture source unavailable');
-    return { loader, sourceProfile };
+    return { loader, sourceProfile, store };
   }
 
   it('hands a referenced canonical on at the release the referrer depends on', async () => {
     const { loader, sourceProfile } = await loaderOverStore({ declaredTargetShipsFile: true });
 
     await expect(loader.referencedProfileUrl(TARGET, sourceProfile, 'R4')).resolves.toBe(`${TARGET}|1.0.0`);
+  });
+
+  it('keeps package authority when a host and SDK address the same store through different root aliases', async () => {
+    const { sourceProfile, store } = await loaderOverStore({ declaredTargetShipsFile: true });
+    const aliases = await mkdtemp(path.join(tmpdir(), 'records-profile-store-alias-'));
+    tempDirs.push(aliases);
+    const alias = path.join(aliases, 'bundled');
+    await symlink(store, alias, 'dir');
+    const loader = new StructureDefinitionLoader(alias, null, { autoDownload: false, prewarmProfileSource: false });
+    await loader.waitForInitialization();
+    await expect(loader.loadReferencedProfile(TARGET, sourceProfile, 'R4'))
+      .resolves.toMatchObject({ url: TARGET, version: '1.0.0' });
   });
 
   it('retains an unavailable indexed file instead of handing a foreign canonical on', async () => {

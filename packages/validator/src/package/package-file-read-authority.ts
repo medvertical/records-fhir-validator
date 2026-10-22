@@ -2,7 +2,7 @@ import { constants, promises as fs, type BigIntStats } from 'node:fs';
 import path from 'node:path';
 import type { FileHandle } from 'node:fs/promises';
 
-export type PackageFileRead = { status: 'read'; bytes: Buffer; boundary: string }
+export type PackageFileRead = { status: 'read'; bytes: Buffer; boundary: string; signature: string }
   | { status: 'absent'; boundary: string }
   | { status: 'unavailable'; cause: 'unsafe-file' | 'resource-too-large' | 'source-changed' };
 
@@ -49,12 +49,17 @@ export async function readStablePackageFile(
         || !sameOwner(owner, await fs.stat(boundary, { bigint: true }))
         || !sameFile(prior, await fs.stat(file, { bigint: true })))
         return { status: 'unavailable', cause: 'source-changed' };
-      return { status: 'read', bytes, boundary };
+      return { status: 'read', bytes, boundary, signature: packageFileSignature(file, prior) };
     } finally { await handle.close(); }
   } catch (error: unknown) {
     if (hasErrorCode(error, ['ENOENT', 'ELOOP', 'ESTALE'])) return { status: 'unavailable', cause: 'source-changed' };
     throw error;
   }
+}
+
+/** The same physical identity fields accepted by the stable reader, including the resolved path. */
+export function packageFileSignature(file: string, stats: BigIntStats): string {
+  return `${file}:${stats.dev}:${stats.ino}:${stats.size}:${stats.mtimeNs}:${stats.ctimeNs}`;
 }
 
 async function readBoundBytes(handle: FileHandle, priorSize: number): Promise<Buffer> {

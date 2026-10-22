@@ -5,9 +5,9 @@ import type {
 import { createValidationIssue } from '../issues/index.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { sliceHasDiscriminatorEvidence } from './slice-discriminator-matcher.js';
+import { hasUnresolvedChildBindingDiscriminator, usesDirectExistsDiscrimination } from './slice-discriminator-constraints.js';
 import type { SliceDefinition } from './slice-types.js';
 import { resourceTypeFromPath } from './slicing-content-rules.js';
-import { usesDirectExistsDiscrimination } from './slice-discriminator-constraints.js';
 
 export interface SlicingVerifiabilityAssessment {
   blockingIssues: ValidationIssue[];
@@ -54,7 +54,8 @@ export function assessSlicingVerifiability({
 
   const unresolvedSliceNames = new Set(
     slices
-      .filter(slice => !discriminators.some(discriminator => sliceHasDiscriminatorEvidence(slice, discriminator))
+      .filter(slice => discriminators.some(discriminator => hasUnresolvedChildBindingDiscriminator(slice, discriminator))
+        || !discriminators.some(discriminator => sliceHasDiscriminatorEvidence(slice, discriminator))
         || discriminators.some(discriminator => usesDirectExistsDiscrimination([discriminator])
           && !sliceHasDiscriminatorEvidence(slice, discriminator)))
       .map(slice => slice.sliceName),

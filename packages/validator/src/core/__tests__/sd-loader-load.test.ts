@@ -15,6 +15,57 @@ describe('sd-loader loadProfile fallback behavior', () => {
     tempDirs.length = 0;
   });
 
+  it('uses the pinned core artifact before a different host or memory projection of the same edition', async () => {
+    const canonical = 'http://hl7.org/fhir/StructureDefinition/Meta';
+    const fixed = { resourceType: 'StructureDefinition', id: 'Meta', url: canonical,
+      version: '4.0.1', fhirVersion: '4.0.1', name: 'Meta', status: 'active',
+      kind: 'complex-type', abstract: false, type: 'Meta',
+      snapshot: { element: [{ id: 'Meta', path: 'Meta', min: 0, max: '*' }] },
+    } satisfies StructureDefinition;
+    const changed = { ...fixed, description: 'Mutable host projection' };
+    const host = vi.fn().mockResolvedValue(changed);
+    setProfileSource({ findByUrl: host });
+    const source = await mkdtemp(path.join(tmpdir(), 'records-fixed-core-'));
+    tempDirs.push(source);
+    const folder = path.join(source, 'hl7.fhir.r4.core#4.0.1', 'package');
+    await mkdir(folder, { recursive: true });
+    await writeFile(path.join(folder, 'StructureDefinition-Meta.json'), JSON.stringify(fixed));
+    const ctx = { ...makeScopedContext(canonical, changed), packageSources: [source],
+      packageVersionPins: { 'hl7.fhir.r4.core': '4.0.1' } };
+    expect(JSON.parse(JSON.stringify(await loadProfile(ctx, canonical, 'R4')))).toEqual(fixed);
+    expect(host).not.toHaveBeenCalled();
+    const revised = { ...fixed, description: 'Changed artifact' };
+    await writeFile(path.join(folder, 'StructureDefinition-Meta.json'), JSON.stringify(revised));
+    expect(JSON.parse(JSON.stringify(await loadProfile(ctx, canonical, 'R4')))).toEqual(revised);
+  });
+
+  it('cannot replace an absent pinned core artifact with mutable host content in snapshot mode', async () => {
+    const canonical = 'http://hl7.org/fhir/StructureDefinition/Meta';
+    const profile = { resourceType: 'StructureDefinition', url: canonical, version: '4.0.1',
+      fhirVersion: '4.0.1', type: 'Meta' } as StructureDefinition;
+    const host = vi.fn().mockResolvedValue(profile);
+    setProfileSource({ findByUrl: host });
+    const ctx = makeScopedContext(canonical, profile);
+    ctx.packageVersionPins = { 'hl7.fhir.r4.core': '4.0.1' };
+    ctx.profileSourceContext = { ...ctx.profileSourceContext, terminologySnapshotSha256: 'a'.repeat(64) };
+    expect(await loadProfile(ctx, canonical, 'R4')).toBeNull();
+    expect(host).not.toHaveBeenCalled();
+  });
+
+  it('retains a guarded host lookup for a versioned HL7 extension outside the core type catalog', async () => {
+    const canonical = 'http://hl7.org/fhir/StructureDefinition/alternate-reference|5.2.0';
+    const profile = { resourceType: 'StructureDefinition', url: canonical.split('|')[0], version: '5.2.0',
+      fhirVersion: '4.0.1', type: 'Extension' } as StructureDefinition;
+    const host = vi.fn().mockResolvedValue(profile);
+    setProfileSource({ findByUrl: host });
+    const ctx = makeScopedContext(canonical, profile);
+    ctx.cache.clear();
+    ctx.packageVersionPins = { 'hl7.fhir.r4.core': '4.0.1' };
+    ctx.profileSourceContext = { ...ctx.profileSourceContext, terminologySnapshotSha256: 'a'.repeat(64) };
+    expect(await loadProfile(ctx, canonical, 'R4')).toEqual(profile);
+    expect(host).toHaveBeenCalledWith(canonical, 'R4', ctx.profileSourceContext);
+  });
+
   it('resolves tenant profiles before trusting a shared in-memory cache hit', async () => {
     const canonical = 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-body-height';
     const globalProfile = {

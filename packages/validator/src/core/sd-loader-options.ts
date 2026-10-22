@@ -16,6 +16,7 @@ export interface StructureDefinitionLoaderOptions {
   registryClient?: PackageRegistryClient;
   maxCacheEntries?: number;
   prewarmProfileSource?: boolean;
+  preloadPackageInventory?: boolean;
 }
 
 export function resolveStructureDefinitionLoaderOptions(
@@ -23,7 +24,7 @@ export function resolveStructureDefinitionLoaderOptions(
   bundledPath: string | null | undefined,
   options?: StructureDefinitionLoaderOptions,
 ) {
-  const resolvedBundledPath = bundledPath ?? resolveDefaultBundledProfilesPath();
+  const resolvedBundledPath = bundledPath === undefined ? resolveDefaultBundledProfilesPath() : bundledPath;
   const registryClient = options?.registryClient ?? new PackageRegistryClient();
   return {
     bundledPath: resolvedBundledPath,
@@ -35,6 +36,7 @@ export function resolveStructureDefinitionLoaderOptions(
     registryClient,
     maxCacheEntries: Math.max(1, Math.trunc(options?.maxCacheEntries ?? 192)),
     prewarmProfileSource: options?.prewarmProfileSource !== false,
+    preloadPackageInventory: options?.preloadPackageInventory !== false,
     packageSources: [...(resolvedBundledPath ? [resolvedBundledPath] : []), cachePath],
   };
 }

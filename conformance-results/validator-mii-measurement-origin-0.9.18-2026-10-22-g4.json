@@ -1,0 +1,13 @@
+{
+  "schema": "records.validator.mii-clean-measurement.v1",
+  "before": "7576da083b6bc2f5dd46fc159dcacf73bd95f97ce890d8cc1e777de698393cb7",
+  "after": "7576da083b6bc2f5dd46fc159dcacf73bd95f97ce890d8cc1e777de698393cb7",
+  "startedAt": "2026-10-22T21:02:02.520Z",
+  "finishedAt": "2026-10-22T21:07:05.328Z",
+  "command": [
+    "/Users/sheydin/.nvm/versions/node/v24.21.0/bin/node",
+    "scripts/release/run-isolated-validator-quality.mjs"
+  ],
+  "exitCode": 0,
+  "reportSha256": "92b1b4350bc68fe2b6476b9b5ec2089bdac832385abe4d0824ffe47cade9e2d6"
+}

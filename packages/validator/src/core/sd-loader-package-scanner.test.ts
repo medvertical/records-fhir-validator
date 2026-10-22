@@ -1,18 +1,21 @@
 import { mkdtemp, mkdir, readFile, rm, symlink, truncate, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
-import { afterEach, describe, expect, it } from 'vitest';
+import { promises as fs } from 'node:fs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   compareVersions,
   parsePackageName,
   scanCacheDirectory,
   scanPackageDirectory,
 } from './sd-loader-package-scanner';
+import { createProfileIndexWriter } from './sd-loader-persistent-index';
 
 describe('scanCacheDirectory package version pins', () => {
   const tempDirs: string[] = [];
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true })));
     tempDirs.length = 0;
   });
@@ -34,6 +37,67 @@ describe('scanCacheDirectory package version pins', () => {
       })
     );
   }
+
+  it('rescans a missing index without attempting writes in the default runtime reader', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'records-sd-reader-'));
+    tempDirs.push(root);
+    await addPackage(root, 'example.fhir#1.0.0', 'http://example.org/reader');
+    const write = vi.spyOn(fs, 'writeFile').mockRejectedValue(new Error('read-only source'));
+    const rename = vi.spyOn(fs, 'rename');
+    const unlink = vi.spyOn(fs, 'unlink');
+    const profiles = new Set<string>();
+
+    await scanCacheDirectory(root, profiles);
+
+    expect(profiles.has('http://example.org/reader')).toBe(true);
+    expect(write).not.toHaveBeenCalled();
+    expect(rename).not.toHaveBeenCalled();
+    expect(unlink).not.toHaveBeenCalled();
+  });
+
+  it('rejects a foreign source writer before any source or index I/O', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'records-sd-boundary-'));
+    tempDirs.push(root);
+    const writer = createProfileIndexWriter(join(root, 'foreign'));
+    const stat = vi.spyOn(fs, 'stat');
+    const read = vi.spyOn(fs, 'readFile');
+    const list = vi.spyOn(fs, 'readdir');
+    const write = vi.spyOn(fs, 'writeFile');
+    const profiles = new Set<string>();
+
+    await expect(scanCacheDirectory(root, profiles, { indexWriter: writer }))
+      .rejects.toThrow('bound to a different source');
+
+    for (const operation of [stat, read, list, write]) expect(operation).not.toHaveBeenCalled();
+    expect(profiles.size).toBe(0);
+  });
+
+  it('does not invoke an injected writer when package pins are active', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'records-sd-pinned-writer-'));
+    tempDirs.push(root);
+    await addPackage(root, 'example.fhir#1.0.0', 'http://example.org/pinned');
+    const save = vi.fn();
+    const profiles = new Set<string>();
+
+    await scanCacheDirectory(root, profiles, {
+      packageVersionPins: { 'example.fhir': '1.0.0' },
+      indexWriter: { sourcePath: root, save },
+    });
+
+    expect(profiles.has('http://example.org/pinned')).toBe(true);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('propagates explicit writer failure instead of reporting a successful build', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'records-sd-writer-failure-'));
+    tempDirs.push(root);
+    await addPackage(root, 'example.fhir#1.0.0', 'http://example.org/profile');
+    const failure = new Error('index write failed');
+
+    await expect(scanCacheDirectory(root, new Set(), {
+      indexWriter: { sourcePath: root, save: vi.fn().mockRejectedValue(failure) },
+    })).rejects.toBe(failure);
+  });
 
   it('scans the pinned package version instead of the newest installed version', async () => {
     const root = await mkdtemp(join(tmpdir(), 'records-sd-scan-'));
@@ -93,7 +157,7 @@ describe('scanCacheDirectory package version pins', () => {
     await addPackage(root, 'example.fhir#1.0.0-beta.10', 'http://example.org/beta-10');
 
     const availableProfiles = new Set<string>();
-    await scanCacheDirectory(root, availableProfiles);
+    await scanCacheDirectory(root, availableProfiles, { indexWriter: createProfileIndexWriter(root) });
 
     expect(compareVersions('1.0.0-beta.10', '1.0.0-beta.2')).toBeGreaterThan(0);
     expect(availableProfiles.has('http://example.org/beta-10')).toBe(true);
@@ -108,7 +172,7 @@ describe('scanCacheDirectory package version pins', () => {
     const inheritedPins = Object.create({ 'example.fhir': '1.0.0' }) as Record<string, string>;
 
     const availableProfiles = new Set<string>();
-    await scanCacheDirectory(root, availableProfiles, { packageVersionPins: inheritedPins });
+    await scanCacheDirectory(root, availableProfiles, { packageVersionPins: inheritedPins, indexWriter: createProfileIndexWriter(root) });
 
     expect(availableProfiles.has('http://example.org/latest')).toBe(true);
     await expect(selectedPackages(root)).resolves.toEqual(['example.fhir#2.0.0']);

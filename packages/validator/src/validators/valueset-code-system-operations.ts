@@ -112,6 +112,11 @@ export class ValueSetCodeSystemOperations {
         code, system, localResult, resolutionConfig, selectedVersion, fhirVersion,
       ) ?? localResult;
     }
+    if (this.dependencies.cache.sourceContexts.context()?.terminologySnapshotSha256) return {
+      valid: true,
+      reason: 'snapshot-unavailable',
+      message: 'The selected terminology snapshot has no complete authority for this CodeSystem; membership remains unverified.',
+    };
     if (!isExternalCodeSystem(system) && !(resolutionConfig.servers ?? []).some(server =>
       isTerminologyServerEligible(server, fhirVersion) && server.preferredSystems?.includes(system))) return { valid: true };
     if (!canDelegateCodeValidation(resolutionConfig)) return {

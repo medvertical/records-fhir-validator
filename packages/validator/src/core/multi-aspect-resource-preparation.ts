@@ -1,4 +1,4 @@
-import { selectedProfileLookup } from './profile-reference-authority.js';
+import { selectedProfileIdentity } from './profile-reference-authority.js';
 import { applyResourcePinToCanonical } from '../package/canonical-pin-context.js';
 import type { ProfileSourceContext } from '../persistence/index.js';
 import type { ReferenceResourceFetcher } from '../reference/reference-fetch-deadline.js';
@@ -27,6 +27,7 @@ import {
 import type { StructureDefinition } from './structure-definition-types.js';
 import { createValidationErrorIssue } from './validation-utils.js';
 import { normalizeIssuesByAspect } from './multi-aspect-issue-normalization.js';
+import { createValidationSourceContext } from './validator-terminology-snapshot-context.js';
 
 type ResourcePreparationDeps = Pick<
   MultiAspectDeps,
@@ -121,11 +122,7 @@ export class MultiAspectResourcePreparation {
       };
     }
 
-    const profileSourceContext: ProfileSourceContext = {
-      organizationId: this.options.organizationId,
-      serverId: this.options.serverId,
-      fhirVersion,
-    };
+    const profileSourceContext = createValidationSourceContext({ ...this.options, fhirVersion });
     const contextQuestionnaire = resourceType === 'QuestionnaireResponse'
       ? await resolveContextQuestionnaire(
         resourceRecord,
@@ -185,7 +182,7 @@ export class MultiAspectResourcePreparation {
       structureDef,
       fetcher,
       limits,
-      alreadyResolved: bundleReferenceResolver,
+      alreadyResolved: combineReferenceResolvers(bundleReferenceResolver, this.options.externalReferenceResolver),
     });
     this.options.throwIfStopped?.();
     return resolver ?? undefined;
@@ -196,7 +193,7 @@ export class MultiAspectResourcePreparation {
     resourceType: string,
     fhirVersion: 'R4' | 'R5' | 'R6',
   ): Promise<ProfileLoadResult> {
-    const key = `${fhirVersion}|${profileUrl}|${resourceType}|${selectedProfileLookup(profileUrl, fhirVersion)?.key ?? ''}`;
+    const key = `${fhirVersion}|${profileUrl}|${resourceType}|${selectedProfileIdentity(profileUrl, fhirVersion)?.key ?? ''}`;
     let promise = this.profileLoadCache.get(key);
     if (!promise) {
       const deps = this.options.deps;

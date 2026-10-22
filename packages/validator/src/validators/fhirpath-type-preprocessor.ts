@@ -61,8 +61,9 @@ export function resolveTypeLiteralContext(
   elementPath: string,
   declaredElementType: string | null,
   fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+  readContext: (path: string) => unknown = path => getEvaluationContext(rootResource, path),
 ): PreprocessContext {
-  const evaluationContext = getEvaluationContext(rootResource, elementPath);
+  const evaluationContext = readContext(elementPath);
   let concreteContextType = isFhirResource(evaluationContext)
     ? evaluationContext.resourceType
     : declaredElementType;
@@ -71,7 +72,7 @@ export function resolveTypeLiteralContext(
   let containingResourceType = rootResource.resourceType;
   let containingResourcePathEnd = 1;
   for (let end = pathSegments.length - 1; end >= 1; end--) {
-    const ancestor = getEvaluationContext(rootResource, pathSegments.slice(0, end).join('.'));
+    const ancestor = readContext(pathSegments.slice(0, end).join('.'));
     if (isFhirResource(ancestor)) {
       containingResourceType = ancestor.resourceType;
       containingResourcePathEnd = end;

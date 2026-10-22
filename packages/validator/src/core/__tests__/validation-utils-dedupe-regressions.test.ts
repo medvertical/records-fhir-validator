@@ -8,6 +8,14 @@ import {
 import { validationIssue as issue } from "./validation-issue-test-builders";
 
 describe("validation issue dedupe regressions", () => {
+  it("keeps a best-practice warning beside weaker MustSupport advice on the same field", () => {
+    const support = issue({ code: "profile-mustsupport-missing", severity: "information", path: "Observation.effective[x]" });
+    const practice = issue({ code: "best-practice-missing-effective", severity: "warning", path: support.path });
+    expect(dedupeIssues([support, practice])).toContain(practice);
+    expect(dedupeIssues([support, { ...practice, severity: "information" }])).toEqual([support]);
+    expect(dedupeIssues([{ ...support, severity: "warning" }, practice])).toHaveLength(1);
+  });
+
   it("reports one wrong display once whether its extension is named by position or by url", () => {
     const display = (path: string, severity: "error" | "warning", aspect: "terminology" | "profile") => issue({
       aspect,

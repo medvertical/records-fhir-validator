@@ -33,6 +33,7 @@ import { createExecutorFailureIssue } from './executor-failure-issue.js';
 import { ProfileSlicingValidation } from './profile-slicing-validation.js';
 import { profileCanonicalAliasIssue } from '../profile-canonical-alias.js';
 import { profileForConcreteResource } from '../profile-resource-type.js';
+import { profileCanonicalMetadata } from '../../utils/sensitive-logging-metadata.js';
 
 // ============================================================================
 // Types
@@ -89,6 +90,25 @@ export class ProfileExecutor {
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
     let profileConformance: ProfileConformanceLookup | undefined;
+    let conformanceChecks = 0;
+    let conformanceCheckMs = 0;
+    const underlyingCheck = context.profileConformance;
+    const conformanceCheck: ProfileConformanceCheck | undefined = underlyingCheck && (async (...args) => {
+      const tick = performance.now();
+      conformanceChecks++;
+      try { return await underlyingCheck(...args); }
+      finally { conformanceCheckMs += performance.now() - tick; }
+    });
+    const startedAt = performance.now();
+    let phaseStartedAt = startedAt;
+    let phase = 'extensions';
+    const phases: Record<string, number> = {};
+    const finishPhase = (nextPhase: string) => {
+      const now = performance.now();
+      phases[phase] = now - phaseStartedAt;
+      phase = nextPhase;
+      phaseStartedAt = now;
+    };
 
     try {
       const { resource, profileUrl, fhirVersion, strictMode, getValueAtPath, referenceResolver, enclosingBundle } = context;
@@ -110,9 +130,10 @@ export class ProfileExecutor {
           profileUrl,
           getValueAtPath,
           referenceResolver,
-          profileConformance: context.profileConformance,
+          profileConformance: conformanceCheck,
         }
       );
+      finishPhase('slicing');
 
       // 2. Validate slicing (check for sliced elements like Patient.identifier)
       if (structureDef.snapshot?.element) {
@@ -123,23 +144,27 @@ export class ProfileExecutor {
           getValueAtPath,
           referenceResolver,
           fhirVersion,
-          profileConformance: context.profileConformance,
+          profileConformance: conformanceCheck,
         }));
+        finishPhase('conformance');
 
         // 3. Validate FHIRPath constraints
         // Using snapshot elements which contain the constraints
-        profileConformance = context.profileConformance
-          ? await precomputeProfileConformance(structureDef.snapshot.element, resource, context.profileConformance)
+        profileConformance = conformanceCheck
+          ? await precomputeProfileConformance(structureDef.snapshot.element, resource, conformanceCheck)
           : undefined;
+        finishPhase('constraints');
         const constraintIssues = await this.constraintValidator.validate(
           resource,
           structureDef.snapshot.element,
           profileUrl,
-          { strictMode, fhirVersion, bundle: enclosingBundle, profileConformance },
+          { strictMode, fhirVersion, bundle: enclosingBundle, profileConformance, referenceResolver },
         );
         issues.push(...constraintIssues);
+        finishPhase('identifiers');
       } else {
         issues.push(...extensionIssues);
+        finishPhase('identifiers');
       }
 
       // 4. Validate German identifier systems (GKV/PKV assigner validation)
@@ -160,6 +185,7 @@ export class ProfileExecutor {
 
       const aliasIssue = profileCanonicalAliasIssue(resource, context.resourceType, profileUrl, structureDef);
       if (aliasIssue) issues.push(aliasIssue);
+      finishPhase('deepConformance');
 
       issues.push(...deepProfileValidator.validate({
         resource,
@@ -167,13 +193,23 @@ export class ProfileExecutor {
         structureDef,
         profileUrl,
       }));
+      finishPhase('snapshotFHIRPath');
       issues.push(...await this.runSnapshotFHIRPathConstraints(effectiveContext, profileConformance));
+      finishPhase('completed');
 
       return issues;
 
     } catch {
       logger.error('[ProfileExecutor] Validation failed');
       return [createExecutorFailureIssue('profile', 'Profile')];
+    } finally {
+      const totalMs = performance.now() - startedAt;
+      if (phase !== 'completed') phases[phase] = performance.now() - phaseStartedAt;
+      const metadata = { ...profileCanonicalMetadata(context.profileUrl), totalMs, phases,
+        conformance: { checks: conformanceChecks, elapsedMs: conformanceCheckMs },
+        outcome: phase === 'completed' ? 'completed' : 'failed' };
+      if (totalMs >= 500) logger.warn('[ProfileExecutor] Phase timings', metadata);
+      else logger.debug('[ProfileExecutor] Phase timings', metadata);
     }
   }
 
@@ -193,6 +229,7 @@ export class ProfileExecutor {
       fhirVersion: context.fhirVersion,
       terminologyResolver: context.terminologyResolver,
       profileConformance,
+      referenceResolver: context.referenceResolver,
     });
   }
 }

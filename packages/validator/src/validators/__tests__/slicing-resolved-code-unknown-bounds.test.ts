@@ -114,7 +114,7 @@ for (const type of ['value', 'pattern'] as const) describe(`resolved-code unknow
     const { issues } = await run(definition, [0], false, kind === 'required-literal');
     expect(issues.some(issue => issue.code === 'profile-slice-min-cardinality' && details(issue).sliceName === names[1])).toBe(true);
   });
-  it('retains complete known conformance and its session cache', async () => {
+  it('retains complete known conformance while rechecking its dependencies', async () => {
     const definition = profile(type);
     definition.snapshot!.element.find(element => element.sliceName === names[1])!.type![0].targetProfile = [targets[1].url!];
     const { resource, issues } = await run(definition, [0]);
@@ -123,6 +123,6 @@ for (const type of ['value', 'pattern'] as const) describe(`resolved-code unknow
     let calls = 0;
     const conforms = createProfileConformanceCheck({ sdLoader: profileLoader(definition),
       validateOne: async () => { calls++; return result; }, fhirVersion: 'R4', recursionDepth: 0 })!;
-    expect(await conforms(resource, definition.url!)).toBe(true); expect(await conforms(resource, definition.url!)).toBe(true); expect(calls).toBe(1);
+    expect(await conforms(resource, definition.url!)).toBe(true); expect(await conforms(resource, definition.url!)).toBe(true); expect(calls).toBe(2);
   });
 });

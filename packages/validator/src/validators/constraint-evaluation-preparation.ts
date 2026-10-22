@@ -65,7 +65,7 @@ export function prepareConstraintEvaluation({
       : preprocessTypeLiterals(
       fixKnownInvariantExpression(constraint.expression, constraint.key, state.fhirVersion),
       {
-        ...resolveTypeLiteralContext(resource, elementPath, elementType, state.fhirVersion),
+        ...resolveTypeLiteralContext(resource, elementPath, elementType, state.fhirVersion, state.getEvaluationContext),
         ...(state.focusResource ? { resourceType: state.focusResource.resourceType } : {}),
         ...(state.focusResource !== undefined && state.rootResource
           ? { rootResourceType: state.rootResource.resourceType } : {}),

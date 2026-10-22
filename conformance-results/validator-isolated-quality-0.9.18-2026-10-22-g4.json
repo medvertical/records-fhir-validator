@@ -1,0 +1,3269 @@
+{
+  "schema": "records.validator.isolated-publish-quality.v1",
+  "candidateSha": "aefe452ef6b58f3b48c8afb0c8848041e9ed1915",
+  "workflowSha": null,
+  "startedAt": "2026-10-22T21:02:13.883Z",
+  "finishedAt": "2026-10-22T21:06:30.400Z",
+  "command": [
+    "npm",
+    "run",
+    "quality:corpus-gates"
+  ],
+  "exitCode": 0,
+  "status": "passed",
+  "failure": null,
+  "originalSourceRoot": "/Users/sheydin/.codex/worktrees/validator-0-9-18-release/records",
+  "coldCheckout": {
+    "schema": "records.validator.cold-quality-checkout.v1",
+    "candidateSha": "aefe452ef6b58f3b48c8afb0c8848041e9ed1915",
+    "method": "local-shared-clone-detached-candidate",
+    "originalSourceRoot": "/Users/sheydin/.codex/worktrees/validator-0-9-18-release/records",
+    "sourceRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source",
+    "dependencyCommand": [
+      "npm",
+      "ci",
+      "--offline",
+      "--ignore-scripts"
+    ],
+    "sdk": [
+      {
+        "relativePath": "packages/validator/src",
+        "origin": "candidate-git-checkout",
+        "root": "packages/validator/src",
+        "files": 1527,
+        "sizeBytes": 9568408,
+        "sha256": "5c7d441a9f0fdc330bc4dbb0bd215250240ab709bc642c1bc3fbc47ced1b07e0"
+      },
+      {
+        "relativePath": "packages/validator/dist",
+        "origin": "original-built-directory-copy",
+        "root": "packages/validator/dist",
+        "files": 3237,
+        "sizeBytes": 9635363,
+        "sha256": "4185c2d0ab5704ed59f8c7792a9ce0ce51658abdef74571a5dcb7ec0a64e7005"
+      },
+      {
+        "relativePath": "packages/validation-types/src",
+        "origin": "candidate-git-checkout",
+        "root": "packages/validation-types/src",
+        "files": 76,
+        "sizeBytes": 351863,
+        "sha256": "542e255c72ef05c2a7cca77444edc28dca960725d2cbea0dbe82e52200d9fb9d"
+      },
+      {
+        "relativePath": "packages/validation-types/dist",
+        "origin": "original-built-directory-copy",
+        "root": "packages/validation-types/dist",
+        "files": 248,
+        "sizeBytes": 965436,
+        "sha256": "d5dfed97454b22262964954e1a8589df13f051ee42ef7ad93e48a9abcbf7b5b7"
+      }
+    ],
+    "corpus": {
+      "root": "fhir-test-cases",
+      "files": 5905,
+      "sizeBytes": 148740986,
+      "sha256": "f1b6225734265d7b29c31ba6707c9dd27f63906764381056c154a9071e7bbf62",
+      "nestedGitMetadataExcluded": true
+    },
+    "bundled": {
+      "root": "server/storage/profiles/bundled",
+      "files": 39171,
+      "sizeBytes": 910209474,
+      "sha256": "fb538a126da4dd12f0ab7e751a854c0699df1af928e7cd94b1de5f5ce232ee81",
+      "packageDirectories": [
+        "custom-profiles#1.0.0",
+        "de.basisprofil.r4#1.3.2",
+        "de.basisprofil.r4#1.4.0",
+        "de.basisprofil.r4#1.5.4",
+        "de.einwilligungsmanagement#2.0.3",
+        "de.gematik.isik#5.1.0",
+        "de.gematik.isik-basismodul#2.0.4",
+        "de.gematik.isip#1.0.2",
+        "de.medizininformatikinitiative.kerndatensatz.base#2026.0.0",
+        "de.medizininformatikinitiative.kerndatensatz.bildgebung#2026.0.0",
+        "de.medizininformatikinitiative.kerndatensatz.biobank#2026.0.1",
+        "de.medizininformatikinitiative.kerndatensatz.consent#2026.0.1-rc-2",
+        "de.medizininformatikinitiative.kerndatensatz.icu#2026.0.2",
+        "de.medizininformatikinitiative.kerndatensatz.laborbefund#2026.0.1",
+        "de.medizininformatikinitiative.kerndatensatz.medikation#2026.0.1",
+        "de.medizininformatikinitiative.kerndatensatz.meta#2026.0.0",
+        "de.medizininformatikinitiative.kerndatensatz.molgen#2026.0.4",
+        "de.medizininformatikinitiative.kerndatensatz.onkologie#2026.0.3",
+        "de.medizininformatikinitiative.kerndatensatz.patho#2026.0.2",
+        "de.medizininformatikinitiative.kerndatensatz.pros#2026.3.0",
+        "de.medizininformatikinitiative.kerndatensatz.seltene#2026.0.1",
+        "de.medizininformatikinitiative.kerndatensatz.studie#2026.0.2",
+        "fhir.r4.ukcore.stu3.currentbuild#0.0.6-pre-release",
+        "hl7.fhir.eu.base#2.0.0",
+        "hl7.fhir.eu.eps#1.0.0-ballot",
+        "hl7.fhir.eu.extensions.r4#1.3.0",
+        "hl7.fhir.eu.hdr#0.1.0-ballot",
+        "hl7.fhir.eu.health-data-api#1.0.0-ballot",
+        "hl7.fhir.eu.imaging#1.0.0-ballot",
+        "hl7.fhir.eu.laboratory#2.0.0",
+        "hl7.fhir.r4.core#4.0.1",
+        "hl7.fhir.r4b.core#4.3.0",
+        "hl7.fhir.r5.core#5.0.0",
+        "hl7.fhir.r6.core#6.0.0-ballot4",
+        "hl7.fhir.uv.extensions.r4#5.3.0",
+        "hl7.fhir.uv.extensions.r5#5.3.0",
+        "hl7.fhir.uv.ips#2.0.0",
+        "hl7.fhir.uv.ips#2.0.1",
+        "hl7.fhir.uv.xver-r5.r4#0.1.0",
+        "hl7.terminology.r4#7.1.0",
+        "hl7.terminology.r5#7.1.0",
+        "ihe.pharm.mpd.r4#1.0.0-comment-2",
+        "kbv.basis#1.3.0",
+        "kbv.mio.ueberleitungsbogen#1.0.0",
+        "myhealth.eu.fhir.mvc-package#9.1.0"
+      ]
+    },
+    "bootstrapRootIndexesExcluded": true,
+    "originalInputsByteIdentical": true
+  },
+  "toolingFiles": [
+    {
+      "path": "scripts/release/run-isolated-validator-quality.mjs",
+      "sha256": "aa374eda71755e9a52704b9dc9e40a94dec0e616a0a8c80153c3f03af73df859"
+    },
+    {
+      "path": "scripts/release/prepare-cold-validator-quality-checkout.mjs",
+      "sha256": "85f9b6fc2ffe9fcf9f7bf75b77a3916c97b5e159e9ab8115b1213e20c3fd0c9a"
+    },
+    {
+      "path": "scripts/release/restore-validator-quality-runtime.mjs",
+      "sha256": "8997fdf28b79495d543e1b5ffb4e352d1b350295e1900e90cd6fe3d16ce0854e"
+    },
+    {
+      "path": "scripts/release/validator-quality-isolation.mjs",
+      "sha256": "6c47171a2d754557f3714bd6315696ab034896b854e6836a47f88040a134eee2"
+    }
+  ],
+  "candidateSdkEntrySha256": "c5f5d3fd8ebafae8baa92f53b38ef17ba9fae43637f823a933196d27de85b351",
+  "candidateRuntime": [
+    {
+      "path": "/Users/sheydin/.codex/worktrees/validator-0-9-18-release/records/packages/validator/src",
+      "sha256": "5c7d441a9f0fdc330bc4dbb0bd215250240ab709bc642c1bc3fbc47ced1b07e0"
+    },
+    {
+      "path": "/Users/sheydin/.codex/worktrees/validator-0-9-18-release/records/packages/validator/dist",
+      "sha256": "4185c2d0ab5704ed59f8c7792a9ce0ce51658abdef74571a5dcb7ec0a64e7005"
+    },
+    {
+      "path": "/Users/sheydin/.codex/worktrees/validator-0-9-18-release/records/packages/validation-types/src",
+      "sha256": "542e255c72ef05c2a7cca77444edc28dca960725d2cbea0dbe82e52200d9fb9d"
+    },
+    {
+      "path": "/Users/sheydin/.codex/worktrees/validator-0-9-18-release/records/packages/validation-types/dist",
+      "sha256": "d5dfed97454b22262964954e1a8589df13f051ee42ef7ad93e48a9abcbf7b5b7"
+    }
+  ],
+  "restoreReceipt": {
+    "packages": 12,
+    "files": 5448,
+    "receipt": {
+      "schema": "records.validator.quality-runtime-restoration.v1",
+      "sourceRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source",
+      "toolingRoot": "/Users/sheydin/.codex/worktrees/validator-0-9-18-release/records",
+      "cacheRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+      "manifest": {
+        "relativePath": "release/validator-quality-runtime/manifest.json",
+        "sha256": "c0de2d956930763a42467830366a82c4e2fb31073b8c6197d940e63596a77444",
+        "sizeBytes": 1124203
+      },
+      "scope": {
+        "corpusRoot": "quality-corpus/r4/profiled",
+        "purpose": "required-literal-fixture-versions-and-cas-definition",
+        "fixtureBytesChanged": false,
+        "includesDeclaredDependencyClosure": false,
+        "liveTerminologyReobserved": false,
+        "description": "Finite isolated runtime context for unchanged release-SDK quality/MII measurements: exact literal profile versions, explicitly selected original clean-fixture packages, ordered Subscription prefix, CAS CodeSystem identity and original complete Genomics variant-confidence CodeSystem. This is not a full ISiK/MII/SDC/PhD/Genomics dependency DAG; no terminology content is reconstructed. Historical G5 HOME version selection is unknown.",
+        "additionalCorpusRoots": [
+          "quality-corpus/r4/clean"
+        ],
+        "additionalRuntimeContexts": [
+          "Original locked MII molgen2026.0.4 declared Genomics3.0.x"
+        ]
+      },
+      "limits": {
+        "missingDeclaredPackages": [
+          {
+            "id": "de.ihe-d.terminology",
+            "version": "3.0.1"
+          },
+          {
+            "id": "de.gematik.terminology",
+            "version": "1.0.6"
+          },
+          {
+            "id": "de.fhir.medication",
+            "version": "1.0.0"
+          },
+          {
+            "id": "de.gematik.ti",
+            "version": "1.1.1"
+          },
+          {
+            "id": "de.medizininformatikinitiative.kerndatensatz.meta",
+            "version": "2025.0.x"
+          },
+          {
+            "id": "kbv.all.st",
+            "version": "1.27.0"
+          }
+        ],
+        "coreFamilyResolution": "Subscription original core4.0.0 declaration is unchanged; existing release SDK FHIR-family policy and independently locked R4 core4.0.1 supply the effective core.",
+        "authority": "Original files and declared dependencies/licenses are preserved. Missing packages remain visible; no substitute versions, complete-DAG claim, live downloads or new positive/negative terminology authority.",
+        "additionalDeclaredDependenciesOutsideRuntimeContext": [
+          {
+            "id": "hl7.fhir.uv.extensions.r4",
+            "version": "5.2.0",
+            "declaredBy": "hl7.fhir.uv.phd#2.0.0",
+            "retainedOriginalSourceExists": true,
+            "installedByThisRuntimeRestore": false
+          },
+          {
+            "id": "hl7.fhir.uv.pocd",
+            "version": "0.3.0",
+            "declaredBy": "hl7.fhir.uv.phd#2.0.0",
+            "retainedOriginalSourceExists": true,
+            "installedByThisRuntimeRestore": false
+          },
+          {
+            "id": "hl7.terminology.r4",
+            "version": "6.1.0",
+            "declaredBy": "hl7.fhir.uv.sdc#4.0.0-ballot",
+            "retainedOriginalSourceExists": true,
+            "installedByThisRuntimeRestore": false
+          },
+          {
+            "id": "hl7.fhir.r4.examples",
+            "version": "4.0.1",
+            "declaredBy": "hl7.fhir.uv.sdc#4.0.0-ballot",
+            "retainedOriginalSourceExists": true,
+            "installedByThisRuntimeRestore": false
+          },
+          {
+            "id": "hl7.fhir.uv.extensions.r4",
+            "version": "5.1.0",
+            "declaredBy": "hl7.fhir.uv.sdc#4.0.0-ballot",
+            "retainedOriginalSourceExists": true,
+            "installedByThisRuntimeRestore": false
+          },
+          {
+            "id": "hl7.terminology.r4",
+            "version": "6.1.0",
+            "declaredBy": "hl7.fhir.uv.genomics-reporting#3.0.0",
+            "retainedOriginalSourceExists": true,
+            "installedByThisRuntimeRestore": false
+          },
+          {
+            "id": "hl7.fhir.uv.extensions.r4",
+            "version": "5.1.0",
+            "declaredBy": "hl7.fhir.uv.genomics-reporting#3.0.0",
+            "retainedOriginalSourceExists": true,
+            "installedByThisRuntimeRestore": false
+          }
+        ],
+        "newContextSelection": "These three packages address observed clean-R4 profile availability. Original declared dependencies remain visible and unmodified; no full closure claim or claim about which versions the prior G5 HOME-dependent run selected."
+      },
+      "downloads": 0,
+      "packages": [
+        {
+          "id": "hl7.terminology.r4",
+          "version": "5.0.0",
+          "dependencies": {
+            "hl7.fhir.r4.core": "4.0.1"
+          },
+          "declaredLicense": "CC0-1.0",
+          "source": {
+            "kind": "captured-package-directory",
+            "archive": "hl7.terminology.r4#5.0.0.tgz",
+            "sha256": "0ae8c3001b01cf8a68d96e1f442eacd930e1ae6565e2d382a9dca1acdc0662b9",
+            "sizeBytes": 4457208,
+            "originalDirectory": "/Users/sheydin/.fhir/packages/hl7.terminology.r4#5.0.0",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Deterministic USTAR/gzip capture of every retained original package file, sorted paths, regular files only, uid/gid/mtime zero. Original package bytes and metadata are unchanged; this is not an original registry tarball."
+          },
+          "files": 4227,
+          "sizeBytes": 54842923,
+          "inventorySha256": "2a980e6cd1c8905a00a16c107ccc39f47f73516846b7bd25ab764c06c884453d"
+        },
+        {
+          "id": "de.medizininformatikinitiative.kerndatensatz.diagnose",
+          "version": "2025.0.1",
+          "dependencies": {
+            "hl7.fhir.r4.core": "4.0.1",
+            "de.basisprofil.r4": "1.5.x",
+            "de.medizininformatikinitiative.kerndatensatz.meta": "2025.0.x",
+            "kbv.all.st": "1.27.0"
+          },
+          "declaredLicense": "CC-BY-4.0",
+          "source": {
+            "kind": "captured-package-directory",
+            "archive": "de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1.tgz",
+            "sha256": "e1e94779eb45f4052050b5680787c8ff5cfc25b440cdd48217fb5a7bb5596eb8",
+            "sizeBytes": 34121,
+            "originalDirectory": "/Users/sheydin/.fhir/packages/de.medizininformatikinitiative.kerndatensatz.diagnose#2025.0.1",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Deterministic USTAR/gzip capture of every retained original package file, sorted paths, regular files only, uid/gid/mtime zero. Original package bytes and metadata are unchanged; this is not an original registry tarball."
+          },
+          "files": 16,
+          "sizeBytes": 372453,
+          "inventorySha256": "c2baaa98430805ef10b2c972f64d09933152e882a9a43904ca40338a73b12df3"
+        },
+        {
+          "id": "de.medizininformatikinitiative.kerndatensatz.fall",
+          "version": "2025.0.1",
+          "dependencies": {
+            "hl7.fhir.r4.core": "4.0.1",
+            "de.basisprofil.r4": "1.5.x",
+            "de.medizininformatikinitiative.kerndatensatz.meta": "2025.0.x"
+          },
+          "declaredLicense": "CC-BY-4.0",
+          "source": {
+            "kind": "captured-package-directory",
+            "archive": "de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1.tgz",
+            "sha256": "a3439026301572599bda6542c69e5236e4945f94906c8a679d94108f3228d7a9",
+            "sizeBytes": 41215,
+            "originalDirectory": "/Users/sheydin/.fhir/packages/de.medizininformatikinitiative.kerndatensatz.fall#2025.0.1",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Deterministic USTAR/gzip capture of every retained original package file, sorted paths, regular files only, uid/gid/mtime zero. Original package bytes and metadata are unchanged; this is not an original registry tarball."
+          },
+          "files": 19,
+          "sizeBytes": 418693,
+          "inventorySha256": "dde4ea4f942702cea0e313b56fa3eecab524ab23f09c522a580faede7bde34f0"
+        },
+        {
+          "id": "de.medizininformatikinitiative.kerndatensatz.medikation",
+          "version": "2025.0.1",
+          "dependencies": {
+            "hl7.fhir.r4.core": "4.0.1",
+            "de.basisprofil.r4": "1.5.x",
+            "de.medizininformatikinitiative.kerndatensatz.meta": "2025.0.x",
+            "hl7.fhir.uv.ips": "1.1.x",
+            "de.ihe-d.terminology": "3.0.1"
+          },
+          "declaredLicense": "CC-BY-4.0",
+          "source": {
+            "kind": "captured-package-directory",
+            "archive": "de.medizininformatikinitiative.kerndatensatz.medikation#2025.0.1.tgz",
+            "sha256": "dc1f02334d545de96abde11ddfe251db115faffadc4d3c1d8bc60823e7bb5e07",
+            "sizeBytes": 162544,
+            "originalDirectory": "/Users/sheydin/.fhir/packages/de.medizininformatikinitiative.kerndatensatz.medikation#2025.0.1",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Deterministic USTAR/gzip capture of every retained original package file, sorted paths, regular files only, uid/gid/mtime zero. Original package bytes and metadata are unchanged; this is not an original registry tarball."
+          },
+          "files": 43,
+          "sizeBytes": 1924873,
+          "inventorySha256": "e5c77d6502f2d04e41d29aee3f28b88abfe3074eca49933259070108e65f6476"
+        },
+        {
+          "id": "de.medizininformatikinitiative.kerndatensatz.person",
+          "version": "2025.0.1",
+          "dependencies": {
+            "hl7.fhir.r4.core": "4.0.1",
+            "de.basisprofil.r4": "1.5.x",
+            "de.medizininformatikinitiative.kerndatensatz.meta": "2025.0.x"
+          },
+          "declaredLicense": "CC-BY-4.0",
+          "source": {
+            "kind": "captured-package-directory",
+            "archive": "de.medizininformatikinitiative.kerndatensatz.person#2025.0.1.tgz",
+            "sha256": "b39eb834cc238aae1eb02abf8e0da236c8edd138bf258d52803738b4396a1d0d",
+            "sizeBytes": 107428,
+            "originalDirectory": "/Users/sheydin/.fhir/packages/de.medizininformatikinitiative.kerndatensatz.person#2025.0.1",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Deterministic USTAR/gzip capture of every retained original package file, sorted paths, regular files only, uid/gid/mtime zero. Original package bytes and metadata are unchanged; this is not an original registry tarball."
+          },
+          "files": 16,
+          "sizeBytes": 918614,
+          "inventorySha256": "e642bed9cf64cdc78d2624ff315d4f64480ce51c0bd989b81a33dfea7919205c"
+        },
+        {
+          "id": "de.medizininformatikinitiative.kerndatensatz.prozedur",
+          "version": "2025.0.1",
+          "dependencies": {
+            "hl7.fhir.r4.core": "4.0.1",
+            "de.basisprofil.r4": "1.5.x",
+            "de.medizininformatikinitiative.kerndatensatz.meta": "2025.0.x",
+            "kbv.all.st": "1.27.0"
+          },
+          "declaredLicense": "CC-BY-4.0",
+          "source": {
+            "kind": "captured-package-directory",
+            "archive": "de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1.tgz",
+            "sha256": "248b02d6a4cdea3b7635151cffa928f93c68194f994ffd94b405ae9e51b70772",
+            "sizeBytes": 29138,
+            "originalDirectory": "/Users/sheydin/.fhir/packages/de.medizininformatikinitiative.kerndatensatz.prozedur#2025.0.1",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Deterministic USTAR/gzip capture of every retained original package file, sorted paths, regular files only, uid/gid/mtime zero. Original package bytes and metadata are unchanged; this is not an original registry tarball."
+          },
+          "files": 13,
+          "sizeBytes": 247468,
+          "inventorySha256": "1aaddd66972fd84bddcbdf2a33972621e64a0d2f082d26138a319440d14b7bd2"
+        },
+        {
+          "id": "hl7.fhir.uv.subscriptions-backport.r4",
+          "version": "1.1.0",
+          "dependencies": {
+            "hl7.terminology.r4": "5.0.0",
+            "hl7.fhir.r4.core": "4.0.0"
+          },
+          "declaredLicense": "CC0-1.0",
+          "source": {
+            "kind": "tagged-fixture-package-directory",
+            "relativePath": "tests/fixtures/ukcore-conformance-profiles/hl7.fhir.uv.subscriptions-backport.r4#1.1.0",
+            "provenance": {
+              "relativePath": "tests/fixtures/ukcore-conformance-profiles/provenance.json",
+              "sha256": "af4d0945e1c7acf1e24f6190ec95ae7cd37d496d2df63b3ff1ba55023d0ba514",
+              "sizeBytes": 13507
+            },
+            "originalDirectory": "/Users/sheydin/.fhir/packages/hl7.fhir.uv.subscriptions-backport.r4#1.1.0",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Complete original retained package bytes already committed in an independently pinned release-tag fixture catalog. All historical catalog pins remain unchanged."
+          },
+          "files": 67,
+          "sizeBytes": 916375,
+          "inventorySha256": "f0144ac4f66aafb204aeaa23b3d0eaa31f6835b97c9e361e0f3ffbb45e0aadce"
+        },
+        {
+          "id": "de.gematik.isik-basismodul",
+          "version": "2.0.0",
+          "dependencies": {
+            "de.basisprofil.r4": "1.4.0"
+          },
+          "declaredLicense": null,
+          "source": {
+            "kind": "tagged-fixture-package-directory",
+            "relativePath": "tests/fixtures/records-aspect-parity-profiles/de.gematik.isik-basismodul#2.0.0",
+            "provenance": {
+              "relativePath": "tests/fixtures/records-aspect-parity-profiles/provenance.json",
+              "sha256": "e7c438fada4664a6ac8b41354ae1f79bcd7a3bb3f8980586ecb50e45b71cd212",
+              "sizeBytes": 12325
+            },
+            "originalDirectory": "/Users/sheydin/.fhir/packages/de.gematik.isik-basismodul#2.0.0",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Complete original retained package bytes already committed in an independently pinned release-tag fixture catalog. All historical catalog pins remain unchanged."
+          },
+          "files": 45,
+          "sizeBytes": 439140,
+          "inventorySha256": "0e70f0385ceee8c5ae360638b220450e0ea28094622f34cb1178fde905244594"
+        },
+        {
+          "id": "hl7.fhir.uv.phd",
+          "version": "2.0.0",
+          "dependencies": {
+            "hl7.fhir.r4.core": "4.0.1",
+            "hl7.terminology.r4": "7.1.0",
+            "hl7.fhir.uv.extensions.r4": "5.2.0",
+            "hl7.fhir.uv.pocd": "0.3.0"
+          },
+          "declaredLicense": "CC0-1.0",
+          "source": {
+            "kind": "captured-package-directory",
+            "archive": "hl7.fhir.uv.phd#2.0.0.tgz",
+            "sha256": "52195b2e717f1a77ca71854322b95f8b409dd9a4d4bc2e253aa77057377a22e0",
+            "sizeBytes": 508418,
+            "originalDirectory": "/Users/sheydin/.fhir/packages/hl7.fhir.uv.phd#2.0.0",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Deterministic USTAR/gzip capture of every retained original package file, sorted paths, regular files only, uid/gid/mtime zero. Original bytes and metadata unchanged; not an original registry tarball.",
+            "selection": {
+              "controlledFixture": "quality-corpus/r4/clean/obs-vital-signs-mdc.json",
+              "definition": {
+                "path": "package/StructureDefinition-PhdNumericObservation.json",
+                "url": "http://hl7.org/fhir/uv/phd/StructureDefinition/PhdNumericObservation",
+                "version": "2.0.0",
+                "sha256": "095543a63ccf61d0300c47a425acdf4dc3013aa77e7130b08b0dee851e2a5598",
+                "sizeBytes": 281192
+              },
+              "basis": "The controlled clean fixture declares the literal profile |2.0.0. Upstream fixture canonical is unversioned; no historical G5 package selection is inferred.",
+              "historicalG5SelectedVersionKnown": false
+            }
+          },
+          "files": 99,
+          "sizeBytes": 4918813,
+          "inventorySha256": "eec53a40d33a58c83d7d0a84b5a19a8240c070eb57f224ab1b70b810f5f23869"
+        },
+        {
+          "id": "hl7.fhir.uv.sdc",
+          "version": "4.0.0-ballot",
+          "dependencies": {
+            "hl7.fhir.r4.core": "4.0.1",
+            "hl7.terminology.r4": "6.1.0",
+            "hl7.fhir.r4.examples": "4.0.1",
+            "hl7.fhir.uv.extensions.r4": "5.1.0"
+          },
+          "declaredLicense": "CC0-1.0",
+          "source": {
+            "kind": "captured-package-directory",
+            "archive": "hl7.fhir.uv.sdc#4.0.0-ballot.tgz",
+            "sha256": "2cea0b286c9fd58443dc7e7532b90d0705a870517f8bdd1d99b0f0de591600f5",
+            "sizeBytes": 1036095,
+            "originalDirectory": "/Users/sheydin/.fhir/packages/hl7.fhir.uv.sdc#4.0.0-ballot",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Deterministic USTAR/gzip capture of every retained original package file, sorted paths, regular files only, uid/gid/mtime zero. Original bytes and metadata unchanged; not an original registry tarball.",
+            "selection": {
+              "controlledFixture": "quality-corpus/r4/clean/qr-internal-refs.json",
+              "definition": {
+                "path": "package/StructureDefinition-sdc-questionnaireresponse-adapt.json",
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaireresponse-adapt",
+                "version": "4.0.0-ballot",
+                "sha256": "2c44d9363da7a7984979813f617d1626adaa9575da82f94561cef703854d1f1e",
+                "sizeBytes": 80395
+              },
+              "basis": "The upstream qr-internal-refs test manifest explicitly declares hl7.fhir.uv.sdc#4.0.0-ballot. Its profile canonical is unversioned. No historical G5 selection is inferred.",
+              "historicalG5SelectedVersionKnown": false
+            }
+          },
+          "files": 284,
+          "sizeBytes": 10244859,
+          "inventorySha256": "2411c0d591833fd583dc3ad95b856040da7134c266096794972369672bcaec56"
+        },
+        {
+          "id": "hl7.fhir.us.core",
+          "version": "3.1.1",
+          "dependencies": {
+            "hl7.fhir.r4.core": "4.0.1"
+          },
+          "declaredLicense": "CC0-1.0",
+          "source": {
+            "kind": "captured-package-directory",
+            "archive": "hl7.fhir.us.core#3.1.1.tgz",
+            "sha256": "f3ef8b7579fab461caf6cf18e2436e2efd922a7eecae0e773ee81c41c0acaab4",
+            "sizeBytes": 564135,
+            "originalDirectory": "/Users/sheydin/.fhir/packages/hl7.fhir.us.core#3.1.1",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Deterministic USTAR/gzip capture of every retained original package file, sorted paths, regular files only, uid/gid/mtime zero. Original bytes and metadata unchanged; not an original registry tarball.",
+            "selection": {
+              "controlledFixture": "quality-corpus/r4/clean/obs-fio2.json",
+              "definition": {
+                "path": "package/StructureDefinition-us-core-pulse-oximetry.json",
+                "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-pulse-oximetry",
+                "version": "3.1.1",
+                "sha256": "41997bcfda7c70dc64ddbece8ef21f63670815036d4c17a32893b69d951b95d8",
+                "sizeBytes": 237972
+              },
+              "basis": "The upstream us-cond test manifest already declares hl7.fhir.us.core#3.1.1; this exact retained original package also supplies the unversioned obs-fio2 profile. obs-fio2 itself does not declare a package version. This is a new explicit cold-context selection, not evidence of the G5 HOME selection.",
+              "historicalG5SelectedVersionKnown": false
+            }
+          },
+          "files": 270,
+          "sizeBytes": 5042971,
+          "inventorySha256": "057e36e767721911989619962701817de4d1b879313f145ba0e629a5f413e9c3"
+        },
+        {
+          "id": "hl7.fhir.uv.genomics-reporting",
+          "version": "3.0.0",
+          "dependencies": {
+            "hl7.fhir.r4.core": "4.0.1",
+            "hl7.terminology.r4": "6.1.0",
+            "hl7.fhir.uv.extensions.r4": "5.1.0"
+          },
+          "declaredLicense": "CC0-1.0",
+          "source": {
+            "kind": "captured-package-directory",
+            "archive": "hl7.fhir.uv.genomics-reporting#3.0.0.tgz",
+            "sha256": "3b08486abe8bd8be0c3ebb6bf722c720170abbc2438dfeda0fada7b05eb1a775",
+            "sizeBytes": 595737,
+            "originalDirectory": "/Users/sheydin/.fhir/packages/hl7.fhir.uv.genomics-reporting#3.0.0",
+            "originalRegistryArchive": null,
+            "originalDownloadUrl": null,
+            "description": "Deterministic USTAR/gzip capture of every retained original package file, sorted paths, regular files only, uid/gid/mtime zero. Original bytes and metadata unchanged; not an original registry tarball.",
+            "selection": {
+              "declaredBy": {
+                "id": "de.medizininformatikinitiative.kerndatensatz.molgen",
+                "version": "2026.0.4",
+                "dependencyVersion": "3.0.x",
+                "originalPackageManifestSha256": "52d2e28de92d2caf55d7272ccbe306af9cab9cbed5effaeb59715abdc94b813b"
+              },
+              "definition": {
+                "path": "package/CodeSystem-variant-confidence-status-cs.json",
+                "url": "http://terminology.hl7.org/CodeSystem/variant-confidence-status-cs",
+                "version": "3.0.0",
+                "sha256": "668d9b2540a9aa5c80517ea484e540dffbec1824b1c512a1fcbb00c37b3ce33e",
+                "sizeBytes": 2511,
+                "content": "complete",
+                "count": 3
+              },
+              "basis": "The original locked MII molgen2026.0.4 package declares Genomics3.0.x. Complete original Genomics3.0.0 supplies the exact CodeSystem canonical and its original three-member complete inventory; no reconstructed definition or alias.",
+              "historicalG5SelectedVersionKnown": false
+            }
+          },
+          "files": 349,
+          "sizeBytes": 7371176,
+          "inventorySha256": "5f2c9e32993de06608c0184ffb783db10959258d47807d77701fa73a817e6bf0"
+        }
+      ]
+    }
+  },
+  "context": {
+    "schema": "records.validator.quality-context.v1",
+    "sourceRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source",
+    "packageCachePath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+    "bundledProfilesPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+    "receiptDirectory": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/receipts",
+    "candidateSha": "aefe452ef6b58f3b48c8afb0c8848041e9ed1915",
+    "stores": [
+      {
+        "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+        "sha256": "fb538a126da4dd12f0ab7e751a854c0699df1af928e7cd94b1de5f5ce232ee81"
+      },
+      {
+        "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+        "sha256": "f09cb7db7d93bcb90b994894d1bddbec9da5b2b9d2dd54382efe891c69758ae5"
+      },
+      {
+        "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+        "sha256": "2df49d4025dbc4bf3acc797f6e9ef76d9db60049528b0d3899c06e975d060cc2"
+      }
+    ],
+    "sdkEntry": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/validator/dist/index.js"
+  },
+  "measurements": [
+    {
+      "schema": "records.validator.quality-isolation-receipt.v1",
+      "startedAt": "2026-10-22T21:04:16.488Z",
+      "pid": 75389,
+      "nodeVersion": "v24.21.0",
+      "cliPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+      "argv": [
+        "/Users/sheydin/.nvm/versions/node/v24.21.0/bin/node",
+        "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+        "--min-precision",
+        "99",
+        "--min-fixtures",
+        "185",
+        "--max-excluded",
+        "0"
+      ],
+      "candidateSha": "aefe452ef6b58f3b48c8afb0c8848041e9ed1915",
+      "contextSha256": "5704950d04d19084e607994f654a7813c227a77a6d5ffa50d542b7967acb4cab",
+      "sourceRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source",
+      "sdkEntry": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/validator/dist/index.js",
+      "sdkEntrySha256": "c5f5d3fd8ebafae8baa92f53b38ef17ba9fae43637f823a933196d27de85b351",
+      "stores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "sha256": "fb538a126da4dd12f0ab7e751a854c0699df1af928e7cd94b1de5f5ce232ee81"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "sha256": "f09cb7db7d93bcb90b994894d1bddbec9da5b2b9d2dd54382efe891c69758ae5"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "sha256": "2df49d4025dbc4bf3acc797f6e9ef76d9db60049528b0d3899c06e975d060cc2"
+        }
+      ],
+      "defaultStores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/fhir-packages",
+          "present": false
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/bundled-profiles/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+        }
+      ],
+      "packageCachePath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+      "bundledProfilesPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+      "instrumentation": "Original SDK methods forward unchanged arguments and results; filesystem/network observation only.",
+      "runtimeReleases": [
+        {
+          "release": "R4",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R4B",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R5",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R6",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        }
+      ],
+      "dynamicStores": [
+        {
+          "path": "/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-conformance-cache-q64jfH",
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-conformance-cache-q64jfH",
+          "sha256": "b0bce3cd20533e503d35edb5e59603247c16dae158b66212ffbbca7c5161c86c",
+          "files": [
+            {
+              "path": ".records-conformance-runtime-cache",
+              "sha256": "1937b02b087dce042d2042545bb54d106c9846241847f0a5534a6963f9ff6062",
+              "sizeBytes": 6
+            }
+          ],
+          "markerVerified": true,
+          "observedAt": "2026-10-22T21:04:20.504Z",
+          "cleanupObserved": true
+        },
+        {
+          "path": "/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-conformance-cache-q64jfH",
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-conformance-cache-q64jfH",
+          "sha256": "323b8d09cf6adb0447af30f851d2c8be34af3d2460c9eb07c0472945ffddf2f7",
+          "files": [
+            {
+              "path": ".records-conformance-runtime-cache",
+              "sha256": "1937b02b087dce042d2042545bb54d106c9846241847f0a5534a6963f9ff6062",
+              "sizeBytes": 6
+            },
+            {
+              "path": ".terminology-canonical-index.json",
+              "sha256": "f1679591b1a22ba4d50713b2eff3c65653096fb114d59f338fa9bbc6c51e166a",
+              "sizeBytes": 1809475
+            }
+          ],
+          "markerVerified": true,
+          "observedAt": "2026-10-22T21:04:23.028Z",
+          "cleanupObserved": true
+        },
+        {
+          "path": "/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-conformance-cache-q64jfH",
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-conformance-cache-q64jfH",
+          "sha256": "48faaace26eb12b7c63667e4c14906b43d8c417fd4f71bb723b5c15ce57513a5",
+          "files": [
+            {
+              "path": ".records-conformance-runtime-cache",
+              "sha256": "1937b02b087dce042d2042545bb54d106c9846241847f0a5534a6963f9ff6062",
+              "sizeBytes": 6
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/CapabilityStatement-us-core-client.json",
+              "sha256": "26ccff041ff88acf3fd39556ce63cdecdc2b2b21fe30cd9e98a5e890f9e6493d",
+              "sizeBytes": 156696
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/CapabilityStatement-us-core-server.json",
+              "sha256": "d2cf10d3926a70b0808d7e7054a138753a8c20533d9d7edf36a42df243049a14",
+              "sizeBytes": 159981
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/CodeSystem-careplan-category.json",
+              "sha256": "395e76692e381c8fc0eb4cc674c9cefa859237d008742c9a3f0f38318c88a96b",
+              "sizeBytes": 1709
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/CodeSystem-cdcrec.json",
+              "sha256": "1a463a94ceab7a0b4fc0300da7e7d21109fa98cb40b6db2b64a346fe9c4e9e6f",
+              "sizeBytes": 206777
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/CodeSystem-condition-category.json",
+              "sha256": "731619787af001227fd4473f07a562984e1836e3637628d67a55fc3397eff821",
+              "sizeBytes": 2910
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/CodeSystem-us-core-documentreference-category.json",
+              "sha256": "8ba59d902ff8cb74e4131470bf2c50ee54a0506f370d605f9b4a95da35c2d19d",
+              "sizeBytes": 2055
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/CodeSystem-us-core-provenance-participant-type.json",
+              "sha256": "d9f502b9ff8fb0003596eea9b1eab91a5a16e9c4a56796e89c9ab29bb6fb4967",
+              "sizeBytes": 1607
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ConceptMap-ndc-cvx.json",
+              "sha256": "ebf5f389de81ea5e0200518be8606c9a22428490070a5819a51e789dee1f332c",
+              "sizeBytes": 44645
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ImplementationGuide-hl7.fhir.us.core.json",
+              "sha256": "a895c6f03dd582fb9d8bfa11476897e28bb329394ee17c7b8521fa3fd89d0660",
+              "sizeBytes": 97508
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/OperationDefinition-docref.json",
+              "sha256": "247de037b84af2f0f750754a0c839f0325a754976822f20733be3b26b7f3e5d0",
+              "sizeBytes": 11453
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-allergyintolerance-clinical-status.json",
+              "sha256": "cac54207c2a45068a94a9ba517c991e332759fa8c33496e70b47542fb0c51106",
+              "sizeBytes": 5358
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-allergyintolerance-patient.json",
+              "sha256": "2004b03c5ffc454be13579843120964164f5a72c2a30ebd54701d2c81fc75fc2",
+              "sizeBytes": 4264
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-careplan-category.json",
+              "sha256": "24dd18b69afe1a02651e89f1e3299e6b83b5ec5215bf04dc740c225e07cdef21",
+              "sizeBytes": 5078
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-careplan-date.json",
+              "sha256": "595b89790009d51c096db67d7b64ce5fa354a5a30cbd49a0ce96ed19e05c2468",
+              "sizeBytes": 5265
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-careplan-patient.json",
+              "sha256": "bd7e4144c302dcbc920b494baf41b2e68b7cdf9242a6528d08f25d75c89fe35f",
+              "sizeBytes": 4186
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-careplan-status.json",
+              "sha256": "19ddfeb8e17fde4e6b20718b39619d54b8e8323841d9ecb886bbec0bdb4ecaf2",
+              "sizeBytes": 5186
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-careteam-patient.json",
+              "sha256": "2203bb74c696ce7b10858bb7e3894798c3e98dd42965d7ce4e4a3237a8282cb0",
+              "sizeBytes": 4178
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-careteam-status.json",
+              "sha256": "501435a13cdfdb934fbc5fc04b56434af868daed0560e08b4ddf2e1e69dcdf6c",
+              "sizeBytes": 5146
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-condition-category.json",
+              "sha256": "96bf24aa20f1588a15c35cf790844f102ccdf0fe4cc129e61a73aa9b861dc2c6",
+              "sizeBytes": 5127
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-condition-clinical-status.json",
+              "sha256": "83f0c432fb8fe69324f8c3749a4e7c3222c94d04259f1d4576e98b0a3d007679",
+              "sizeBytes": 5239
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-condition-code.json",
+              "sha256": "d0b102a6cdc1d16901c70941b8392ab8b3f2dfac9cee94300dd309f589d9c287",
+              "sizeBytes": 5051
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-condition-onset-date.json",
+              "sha256": "8c50586073730c0cb6f4099566b365fb2822974c5fc5ba45ea4c6bf38b7ce32c",
+              "sizeBytes": 5417
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-condition-patient.json",
+              "sha256": "b120cd12327045bc22413ffce506746f3f0119ce43d28bca1a332b1ab4501069",
+              "sizeBytes": 4195
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-device-patient.json",
+              "sha256": "f27eafaa8681de20f3121576af339fbfce04a4e5ebc4d54b98d8f81b485d2816",
+              "sizeBytes": 4162
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-device-type.json",
+              "sha256": "a21f857696bdc2aaf9a1489dc1d6ec8efd542dc55ab1127d8ca3b7dab8bb4aae",
+              "sizeBytes": 5008
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-diagnosticreport-category.json",
+              "sha256": "c3450e4c0061158b3631be9008e55850fe12fa5b7d378b469335867af53196b3",
+              "sizeBytes": 5288
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-diagnosticreport-code.json",
+              "sha256": "a37be2002d6b0e1177bec848d7afdc4c56f28cdb260f05673798d5a5484f0d70",
+              "sizeBytes": 5392
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-diagnosticreport-date.json",
+              "sha256": "dba8bc1cd3ebb0e7dee9861b1d6a93ae09c28454fa55d7694929c1fbc9e5dc28",
+              "sizeBytes": 5435
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-diagnosticreport-patient.json",
+              "sha256": "7ef2be3f99af36a22357a368069cd683e72e98b5a7c9368dd710daee23cf84e8",
+              "sizeBytes": 4318
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-diagnosticreport-status.json",
+              "sha256": "7fe023eb966b64d053ac6e4b000bdcf1f933a16e8ca74a660799e73a7df18e6d",
+              "sizeBytes": 5196
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-documentreference-category.json",
+              "sha256": "654c540a432a235270804a674aad71619243a7c5677b2b150cc279254d3f8acd",
+              "sizeBytes": 5241
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-documentreference-date.json",
+              "sha256": "ddec1edb40e3aab6ffd2b314ec8d06ff783de6398fd82dbeb8587538f29302c9",
+              "sizeBytes": 5426
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-documentreference-id.json",
+              "sha256": "1c8ff79dac9fc4d31c9031bf9a430a0b5ceaeb259de7bdede2bb3f9b3d624550",
+              "sizeBytes": 5129
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-documentreference-patient.json",
+              "sha256": "0d102cea027487840ce4d44a71c611842d98ab986f606d3f1d77f4594ef6f36a",
+              "sizeBytes": 4333
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-documentreference-period.json",
+              "sha256": "251648dee9fdd0af63d343fc028b38848767163f8b4b0412a51a7c191b9f9c49",
+              "sizeBytes": 5492
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-documentreference-status.json",
+              "sha256": "fd7715ae7edc69c8d523ee53a90dde6eda2ea4656ea62753e350c78519132932",
+              "sizeBytes": 5241
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-documentreference-type.json",
+              "sha256": "033bfe78ef2874cdfa8832dceed682a5150ecf3981f5153db62c5046d00cdac1",
+              "sizeBytes": 5183
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-encounter-class.json",
+              "sha256": "91530dfb337ec1dfe4efeadfe343836f6319d40a28de201ebdc3126de0982ccd",
+              "sizeBytes": 5094
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-encounter-date.json",
+              "sha256": "92266182869f00e1778a374517c18bf592df4b73fc4f162cc578b1f580d98359",
+              "sizeBytes": 5322
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-encounter-id.json",
+              "sha256": "715f026a98d5b43d8db4ec789f78130b0ad4c663d5bcc804bdcd357880bc77bb",
+              "sizeBytes": 5025
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-encounter-identifier.json",
+              "sha256": "d4a6099f06e3d8a40286381e3e136f238096eb51467c266fd15338b058dbe114",
+              "sizeBytes": 5189
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-encounter-patient.json",
+              "sha256": "7e48f7f5ae0515c9d989d8a899490533932f5216f4bacd998fa85a681a2eed5a",
+              "sizeBytes": 4241
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-encounter-status.json",
+              "sha256": "1655218242a7cb87b335a994156be34c85d928db84c1d2e677dd73560c5cc587",
+              "sizeBytes": 5205
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-encounter-type.json",
+              "sha256": "d0a3a4fdfd29ee8f21ab113952902e4fd14a5e531664edff9de5d54178bbd6a2",
+              "sizeBytes": 5059
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-ethnicity.json",
+              "sha256": "d6f505bf5c83ae81edebaae097d8071cafa8f42b562870efbe3d681edcfc3362",
+              "sizeBytes": 2175
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-goal-lifecycle-status.json",
+              "sha256": "2d688c7bca87261ce7b6f76b9841fb9f9ef605ac8d37d1b07a4a810954fa116f",
+              "sizeBytes": 5311
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-goal-patient.json",
+              "sha256": "befd066d110aadec43e6e7cc7a6969e685e36c960c71b1dee77f60194bd44b65",
+              "sizeBytes": 4144
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-goal-target-date.json",
+              "sha256": "186f17c004f1126d46d49ce02b39948974fb3b475a452204352595543804172d",
+              "sizeBytes": 5291
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-immunization-date.json",
+              "sha256": "4cb62795b500299ae57a72442d8f6a92e61c4e8921300c918a70795e45508a83",
+              "sizeBytes": 5379
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-immunization-patient.json",
+              "sha256": "c869df8b90049ee515a6f7580dc1336deaa2dcd84908223588b7baeae163bd4e",
+              "sizeBytes": 4210
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-immunization-status.json",
+              "sha256": "bcda3faffbaf4b27eff2d77526bf59b6409bb4d074eeafc4571b627e920a74e9",
+              "sizeBytes": 5134
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-location-address-city.json",
+              "sha256": "f36ed772c20b225d0f607a961ea37f4076c3e9d600dc15f04212f9cd4ed597da",
+              "sizeBytes": 4181
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-location-address-postalcode.json",
+              "sha256": "b002444d209ed65dd94bfff315f3f4a3ce7fba5a2c7cf4077cfe1f3d9c7c9e7e",
+              "sizeBytes": 4285
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-location-address-state.json",
+              "sha256": "d2a45cbed1eca22a525f0852b14d1a25e59da1278c5042edd2e68b19b405284f",
+              "sizeBytes": 4198
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-location-address.json",
+              "sha256": "a3b2066e1bf832884b3b05fc700466b7c4f665ade5018faabe18cd3e9a77459c",
+              "sizeBytes": 4123
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-location-name.json",
+              "sha256": "2cc1883ea372ae42fad90b4d5405b2db0ff2b97d65d5f007011bda08e436475a",
+              "sizeBytes": 4082
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-medicationrequest-authoredon.json",
+              "sha256": "3018f0709719fb6773750c47d644cb812fa40137bb761360f07afd2ccd4b5a65",
+              "sizeBytes": 5518
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-medicationrequest-encounter.json",
+              "sha256": "24b309e4a3a1e0b17ca709d99ad8266b7797a5f90857befaab144be4b756f277",
+              "sizeBytes": 4331
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-medicationrequest-intent.json",
+              "sha256": "1af2125e7c9b69c67afce8e73a87a2ca28053fedb4982d22954d827bc159c65e",
+              "sizeBytes": 5247
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-medicationrequest-patient.json",
+              "sha256": "035590bfe4fbc79f588e69dbb4c4da5d95effc0cd985a138e5f6e28e776a5858",
+              "sizeBytes": 4343
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-medicationrequest-status.json",
+              "sha256": "6ad98a6fb0aba721b391234474c77896e9d7b2914c80436b88e4b4479726dc06",
+              "sizeBytes": 5203
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-observation-category.json",
+              "sha256": "509ca426e5b38d8cca24794fd3e7229f4603f781f27ce00892cb4d65dd95e113",
+              "sizeBytes": 5189
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-observation-code.json",
+              "sha256": "09a42e71935ac53e24302d812208dd29246abd3db1922b0957aca79a7966f157",
+              "sizeBytes": 5103
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-observation-date.json",
+              "sha256": "960e454d83dc56c73b737a66affc3bc104f19f18489ef1fed380eaecfceff54a",
+              "sizeBytes": 5462
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-observation-patient.json",
+              "sha256": "7f809c8724a5483444cfb5dd9a2ffdd06ac17f145f0a24a8a09786ab99364622",
+              "sizeBytes": 4285
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-observation-status.json",
+              "sha256": "1ec67d359ac4f27de3ad577f96e13836a64c626659a37993d3c4fe608265e191",
+              "sizeBytes": 5131
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-organization-address.json",
+              "sha256": "34c7c18fba29518a804cc5748b694365dacd0570256af8b5b507ff2436b6abb3",
+              "sizeBytes": 4407
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-organization-name.json",
+              "sha256": "e706cc954636018f0ea32022276375c95f844a891054a3de13eb8228258f0ab7",
+              "sizeBytes": 4150
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-patient-birthdate.json",
+              "sha256": "090b35c40b73d1d0206b4813256882be53d6f6510843c589a699b16ee9960047",
+              "sizeBytes": 5313
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-patient-family.json",
+              "sha256": "3f3b8d168cae8df04354b31ae626a5aa6b9e7271a5b17d94bf941f69f05f160d",
+              "sizeBytes": 4131
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-patient-gender.json",
+              "sha256": "0a6505b2e32a911e2476425eb70ac46932012ed34f4f88774c1312175d642b50",
+              "sizeBytes": 5057
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-patient-given.json",
+              "sha256": "a2e52a88069b0c8bf5348118bc530e49b0e7f9b796c3abe9e66802a144328cce",
+              "sizeBytes": 4114
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-patient-id.json",
+              "sha256": "8b235d6d926fc7dee255892a6ffa821c99eeda75f4e8d8107e13c8d81695e387",
+              "sizeBytes": 4999
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-patient-identifier.json",
+              "sha256": "1a25b78c7e0fa6fbaf82fd7c664ef98f41d502f2106c068d4c3de6cb767c2185",
+              "sizeBytes": 5109
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-patient-name.json",
+              "sha256": "9792f68c69989564cdf817d2122684d876273fd69798a04f70865edcb8df75ed",
+              "sizeBytes": 4267
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-practitioner-identifier.json",
+              "sha256": "1e6be6766d8828fa87a572564dc49152cde9e3a293dce2a63988bef28d3f3a90",
+              "sizeBytes": 5198
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-practitioner-name.json",
+              "sha256": "ed59a112105255b2714752820306079fb102e9e3550795062ccb362203a627bf",
+              "sizeBytes": 4342
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-practitionerrole-practitioner.json",
+              "sha256": "cc774d09679a09a99cede28e34fe456d02ef026654d7ab057c969cdd37f45e7a",
+              "sizeBytes": 4863
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-practitionerrole-specialty.json",
+              "sha256": "198c1edd1b37edbde036a811e2ba8c4cbc8be002240ceba472a907a3189c3b27",
+              "sizeBytes": 5297
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-procedure-code.json",
+              "sha256": "1a993ff354a3f3b4008a860d16ba0a14d2bde0a3c05a6c1a45ac264ef86489ad",
+              "sizeBytes": 5075
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-procedure-date.json",
+              "sha256": "e435c9f7139f17a538121aaa1247a59e22e4805473cd7971d8f3ccf04c3ff467",
+              "sizeBytes": 5350
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-procedure-patient.json",
+              "sha256": "9bfd66baeab9a0b2eb769a5f91436cd071131f25714b98f986a76c72e3a86d05",
+              "sizeBytes": 4209
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-procedure-status.json",
+              "sha256": "a8313686ef1e225cf030318f34efecddb80368a6427c706a647587e45b56023c",
+              "sizeBytes": 5237
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/SearchParameter-us-core-race.json",
+              "sha256": "e14ea7b0be9fb3340eb8746867f371f583e3db46fa95f51a4122b45045631900",
+              "sizeBytes": 2098
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-pediatric-bmi-for-age.json",
+              "sha256": "94f2927dca0d62e54ce62eba471b0f307f2f8578dcc001918a39a5bca71347e8",
+              "sizeBytes": 126041
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-pediatric-weight-for-height.json",
+              "sha256": "ca071c51f88e539f3e7aac0474f805e9bb697aab5334f11a1557159e6141e9b2",
+              "sizeBytes": 125996
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-allergyintolerance.json",
+              "sha256": "cd5ff5f7be23ccc4b74d9738b24b57ad7abe78f2b746f9a5c825e2dfaf2056e6",
+              "sizeBytes": 69417
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-birthsex.json",
+              "sha256": "91917f7ea58a467a4576742950532edfda64b67ca6ed2ededc46d2f9ff9c8c45",
+              "sizeBytes": 15339
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-careplan.json",
+              "sha256": "3c394f3bdabddaab6306dccd5e5817fe14b5c1b609e17d5c150b35b1f36af340",
+              "sizeBytes": 112185
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-careteam.json",
+              "sha256": "1e855a3a283fe2383f16d4287b0dcfdc20e07abd6d3a6538344d3f4fc9d0dd0d",
+              "sizeBytes": 53065
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-condition.json",
+              "sha256": "ae9dd647e0bcd8ee30776d86c5de0cc620ba0233527c574c06f2dc42cfb69e12",
+              "sizeBytes": 72255
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-diagnosticreport-lab.json",
+              "sha256": "56f8ea100dac3b5dfcc7edd153ee463a7ae103de15aeafae3fdb466f3be00848",
+              "sizeBytes": 81153
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-diagnosticreport-note.json",
+              "sha256": "28902a9ced840e97305531382d672e469d7b91888f96b217728089dc5408bd5c",
+              "sizeBytes": 73939
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-direct.json",
+              "sha256": "2da0aca0b93be51732acc8f6ee030e91dd5a97791bf756763ed5066249b34926",
+              "sizeBytes": 14588
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-documentreference.json",
+              "sha256": "ae771eacebe90ada2cb1d92727e445459f01923044b5e5106b8b6cf070ea7437",
+              "sizeBytes": 119862
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-encounter.json",
+              "sha256": "365b221a032fc173d5ab927fd20ed0cef6421665bed953e34794bb17abef68cf",
+              "sizeBytes": 138795
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-ethnicity.json",
+              "sha256": "810cc5e188955af8990338c19612a998edac7edd916df92f76e87077de4a80a8",
+              "sizeBytes": 64641
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-goal.json",
+              "sha256": "1f965238afe70a658ef248b0f573c0af33ad7cba81294d5cea79e11381f705f0",
+              "sizeBytes": 56953
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-immunization.json",
+              "sha256": "9d87e2c032377cada74224b15a729e3c48b9396f66acd3c8539c427ee0eb4f93",
+              "sizeBytes": 97965
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-implantable-device.json",
+              "sha256": "02140de77c77bf45ad27d8873964f81de352b4ab98011825d9414bf417e6bee1",
+              "sizeBytes": 105115
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-location.json",
+              "sha256": "3e42cb66a513ca879d48552ba1ef83dba41010e669e62fe022fcbede2e65d4f9",
+              "sizeBytes": 81357
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-medication.json",
+              "sha256": "61ee1efd6f620195ab2550ee3c31afcf6983e4c7c250e5ec299587313a424bf7",
+              "sizeBytes": 47344
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-medicationrequest.json",
+              "sha256": "e22ada1432c52a07063d45a5cac3370a6fa5625a022984b64aa6413bbd1969f5",
+              "sizeBytes": 144646
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-observation-lab.json",
+              "sha256": "f56b345dfc47bbadcc932c16a9cd9b8738462396b44e687eec2ec4823f35353f",
+              "sizeBytes": 119115
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-organization.json",
+              "sha256": "d673851ecea41d544c05e648f35c56ac4687bf70262087c3be24c920eb9ba79c",
+              "sizeBytes": 99874
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-patient.json",
+              "sha256": "aa69485ef987859f04b62fd37b6b808731ad5b44f6ff1e69cfc6d67b6d1a0d34",
+              "sizeBytes": 160244
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-practitioner.json",
+              "sha256": "623d49969fdb187f0a84742b919ebc5174efea2a7ab42b2ef68ab7fc47d0ab48",
+              "sizeBytes": 75555
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-practitionerrole.json",
+              "sha256": "1f02740c6bcb738ee244b6c9755cb5a626dd9064a84b8d11ba18f51a135a203a",
+              "sizeBytes": 75012
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-procedure.json",
+              "sha256": "74458ccfc281416149e560cc47d69fb167485351aeb37fe901520f9ed83b6eaa",
+              "sizeBytes": 79759
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-provenance.json",
+              "sha256": "fc4c4c0cd93b7caf0341aedda6d71287fcc3e82ee30494b95e920f70d882c6a4",
+              "sizeBytes": 107665
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-pulse-oximetry.json",
+              "sha256": "8d209b0baede9c17b0c368e5fd6bc73ecd00206afc17b4f0c9a1eb97348497da",
+              "sizeBytes": 236850
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-race.json",
+              "sha256": "b38a594cb5ce88ae4d12721d0bc447ce9bc9ad473beb54e774ca56fedccb6ac2",
+              "sizeBytes": 67452
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/StructureDefinition-us-core-smokingstatus.json",
+              "sha256": "5347592079e51e52e4240c819726e67869397bb469b5d14148d5558053553a8f",
+              "sizeBytes": 96417
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-birthsex.json",
+              "sha256": "7a85f57fdbf248dbe5a43cfa64fb9f8d3306afe5d109d8d453569163ebedb9d9",
+              "sizeBytes": 3218
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-detailed-ethnicity.json",
+              "sha256": "ad71ed4017c1b009a46219815facdfc655aa17aa375e8c39afc1d23654dd0672",
+              "sizeBytes": 2029
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-detailed-race.json",
+              "sha256": "2fc8eb1a19aba4edb6ddc86787274f6703b4f65db2b9e3c6c4017e4fad767b89",
+              "sizeBytes": 2337
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-omb-ethnicity-category.json",
+              "sha256": "12e99f41c8a0183e761c62702325bdf0b118c9683f3685bfd760e1679575f999",
+              "sizeBytes": 2158
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-omb-race-category.json",
+              "sha256": "db2baebf690533e42f49220d0e8d1c478e619f185b2d65d67e2c05421ec5cd24",
+              "sizeBytes": 4818
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-simple-language.json",
+              "sha256": "97e81fa0c86449598ea163548b546d5c1d6e62041095fd37ac696599024dfdce",
+              "sizeBytes": 2247
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-allergy-substance.json",
+              "sha256": "ffa706d5e28bf9ebf68479e0c501af36c5c0b03a0086a30c376ce8e35e1556de",
+              "sizeBytes": 102221
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-careteam-provider-roles.json",
+              "sha256": "2d797205442e04e460780ccf0fb203e1ae1a46b679f1274396d382aceb0db90c",
+              "sizeBytes": 3185
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-clinical-note-type.json",
+              "sha256": "6d729ef432d4f22be19c1c1aab01c94c152b334a54ed4b21a7cf6768d8f7e902",
+              "sizeBytes": 2329
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-condition-category.json",
+              "sha256": "fa31043c5a15e80605019b00fcc7d14be2d4d1c50c3c9864c2f6ed76ad8515e0",
+              "sizeBytes": 2227
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-condition-code.json",
+              "sha256": "1488482a1ca1a9b1471146964386da2729a0d12ce8c9778fa11ef271c4d3892a",
+              "sizeBytes": 4018
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-diagnosticreport-category.json",
+              "sha256": "b14cf08cdaff9a84bb4942ace49334668a15d0eafa1b4690bbd8ab43ca130096",
+              "sizeBytes": 2075
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-diagnosticreport-lab-codes.json",
+              "sha256": "aa278f305e36dce43190de071aea1f71f4c1098316582d0fd705f22578f26830",
+              "sizeBytes": 1639
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-diagnosticreport-report-and-note-codes.json",
+              "sha256": "99210db2bb4b921cb51363757277c5f42c85aaf2877e303e72cc7484257a2a3f",
+              "sizeBytes": 1705
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-documentreference-category.json",
+              "sha256": "ace76ff4193e4ffe50f91e72c2b3c900e8fa4cbc7e288309421f0cc510db9e34",
+              "sizeBytes": 1373
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-documentreference-type.json",
+              "sha256": "a5b15e228917b87f216fa3aba246b1a91e410d1e6d0d153ac6c496149e2f510c",
+              "sizeBytes": 3113
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-encounter-type.json",
+              "sha256": "747b3ce657a47712c8144835a8175dccb79aad20b1298574c5a4d9955ed70a9a",
+              "sizeBytes": 2723
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-medication-codes.json",
+              "sha256": "ea1d55a3218db60c937746b264c293b9fd021845820ae6f413ab1a946cbe4796",
+              "sizeBytes": 1968
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-narrative-status.json",
+              "sha256": "b63e317e733ad82735dc6c1d7d96fdc78bea034f5152f279a759fa72b3eca650",
+              "sizeBytes": 2025
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-ndc-vaccine-codes.json",
+              "sha256": "6083e67b89452ee3de34370f868c1b74d00f2c7523d2162a44356555ba71a188",
+              "sizeBytes": 35957
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-observation-smoking-status-status.json",
+              "sha256": "5b4826e7ddb84b36c1792819f59855c7968da307271e2205ecf85de09c50f298",
+              "sizeBytes": 2557
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-observation-smokingstatus.json",
+              "sha256": "c359181cbe504ca2b42fab6c6429a896e69cac3b808365f57adebd4e1f3c3bb9",
+              "sizeBytes": 3584
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-observation-value-codes.json",
+              "sha256": "8956f543190fb647abaf16cd7838135bd3ba6d4149d7615411b04ca40beff467",
+              "sizeBytes": 1748
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-procedure-code.json",
+              "sha256": "d15c96fca80875b0ada450418adf3ed65a35958e943169ae5902e248ebb615ca",
+              "sizeBytes": 2401
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-procedure-icd10pcs.json",
+              "sha256": "c14d5476592212f66d2c7198f05c7db24c909f75cbe914837d8fe348bf2b36a5",
+              "sizeBytes": 1762
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-provenance-participant-type.json",
+              "sha256": "5cbaa137ae23fbfea2518128e362ea27b89525aea08271be2f68b2016d338f4f",
+              "sizeBytes": 1544
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-provider-role.json",
+              "sha256": "b6bb9eafc0ecd6cabe7ad9e94d05fce7277fcc4d5be952cb32726d9d41f8a856",
+              "sizeBytes": 31297
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-provider-specialty.json",
+              "sha256": "30e95ed056df8e318059e3365cabae46f31667eb066f5f7c2c8303f8c1f997cc",
+              "sizeBytes": 1665
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-smoking-status-observation-codes.json",
+              "sha256": "1de4ab736d067d454b257699beeb44b8273452e48e26f061ab2abef77acd3569",
+              "sizeBytes": 1506
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-usps-state.json",
+              "sha256": "b60e91608e93797aec375f556c66c68a54bc6186ee33715ad8d82695e42a2c54",
+              "sizeBytes": 6962
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/ValueSet-us-core-vaccines-cvx.json",
+              "sha256": "d4239dc626c706cc9c1560a7fa26929c5ddea92ee2199a8fe8b8c730539a1069",
+              "sizeBytes": 29469
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.0/package/package.json",
+              "sha256": "10f2441726aa90b7faa34dea938727ac12362e28ec8e341586d0f3c98b5ff614",
+              "sizeBytes": 89
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ImplementationGuide-hl7.fhir.us.mcode.json",
+              "sha256": "b9d9ddf75cb778fa92a2cd94de57562858beccf5f0cdf827a914aab232ae98a9",
+              "sizeBytes": 66656
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-cancer-condition-parent.json",
+              "sha256": "26b145b227456f0cd86da7c714be3c0142a90c6707f6d22d2b893101a23b65c8",
+              "sizeBytes": 90545
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-cancer-disease-status.json",
+              "sha256": "6661296b354cbd608fec998da36de2302f274db306a655136e9be64258bd0389",
+              "sizeBytes": 135562
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-cancer-genetic-variant.json",
+              "sha256": "1d8f8ab8d2e09ac56be4c2b1c4443efba435c730614de531e1fa8022094ceb50",
+              "sizeBytes": 362162
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-cancer-genomics-report.json",
+              "sha256": "eae82d5bb68e6320c802f0458f4b59918a96a96e04bbadd8d8506bfd270d7d9b",
+              "sizeBytes": 85990
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-cancer-patient.json",
+              "sha256": "a115f0db5c567d4d3c094028adeabf4091ac4c2b87bd3cead98d567447be6f20",
+              "sizeBytes": 113523
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-cancer-related-medication-statement.json",
+              "sha256": "4c92a283fc00cd60790e468e536fc338cea74e57f23020ef088814db5008c74a",
+              "sizeBytes": 62340
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-cancer-related-radiation-procedure.json",
+              "sha256": "d5b66b848a06b0111d6c58c82b559193861fe802a5c9ae7ca64c0faff33c96a1",
+              "sizeBytes": 110212
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-cancer-related-surgical-procedure.json",
+              "sha256": "41e79987d80a7bc85ac3e8fdf7d28b3b430ff071c172ff88f5f32532a500fb07",
+              "sizeBytes": 105126
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-cancer-stage-parent.json",
+              "sha256": "018cb686e0bb11a7838d78f5d943811d49a76c00b7f6a2757b56404505cca24c",
+              "sizeBytes": 114479
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-comorbid-condition.json",
+              "sha256": "015833737da998d92979b3db68ac3739b4d588355d790e2d22780d55a4d2775e",
+              "sizeBytes": 80772
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-ecog-performance-status.json",
+              "sha256": "358716e7e676369198a3a61f7012265fb07e836acfda75c08e71b5db20966f08",
+              "sizeBytes": 124702
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-evidence-type.json",
+              "sha256": "aad35079db777c996a611433c98423945bd19a9e177300ac59d07cd2786a7bbf",
+              "sizeBytes": 13672
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-genetic-specimen.json",
+              "sha256": "46d473f0a8c2a693e3c5247d160a0bf6cb4e2e22180520e6966bf97c0e5df520",
+              "sizeBytes": 75526
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-genomic-region-studied.json",
+              "sha256": "c04a9c43e9278baff5da172d91adeb5f59db484ed697a9e261368cc4a716abee",
+              "sizeBytes": 283086
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-histology-morphology-behavior.json",
+              "sha256": "2be751d568948c170402262006fc468ae969adc0b2c16fb1b15d9523076ef2c7",
+              "sizeBytes": 17518
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-karnofsky-performance-status.json",
+              "sha256": "21c14b9c7f9b6e33ba5ff610c5e32a36a748b0cab916027e59d48779a3541dad",
+              "sizeBytes": 124902
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-laterality.json",
+              "sha256": "591ad27bd1ac8f7e5d1a9aa5b5ee8a4b1cbff4863cdec7365f324c9d5ee5eae5",
+              "sizeBytes": 17107
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-primary-cancer-condition.json",
+              "sha256": "5051725e48bcb93d5ca11d7c9c6b61cca2a2d67177c33c6cca9cc3052e71820b",
+              "sizeBytes": 73024
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-related-primary-cancer-condition.json",
+              "sha256": "6c96288aa7b26befbf44a2427212137464f619cb00fd29750e00ac0d3ea8c0f0",
+              "sizeBytes": 16929
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-secondary-cancer-condition.json",
+              "sha256": "6cdc9fbe639c779aaff454c69dcbfd9388f647953e1f20da3c7fdd481da056f2",
+              "sizeBytes": 74020
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-termination-reason.json",
+              "sha256": "50b3f5b03739853d09eff2a8147f67bede0b9c913881bd06482cfb3a7720c0c3",
+              "sizeBytes": 17243
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-tnm-clinical-distant-metastases-category.json",
+              "sha256": "9a950f7d21e4f0bfc770f7276792cbfd291f7f1028834ee8355538785ae2a67d",
+              "sizeBytes": 92680
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-tnm-clinical-primary-tumor-category.json",
+              "sha256": "5a49746e4d2a22d057d5afaa6a0831e1cc9d72d3ec582e9a4289601f806ff91b",
+              "sizeBytes": 92616
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-tnm-clinical-regional-nodes-category.json",
+              "sha256": "c2b6cc40c6aa927e99dbac22b76ff2ad9ed296cc30408de7dfcfe1078bda6924",
+              "sizeBytes": 92638
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-tnm-clinical-stage-group.json",
+              "sha256": "404e3c2a39bf0f5f70773980bfdee192011698743a8d1215086e4be5b9933810",
+              "sizeBytes": 106227
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-tnm-pathological-distant-metastases-category.json",
+              "sha256": "ae4041cfae75f138097bbd310dc276ddd1ac956bf42419f750ada0a7083e82a7",
+              "sizeBytes": 92681
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-tnm-pathological-primary-tumor-category.json",
+              "sha256": "0810eeaf82611bd3986530cdc5cb1455ba4a99ffc139fa19fe17cb31969632b7",
+              "sizeBytes": 92612
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-tnm-pathological-regional-nodes-category.json",
+              "sha256": "dc7bd53c8bfd3dc64e150ae762f15b927bcaa9df6703cc12e7ffff4cee263447",
+              "sizeBytes": 92634
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-tnm-pathological-stage-group.json",
+              "sha256": "bef02fac29651bc9bf3ffbbd58fdb79ba7b04c442adaeafa006f853122542e1d",
+              "sizeBytes": 106199
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-treatment-intent.json",
+              "sha256": "9bcae919400d2fb130389ece31423f0bc20652e3d24829e210ee4132e91e7c54",
+              "sizeBytes": 17088
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/StructureDefinition-mcode-tumor-marker.json",
+              "sha256": "7e96d83634c516ed21eafc02942b4dd0b64b5afdfcd5bf078bff620cba35f5cc",
+              "sizeBytes": 113778
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-cancer-body-location-vs.json",
+              "sha256": "f8ee925918e103e75891c7e1014e9726ba9c1d44249f07086e50c87792506397",
+              "sizeBytes": 1819
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-cancer-disease-status-evidence-type-vs.json",
+              "sha256": "889bd83968ac69a662e07c91edaf2d23aa3e73f8737483d8333fd095fe689a2d",
+              "sizeBytes": 2755
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-cancer-disorder-vs.json",
+              "sha256": "0477c05e985b2b29dda804c3a277e3307d52df78dd7d5be7fc219cfe1df55fbe",
+              "sizeBytes": 227391
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-cancer-related-surgical-procedure-vs.json",
+              "sha256": "39bd044a508ee57d55d2700ef5bb725d06319384d42f91b58fece04bffd804c7",
+              "sizeBytes": 38969
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-cancer-staging-system-vs.json",
+              "sha256": "dfedc2c7703c71b453b2c2174978e7f4c5b32fb0413368d0e59419264d927815",
+              "sizeBytes": 2567
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-clinvar-vs.json",
+              "sha256": "d5e1c7027ca29c31c81ab7779891d149e6733ce301f350cebdb538cd62ccb694",
+              "sizeBytes": 1599
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-comorbid-condition-vs.json",
+              "sha256": "b337448e81900d4fa74c6f4b08354c9825512678893b206ef4f77dc0826348f9",
+              "sizeBytes": 694522
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-condition-status-trend-vs.json",
+              "sha256": "d58af475efc67729ca38280ff192479aa44f601209382c2b492cee08d2102509",
+              "sizeBytes": 2338
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-genetic-specimen-type-vs.json",
+              "sha256": "18cb35ff822efe104356d94b57bd2668509a416c4832f5a365fb8db381591432",
+              "sizeBytes": 6540
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-hgnc-vs.json",
+              "sha256": "1bf4e64c94a450e1b0661b8b458586c7265dae892fd6dd0c84e13309e7bf1cc7",
+              "sizeBytes": 986
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-hgvs-vs.json",
+              "sha256": "25d50e1b88ec95e1102eca6bdbdb4d562153d3558b778ebb5a353981a9642f03",
+              "sizeBytes": 1142
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-histology-morphology-behavior-vs.json",
+              "sha256": "ca99298df95661048b491bb3a814994b3ad093433844b3b884aa4a8ab378d056",
+              "sizeBytes": 5383
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-laterality-vs.json",
+              "sha256": "319a98fc270f3353be94f59dad32301a76c807a91f2641f784adcb345410b77e",
+              "sizeBytes": 2273
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-primary-or-uncertain-behavior-cancer-disorder-vs.json",
+              "sha256": "1e0f104366c434afbe1ccb1311101c5d505517f22523a0e655d91887b0161969",
+              "sizeBytes": 219963
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-radiation-procedure-vs.json",
+              "sha256": "a16723a572bd57312197deac5a97bb7aa49edb236aa22c1bea1961a7d0c3b924",
+              "sizeBytes": 3635
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-radiation-target-body-site-vs.json",
+              "sha256": "9652d60cce14536fd7537411cf8b05122d153a5cd15f2057bb1b61b40ec19173",
+              "sizeBytes": 18039
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-secondary-cancer-disorder-vs.json",
+              "sha256": "c61aea822dc4e91a4dcdb8ae14e3e4ace3d459d5cbdba63433a493a4f33a52ac",
+              "sizeBytes": 13047
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-tnm-distant-metastases-category-vs.json",
+              "sha256": "3c35601b17f498f2fedb134c839c674f61ea43b5fd7cdf0fbc6879e98429e809",
+              "sizeBytes": 3943
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-tnm-primary-tumor-category-vs.json",
+              "sha256": "194f3feb2392f49353000eacc78035976acee80b34b92feb16bb21d933391ef5",
+              "sizeBytes": 4328
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-tnm-regional-nodes-category-vs.json",
+              "sha256": "d4ed40fdfd961446ef8fbf0a8975eeaed945b6217c61f21fe976b9d985786fb3",
+              "sizeBytes": 4369
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-tnm-stage-group-vs.json",
+              "sha256": "a8605cb77962109fb4cbca137666f6527bf5b8bccf3ae22bb2a6b20f6e24ff87",
+              "sizeBytes": 2584
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-treatment-intent-vs.json",
+              "sha256": "0cfb27a13017cd1f80d16f5e62b18ab207cf04a8a73e9e37da38f273b8dd8f02",
+              "sizeBytes": 2040
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-treatment-termination-reason-vs.json",
+              "sha256": "4132d50468163a7b6e392ad27e6442f044fbde59520ff67a85f7d04ffd59e022",
+              "sizeBytes": 3095
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-tumor-marker-test-vs.json",
+              "sha256": "b8db9c6405e6b66fc516dc79394b2d0aa0eaee541bc359d65b5fb2b176724a0e",
+              "sizeBytes": 39828
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/ValueSet-mcode-units-of-length-vs.json",
+              "sha256": "92a1492e7aaf0546b82b292e9054794f1ae7ada19dfda2fdf2aeb2bd600d0d97",
+              "sizeBytes": 1508
+            },
+            {
+              "path": "hl7.fhir.us.mcode#1.0.0/package/package.json",
+              "sha256": "687d5efacbf5b2dceeee5ceb448dd7500f2f05d3c29e36fb80de9caf09f40f2a",
+              "sizeBytes": 117
+            }
+          ],
+          "markerVerified": true,
+          "observedAt": "2026-10-22T21:04:27.302Z",
+          "cleanupObserved": true
+        },
+        {
+          "path": "/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-conformance-cache-q64jfH",
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-conformance-cache-q64jfH",
+          "sha256": "6d66a4848f875db521d38dfb9497a05b9e98e3d5dfd7dbc17ec725db45d3fc16",
+          "files": [
+            {
+              "path": ".records-conformance-runtime-cache",
+              "sha256": "1937b02b087dce042d2042545bb54d106c9846241847f0a5534a6963f9ff6062",
+              "sizeBytes": 6
+            },
+            {
+              "path": ".terminology-canonical-index.json",
+              "sha256": "b656bd686cc329a0a1ff8df438238492edb04a168c3c6f6ede5b6173c809dffe",
+              "sizeBytes": 1809475
+            }
+          ],
+          "markerVerified": true,
+          "observedAt": "2026-10-22T21:04:30.436Z",
+          "cleanupObserved": true
+        },
+        {
+          "path": "/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-conformance-cache-q64jfH",
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-conformance-cache-q64jfH",
+          "sha256": "f6a5f0aa0469a622bef5fa51f0cd17cc9523918f74f71393adfbd3491b7b1d94",
+          "files": [
+            {
+              "path": ".records-conformance-runtime-cache",
+              "sha256": "1937b02b087dce042d2042545bb54d106c9846241847f0a5534a6963f9ff6062",
+              "sizeBytes": 6
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/CapabilityStatement-us-core-client.json",
+              "sha256": "b323fd348778f23143d88f483336066d766498e8ab5ecba8dddb6ec455e7eb3d",
+              "sizeBytes": 156254
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/CapabilityStatement-us-core-server.json",
+              "sha256": "c4b3662c5d91a4bacf2831bf9110f02a92efc761bdcf45890c3e04ce5d6522de",
+              "sizeBytes": 160824
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/CodeSystem-careplan-category.json",
+              "sha256": "1891ce341949d69fb33eb86ab9ea8412f139a8b321683924f5bb409f18f140eb",
+              "sizeBytes": 1496
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/CodeSystem-cdcrec.json",
+              "sha256": "36018eebcbd72320f704b5b8ecc83445420c79d55ea3bd55e27cf71b46eb769f",
+              "sizeBytes": 205683
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/CodeSystem-condition-category.json",
+              "sha256": "d93437c7d10e8746355ec68cdd5037fd26736800e37ef3d8f129784bebb7fb76",
+              "sizeBytes": 2691
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/CodeSystem-us-core-documentreference-category.json",
+              "sha256": "2d3c4708d1b21ad3212ba882d310e47fe1210b504a79e28b0174f4ceb3fd6b8d",
+              "sizeBytes": 1826
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/CodeSystem-us-core-provenance-participant-type.json",
+              "sha256": "63f53ddbe33417c20a26592373c16564ba30bea319e50c8461e076a750634527",
+              "sizeBytes": 1384
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ConceptMap-ndc-cvx.json",
+              "sha256": "f8eb92e0e396f261a33c5a27cdc57b56ed90d10516739a1e3d21bcaa52c81ddb",
+              "sizeBytes": 76794
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ImplementationGuide-hl7.fhir.us.core.json",
+              "sha256": "3d761b94596f29f02e2479d8c19907a9ad1101ba1b6d3df873587bab9b1807d4",
+              "sizeBytes": 99250
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/OperationDefinition-docref.json",
+              "sha256": "7b5bf518f8a60488fdb6a97fe9bdc57fecb3daac674a396eaaacec30a278baa1",
+              "sizeBytes": 11439
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-allergyintolerance-clinical-status.json",
+              "sha256": "ee393a2bf1b42ec78d930084f5331cd3fd5f96b49ad7c79355d01a0db68eecca",
+              "sizeBytes": 3749
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-allergyintolerance-patient.json",
+              "sha256": "f2ff4086bfdf325ab6d27d479e28b5108241b82d21da91805b76cba74190b37f",
+              "sizeBytes": 3649
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-careplan-category.json",
+              "sha256": "1045520a341b056f2a45f045803830ba65a9c043626825a3559a9d150c90f1f8",
+              "sizeBytes": 3469
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-careplan-date.json",
+              "sha256": "0037cca20fb4d4358659e465e9f7a32dde4554dfd979720d3435dcef2f7f352f",
+              "sizeBytes": 5263
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-careplan-patient.json",
+              "sha256": "73e94c91690a176f3dc9c364b2b40f42e751d48813cc56dc5e2811e9d1b4347b",
+              "sizeBytes": 3571
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-careplan-status.json",
+              "sha256": "14f34909a46de7f1d05975621854a10cabb5a73b639c84c54965e89f4ded8427",
+              "sizeBytes": 3569
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-careteam-patient.json",
+              "sha256": "0eb39a11a8d9220ff0d64d1bc9c815c9429a9420b4152dbbedd3d4e54bd496b6",
+              "sizeBytes": 3563
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-careteam-status.json",
+              "sha256": "7df0e8e9a0470bb6ccfcee79a411ffcc18216e08e082c6c121623ee5c27dc9f4",
+              "sizeBytes": 3537
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-condition-category.json",
+              "sha256": "39d31210e84f6eefee42f6e14799f649a87d866515f306bc2f8bff0441aa9f41",
+              "sizeBytes": 3518
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-condition-clinical-status.json",
+              "sha256": "eede5e04e138cc1117c35fac40c321c416ddcb9acd9e6492974c4ab2ff9d0a04",
+              "sizeBytes": 3630
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-condition-code.json",
+              "sha256": "bf1f094f870286ffdf5ed357b82c697d3ae9dcb7cc8a015123775a131577c336",
+              "sizeBytes": 3442
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-condition-onset-date.json",
+              "sha256": "a6a4c98081e793ea267e792caa6a5650fb44eb7000f5d60546941b83b23bb94c",
+              "sizeBytes": 5415
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-condition-patient.json",
+              "sha256": "3d9d4759d6078fd1fc9d946c3f0fd2fd61fe027d355d802357661e5b3c309926",
+              "sizeBytes": 3580
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-device-patient.json",
+              "sha256": "3ace8be182e35e02b7b8839bc13c72b312a7f94f79abc09ae4b952cc78fb1c38",
+              "sizeBytes": 3547
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-device-type.json",
+              "sha256": "41c95596e63b04f560761d3d17fdcd2741bef7850ac1da07ded9d20d738d3d47",
+              "sizeBytes": 3399
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-diagnosticreport-category.json",
+              "sha256": "08f7b3164fb1680bbfd2dec1f0fcef920af007a357748f6ed14d683c26836aa2",
+              "sizeBytes": 3679
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-diagnosticreport-code.json",
+              "sha256": "c77ad5ed10d80d1fbd020792fd9f783159ab87c0f981c741c65833ead5462110",
+              "sizeBytes": 3783
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-diagnosticreport-date.json",
+              "sha256": "5a40cc43a2ab7a4e906e32df34650d231585ee1fb6f8a3dbd0b958b2f3addea7",
+              "sizeBytes": 5433
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-diagnosticreport-patient.json",
+              "sha256": "41de5ab2ba0c0c77b40ec5e050cdab9506ca94471f96549731cd9bf89494bf79",
+              "sizeBytes": 3703
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-diagnosticreport-status.json",
+              "sha256": "af4df4d26dbb9897d3287d3d2c7bbe4dafa80371ce5f5b09de4e3dcef9cdf9d9",
+              "sizeBytes": 3587
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-documentreference-category.json",
+              "sha256": "2b6c641a31877c9594c78adcd8231f0d79e8e426ef63a6be672192c48cb58010",
+              "sizeBytes": 3632
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-documentreference-date.json",
+              "sha256": "234ae57c9be55b204c61f803c122083c9d2d089904fa55392af9d38553c8fe39",
+              "sizeBytes": 5424
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-documentreference-id.json",
+              "sha256": "fb5c749b079c3dcd3aaf3e892d5da2c213b7ca7bc5783907043ae9b53c58082d",
+              "sizeBytes": 3520
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-documentreference-patient.json",
+              "sha256": "642a0d566b71626a33da23cc896bb92d483e72fb742962d1c70584088fdc0f12",
+              "sizeBytes": 3718
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-documentreference-period.json",
+              "sha256": "7f8fd93e6e51ce31424e13a1b05347cb8c815dd1da881481d2856fe1c2bce138",
+              "sizeBytes": 5490
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-documentreference-status.json",
+              "sha256": "5516b99dfe49d183992651e894fdcc7ce00d01610e4ce577dfaf59050df564c6",
+              "sizeBytes": 3632
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-documentreference-type.json",
+              "sha256": "f32eb585c06fcfc992f8b128e63d53b1112c1f8989a01b60bc994f99350c98b8",
+              "sizeBytes": 3574
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-encounter-class.json",
+              "sha256": "cb912b60d5047c71a5cf2bd587fbe6156440e390570ba9338142629fe3ec5f77",
+              "sizeBytes": 3485
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-encounter-date.json",
+              "sha256": "cbc54609ec3616d2c1d596bc1d7f35932e1e85f1ccd727e063cd87db11663495",
+              "sizeBytes": 5320
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-encounter-id.json",
+              "sha256": "33d6c05c9fb600e851a1de557b0df97598d4977a5f9bbb37e6bfa2abeae7f7d0",
+              "sizeBytes": 3416
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-encounter-identifier.json",
+              "sha256": "6faa364fc232fadf17d42deb25dec93486e1ed76e2a0a5bc737bb77388001886",
+              "sizeBytes": 3580
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-encounter-patient.json",
+              "sha256": "8c5aec5d483d788787e74ebc60f074f99dea5ac5147b22a4519aa8cafc04b78e",
+              "sizeBytes": 3626
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-encounter-status.json",
+              "sha256": "6d15e4ff49c08e54e4816bf962e14e850ca873725a546ec14c1acd26c18c588a",
+              "sizeBytes": 3582
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-encounter-type.json",
+              "sha256": "ca5a5ff973e7c4ef5393d57bfaabed8bbdfc7bc25531ca38b6748cfeccca79e0",
+              "sizeBytes": 3450
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-ethnicity.json",
+              "sha256": "76f12d25de63343bc3afe3ba3be560fbdb58255f2bcf7936c5198db10cfcf4e2",
+              "sizeBytes": 2048
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-goal-lifecycle-status.json",
+              "sha256": "9fecc352a55192621449276227f9b68044689cef617fc64972f0f0f28b295bcc",
+              "sizeBytes": 3702
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-goal-patient.json",
+              "sha256": "ef576f162ec3cb45b1925e4043ea175e80c78e94f63db9f2f6b0932bd99811c8",
+              "sizeBytes": 3529
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-goal-target-date.json",
+              "sha256": "919c8b212bbd2535c030f100e6d4d01f57c3c9ced22b523752898a4120e2a572",
+              "sizeBytes": 5325
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-immunization-date.json",
+              "sha256": "4cd27d991cc9dd7361140fd338a8aca9b5faef1b3b39da8ae89da998f46795ba",
+              "sizeBytes": 5377
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-immunization-patient.json",
+              "sha256": "bf8a8ed58e445bb6a7b0f552446dd68b50172fba3940c9849a4baf0266a55d0a",
+              "sizeBytes": 3595
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-immunization-status.json",
+              "sha256": "63f7ad172771ca6668d47939c0a36d7d0252228bfdab39636cd2304d5ccb9855",
+              "sizeBytes": 3525
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-location-address-city.json",
+              "sha256": "1942e65363d1fd537d517feb52d32f77c9afb497ac97bb6dd0056477e4869e27",
+              "sizeBytes": 3568
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-location-address-postalcode.json",
+              "sha256": "a787dae7f3284472e3ae422019c5350bf593bb6314e3fa56bd8d1c89114e46cf",
+              "sizeBytes": 3672
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-location-address-state.json",
+              "sha256": "c89e046358d4b8676d6b08065f7996db26bfeefdf34859c16981694672126c8e",
+              "sizeBytes": 3585
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-location-address.json",
+              "sha256": "40c2b1122427f512b4560edac9ea5025a0fa9e5fb2e03d42472ee69f17ad4d58",
+              "sizeBytes": 3510
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-location-name.json",
+              "sha256": "ca6ef42cef53c96eeca90886b2a7436010fb2afd2af67b8b23cd72a2e1a194ba",
+              "sizeBytes": 3469
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-medicationrequest-authoredon.json",
+              "sha256": "b6fd71b679f86f21c5bf0be8c67a9b2267acde464d6304cbeda19046a97b4499",
+              "sizeBytes": 5516
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-medicationrequest-encounter.json",
+              "sha256": "d95f0c888ee5a5565024bc1f017208853815f2687e9997788892d089946fd0d1",
+              "sizeBytes": 3716
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-medicationrequest-intent.json",
+              "sha256": "8b62654bf5dbde1a9464cc37ae9e03985b5901c5ec134179385c84ee0335bc27",
+              "sizeBytes": 3642
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-medicationrequest-patient.json",
+              "sha256": "f87978d67099c90d482db80ca080b4ea17c6939615581b57aa75170365e165dc",
+              "sizeBytes": 3728
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-medicationrequest-status.json",
+              "sha256": "226327516b747dd5907eb73b60c02a66f03af71677697b4a0eda1a0d7041c831",
+              "sizeBytes": 3594
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-observation-category.json",
+              "sha256": "0c1ddf6ac76d0adfa3e6a6206f53269cee47e08e2959378c40459d39ff4b5d2e",
+              "sizeBytes": 3580
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-observation-code.json",
+              "sha256": "32cea18e50bce04f6788311f6f4f29508468a2efe14a50b8817b6edacd23f04c",
+              "sizeBytes": 3494
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-observation-date.json",
+              "sha256": "369eb3b0f6d1ee39640394fa7c1d1a181dee977f8d49afd1a22743f92c8428b1",
+              "sizeBytes": 5460
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-observation-patient.json",
+              "sha256": "e378bbacc9e6618bdee528d29565cbe1d9142aa5bd999b767e479a8f21d7f0a8",
+              "sizeBytes": 3670
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-observation-status.json",
+              "sha256": "5c8624a7c08499aa7bd93c538990d1981b356020d98134699cb94fa40c79e4e8",
+              "sizeBytes": 3522
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-organization-address.json",
+              "sha256": "a2f4abd9b2694114b49875caf8e26551908d44fa7398c7134fd0aef8731b2eaa",
+              "sizeBytes": 3794
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-organization-name.json",
+              "sha256": "97fd0aa51cf1a7f392eaaf0d162e11056bf3dc5de75ea7f472e98e5d190d60ae",
+              "sizeBytes": 3537
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-patient-birthdate.json",
+              "sha256": "018709457b77739db58accd150906e502d0dc80381c1a35ada7aa91f8e4c83a0",
+              "sizeBytes": 5307
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-patient-family.json",
+              "sha256": "6e3f41ca4d97c6561abb01f59b86a5f8ac3155c1c80226fa5ae5556d4fa989cd",
+              "sizeBytes": 3518
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-patient-gender.json",
+              "sha256": "7bd06fda6f1bc6bffc7fe980373380e74b490c0adad517c2cb8f8379c1875b44",
+              "sizeBytes": 3448
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-patient-given.json",
+              "sha256": "9d567307127bc88b0faaace23769268d22fa9969c7e2aadf77707ffb28fa16d0",
+              "sizeBytes": 3501
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-patient-id.json",
+              "sha256": "f43cde30e8de154623f35d97cf31acd2cd94bb42091222d5aff6d3fd21a41922",
+              "sizeBytes": 3390
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-patient-identifier.json",
+              "sha256": "87cd19dfad31bd5f1e78fb18cbd81d11bab93effb263521088c3ca050c8325ca",
+              "sizeBytes": 3500
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-patient-name.json",
+              "sha256": "2c5b1293a91aefcecc14f80f8256ccdaabe1d82372f453eadc701d08cc8ebd42",
+              "sizeBytes": 3654
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-practitioner-identifier.json",
+              "sha256": "bfe51182ee3a41f91fd520a90cb5acfe5b38af9702557b775fd12f52d5f6175a",
+              "sizeBytes": 3589
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-practitioner-name.json",
+              "sha256": "c31dfd869c52d031bb03f25ed64b7ffd374b44a522049a7eae755e734c98da55",
+              "sizeBytes": 3729
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-practitionerrole-practitioner.json",
+              "sha256": "23da212f3ceaa4dbe85f8c254c64589acd0a6442d5ad1c5f62d928b26f927b64",
+              "sizeBytes": 4248
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-practitionerrole-specialty.json",
+              "sha256": "de198ca672505f6507abc0e8a5ff4664f2eecd9431ba313d96146afb767ac0d8",
+              "sizeBytes": 3688
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-procedure-code.json",
+              "sha256": "e3c9c5d2efbd63597e867af8cff7030beef8ae74a6bdd0be6304f625b688dfc4",
+              "sizeBytes": 3466
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-procedure-date.json",
+              "sha256": "925b5bf6ab362e9fea66c2fba76f9bab26bda9e8fb8572b8efbc12f30a66da98",
+              "sizeBytes": 5322
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-procedure-patient.json",
+              "sha256": "5816987994fc6a1dc658fab003084159b5b580694cbd78e36f4abe9ca668948e",
+              "sizeBytes": 3594
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-procedure-status.json",
+              "sha256": "deb08adae5b522dbd8814c96313a770cf093471f12f91e12aa038fdbd932bf56",
+              "sizeBytes": 3628
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/SearchParameter-us-core-race.json",
+              "sha256": "1a47181c733ec53ba52ff03593703c0c9d16a15185d3dbd70d57bb1f40b3d959",
+              "sizeBytes": 1971
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-head-occipital-frontal-circumference-percentile.json",
+              "sha256": "e3698127b40c54286c6135571879fef15a083675d53efd2719f0e505aed3b673",
+              "sizeBytes": 128351
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-pediatric-bmi-for-age.json",
+              "sha256": "8adf7475f425089d06dc23804240f6f94701eb478853475aa6f09d5901d4b1a4",
+              "sizeBytes": 128975
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-pediatric-weight-for-height.json",
+              "sha256": "d745c5eaf5aa12418de32adef57a018585e426c4f96ba3a8e776f9d14d9717d7",
+              "sizeBytes": 128846
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-allergyintolerance.json",
+              "sha256": "475da96f4368f68a73a1a6ae98feaab9cada08d754d9455f1d02fec0fc998f09",
+              "sizeBytes": 74324
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-birthsex.json",
+              "sha256": "c09562142cd5e9e60c9a02352b3c1b5f53a09bf9f9a0b930c745606287a0a9eb",
+              "sizeBytes": 15480
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-careplan.json",
+              "sha256": "207b9b339da85b279cb3917a0c4b3fc8d7e1d3ebc4c7551e932b9df1ac811c47",
+              "sizeBytes": 112888
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-careteam.json",
+              "sha256": "8434cc2ca8952f3f1f0abaf1ee520fe6cbe393334d5d8323339445e5afa2809c",
+              "sizeBytes": 53388
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-condition.json",
+              "sha256": "c586a5dab8120ca434c02c273afa3cce3b52e46956f1dbbdf719a31791dc16da",
+              "sizeBytes": 72800
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-diagnosticreport-lab.json",
+              "sha256": "53480a9ac62c07e40ea46a765b37fb4033aaa3f286c908ef66ec2a3c3e8a0b92",
+              "sizeBytes": 81849
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-diagnosticreport-note.json",
+              "sha256": "b4d62a464a20b85adaa87592c1bb6149e0a9191de1c9b9f02fef097473c2da71",
+              "sizeBytes": 74371
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-direct.json",
+              "sha256": "903b4bb9db027595d745642cae2e36ca096a2f76605ea7e7398b54f955a8cdb2",
+              "sizeBytes": 14679
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-documentreference.json",
+              "sha256": "1c3a8c0f056e2802fca18a5f2ed03f5d652bf1b373504bf692a05fe859912b7b",
+              "sizeBytes": 120708
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-encounter.json",
+              "sha256": "9d75ceaa135749f5089b86412ae0c8bb9f7903006339617d84969f188b73cdaa",
+              "sizeBytes": 140384
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-ethnicity.json",
+              "sha256": "31bde16e4074aeaffb5362bdab5d419bafd48166e619d49a958fe6d64b0ff225",
+              "sizeBytes": 64841
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-goal.json",
+              "sha256": "548959b1d64b09856bd24df724a6862a545c9ee94fc2e71df185b9658c6f6d50",
+              "sizeBytes": 56845
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-immunization.json",
+              "sha256": "605f6019f599e3503463a8a81738fedd79d078e21db5262e907c9a83e723e913",
+              "sizeBytes": 98428
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-implantable-device.json",
+              "sha256": "35236a9e5ab91169fdad275f5e5532d6e9a8a56a34bfc753bc098d5c0b12e71b",
+              "sizeBytes": 106042
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-location.json",
+              "sha256": "3bd8824f9d6175efac08b3e71e2833118d5602f1df5a05702e0935269ac61f96",
+              "sizeBytes": 82071
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-medication.json",
+              "sha256": "a67527b415090b2e712ffe8fb289519f681e5f1b862fb44557e3fd2c01442809",
+              "sizeBytes": 47540
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-medicationrequest.json",
+              "sha256": "7fe3fb02918014c06e85eef724834b5caa27302c997c96a393955f6eb740fc37",
+              "sizeBytes": 144628
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-observation-lab.json",
+              "sha256": "08d845bcbb66621c736b1beb888417f0453d66ae7f6062412f5c36e3aa020b5f",
+              "sizeBytes": 119826
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-organization.json",
+              "sha256": "d91d2021a46ae5cdc37cf680c9d025680ca8240595d90be8f589ce3bf0988c64",
+              "sizeBytes": 100769
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-patient.json",
+              "sha256": "7e89a0583ce42b77e13a754a8ea5748d8d594244b198855559a832a40e9fd2d8",
+              "sizeBytes": 162675
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-practitioner.json",
+              "sha256": "0f38e44ad8c076784a1ac3325a3e9112a3e99f213950ca0b3cf0c33cb45b516a",
+              "sizeBytes": 76258
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-practitionerrole.json",
+              "sha256": "b2d3c941b4614a2da8926e9c6502944904d8f76c77365057c590fa0554fd93c2",
+              "sizeBytes": 76032
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-procedure.json",
+              "sha256": "3905ff7b35bda65570eb6a11cb141bf24997a55f11ce05d87806545696edad22",
+              "sizeBytes": 80228
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-provenance.json",
+              "sha256": "1bb097c8dd31bfe0c68d5ca5d7853afc8c304587d4eff2961b1ab00f44a4a8f0",
+              "sizeBytes": 107678
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-pulse-oximetry.json",
+              "sha256": "41997bcfda7c70dc64ddbece8ef21f63670815036d4c17a32893b69d951b95d8",
+              "sizeBytes": 237972
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-race.json",
+              "sha256": "e35ce6a299d567e85c067cae44f39094425168adadbbb46a614eba67132e36fe",
+              "sizeBytes": 67637
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/StructureDefinition-us-core-smokingstatus.json",
+              "sha256": "4cb823c90288839de5f516c877370fecdc32d4c24c5e379ee2c82c7f190d4418",
+              "sizeBytes": 97303
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-birthsex.json",
+              "sha256": "f3f82ed76cdf6924ac9b64aca7b4018b06fea1c1da2a83036458cc37c2d7b232",
+              "sizeBytes": 2983
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-detailed-ethnicity.json",
+              "sha256": "a3db029d48fd750a028dc505a3d09a5ab1e99cbda5ed52e5144e3c3829d48591",
+              "sizeBytes": 1875
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-detailed-race.json",
+              "sha256": "164ec3122a1673a928648818990a8c52432111cfe46e2e4414b2d4b0f76dc8db",
+              "sizeBytes": 2196
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-omb-ethnicity-category.json",
+              "sha256": "3406751fe3ebeb470ee01bac175ed93e1b0e2b3867e728d5e3bc5b78549d64c7",
+              "sizeBytes": 1697
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-omb-race-category.json",
+              "sha256": "2320e743e98ba1378fbf7b5d18d96345c037a5eaa727c2c1ce304e2e3a3833ca",
+              "sizeBytes": 4220
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-simple-language.json",
+              "sha256": "a904b08a1e6f992be1edcc5583c874ffbdd46937e3b388561a9b3654bf6f5f54",
+              "sizeBytes": 1687
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-allergy-substance.json",
+              "sha256": "e418bcb1cbdaf9ccedc96a01aae5703d5d86b18cef1dcd9021c6349e54c004c4",
+              "sizeBytes": 101518
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-careteam-provider-roles.json",
+              "sha256": "9d92df957fbe6f8de25e23d5c8039eab20830a3523cf2e35bb085179198a58ed",
+              "sizeBytes": 2250
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-clinical-note-type.json",
+              "sha256": "8029dd2e873146c8cc9ce8fa0ae80c226130b0ae1e5fda7ff4a01f7db9f9f425",
+              "sizeBytes": 2044
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-condition-category.json",
+              "sha256": "821a7ecb301d825d14cce97a8e6e794361848106ac24163e33ff3ac67861ac53",
+              "sizeBytes": 1903
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-condition-code.json",
+              "sha256": "bd58a401a18ccf4920886536c4e5c89870870aecc0604f696b7153b591102141",
+              "sizeBytes": 3020
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-diagnosticreport-category.json",
+              "sha256": "9907718cded3c9a1749bbf164bf4a23b7e3d4c27a6d880545ba60f82152ed02a",
+              "sizeBytes": 1764
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-diagnosticreport-lab-codes.json",
+              "sha256": "e97e0e9acccd4bd29f275a9175166b1aaf8fd6de695123db75f682828cd451dc",
+              "sizeBytes": 1341
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-diagnosticreport-report-and-note-codes.json",
+              "sha256": "fa796e9ba87ba81f5b52352175c79d9184d92d3fa62200165fc0363ace40267d",
+              "sizeBytes": 1367
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-documentreference-category.json",
+              "sha256": "f5742a59c9c3d3f59a30679bae4b221b8392d446da9f2f15b3abedf9e30823db",
+              "sizeBytes": 1093
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-documentreference-type.json",
+              "sha256": "a8d9ede7e4e9339da62e98afb7c8851ce38b07f0540324d02d36b4b800fb72a6",
+              "sizeBytes": 2759
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-encounter-type.json",
+              "sha256": "b1e854bf0a4c45aa37a19bb5bdc7bbb5cfb3aadbd2e867ff7aac27c011282c4d",
+              "sizeBytes": 1951
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-medication-codes.json",
+              "sha256": "aa55f583a43f835b407c60d1ccfea72306140163986e169e40d3150c68e7b497",
+              "sizeBytes": 2533
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-narrative-status.json",
+              "sha256": "054305314314e1c90b200506c57e755296e9f3117da4b03958fc897b8bcb6684",
+              "sizeBytes": 1776
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-ndc-vaccine-codes.json",
+              "sha256": "1acd1c2878784e414f04e40fc1646813fe3dc73ab5299d9ccc732df37e6bc520",
+              "sizeBytes": 35695
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-observation-smoking-status-status.json",
+              "sha256": "68f96bbad0c0cb1606e335b71d0160589fd5832a64c8398c49b3893af965526f",
+              "sizeBytes": 2267
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-observation-smokingstatus-max.json",
+              "sha256": "8305babbe50b66be93edce3f3351ab273d4c80ffa7cc2742ecf2d7784a02e542",
+              "sizeBytes": 1174
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-observation-smokingstatus.json",
+              "sha256": "9535b4ad9677f06fe6e4eb4e8cd26bed33f926da5b41bad83f5b6d52f0671dc4",
+              "sizeBytes": 3158
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-observation-value-codes.json",
+              "sha256": "8cf1a40c6c7ffa6ae2590099aa8ce364a139c0bd04ee8d5aec46e3572d0337b9",
+              "sizeBytes": 1209
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-procedure-code.json",
+              "sha256": "358131b2094ceb7aab58a19662b55951808a8211cb598197f78c06d4fa70d1e1",
+              "sizeBytes": 3184
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-procedure-icd10pcs.json",
+              "sha256": "8ee9ab71bb8070a48228e13d00d1f7972dc50691730bc0b55f199d446073fc1c",
+              "sizeBytes": 1219
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-provenance-participant-type.json",
+              "sha256": "a4ac0a10ee7d447d0e964dbb452b3fb0878c260b21978c162f9829905d7d0fb6",
+              "sizeBytes": 1403
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-provider-role.json",
+              "sha256": "fd5d9a45b86a81c21049e0c9e5a5feaf1fa4eab07633c4495dc483b22eb0ac05",
+              "sizeBytes": 30692
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-provider-specialty.json",
+              "sha256": "faacce590954a75b27390af63476092bac49301ec4a5f7e37969026adc5ec6e1",
+              "sizeBytes": 1212
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-smoking-status-observation-codes.json",
+              "sha256": "d357b571bfa3ad5611354187514708ae5b617c3743079e8fff471d77f0b0c346",
+              "sizeBytes": 1606
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-usps-state.json",
+              "sha256": "04078206c00bd5c03aaf1470e0e77517b5305d4e38f3495cddb107d10001814f",
+              "sizeBytes": 6180
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/ValueSet-us-core-vaccines-cvx.json",
+              "sha256": "8a2df15dc0f4025937fe6695479c9d68bd2300025ccb59a65632cae6ea40ab78",
+              "sizeBytes": 30836
+            },
+            {
+              "path": "hl7.fhir.us.core#3.1.1/package/package.json",
+              "sha256": "358d6aec4521a975a73013694d7f8b2af9c7e237def34c628482cb9bf5ff5d26",
+              "sizeBytes": 89
+            }
+          ],
+          "markerVerified": true,
+          "observedAt": "2026-10-22T21:04:33.130Z",
+          "cleanupObserved": true
+        }
+      ],
+      "networkAttempts": [],
+      "isolationErrors": [],
+      "setupComplete": true,
+      "sdkVersion": "0.9.18",
+      "finishedAt": "2026-10-22T21:04:34.800Z",
+      "exitCode": 0
+    },
+    {
+      "schema": "records.validator.quality-isolation-receipt.v1",
+      "startedAt": "2026-10-22T21:04:35.373Z",
+      "pid": 75664,
+      "nodeVersion": "v24.21.0",
+      "cliPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+      "argv": [
+        "/Users/sheydin/.nvm/versions/node/v24.21.0/bin/node",
+        "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+        "--corpus",
+        "quality-corpus/r5/clean",
+        "--min-precision",
+        "99",
+        "--min-fixtures",
+        "15",
+        "--max-excluded",
+        "0"
+      ],
+      "candidateSha": "aefe452ef6b58f3b48c8afb0c8848041e9ed1915",
+      "contextSha256": "5704950d04d19084e607994f654a7813c227a77a6d5ffa50d542b7967acb4cab",
+      "sourceRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source",
+      "sdkEntry": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/validator/dist/index.js",
+      "sdkEntrySha256": "c5f5d3fd8ebafae8baa92f53b38ef17ba9fae43637f823a933196d27de85b351",
+      "stores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "sha256": "fb538a126da4dd12f0ab7e751a854c0699df1af928e7cd94b1de5f5ce232ee81"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "sha256": "f09cb7db7d93bcb90b994894d1bddbec9da5b2b9d2dd54382efe891c69758ae5"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "sha256": "2df49d4025dbc4bf3acc797f6e9ef76d9db60049528b0d3899c06e975d060cc2"
+        }
+      ],
+      "defaultStores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/fhir-packages",
+          "present": false
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/bundled-profiles/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+        }
+      ],
+      "packageCachePath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+      "bundledProfilesPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+      "instrumentation": "Original SDK methods forward unchanged arguments and results; filesystem/network observation only.",
+      "runtimeReleases": [
+        {
+          "release": "R4",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R4B",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R5",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R6",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        }
+      ],
+      "dynamicStores": [],
+      "networkAttempts": [],
+      "isolationErrors": [],
+      "setupComplete": true,
+      "sdkVersion": "0.9.18",
+      "finishedAt": "2026-10-22T21:04:43.293Z",
+      "exitCode": 0
+    },
+    {
+      "schema": "records.validator.quality-isolation-receipt.v1",
+      "startedAt": "2026-10-22T21:04:43.852Z",
+      "pid": 75764,
+      "nodeVersion": "v24.21.0",
+      "cliPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+      "argv": [
+        "/Users/sheydin/.nvm/versions/node/v24.21.0/bin/node",
+        "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+        "--corpus",
+        "quality-corpus/r4/profiled",
+        "--min-precision",
+        "97",
+        "--min-fixtures",
+        "175",
+        "--max-excluded",
+        "7"
+      ],
+      "candidateSha": "aefe452ef6b58f3b48c8afb0c8848041e9ed1915",
+      "contextSha256": "5704950d04d19084e607994f654a7813c227a77a6d5ffa50d542b7967acb4cab",
+      "sourceRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source",
+      "sdkEntry": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/validator/dist/index.js",
+      "sdkEntrySha256": "c5f5d3fd8ebafae8baa92f53b38ef17ba9fae43637f823a933196d27de85b351",
+      "stores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "sha256": "fb538a126da4dd12f0ab7e751a854c0699df1af928e7cd94b1de5f5ce232ee81"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "sha256": "f09cb7db7d93bcb90b994894d1bddbec9da5b2b9d2dd54382efe891c69758ae5"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "sha256": "2df49d4025dbc4bf3acc797f6e9ef76d9db60049528b0d3899c06e975d060cc2"
+        }
+      ],
+      "defaultStores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/fhir-packages",
+          "present": false
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/bundled-profiles/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+        }
+      ],
+      "packageCachePath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+      "bundledProfilesPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+      "instrumentation": "Original SDK methods forward unchanged arguments and results; filesystem/network observation only.",
+      "runtimeReleases": [
+        {
+          "release": "R4",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R4B",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R5",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R6",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        }
+      ],
+      "dynamicStores": [],
+      "networkAttempts": [],
+      "isolationErrors": [],
+      "setupComplete": true,
+      "sdkVersion": "0.9.18",
+      "finishedAt": "2026-10-22T21:05:06.262Z",
+      "exitCode": 0
+    },
+    {
+      "schema": "records.validator.quality-isolation-receipt.v1",
+      "startedAt": "2026-10-22T21:05:06.848Z",
+      "pid": 77209,
+      "nodeVersion": "v24.21.0",
+      "cliPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+      "argv": [
+        "/Users/sheydin/.nvm/versions/node/v24.21.0/bin/node",
+        "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+        "--corpus",
+        "quality-corpus/r5/profiled",
+        "--min-precision",
+        "99",
+        "--min-fixtures",
+        "8",
+        "--max-excluded",
+        "0"
+      ],
+      "candidateSha": "aefe452ef6b58f3b48c8afb0c8848041e9ed1915",
+      "contextSha256": "5704950d04d19084e607994f654a7813c227a77a6d5ffa50d542b7967acb4cab",
+      "sourceRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source",
+      "sdkEntry": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/validator/dist/index.js",
+      "sdkEntrySha256": "c5f5d3fd8ebafae8baa92f53b38ef17ba9fae43637f823a933196d27de85b351",
+      "stores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "sha256": "fb538a126da4dd12f0ab7e751a854c0699df1af928e7cd94b1de5f5ce232ee81"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "sha256": "f09cb7db7d93bcb90b994894d1bddbec9da5b2b9d2dd54382efe891c69758ae5"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "sha256": "2df49d4025dbc4bf3acc797f6e9ef76d9db60049528b0d3899c06e975d060cc2"
+        }
+      ],
+      "defaultStores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/fhir-packages",
+          "present": false
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/bundled-profiles/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+        }
+      ],
+      "packageCachePath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+      "bundledProfilesPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+      "instrumentation": "Original SDK methods forward unchanged arguments and results; filesystem/network observation only.",
+      "runtimeReleases": [
+        {
+          "release": "R4",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R4B",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R5",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R6",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        }
+      ],
+      "dynamicStores": [],
+      "networkAttempts": [],
+      "isolationErrors": [],
+      "setupComplete": true,
+      "sdkVersion": "0.9.18",
+      "finishedAt": "2026-10-22T21:05:13.662Z",
+      "exitCode": 0
+    },
+    {
+      "schema": "records.validator.quality-isolation-receipt.v1",
+      "startedAt": "2026-10-22T21:05:14.126Z",
+      "pid": 77500,
+      "nodeVersion": "v24.21.0",
+      "cliPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+      "argv": [
+        "/Users/sheydin/.nvm/versions/node/v24.21.0/bin/node",
+        "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+        "--corpus",
+        "quality-corpus/r4/profiled/mii-2026",
+        "--min-precision",
+        "99",
+        "--min-fixtures",
+        "440",
+        "--max-excluded",
+        "110"
+      ],
+      "candidateSha": "aefe452ef6b58f3b48c8afb0c8848041e9ed1915",
+      "contextSha256": "5704950d04d19084e607994f654a7813c227a77a6d5ffa50d542b7967acb4cab",
+      "sourceRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source",
+      "sdkEntry": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/validator/dist/index.js",
+      "sdkEntrySha256": "c5f5d3fd8ebafae8baa92f53b38ef17ba9fae43637f823a933196d27de85b351",
+      "stores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "sha256": "fb538a126da4dd12f0ab7e751a854c0699df1af928e7cd94b1de5f5ce232ee81"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "sha256": "f09cb7db7d93bcb90b994894d1bddbec9da5b2b9d2dd54382efe891c69758ae5"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "sha256": "2df49d4025dbc4bf3acc797f6e9ef76d9db60049528b0d3899c06e975d060cc2"
+        }
+      ],
+      "defaultStores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/fhir-packages",
+          "present": false
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/bundled-profiles/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+        }
+      ],
+      "packageCachePath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+      "bundledProfilesPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+      "instrumentation": "Original SDK methods forward unchanged arguments and results; filesystem/network observation only.",
+      "runtimeReleases": [
+        {
+          "release": "R4",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R4B",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R5",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R6",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        }
+      ],
+      "dynamicStores": [],
+      "networkAttempts": [],
+      "isolationErrors": [],
+      "setupComplete": true,
+      "sdkVersion": "0.9.18",
+      "finishedAt": "2026-10-22T21:05:46.122Z",
+      "exitCode": 0
+    },
+    {
+      "schema": "records.validator.quality-isolation-receipt.v1",
+      "startedAt": "2026-10-22T21:05:46.652Z",
+      "pid": 78651,
+      "nodeVersion": "v24.21.0",
+      "cliPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+      "argv": [
+        "/Users/sheydin/.nvm/versions/node/v24.21.0/bin/node",
+        "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/clean-validation.ts",
+        "--corpus",
+        "quality-corpus/r4/profiled/ehds-2026",
+        "--min-precision",
+        "100",
+        "--min-fixtures",
+        "1",
+        "--max-excluded",
+        "0"
+      ],
+      "candidateSha": "aefe452ef6b58f3b48c8afb0c8848041e9ed1915",
+      "contextSha256": "5704950d04d19084e607994f654a7813c227a77a6d5ffa50d542b7967acb4cab",
+      "sourceRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source",
+      "sdkEntry": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/validator/dist/index.js",
+      "sdkEntrySha256": "c5f5d3fd8ebafae8baa92f53b38ef17ba9fae43637f823a933196d27de85b351",
+      "stores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "sha256": "fb538a126da4dd12f0ab7e751a854c0699df1af928e7cd94b1de5f5ce232ee81"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "sha256": "f09cb7db7d93bcb90b994894d1bddbec9da5b2b9d2dd54382efe891c69758ae5"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "sha256": "2df49d4025dbc4bf3acc797f6e9ef76d9db60049528b0d3899c06e975d060cc2"
+        }
+      ],
+      "defaultStores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/fhir-packages",
+          "present": false
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/bundled-profiles/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+        }
+      ],
+      "packageCachePath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+      "bundledProfilesPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+      "instrumentation": "Original SDK methods forward unchanged arguments and results; filesystem/network observation only.",
+      "runtimeReleases": [
+        {
+          "release": "R4",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R4B",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R5",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R6",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        }
+      ],
+      "dynamicStores": [],
+      "networkAttempts": [],
+      "isolationErrors": [],
+      "setupComplete": true,
+      "sdkVersion": "0.9.18",
+      "finishedAt": "2026-10-22T21:05:52.890Z",
+      "exitCode": 0
+    },
+    {
+      "schema": "records.validator.quality-isolation-receipt.v1",
+      "startedAt": "2026-10-22T21:03:48.638Z",
+      "pid": 74315,
+      "nodeVersion": "v24.21.0",
+      "cliPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/defect-detection.ts",
+      "argv": [
+        "/Users/sheydin/.nvm/versions/node/v24.21.0/bin/node",
+        "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/scripts/quality/defect-detection.ts",
+        "--min-detection-rate",
+        "99",
+        "--min-fixtures",
+        "270",
+        "--max-aspirational",
+        "0"
+      ],
+      "candidateSha": "aefe452ef6b58f3b48c8afb0c8848041e9ed1915",
+      "contextSha256": "5704950d04d19084e607994f654a7813c227a77a6d5ffa50d542b7967acb4cab",
+      "sourceRoot": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source",
+      "sdkEntry": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/validator/dist/index.js",
+      "sdkEntrySha256": "c5f5d3fd8ebafae8baa92f53b38ef17ba9fae43637f823a933196d27de85b351",
+      "stores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "sha256": "fb538a126da4dd12f0ab7e751a854c0699df1af928e7cd94b1de5f5ce232ee81"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "sha256": "f09cb7db7d93bcb90b994894d1bddbec9da5b2b9d2dd54382efe891c69758ae5"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "sha256": "2df49d4025dbc4bf3acc797f6e9ef76d9db60049528b0d3899c06e975d060cc2"
+        }
+      ],
+      "defaultStores": [
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/fhir-packages",
+          "present": false
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/packages/bundled-profiles/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/data/bundled-igs"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled"
+        },
+        {
+          "path": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+          "present": true,
+          "physicalPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+        }
+      ],
+      "packageCachePath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages",
+      "bundledProfilesPath": "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+      "instrumentation": "Original SDK methods forward unchanged arguments and results; filesystem/network observation only.",
+      "runtimeReleases": [
+        {
+          "release": "R4",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R4B",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R5",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        },
+        {
+          "release": "R6",
+          "autoDownload": false,
+          "packageSources": [
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/source/server/storage/profiles/bundled",
+            "/private/var/folders/dl/x7qls_c92652b6t6z9tzy0bc0000gn/T/records-validator-quality-3an2SH/packages"
+          ]
+        }
+      ],
+      "dynamicStores": [],
+      "networkAttempts": [],
+      "isolationErrors": [],
+      "setupComplete": true,
+      "sdkVersion": "0.9.18",
+      "finishedAt": "2026-10-22T21:04:15.889Z",
+      "exitCode": 0
+    }
+  ],
+  "limits": {
+    "thresholdsChanged": false,
+    "exclusionsChanged": false,
+    "sdkSourceChanged": false,
+    "originalGatesUsed": true,
+    "fullDeclaredDependencyClosureClaimed": false,
+    "priorG5GlobalPackageAuthorityIsolated": false,
+    "liveTerminologyReobserved": false
+  }
+}

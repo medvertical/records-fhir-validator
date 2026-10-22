@@ -88,6 +88,7 @@ interface ParametersValidationOptions {
     resource: FhirResourceRecord,
     profileUrl: string,
     recursionDepth: number,
+    skipEmbeddedValidation?: boolean,
   ): Promise<ValidationIssue[]>;
 }
 
@@ -101,8 +102,9 @@ export async function validateParametersResourceTree(
 
   const nested = await awaitAllDrained(embeddedResources.map(async embedded => {
     const issues: ValidationIssue[] = [];
-    for (const profile of new Set([embedded.profileUrl, ...getDeclaredProfiles(embedded.resource)])) {
-      issues.push(...await options.validate(embedded.resource, profile, options.recursionDepth + 1));
+    const profiles = [...new Set([embedded.profileUrl, ...getDeclaredProfiles(embedded.resource)])];
+    for (const [index, profile] of profiles.entries()) {
+      issues.push(...await options.validate(embedded.resource, profile, options.recursionDepth + 1, index > 0));
     }
     // Metadata expectations (missing-meta etc.) apply to the exchanged
     // Parameters envelope, not to each embedded payload resource.

@@ -22,6 +22,7 @@ describe('TwoPhaseTerminologyExpansion', () => {
         url: 'http://example.test/vs',
         status: 'active',
         expansion: {
+          total: 1,
           contains: [{ system: 'http://example.test/cs', code: 'A' }],
         },
       },

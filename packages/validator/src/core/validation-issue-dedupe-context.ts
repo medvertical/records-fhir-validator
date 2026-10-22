@@ -50,7 +50,7 @@ export interface DedupeContext {
   profileExtensionMinPaths: Set<string>;
   profileSliceMinPaths: Set<string>;
   profileExtensionMaxKeys: Set<string>;
-  mustSupportPaths: Set<string>;
+  mustSupportIssuesByPath: Map<string, ValidationIssue[]>;
   ref1InvariantPaths: Set<string>;
   invalidUriPaths: Set<string>;
   invalidTerminologySystemPaths: Set<string>;
@@ -103,7 +103,7 @@ function createDedupeContext(issues: ValidationIssue[]): DedupeContext {
     profileExtensionMinPaths: new Set(),
     profileSliceMinPaths: new Set(),
     profileExtensionMaxKeys: new Set(),
-    mustSupportPaths: new Set(),
+    mustSupportIssuesByPath: new Map(),
     ref1InvariantPaths: new Set(),
     invalidUriPaths: new Set(),
     invalidTerminologySystemPaths: new Set(),
@@ -195,7 +195,11 @@ function indexConstraintsAndCardinality(context: DedupeContext, issue: Validatio
   }
   if (issue.code === 'profile-extension-min-cardinality') context.profileExtensionMinPaths.add(requiredPath);
   if (issue.code === 'profile-slice-min-cardinality') context.profileSliceMinPaths.add(requiredPath);
-  if (issue.code === 'profile-mustsupport-missing') context.mustSupportPaths.add(requiredPath);
+  if (issue.code === 'profile-mustsupport-missing') {
+    const related = context.mustSupportIssuesByPath.get(requiredPath) ?? [];
+    related.push(issue);
+    context.mustSupportIssuesByPath.set(requiredPath, related);
+  }
   if (issue.code === 'ref-1-violation') context.ref1InvariantPaths.add(requiredPath);
 
   const extensionMaxKey = getExtensionMaxCardinalityKey(issue);

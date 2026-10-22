@@ -7,8 +7,10 @@ import { DEFAULT_VALIDATION_SETTINGS_R4 } from '@records-fhir/validation-types';
 import { StructureDefinitionLoader } from '../structure-definition-loader';
 import { RecordsValidator } from '../validator-engine';
 import type { StructureDefinition } from '../structure-definition-types';
-import { createValidationDependencySnapshot, captureValidationDependency, withProfileReferenceInventorySnapshot } from '../../validation-dependency-snapshot';
+import { createValidationDependencySnapshot, captureValidationDependency, withBatchProfileMetadataCache,
+  withProfileReferenceInventorySnapshot } from '../../validation-dependency-snapshot';
 import { clearCanonicalPinCaches } from '../../package/canonical-pin-context';
+import { clearProfileReferenceFallbackCatalog, readFallbackInventory } from '../profile-reference-fallback-catalog';
 import { setProfileSource } from '../../persistence/profile-source';
 
 const roots: string[] = [];
@@ -24,7 +26,7 @@ const definition = (url: string, min = 0): StructureDefinition => ({ resourceTyp
 const settings = structuredClone(DEFAULT_VALIDATION_SETTINGS_R4);
 settings.terminologyServers = []; settings.advisorRules = [];
 afterEach(async () => {
-  vi.restoreAllMocks(); setProfileSource({}); clearCanonicalPinCaches();
+  vi.restoreAllMocks(); setProfileSource({}); clearCanonicalPinCaches(); clearProfileReferenceFallbackCatalog();
   await Promise.all(roots.splice(0).map(root => fs.rm(root, { recursive: true, force: true })));
 });
 async function directory() {
@@ -57,6 +59,87 @@ const unavailable = { name: 'ProfileReferenceUnavailableError', receipt: {
 } };
 
 describe('actual profile inventories within one validation request', () => {
+  it('keeps the first package read separate from concurrent and later snapshot readers', async () => {
+    const { loader, parent } = await fixture();
+    await withProfileReferenceInventorySnapshot(async () => {
+      const [first, concurrent] = await Promise.all([
+        loader.loadReferencedProfile(firstUrl, parent, 'R4'),
+        loader.loadReferencedProfile(firstUrl, parent, 'R4'),
+      ]);
+      expect(min(first)).toBe(0);
+      expect(min(concurrent)).toBe(0);
+      first!.snapshot!.element[1].min = 7;
+      expect(min(concurrent)).toBe(0);
+      const later = await loader.loadReferencedProfile(firstUrl, parent, 'R4');
+      expect(min(later)).toBe(0);
+      later!.snapshot!.element[1].min = 8;
+      expect(min(await loader.loadReferencedProfile(firstUrl, parent, 'R4'))).toBe(0);
+    });
+    expect(min(await withProfileReferenceInventorySnapshot(() =>
+      loader.loadReferencedProfile(firstUrl, parent, 'R4')))).toBe(0);
+  });
+
+  it('reuses a complete fallback catalog across requests and clears it with the loader', async () => {
+    const { loader, parent, targetFolder } = await fixture();
+    const reads = observePackageFileReads();
+    expect(min(await withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(firstUrl, parent, 'R4')))).toBe(0);
+    expect(min(await withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(secondUrl, parent, 'R4')))).toBe(1);
+    const count = () => reads.filter(name => resolve(name) === resolve(join(targetFolder, 'Bundle.json'))).length;
+    expect(count()).toBe(1);
+    loader.clearCache();
+    expect(min(await withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(firstUrl, parent, 'R4')))).toBe(0);
+    expect(count()).toBe(2);
+  });
+
+  it('keeps callback-batch scans separate from the cross-batch catalog', async () => {
+    const { loader, parent, targetFolder } = await fixture();
+    const reads = observePackageFileReads();
+    expect(min(await withBatchProfileMetadataCache(() => withProfileReferenceInventorySnapshot(() =>
+      loader.loadReferencedProfile(firstUrl, parent, 'R4'))))).toBe(0);
+    expect(min(await withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(secondUrl, parent, 'R4')))).toBe(1);
+    const count = reads.filter(name => resolve(name) === resolve(join(targetFolder, 'Bundle.json'))).length;
+    expect(count).toBe(2);
+  });
+
+  it('does not repopulate a cleared catalog from a scan already in flight', async () => {
+    const { targetFolder } = await fixture();
+    const reads = observePackageFileReads();
+    const readdir = fs.readdir.bind(fs);
+    let enter!: () => void;
+    let release!: () => void;
+    const entered = new Promise<void>(resolveEntered => { enter = resolveEntered; });
+    const blocked = new Promise<void>(resolveBlocked => { release = resolveBlocked; });
+    let delayed = false;
+    vi.spyOn(fs, 'readdir').mockImplementation(async (...args) => {
+      const result = await readdir(...args);
+      if (!delayed && resolve(String(args[0])) === resolve(targetFolder)) {
+        delayed = true;
+        enter();
+        await blocked;
+      }
+      return result;
+    });
+    const first = readFallbackInventory(targetFolder);
+    await entered;
+    clearProfileReferenceFallbackCatalog();
+    release();
+    expect((await first).status).toBe('read');
+    expect((await readFallbackInventory(targetFolder)).status).toBe('read');
+    expect(reads.filter(name => resolve(name) === resolve(join(targetFolder, 'Bundle.json')))).toHaveLength(2);
+  });
+
+  it('rebuilds the catalog after in-place content changes or new unindexed files', async () => {
+    const { loader, parent, targetFolder } = await fixture();
+    expect(min(await withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(firstUrl, parent, 'R4')))).toBe(0);
+    await fs.writeFile(join(targetFolder, 'StructureDefinition-1.json'), JSON.stringify(definition(secondUrl, 0)));
+    expect(min(await withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(secondUrl, parent, 'R4')))).toBe(0);
+    const addedUrl = 'https://inventory.test/StructureDefinition/Added';
+    await fs.writeFile(join(targetFolder, 'StructureDefinition-added.json'), JSON.stringify(definition(addedUrl, 1)));
+    expect(min(await withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(addedUrl, parent, 'R4')))).toBe(1);
+    await fs.writeFile(join(targetFolder, 'broken.json'), '{broken');
+    await expect(withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile('https://inventory.test/absent', parent, 'R4')))
+      .rejects.toMatchObject({ name: 'ProfileReferenceUnavailableError', receipt: { cause: 'resource-unreadable' } });
+  });
   it('shares an index-miss scan for distinct canonicals, preserves actual P/N and detaches returned definitions', async () => {
     const { loader, parent, targetFolder } = await fixture();
     const reads = observePackageFileReads(); const snapshot = createValidationDependencySnapshot();
@@ -81,6 +164,16 @@ describe('actual profile inventories within one validation request', () => {
       await expect(loader.loadReferencedProfile(secondUrl, parent, 'R4')).rejects.toMatchObject({
         ...unavailable, receipt: { ...unavailable.receipt, cause: 'source-changed' },
       });
+    });
+    expect(min(await withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(secondUrl, parent, 'R4')))).toBe(0);
+  });
+  it('keeps a selected file change visible as unknown across resources sharing batch metadata', async () => {
+    const { loader, parent, targetFolder } = await fixture();
+    await withBatchProfileMetadataCache(async () => {
+      expect(min(await withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(firstUrl, parent, 'R4')))).toBe(0);
+      await fs.writeFile(join(targetFolder, 'StructureDefinition-1.json'), JSON.stringify(definition(secondUrl, 0)));
+      await expect(withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(secondUrl, parent, 'R4')))
+        .rejects.toMatchObject({ ...unavailable, receipt: { ...unavailable.receipt, cause: 'source-changed' } });
     });
     expect(min(await withProfileReferenceInventorySnapshot(() => loader.loadReferencedProfile(secondUrl, parent, 'R4')))).toBe(0);
   });

@@ -144,7 +144,7 @@ function shouldTryCodeMembershipFallback(
   primaryOverride: TerminologyServerOverride | undefined,
 ): boolean {
   if (result.valid) return false;
-  if (result.reason === 'system-unresolvable') return true;
+  if (result.reason === 'system-unresolvable' || result.reason === 'server-failure') return true;
 
   // A preferred server is the configured authority for that CodeSystem. For a
   // generic default server, "unknown code" may only mean missing coverage.

@@ -45,6 +45,17 @@ describe('MultiAspectResourcePreparation', () => {
     });
   });
 
+  it('retains the snapshot identity for nested terminology and questionnaire preparation', async () => {
+    const sha256 = 'a'.repeat(64);
+    const preparation = new MultiAspectResourcePreparation({ deps: makeDeps(), organizationId: 1, serverId: 491,
+      settings: { terminologyResolution: { snapshot: { sha256 } } } });
+    const result = await preparation.prepare({ resourceType: 'QuestionnaireResponse' }, structureDef.url, 'R4');
+    expect(result.kind).toBe('ready');
+    if (result.kind !== 'ready') return;
+    expect(result.profileSourceContext).toEqual({ organizationId: 1, serverId: 491, fhirVersion: 'R4', terminologySnapshotSha256: sha256 });
+    expect(resolveContextQuestionnaire).toHaveBeenCalledWith(expect.anything(), expect.anything(), result.profileSourceContext, null);
+  });
+
   it('caches profile preparation within one validation session', async () => {
     const preparation = new MultiAspectResourcePreparation({
       deps: makeDeps(),
@@ -143,6 +154,36 @@ describe('MultiAspectResourcePreparation', () => {
       code: 'profile-not-found',
       schemaVersion: 'R5',
     });
+  });
+
+  it('uses a supplied host target without fetching it again under explicit target-profile opt-in', async () => {
+    const definition = {
+      ...structureDef,
+      type: 'DiagnosticReport',
+      snapshot: { element: [{ path: 'DiagnosticReport.result', slicing: {
+        discriminator: [{ type: 'profile' as const, path: 'resolve()' }], rules: 'open' as const,
+      } }] },
+    };
+    vi.mocked(loadProfileOrBase).mockResolvedValue({
+      structureDef: definition, declaredProfileUrl: definition.url, usedBaseFallback: false,
+    });
+    const target = { resourceType: 'Observation', id: 'prefetched' };
+    const fetcher = vi.fn(async () => ({ resourceType: 'Observation', id: 'unexpected-refetch' }));
+    const preparation = new MultiAspectResourcePreparation({
+      deps: makeDeps(),
+      settings: { recursiveReferenceValidation: { enabled: true, validateTargetProfiles: true } },
+      externalReferenceResolver: reference => reference === 'Observation/prefetched' ? target : null,
+      referenceResourceFetcher: fetcher,
+    });
+    const prepared = await preparation.prepare({
+      resourceType: 'DiagnosticReport', result: [{ reference: 'Observation/prefetched' }],
+    }, definition.url, 'R4');
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(prepared.kind).toBe('ready');
+    if (prepared.kind === 'ready') {
+      expect(prepared.context.referenceResolver?.('Observation/prefetched')).toBe(target);
+      expect(prepared.context.localReferenceResolver?.('Observation/prefetched') ?? null).toBeNull();
+    }
   });
 
   it('checks cancellation after profile loading and before contextual lookups', async () => {

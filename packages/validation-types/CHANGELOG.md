@@ -11,6 +11,25 @@ captures changes that affect type-package consumers directly.
 
 ## [Unreleased]
 
+## [0.1.14] — 2026-10-11
+
+### Added
+
+- Shared DQA program, policy, rule, observation and evaluation contracts with
+  explicit coverage, non-evaluation and immutable provenance.
+- Optional profile and EU laboratory document population selection; missing
+  membership policies and bounded structured/primitive observations retain
+  the defaults and hashes of existing manifests.
+- Run-only quality selections, independent FHIR/DQA execution modes and bounded
+  original-CQL preflight/worker contracts.
+- Metadata-only source input receipts, single-resource source ownership and
+  explicit reference namespace and validation-unit deduplication contracts.
+
+### Fixed
+
+- Use Termbox's explicit R4 endpoint in the default R4 server entry. Existing
+  saved configurations retain their selected endpoint.
+
 ## [0.1.13] — 2026-10-05
 
 ### Fixed

@@ -45,7 +45,7 @@ export const githubFindingManifestSchema = z.object({
   issues: z.array(z.object({
     url: issueUrlSchema,
     sourceRunId: z.number().int().positive().safe(),
-    findings: z.array(findingIdentitySchema).min(1).max(50),
+    findings: z.array(findingIdentitySchema).min(1).max(2000),
   }).strict()).min(1).max(200),
 }).strict().superRefine((manifest, context) => {
   const urls = manifest.issues.map(issue => issue.url);
@@ -54,6 +54,9 @@ export const githubFindingManifestSchema = z.object({
     if (new Set(issue.findings.map(finding => finding.signature)).size !== issue.findings.length) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: 'Finding identities must be unique', path: ['issues', index, 'findings'] });
     }
+  }
+  if (manifest.issues.reduce((count, issue) => count + issue.findings.length, 0) > 10_000) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: 'Manifest exceeds 10000 finding references' });
   }
 });
 export type GitHubFindingManifest = z.infer<typeof githubFindingManifestSchema>;

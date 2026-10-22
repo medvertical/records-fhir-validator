@@ -50,8 +50,9 @@ export class SnapshotGenerator {
   ): Promise<ElementDefinition[]> {
     const owner = this.sdLoader.getDependencyCaptureScope?.();
     const ownerKey = profileResolutionOwnerKey(owner);
-    // Parent bytes do not attest the mutable installed definitions used to build its snapshot.
-    const cacheResults = options.cacheResults !== false && !profileDefinitionSourceKey(profileSD);
+    // The basis is built after resolving the current parent and type definitions,
+    // including their package authority; a package version alone is insufficient.
+    const cacheResults = options.cacheResults !== false;
     try {
       if (profileSD.snapshot && profileSD.snapshot.element && profileSD.snapshot.element.length > 0) {
         recordSnapshotTypeSources(profileSD.snapshot.element, profileSD);
@@ -80,23 +81,24 @@ export class SnapshotGenerator {
       const effectiveElements = this.elementMerger.merge(baseSnapshot, differential, false);
       const typeProfiles = await this.loadTypeProfiles(effectiveElements, differential, options, profileSD, expanding);
       const family = options.fhirVersion ?? 'R4';
-      const sources = (elements: readonly ElementDefinition[], fallback: StructureDefinition) => elements.flatMap(element =>
+      const sources = (elements: readonly ElementDefinition[], fallback: StructureDefinition) => [...new Set(elements.flatMap(element =>
         (element.type ?? []).flatMap(type => [
-          ...(type.profile ?? []).map(url => snapshotTypeRecursionKey(url, snapshotTypeSource(type, fallback), family)),
-          ...(type.targetProfile ?? []).map(url => snapshotTypeRecursionKey(url, snapshotTargetProfileSource(type, fallback), family)),
-        ]));
+          snapshotTypeRecursionKey('', snapshotTypeSource(type, fallback), family),
+          snapshotTypeRecursionKey('', snapshotTargetProfileSource(type, fallback), family),
+        ])))];
       // A stable host installation does not attest unchanged parent/type-profile bytes.
       const basisKey = cacheResults ? createHash('sha256').update(JSON.stringify([
-        profileSD, baseSnapshot, differential, [...typeProfiles], options.applyConstraints !== false,
+        profileSD, profileDefinitionSourceKey(baseProfile), baseSnapshot, differential, [...typeProfiles], options.applyConstraints !== false,
         sources(baseSnapshot, baseProfile), sources(differential, profileSD),
         [...typeProfiles.values()].flatMap(elements => sources(elements, profileSD)),
       ])).digest('hex') : undefined;
-      const cachedSnapshot = cacheResults ? this.snapshotCache.get(profileSD, ownerKey, family, basisKey) : undefined;
+      const cacheKey = cacheResults ? this.snapshotCache.keyFor(profileSD, ownerKey, family, basisKey) : undefined;
+      const cachedSnapshot = cacheKey ? this.snapshotCache.get(cacheKey) : undefined;
       if (cachedSnapshot) return cachedSnapshot;
       const snapshot = this.elementMerger.merge(baseSnapshot, differential, options.applyConstraints !== false, typeProfiles);
 
-      if (cacheResults && owner === this.sdLoader.getDependencyCaptureScope?.()) {
-        this.snapshotCache.set(profileSD, snapshot, ownerKey, options.fhirVersion ?? 'R4', basisKey);
+      if (cacheKey && owner === this.sdLoader.getDependencyCaptureScope?.()) {
+        this.snapshotCache.set(cacheKey, snapshot);
       }
 
       logger.info('[SnapshotGenerator] Snapshot generated', {

@@ -25,6 +25,8 @@ interface ValidatorBundleEntryRuntime {
     fhirVersion: 'R4' | 'R5' | 'R6',
     referenceResolver: ReferenceResolver | null,
     bundleCanonicalResolver: BundleCanonicalResolver | null,
+    recursionDepth: number,
+    skipEmbeddedValidation: boolean,
   ) => Promise<ValidationIssue[]>;
 }
 
@@ -42,12 +44,14 @@ export async function validateRecordsBundleEntries(
     snapshotGenerator: runtime.snapshotGenerator,
     maxDepth: runtime.maxDepth,
     structuralExecutor: runtime.structuralExecutor,
-    validateResource: (resource, profileUrl, version) => runtime.validateResource(
+    validateResource: (resource, profileUrl, version, skipEmbeddedValidation = false) => runtime.validateResource(
       resource,
       profileUrl,
       version,
       createBundleReferenceResolver(bundle, resource, referenceIndexCache),
       bundleCanonicalResolver,
+      recursionDepth + 1,
+      skipEmbeddedValidation,
     ),
     validateNestedBundleEntries: (nestedBundle, version, nextDepth) =>
       validateRecordsBundleEntries(

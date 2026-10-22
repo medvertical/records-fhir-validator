@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setProfileSource } from '../persistence';
 import { ValueSetPackageLoader } from './valueset-package-loader';
 import { ValueSetPackageResourceAccess } from './valueset-package-resource-access';
@@ -132,5 +132,19 @@ describe('ValueSetPackageResourceAccess directory resolution', () => {
     const access = new ValueSetPackageResourceAccess([]);
 
     expect(access.getPackageDirectories()).toEqual([]);
+  });
+
+  it('carries a terminology lookup release to the host without mutating the tenant source context', async () => {
+    const canonical = 'http://hl7.org/fhir/encounter-status';
+    const findCanonicalResource = vi.fn(async (_url, _type, _version, context) => ({
+      resourceType: 'CodeSystem', url: canonical, version: context.fhirVersion === 'R5' ? '5.0.0' : '4.0.1',
+    }));
+    setProfileSource({ findCanonicalResource });
+    const access = new ValueSetPackageResourceAccess([]);
+    access.setSourceContext({ organizationId: 7, fhirVersion: 'R4' });
+    await expect(access.findResource(canonical, [], 'CodeSystem', '5')).resolves.toMatchObject({ version: '5.0.0' });
+    expect(findCanonicalResource).toHaveBeenLastCalledWith(canonical, 'CodeSystem', undefined, { organizationId: 7, fhirVersion: 'R5' });
+    await expect(access.findResource(canonical, [], 'CodeSystem', '4')).resolves.toMatchObject({ version: '4.0.1' });
+    expect(access.getSourceContext()).toEqual({ organizationId: 7, fhirVersion: 'R4' });
   });
 });

@@ -61,7 +61,7 @@ export function createSingleResourceConformanceSession(
         conformsTo: profileConformance,
         onIncomplete: issue => incompleteIssues.push(issue),
         loadReferenceTargetDefinition: (url, source) => deps.sdLoader.loadReferencedProfile(url, source, scope.fhirVersion),
-        loadExtensionDefinition: url => loadExtensionTargetDefinition(deps.sdLoader, deps.snapshotGenerator, url, scope.structureDef, scope.fhirVersion),
+        loadExtensionDefinition: (url, parent) => loadExtensionTargetDefinition(deps.sdLoader, deps.snapshotGenerator, url, parent ?? scope.structureDef, scope.fhirVersion),
         pinExtensionProfile: (url, definition) => deps.sdLoader.referencedProfileUrl(url, definition, scope.fhirVersion),
       }),
     };

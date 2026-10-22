@@ -35,18 +35,19 @@ export function resolveConstraintContext(
   elementPath: string,
   rawExpression: string,
   fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
+  readContext: (path: string) => unknown = path => getEvaluationContext(resource, path),
 ): { context: unknown; expression: string } {
   const lastSegment = elementPath.split('.').pop() ?? '';
   if (lastSegment.endsWith('[x]')) {
     const choiceElementName = lastSegment.slice(0, -3);
     const parentPath = elementPath.split('.').slice(0, -1).join('.');
     const ctx = parentPath
-      ? getEvaluationContext(resource, parentPath)
+      ? readContext(parentPath)
       : resource;
     return { context: ctx, expression: `${choiceElementName}.all(${rawExpression})` };
   }
 
-  const concreteChoice = concreteChoiceNavigation(resource, elementPath, fhirVersion);
+  const concreteChoice = concreteChoiceNavigation(resource, elementPath, fhirVersion, readContext);
   if (concreteChoice) {
     return {
       context: concreteChoice.resource,
@@ -54,7 +55,7 @@ export function resolveConstraintContext(
     };
   }
 
-  const ctx = getEvaluationContext(resource, elementPath);
+  const ctx = readContext(elementPath);
 
   // Backbone elements (no `resourceType`) lose FHIR model context,
   // so fhirpath.js can't resolve choice-type children like `value`
@@ -101,6 +102,7 @@ function concreteChoiceNavigation(
   rootResource: FhirResource,
   elementPath: string,
   fhirVersion: 'R4' | 'R5' | 'R6',
+  readContext: (path: string) => unknown,
 ): { resource: FhirResource; navigation: string } | null {
   const segments = elementPath.split('.');
   if (segments.length < 2) return null;
@@ -110,7 +112,7 @@ function concreteChoiceNavigation(
   let resource = rootResource;
   let start = 1;
   for (let end = segments.length - 1; end > 1; end--) {
-    const ancestor = getEvaluationContext(rootResource, segments.slice(0, end).join('.'));
+    const ancestor = readContext(segments.slice(0, end).join('.'));
     if (isFhirResource(ancestor)) {
       resource = ancestor;
       start = end;

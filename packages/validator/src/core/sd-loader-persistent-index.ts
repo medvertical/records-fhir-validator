@@ -58,6 +58,25 @@ export interface PersistentIndexOptions {
     deduplicatePackages?: boolean;
 }
 
+export interface ProfileIndexWriter {
+    readonly sourcePath: string;
+    save(
+        profileUrls: Set<string>,
+        packageDetails: Array<{ name: string; profileCount: number }>,
+        options: PersistentIndexOptions,
+    ): Promise<void>;
+}
+
+/** A lexical source binding, not a filesystem permission or symlink guarantee. */
+export function createProfileIndexWriter(sourcePath: string): ProfileIndexWriter {
+    const boundSourcePath = path.resolve(sourcePath);
+    return Object.freeze({
+        sourcePath: boundSourcePath,
+        save: (profiles: Set<string>, packages: Array<{ name: string; profileCount: number }>, options: PersistentIndexOptions) =>
+            saveToPersistentIndex(boundSourcePath, profiles, packages, options),
+    });
+}
+
 /**
  * Get the path to the index file for a given source directory
  */
@@ -240,6 +259,7 @@ export async function saveToPersistentIndex(
     } catch (error: unknown) {
         await fs.unlink(temporaryPath).catch(() => undefined);
         logger.warn('[SDLoaderIndex] Could not save index', packageErrorMetadata(error));
+        throw error;
     }
 }
 

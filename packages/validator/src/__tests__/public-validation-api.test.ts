@@ -35,6 +35,33 @@ function makeDeps(): PublicValidationDeps & {
 }
 
 describe('public validation API helpers', () => {
+  it('rejects an incoherent public release/model before any dependency runs, including unrestricted input', async () => {
+    const deps = makeDeps();
+    await expect(validateAllResources(deps, [patient('bounded')], { fhirVersion: 'R4', selectedRelease: 'R5' }))
+      .rejects.toThrow('Selected validation release is incompatible with the validator model');
+    expect(deps.validate).not.toHaveBeenCalled();
+    expect(deps.validateBatch).not.toHaveBeenCalled();
+  });
+  it('preserves explicit unknown selection in a homogeneous batch and marks incomplete warnings invalid', async () => {
+    const resource = patient('bounded');
+    const deps = makeDeps();
+    const incomplete = { ...issue('custom-rule-applicability-unknown'), severity: 'warning' as const, details: { checkOutcome: 'unknown', validationComplete: false } };
+    deps.validateBatch.mockResolvedValue(new Map([[resource, [incomplete]]]));
+    const [result] = await validateAllResources(deps, [resource], { fhirVersion: 'R4B', selectedRelease: null });
+    expect(deps.validateBatch).toHaveBeenCalledWith([resource], expect.objectContaining({ fhirVersion: 'R4', selectedRelease: null }), expect.objectContaining({ publicVersion: 'R4B' }));
+    expect(result.isValid).toBe(false);
+  });
+
+  it('does not coalesce different selected releases, even with the same engine version', async () => {
+    const first = patient('known');
+    const second = patient('unknown');
+    const deps = makeDeps();
+    await validateAllResources(deps, [{ resource: first, fhirVersion: 'R4', selectedRelease: 'R4B' },
+      { resource: second, fhirVersion: 'R4', selectedRelease: null }]);
+    expect(deps.validateBatch).not.toHaveBeenCalled();
+    expect(deps.validate).toHaveBeenNthCalledWith(1, first, undefined, expect.objectContaining({ engineVersion: 'R4' }), undefined, undefined, 'R4B');
+    expect(deps.validate).toHaveBeenNthCalledWith(2, second, undefined, expect.objectContaining({ engineVersion: 'R4' }), undefined, undefined, null);
+  });
   it.each([
     ['warning', true],
     ['information', true],
@@ -116,12 +143,14 @@ describe('public validation API helpers', () => {
       expect.objectContaining({ publicVersion: 'R4', engineVersion: 'R4' }),
       undefined,
       undefined,
+      undefined,
     );
     expect(deps.validate).toHaveBeenNthCalledWith(
       2,
       second.resource,
       'http://example.org/B',
       expect.objectContaining({ publicVersion: 'R5', engineVersion: 'R5' }),
+      undefined,
       undefined,
       undefined,
     );

@@ -1,6 +1,6 @@
 import type { SlicingDiscriminator } from '../core/structure-definition-types.js';
 import type { SliceDefinition } from './slice-types.js';
-import { splitResolveDiscriminatorPath } from './slice-discriminator-path.js';
+import { splitResolveDiscriminatorPath, normalizeChoiceDiscriminatorPath } from './slice-discriminator-path.js';
 import { resolvedCodeDiscriminatorHasEvidence } from './slice-resolved-code-discriminator.js';
 import { getValueAtPath, valuesMatch } from './slice-utils.js';
 import { getTypeSpecsForDiscriminator, stripCanonicalVersion } from './slice-type-discriminator.js';
@@ -73,7 +73,7 @@ export function normalizeDiscriminatorPath(path: string): string {
 }
 
 export function normalizeChildConstraintPath(path: string): string {
-  return path.startsWith('$this.') ? path.slice('$this.'.length) : path;
+  return normalizeChoiceDiscriminatorPath(path.startsWith('$this.') ? path.slice('$this.'.length) : path, 'definition');
 }
 
 export function candidateChildConstraintPaths(childPath: string): string[] {
@@ -123,6 +123,19 @@ export function hasDirectDiscriminatorEvidence(slice: SliceDefinition, path: str
   if (slice.fixed && getValueAtPath(slice.fixed, path) !== undefined) return true;
   if (slice.pattern && getValueAtPath(slice.pattern, path) !== undefined) return true;
   return (slice.bindingCodes?.size ?? 0) > 0;
+}
+
+export function hasUnresolvedChildBindingDiscriminator(
+  slice: SliceDefinition,
+  discriminator: SlicingDiscriminator,
+): boolean {
+  if (discriminator.type !== 'value' && discriminator.type !== 'pattern') return false;
+  const paths = candidateChildConstraintPaths(normalizeChildConstraintPath(discriminator.path));
+  return paths.some(path => slice.childBindingValueSets?.has(path)
+    && !slice.childBindingCodes?.get(path)?.size
+    && !paths.some(candidate =>
+      (slice.childFixed && getChildConstraints(slice.childFixed, candidate).length > 0)
+      || (slice.childPatterns && getChildConstraints(slice.childPatterns, candidate).length > 0)));
 }
 
 export function isProhibitedEmptyWholeElementSlice(

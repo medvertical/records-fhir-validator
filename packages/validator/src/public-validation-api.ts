@@ -3,6 +3,7 @@ import type { FhirClientLike } from './core/profile-loader-utils.js';
 import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import { computeValidationIssueId } from '@records-fhir/validation-types';
 import { createSafeValidationFailureMessage } from './utils/validation-execution-failure.js';
+import { isCustomRuleReleaseModelCoherent, type CustomRuleSelectedRelease } from './custom-rules/applicability.js';
 
 type InternalFhirVersion = 'R4' | 'R5' | 'R6';
 
@@ -57,6 +58,7 @@ export interface PublicValidationRequest {
   resource: unknown;
   profileUrl?: string;
   fhirVersion?: PublicFhirVersion;
+  selectedRelease?: CustomRuleSelectedRelease | null;
   settings?: ValidationSettings;
   fhirClient?: FhirClientLike;
 }
@@ -66,6 +68,7 @@ export type PublicValidationInput = unknown | PublicValidationRequest;
 export interface PublicBatchValidationOptions {
   profileUrl?: string;
   fhirVersion?: PublicFhirVersion;
+  selectedRelease?: CustomRuleSelectedRelease | null;
   settings?: ValidationSettings;
   fhirClient?: FhirClientLike;
   maxConcurrency?: number;
@@ -90,6 +93,7 @@ export interface PublicValidationDeps {
     releaseContext: FhirReleaseContext,
     settings: ValidationSettings | undefined,
     fhirClient: FhirClientLike | undefined,
+    selectedRelease?: CustomRuleSelectedRelease | null,
   ): Promise<ValidationIssue[]>;
   validateBatch(
     resources: unknown[],
@@ -99,6 +103,7 @@ export interface PublicValidationDeps {
 }
 
 interface NormalizedValidationRequest extends Required<Pick<PublicValidationRequest, 'fhirVersion'>> {
+  selectedRelease?: CustomRuleSelectedRelease | null;
   resource: unknown;
   profileUrl?: string;
   settings?: ValidationSettings;
@@ -115,6 +120,7 @@ export function normalizeValidationRequests(
         resource: input.resource,
         profileUrl: input.profileUrl ?? options.profileUrl,
         fhirVersion: input.fhirVersion ?? options.fhirVersion ?? 'R4',
+        selectedRelease: input.selectedRelease === undefined ? options.selectedRelease : input.selectedRelease,
         settings: input.settings ?? options.settings,
         fhirClient: input.fhirClient ?? options.fhirClient,
       };
@@ -124,6 +130,7 @@ export function normalizeValidationRequests(
       resource: input,
       profileUrl: options.profileUrl,
       fhirVersion: options.fhirVersion ?? 'R4',
+      selectedRelease: options.selectedRelease,
       settings: options.settings,
       fhirClient: options.fhirClient,
     };
@@ -136,6 +143,9 @@ export async function validateAllResources(
   options: PublicBatchValidationOptions = {},
 ): Promise<PublicValidationResult[]> {
   const requests = normalizeValidationRequests(inputs, options);
+  if (requests.some(request => !isCustomRuleReleaseModelCoherent(request.selectedRelease, toInternalFhirVersion(request.fhirVersion)))) {
+    throw new Error('Selected validation release is incompatible with the validator model');
+  }
   if (requests.length === 0) {
     return [];
   }
@@ -167,6 +177,7 @@ function canUseBatchValidation(requests: NormalizedValidationRequest[]): boolean
   return requests.every((request) =>
     request.profileUrl === first.profileUrl &&
     request.fhirVersion === first.fhirVersion &&
+    request.selectedRelease === first.selectedRelease &&
     request.settings === first.settings &&
     request.fhirClient === first.fhirClient
   );
@@ -183,6 +194,7 @@ async function validateHomogeneousBatch(
   const resultMap = await deps.validateBatch(resources, {
     profileUrl: first.profileUrl,
     fhirVersion: releaseContext.engineVersion,
+    selectedRelease: first.selectedRelease,
     settings: first.settings,
     fhirClient: first.fhirClient,
     maxConcurrency: normalizeMaxConcurrency(options.maxConcurrency),
@@ -209,6 +221,7 @@ function validateIndividually(
           resolveFhirReleaseContext(request.fhirVersion),
           request.settings,
           request.fhirClient,
+          request.selectedRelease,
         );
         return createPublicValidationResult(request, index, issues);
       } catch (error) {
@@ -275,7 +288,8 @@ function createPublicValidationResult(
     ...metadata,
     profileUrl: request.profileUrl,
     fhirVersion: request.fhirVersion,
-    isValid: !issues.some(issue => issue.severity === 'error' || issue.severity === 'fatal'),
+    isValid: !issues.some(issue => issue.severity === 'error' || issue.severity === 'fatal'
+      || (typeof issue.details === 'object' && issue.details?.validationComplete === false)),
     issues,
   };
 }

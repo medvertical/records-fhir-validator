@@ -8,6 +8,7 @@ import {
   validateLocalCodeSystemCoding,
 } from '../terminology-external-code-system-rules';
 import { ValueSetCache } from '../../../validators/valueset-cache';
+import { buildCodeSystemResultIssues } from '../terminology-code-system-result-issues';
 
 const valueSetCache = new ValueSetCache();
 const validateExternalCodeSystems = (
@@ -19,6 +20,27 @@ const validateExternalCodeSystems = (
 ) => validateExternalWithCache(value, targetPath, validator, fhirVersion, sourceContext, valueSetCache);
 
 describe('terminology external CodeSystem rules', () => {
+  it('records a remote execution failure without rejecting the code or losing the requested edition', () => {
+    const version = 'http://snomed.info/sct/900000000000207008/version/20260701';
+    expect(buildCodeSystemResultIssues(
+      { system: 'http://snomed.info/sct', code: '53741008', version },
+      { valid: false, reason: 'server-failure', message: 'The terminology server request failed.' },
+      'Observation.code.coding', 0, true,
+    )).toMatchObject([{
+      code: 'terminology-server-failure', severity: 'warning',
+      path: 'Observation.code.coding[0].system',
+      details: { checkOutcome: 'execution-failure', codeSystemVersion: version },
+    }]);
+    expect(buildCodeSystemResultIssues(
+      { system: 'http://snomed.info/sct', code: '53741008', version },
+      { valid: false, reason: 'system-unresolvable', message: 'Requested edition is unavailable.' },
+      'Observation.code.coding', 0, true,
+    )).toMatchObject([{
+      code: 'terminology-codesystem-unresolvable', severity: 'warning',
+      details: { codeSystemVersion: version },
+    }]);
+  });
+
   const originalPackageCachePath = process.env.FHIR_PACKAGE_CACHE_PATH;
 
   beforeEach(() => {

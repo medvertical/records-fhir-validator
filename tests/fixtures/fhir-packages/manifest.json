@@ -1,14 +1,14 @@
 {
   "schema": "records.validator.portable-test-fixtures.v1",
   "scope": {
-    "purpose": "Original FHIR definitions required by portable terminology unit tests.",
+    "purpose": "Original FHIR definitions required by portable terminology and embedded-resource traversal tests.",
     "partialPackage": true,
     "testFixturesOnly": true,
     "originalDefinitionBytesChanged": false,
     "includesFullPackage": false,
     "includesDeclaredDependencyClosure": false,
     "runtimeTerminologyAuthorityClaimed": false,
-    "description": "This is a five-file test subset, not a complete FHIR package, release-quality report, terminology authority, or replacement for an installed package catalog. No package index, user cache, clinical examples, or downloads are included."
+    "description": "This is an twelve-file test subset, not a complete FHIR package, release-quality report, terminology authority, or replacement for an installed package catalog. No package index, user cache, clinical examples, or downloads are included."
   },
   "package": {
     "id": "hl7.fhir.r4.core",
@@ -63,6 +63,69 @@
       "sizeBytes": 1884,
       "resourceType": "CodeSystem",
       "canonical": "http://terminology.hl7.org/CodeSystem/security-source-type",
+      "resourceVersion": "4.0.1"
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/StructureDefinition-Bundle.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/StructureDefinition-Bundle.json",
+      "sha256": "8229e58c10f75e34f7ae3bc719109416d8e058d23a7abb8cd620122db68adda9",
+      "sizeBytes": 81552,
+      "resourceType": "StructureDefinition",
+      "canonical": "http://hl7.org/fhir/StructureDefinition/Bundle",
+      "resourceVersion": "4.0.1"
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/StructureDefinition-Parameters.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/StructureDefinition-Parameters.json",
+      "sha256": "e205eba9ea1d67a7d027db0a5acef11759d6e333f62e8509ea14ab956a3dfacf",
+      "sizeBytes": 19822,
+      "resourceType": "StructureDefinition",
+      "canonical": "http://hl7.org/fhir/StructureDefinition/Parameters",
+      "resourceVersion": "4.0.1"
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/StructureDefinition-Patient.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/StructureDefinition-Patient.json",
+      "sha256": "7f157a56ade5c6a9d4c8d13d676a0069a585412578f6a93f794baf9e8d0a4bd4",
+      "sizeBytes": 88208,
+      "resourceType": "StructureDefinition",
+      "canonical": "http://hl7.org/fhir/StructureDefinition/Patient",
+      "resourceVersion": "4.0.1"
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/StructureDefinition-Observation.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/StructureDefinition-Observation.json",
+      "sha256": "037032dfe299064946ecfc195e4b8b921f6fef6b31e9dc571131bf7fc138e633",
+      "sizeBytes": 119966,
+      "resourceType": "StructureDefinition",
+      "canonical": "http://hl7.org/fhir/StructureDefinition/Observation",
+      "resourceVersion": "4.0.1"
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/StructureDefinition-bp.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/StructureDefinition-bp.json",
+      "sha256": "a569733eecb08d43fdefa53cad5215bdf7687c799791eaf7ffc25966d128a5d4",
+      "sizeBytes": 197143,
+      "resourceType": "StructureDefinition",
+      "canonical": "http://hl7.org/fhir/StructureDefinition/bp",
+      "resourceVersion": "4.0.1"
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/StructureDefinition-vitalsigns.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/StructureDefinition-vitalsigns.json",
+      "sha256": "64f15d4ba7dc80b3e0820883b12165d694e75ae91a444affa90cce4150586b76",
+      "sizeBytes": 104636,
+      "resourceType": "StructureDefinition",
+      "canonical": "http://hl7.org/fhir/StructureDefinition/vitalsigns",
+      "resourceVersion": "4.0.1"
+    },
+    {
+      "path": "hl7.fhir.r4.core#4.0.1/package/StructureDefinition-Identifier.json",
+      "originalPath": "server/storage/profiles/bundled/hl7.fhir.r4.core#4.0.1/package/StructureDefinition-Identifier.json",
+      "sha256": "b5227053428f8a15e96effc2155b6a41a8e7850ca0c73f18a8332d22393ccf3f",
+      "sizeBytes": 18640,
+      "resourceType": "StructureDefinition",
+      "canonical": "http://hl7.org/fhir/StructureDefinition/Identifier",
       "resourceVersion": "4.0.1"
     }
   ]

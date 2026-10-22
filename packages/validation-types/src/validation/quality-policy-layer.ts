@@ -25,6 +25,10 @@ export const qualityRuleOverrideSchema = z.object({
 
 export const qualityPolicyLayerSchema = z.object({
   qualityAssessmentEnabled: z.boolean().optional(),
+  runConstraints: z.object({
+    qualityAssessmentRequired: z.boolean().optional(),
+    requiredPacks: z.array(packReferenceSchema).max(128).optional(),
+  }).strict().optional(),
   commonPacks: z.array(packReferenceSchema).max(128).optional(),
   localPacks: z.array(packReferenceSchema).max(128).optional(),
   disabledPacks: z.array(packReferenceSchema).max(128).optional(),

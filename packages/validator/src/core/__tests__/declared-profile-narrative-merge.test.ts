@@ -129,8 +129,8 @@ describe('declared profile narrative merge through the actual caller', () => {
     expect(JSON.stringify({ resource, primary })).toBe(before);
   });
 
-  it('returns the unchanged primary result when no additional canonical is declared', async () => {
-    const resource = { resourceType: 'Patient', meta: { profile: [FIRST_PROFILE, `${FIRST_PROFILE}|1.0.0`] } };
+  it('returns the unchanged primary result for repeated identical profile claims', async () => {
+    const resource = { resourceType: 'Patient', meta: { profile: [FIRST_PROFILE, FIRST_PROFILE] } };
     const primary = result([narrative('primary')]);
     const before = JSON.stringify({ resource, primary });
     const validateOne = vi.fn<ValidateOneFn>().mockResolvedValue(primary);

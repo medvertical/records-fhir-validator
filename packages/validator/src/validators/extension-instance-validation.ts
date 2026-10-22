@@ -15,6 +15,7 @@ import {
 import { getSubExtensionDefinitions } from './extension-subdefinition-loader.js';
 import { undefinedSubExtensionIssues } from './extension-subextension-url-rule.js';
 import type { ExtensionDefinition, ExtensionValidationContext } from './extension-types.js';
+import type { ProfileReferenceSource } from '../core/structure-definition-loader.js';
 import { filterDefinitionsForFhirVersion } from './extension-version-filter.js';
 
 export interface ExtensionInstanceValidationDependencies extends ExtensionInstanceRuleDependencies {
@@ -89,9 +90,10 @@ export function validateOwnSubExtensions(
   profileUrl: string,
   extensionPath: string,
   context: ExtensionValidationContext,
+  referencingProfile: ProfileReferenceSource | null = context.profileSD,
 ): Promise<ValidationIssue[]> {
   const definition: ExtensionDefinition = { url: profileUrl, path: 'Extension', min: 0, max: '*', profileUrl };
-  return validateNestedExtensions(dependencies, extension, definition, extensionPath, context, 0, true);
+  return validateNestedExtensions(dependencies, extension, definition, extensionPath, context, 0, true, referencingProfile);
 }
 
 async function validateNestedExtensions(
@@ -102,6 +104,7 @@ async function validateNestedExtensions(
   context: ExtensionValidationContext,
   depth: number,
   skipUniversalChecks = false,
+  referencingProfile?: ProfileReferenceSource | null,
 ): Promise<ValidationIssue[]> {
   if (extension.extension !== undefined && !Array.isArray(extension.extension)) return [];
   const nestedExtensions = Array.isArray(extension.extension) ? extension.extension : [];
@@ -126,7 +129,7 @@ async function validateNestedExtensions(
       context.fhirVersion,
       dependencies.sdLoader,
       dependencies.subExtensionDefinitionsCache,
-      definitionReferencingProfile(definition, context.profileSD),
+      referencingProfile === undefined ? definitionReferencingProfile(definition, context.profileSD) : referencingProfile,
     )
     : undefined;
   } catch (error: unknown) {

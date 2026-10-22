@@ -10,6 +10,7 @@ export async function resolveConfiguredRecordsBatchRuntime(
   resolveRuntime: (runtimeScopeKey?: string) => Promise<RecordsValidator>,
   options: RecordsBatchValidationOptions,
 ) {
+  const selectedRelease = options.selectedRelease;
   const prepared = preparePublicReleaseRuntime(
     options.fhirVersion ?? 'R4',
     options.runtimeScopeKey,
@@ -21,6 +22,7 @@ export async function resolveConfiguredRecordsBatchRuntime(
     options: {
       ...options,
       fhirVersion: prepared.context.engineVersion,
+      selectedRelease: selectedRelease === undefined ? prepared.context.publicVersion : selectedRelease,
       runtimeScopeKey: prepared.runtimeScopeKey,
       settings: settingsWithPublicRelease(options.settings, prepared.context),
     },

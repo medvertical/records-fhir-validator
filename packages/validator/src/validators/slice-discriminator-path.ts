@@ -12,6 +12,14 @@ export interface ResolveDiscriminatorStep {
 
 const RESOLVE_CALL = 'resolve()';
 
+/** Translate a choice cast to its SD path or its concrete FHIR JSON property. */
+export function normalizeChoiceDiscriminatorPath(path: string, representation: 'definition' | 'instance'): string {
+  return path.replace(/([A-Za-z][A-Za-z0-9]*)\.ofType\((?:FHIR\.)?([A-Za-z][A-Za-z0-9]*)\)/g,
+    (_match, property: string, type: string) => representation === 'definition'
+      ? `${property}[x]`
+      : `${property}${type[0].toUpperCase()}${type.slice(1)}`);
+}
+
 export function splitResolveDiscriminatorPath(path: string): ResolveDiscriminatorStep | null {
   const normalized = path.startsWith('$this.') ? path.slice('$this.'.length) : path;
   const marker = normalized.indexOf(RESOLVE_CALL);

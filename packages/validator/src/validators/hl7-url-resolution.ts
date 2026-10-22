@@ -51,12 +51,13 @@ export async function validateUnresolvedHl7Url(
   path: string,
   resourceType: string,
   profileUrl?: string,
-  directories: readonly string[] = resolveValueSetPackageDirectories(),
+  directories?: readonly string[],
 ): Promise<ValidationIssue | null> {
   if (typeof value !== 'string' || (type !== 'uri' && type !== 'url') || answersToOtherRule(path)) return null;
   const [url, version] = value.split('#')[0].split('|');
   if (!url.startsWith(CORE) && !url.startsWith(FHIRPATH) && !url.startsWith(TERMINOLOGY)) return null;
   if (url.startsWith(`${CORE}sid/`) || NAMED_URLS.has(url) || CROSS_VERSION_EXTENSION.test(url)) return null;
+  directories ??= resolveValueSetPackageDirectories();
   if (!await ownerInstalled(url, directories)) return null;
   if (await isPackageDefinedUrl(url, version, directories)) return null;
   return createValidationIssue({

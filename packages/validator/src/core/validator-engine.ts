@@ -1,4 +1,4 @@
-import { withProfileReferenceInventorySnapshot } from '../validation-dependency-snapshot.js';
+import { withBatchProfileMetadataCache, withProfileReferenceBatchSnapshot, withProfileReferenceInventorySnapshot } from '../validation-dependency-snapshot.js';
 import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import type { StructureDefinitionLoader } from './structure-definition-loader.js';
 
@@ -29,16 +29,12 @@ import type { MultiAspectValidateResult } from './multi-aspect-types.js';
 import { ProfileWarmupCoordinator } from './profile-warmup-coordinator.js';
 import { validateRecordsBundleEntries } from './validator-bundle-entry-runtime.js';
 import { ValidatorRuntimeControls } from './validator-runtime-controls.js';
+import type { CustomRuleSelectedRelease } from '../custom-rules/applicability.js';
+import { resolveTerminologySourceContext } from './validator-terminology-snapshot-context.js';
+import { withSnapshotProfileChecks } from './snapshot-profile-checks.js';
 
-export type { RecordsValidatorConfig } from './validator-engine-config.js';
+export type { RecordsValidatorConfig, ValidationContext } from './validator-engine-config.js';
 
-export interface ValidationContext {
-  resource: unknown;
-  resourceType: string;
-  profileUrl?: string;
-  fhirVersion: 'R4' | 'R5' | 'R6';
-  strictMode: boolean;
-}
 
 export class RecordsValidator {
   private config: RecordsValidatorConfig;
@@ -75,31 +71,36 @@ export class RecordsValidator {
   async validateBatch(
     resources: unknown[],
     options: BatchValidationOptions = {}
-  ): Promise<
-    Map<unknown, ValidationIssue[]> |
-    Map<unknown, MultiAspectValidateResult>
-  > {
-    return this.components.valuesetValidator.withSourceContext({ organizationId: options.organizationId, serverId: options.serverId, fhirVersion: options.fhirVersion ?? 'R4' }, async () => {
+  ): Promise<Map<unknown, ValidationIssue[]> | Map<unknown, MultiAspectValidateResult>> {
+    const validationOptions = { ...options, selectedRelease: options.selectedRelease === undefined ? options.fhirVersion ?? 'R4' : options.selectedRelease };
+    const terminologyContext = await resolveTerminologySourceContext(options);
+    return withSnapshotProfileChecks(terminologyContext, () => this.components.valuesetValidator.withSourceContext(terminologyContext, async () => {
     await this.waitForInitialization();
-    this.runtimeControls.applySettings(options.settings as ValidationSettings | undefined);
+    this.runtimeControls.applySettings(validationOptions.settings as ValidationSettings | undefined);
 
-    return validateRecordsBatch(resources, options, this.createBatchValidationContext());
-    });
+    const run = () => validateRecordsBatch(resources, validationOptions, this.createBatchValidationContext());
+    // A bounded capture may need a fresh run. Keep callback-bearing batches on
+    // per-resource captures while sharing only bounded package metadata.
+    return options.onResourceValidated || options.onEmbeddedResourceValidated || options.scheduleValidation
+      ? withBatchProfileMetadataCache(run) : withProfileReferenceBatchSnapshot(run);
+    }), resources);
   }
 
   async validateAspects(
     resource: unknown,
     options: BatchValidationOptions,
   ): Promise<MultiAspectValidateResult> {
-    return this.components.valuesetValidator.withSourceContext({ organizationId: options.organizationId, serverId: options.serverId, fhirVersion: options.fhirVersion ?? 'R4' }, async () => {
+    const validationOptions = { ...options, selectedRelease: options.selectedRelease === undefined ? options.fhirVersion ?? 'R4' : options.selectedRelease };
+    const terminologyContext = await resolveTerminologySourceContext(options);
+    return withSnapshotProfileChecks(terminologyContext, () => this.components.valuesetValidator.withSourceContext(terminologyContext, async () => {
     await this.waitForInitialization();
-    this.runtimeControls.applySettings(options.settings as ValidationSettings | undefined);
+    this.runtimeControls.applySettings(validationOptions.settings as ValidationSettings | undefined);
     return validateRecordsAspects(
       resource,
-      options,
+      validationOptions,
       this.createBatchValidationContext(),
     );
-    });
+    }), [resource]);
   }
 
   private createBatchValidationContext(): RecordsBatchValidationContext {
@@ -107,8 +108,8 @@ export class RecordsValidator {
       components: this.components,
       profileWarmupCoordinator: this.profileWarmupCoordinator,
       strictMode: this.config.strictMode || false,
-      validateSingleResource: (target, profileUrl, version, settings, client, orgId, serverId) =>
-        this.validate(target, profileUrl, version, settings, client, undefined, orgId, serverId),
+      validateSingleResource: (target, profileUrl, version, settings, client, orgId, serverId, selectedRelease) =>
+        this.validate(target, profileUrl, version, settings, client, undefined, orgId, serverId, 0, selectedRelease),
     });
   }
 
@@ -122,18 +123,21 @@ export class RecordsValidator {
     organizationId?: number,
     serverId?: number,
     recursionDepth: number = 0,
+    selectedRelease: CustomRuleSelectedRelease | null = fhirVersion,
   ): Promise<ValidationIssue[]> {
-    return withProfileReferenceInventorySnapshot(() => this.components.valuesetValidator.withSourceContext({ organizationId, serverId, fhirVersion }, async () => {
+    const terminologyContext = await resolveTerminologySourceContext({ organizationId, serverId, fhirVersion, settings });
+    return withSnapshotProfileChecks(terminologyContext, () => withProfileReferenceInventorySnapshot(() => this.components.valuesetValidator.withSourceContext(terminologyContext, async () => {
     return this.validateWithInput(
-      { resource, profileUrl, fhirVersion, settings, fhirClient, referenceResolver, organizationId, serverId },
+      { resource, profileUrl, fhirVersion, selectedRelease, settings, fhirClient, referenceResolver, organizationId, serverId },
       recursionDepth,
     );
-    }));
+    })), [resource]);
   }
 
   private async validateWithInput(
     input: RecordsSingleResourceValidationInput,
     recursionDepth: number,
+    options: { skipEmbeddedValidation?: boolean; skipBundleEntries?: boolean } = {},
     conformanceSession?: SingleResourceConformanceFactory,
   ): Promise<ValidationIssue[]> {
     await this.waitForInitialization();
@@ -160,10 +164,13 @@ export class RecordsValidator {
       strictMode: this.config.strictMode || false,
       createProfileConformance: conformanceInput => conformance(conformanceInput, recursionDepth),
       validateBundleEntriesIfNeeded: (target, version) =>
-        this.validateBundleEntriesIfNeeded(target, version, input, conformance),
+        options.skipEmbeddedValidation || options.skipBundleEntries
+          ? Promise.resolve([]) : this.validateBundleEntriesIfNeeded(target, version, recursionDepth, input, conformance),
       ...createSingleResourceRecursiveValidation(input, {
         recursionDepth, maxDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
-        validate: (embeddedInput, nextDepth) => this.validateWithInput(embeddedInput, nextDepth, conformance),
+        skipEmbeddedValidation: options.skipEmbeddedValidation,
+        validate: (embeddedInput, nextDepth, skipEmbeddedValidation = false) =>
+          this.validateWithInput(embeddedInput, nextDepth, { skipEmbeddedValidation }, conformance),
       }),
     });
   }
@@ -171,13 +178,14 @@ export class RecordsValidator {
   private async validateBundleEntriesIfNeeded(
     resource: unknown,
     fhirVersion: 'R4' | 'R5' | 'R6',
-    input?: RecordsSingleResourceValidationInput,
+    recursionDepth: number,
+    input: RecordsSingleResourceValidationInput,
     conformance?: SingleResourceConformanceFactory,
   ): Promise<ValidationIssue[]> {
-    if (!isFhirResource(resource) || resource.resourceType !== 'Bundle' || !Array.isArray(resource.entry)) {
+    if (recursionDepth >= RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH || !isFhirResource(resource) || resource.resourceType !== 'Bundle' || !Array.isArray(resource.entry)) {
       return [];
     }
-    return this.validateBundleEntries(resource, fhirVersion, 1, input, conformance);
+    return this.validateBundleEntries(resource, fhirVersion, recursionDepth, input, conformance);
   }
 
   private static readonly BUNDLE_ENTRY_MAX_DEPTH = 3;
@@ -215,18 +223,16 @@ export class RecordsValidator {
       snapshotGenerator: this.components.snapshotGenerator,
       maxDepth: RecordsValidator.BUNDLE_ENTRY_MAX_DEPTH,
       structuralExecutor: this.components.structuralExecutor,
-      validateResource: (resource, profileUrl, version, referenceResolver, bundleCanonicalResolver) =>
+      validateResource: (resource, profileUrl, version, referenceResolver, bundleCanonicalResolver, nextDepth, skipEmbeddedValidation) =>
         this.validateWithInput(
           { ...input, resource, profileUrl, fhirVersion: version, referenceResolver, bundleCanonicalResolver,
             enclosingBundle: bundle, containingResource: resource },
-          0, conformance,
+          nextDepth, { skipEmbeddedValidation, skipBundleEntries: true }, conformance,
         ),
     });
   }
 
-  async validateMetadata(
-    resource: unknown
-  ): Promise<ValidationIssue[]> {
+  async validateMetadata(resource: unknown): Promise<ValidationIssue[]> {
     await this.waitForInitialization();
     return this.components.directAspectValidation.validateMetadata(resource);
   }

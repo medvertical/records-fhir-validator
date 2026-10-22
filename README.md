@@ -48,7 +48,7 @@ jobs:
 For production CI, pin an immutable patch tag:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.8.0
+- uses: medvertical/records-fhir-validator@v0.9.18
   with:
     paths: resources/**/*.json
     profile-url: http://hl7.org/fhir/StructureDefinition/Patient
@@ -61,7 +61,7 @@ Action pinning:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Latest stable in current major | `medvertical/records-fhir-validator@v0` | Floating tag, force-moved on stable releases only |
-| Exact released version | `medvertical/records-fhir-validator@v0.8.0` | Immutable consumer tag |
+| Exact released version | `medvertical/records-fhir-validator@v0.9.18` | Immutable consumer tag |
 | Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | Best for audit and forensics |
 
 The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
@@ -89,7 +89,7 @@ within the dependency's existing range.
 ```
 
 ```sh
-npm install @records-fhir/validator@0.8.0 @records-fhir/validation-types@0.1.13
+npm install @records-fhir/validator@0.9.18 @records-fhir/validation-types@0.1.14
 ```
 
 Run the CLI against one file or a folder:
@@ -166,8 +166,8 @@ includes `file`, `resourceType`, `profileUrl`, and `issues`. With
 
 ## What Is Included
 
-- `@records-fhir/validator` 0.8.0 - Apache-2.0 validation engine.
-- `@records-fhir/validation-types` 0.1.13 - Apache-2.0 validation-domain types.
+- `@records-fhir/validator` 0.9.18 - Apache-2.0 validation engine.
+- `@records-fhir/validation-types` 0.1.14 - Apache-2.0 validation-domain types.
 - Composite GitHub Action at repository root.
 - Standalone examples under `packages/validator/examples/`.
 - Boundary audit and smoke-test scripts.
@@ -212,14 +212,14 @@ use the documented R4 maintenance adapter.
 
 ## Validation Evidence
 
-Historical evidence set: `validator-archived-evidence-2026-09-09`. Explicitly pinned tracked reports, preserving their original recorded outcomes and exclusions. These measurements do not certify the currently exported package versions.
+Historical evidence set: `validator-archived-evidence-2026-09-09`. Explicitly pinned tracked reports, preserving their original recorded outcomes and exclusions. These measurements do not certify the currently exported package versions. The 0.8.0 current-release acceptance remains historical. A separate, explicitly pinned 0.9.18 SDK measurement supplies current release acceptance without relabeling historical lanes.
 
 The explicit report selection and SHA-256 hashes are in [`release/validator-evidence.json`](./release/validator-evidence.json).
 The exporting package versions are listed above. They are not the measured versions of these historical runs.
 
 ### Current candidate release acceptance
 
-Candidate validator 0.8.0; validation-types 0.1.13.
+Candidate validator 0.9.18; validation-types 0.1.14.
 Scoped R4 JSON acceptance: **390/390**; unchanged raw criterion: **387/390**, 3 raw failures, 0 skips, 0 runtime errors.
 MII clean precision: **442/442**, with **110 explicit exclusions**. This is clean-corpus precision, not reference parity or site certification.
 Selection and authenticated report inputs: [`conformance-results/validator-current-release.json`](./conformance-results/validator-current-release.json).
@@ -291,7 +291,7 @@ Oracle identities are declared per lane; unrecorded executable versions remain u
 
 <details><summary>Explicitly selected evidence artifacts</summary>
 
-- [`conformance-results/baseline-passing.json`](./conformance-results/baseline-passing.json)
+- [`conformance-results/baseline-passing-archived-0333c754.json`](./conformance-results/baseline-passing-archived-0333c754.json)
 - [`conformance-results/baseline-backlog-discovery-2026-05-03.json`](./conformance-results/baseline-backlog-discovery-2026-05-03.json)
 - [`conformance-results/hl7-validator-testkit-2026-05-20.json`](./conformance-results/hl7-validator-testkit-2026-05-20.json)
 - [`conformance-results/report-2026-07-01.json`](./conformance-results/report-2026-07-01.json)
@@ -317,14 +317,63 @@ Oracle identities are declared per lane; unrecorded executable versions remain u
 - [`conformance-results/public-parity-triage-2026-09-30.json`](./conformance-results/public-parity-triage-2026-09-30.json)
 - [`conformance-results/validator-release-acceptance-2026-10-05-g2.json`](./conformance-results/validator-release-acceptance-2026-10-05-g2.json)
 - [`conformance-results/validator-release-acceptance-2026-10-05-g3.json`](./conformance-results/validator-release-acceptance-2026-10-05-g3.json)
+- [`conformance-results/validator-release-inventory-loop112-g6-2026-10-06.json`](./conformance-results/validator-release-inventory-loop112-g6-2026-10-06.json)
+- [`conformance-results/validator-r4-raw-loop112-g6-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop112-g6-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-receipts-loop112-g6-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop112-g6-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-acceptance-loop112-g6-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop112-g6-2026-10-06.json)
+- [`conformance-results/validator-r4-measurement-origin-loop112-g6-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop112-g6-2026-10-06.json)
+- [`conformance-results/validator-mii-clean-loop112-g6-2026-10-06.json`](./conformance-results/validator-mii-clean-loop112-g6-2026-10-06.json)
+- [`conformance-results/validator-mii-measurement-origin-loop112-g6-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop112-g6-2026-10-06.json)
+- [`conformance-results/validator-release-inventory-loop113-g7-2026-10-06.json`](./conformance-results/validator-release-inventory-loop113-g7-2026-10-06.json)
+- [`conformance-results/validator-r4-raw-loop113-g7-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop113-g7-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-receipts-loop113-g7-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop113-g7-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-acceptance-loop113-g7-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop113-g7-2026-10-06.json)
+- [`conformance-results/validator-r4-measurement-origin-loop113-g7-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop113-g7-2026-10-06.json)
+- [`conformance-results/validator-mii-clean-loop113-g7-2026-10-06.json`](./conformance-results/validator-mii-clean-loop113-g7-2026-10-06.json)
+- [`conformance-results/validator-mii-measurement-origin-loop113-g7-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop113-g7-2026-10-06.json)
+- [`conformance-results/validator-release-inventory-loop114-g8-2026-10-06.json`](./conformance-results/validator-release-inventory-loop114-g8-2026-10-06.json)
+- [`conformance-results/validator-r4-raw-loop114-g8-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop114-g8-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-receipts-loop114-g8-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop114-g8-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-acceptance-loop114-g8-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop114-g8-2026-10-06.json)
+- [`conformance-results/validator-r4-measurement-origin-loop114-g8-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop114-g8-2026-10-06.json)
+- [`conformance-results/validator-mii-clean-loop114-g8-2026-10-06.json`](./conformance-results/validator-mii-clean-loop114-g8-2026-10-06.json)
+- [`conformance-results/validator-mii-measurement-origin-loop114-g8-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop114-g8-2026-10-06.json)
+- [`conformance-results/validator-current-release-loop116-prior-g8-2026-10-06.json.gz`](./conformance-results/validator-current-release-loop116-prior-g8-2026-10-06.json.gz)
+- [`conformance-results/validator-evidence-loop116-prior-g8-2026-10-06.json.gz`](./conformance-results/validator-evidence-loop116-prior-g8-2026-10-06.json.gz)
+- [`conformance-results/validator-release-inventory-loop116-g9-2026-10-06.json`](./conformance-results/validator-release-inventory-loop116-g9-2026-10-06.json)
+- [`conformance-results/validator-r4-raw-loop116-g9-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop116-g9-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-receipts-loop116-g9-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop116-g9-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-acceptance-loop116-g9-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop116-g9-2026-10-06.json)
+- [`conformance-results/validator-r4-measurement-origin-loop116-g9-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop116-g9-2026-10-06.json)
+- [`conformance-results/validator-mii-clean-loop116-g9-2026-10-06.json`](./conformance-results/validator-mii-clean-loop116-g9-2026-10-06.json)
+- [`conformance-results/validator-mii-measurement-origin-loop116-g9-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop116-g9-2026-10-06.json)
+- [`conformance-results/validator-current-release-loop117-prior-g9-2026-10-06.json.gz`](./conformance-results/validator-current-release-loop117-prior-g9-2026-10-06.json.gz)
+- [`conformance-results/validator-evidence-loop117-prior-g9-2026-10-06.json.gz`](./conformance-results/validator-evidence-loop117-prior-g9-2026-10-06.json.gz)
+- [`conformance-results/validator-release-inventory-loop117-g10-2026-10-06.json`](./conformance-results/validator-release-inventory-loop117-g10-2026-10-06.json)
+- [`conformance-results/validator-r4-raw-loop117-g10-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop117-g10-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-receipts-loop117-g10-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop117-g10-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-acceptance-loop117-g10-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop117-g10-2026-10-06.json)
+- [`conformance-results/validator-r4-measurement-origin-loop117-g10-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop117-g10-2026-10-06.json)
+- [`conformance-results/validator-mii-clean-loop117-g10-2026-10-06.json`](./conformance-results/validator-mii-clean-loop117-g10-2026-10-06.json)
+- [`conformance-results/validator-mii-measurement-origin-loop117-g10-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop117-g10-2026-10-06.json)
+- [`conformance-results/validator-current-release-loop118-prior-g10-2026-10-06.json.gz`](./conformance-results/validator-current-release-loop118-prior-g10-2026-10-06.json.gz)
+- [`conformance-results/validator-evidence-loop118-prior-g10-2026-10-06.json.gz`](./conformance-results/validator-evidence-loop118-prior-g10-2026-10-06.json.gz)
+- [`conformance-results/validator-release-inventory-loop118-g11-2026-10-06.json`](./conformance-results/validator-release-inventory-loop118-g11-2026-10-06.json)
+- [`conformance-results/validator-r4-raw-loop118-g11-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop118-g11-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-receipts-loop118-g11-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop118-g11-2026-10-06.json.gz)
+- [`conformance-results/validator-r4-acceptance-loop118-g11-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop118-g11-2026-10-06.json)
+- [`conformance-results/validator-r4-measurement-origin-loop118-g11-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop118-g11-2026-10-06.json)
+- [`conformance-results/validator-mii-clean-loop118-g11-2026-10-06.json`](./conformance-results/validator-mii-clean-loop118-g11-2026-10-06.json)
+- [`conformance-results/validator-mii-measurement-origin-loop118-g11-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop118-g11-2026-10-06.json)
 - [`conformance-results/validator-current-release.json`](./conformance-results/validator-current-release.json)
-- [`conformance-results/validator-release-inventory-loop111-g1-2026-10-05.json`](./conformance-results/validator-release-inventory-loop111-g1-2026-10-05.json)
-- [`conformance-results/validator-r4-raw-loop111-g1-2026-10-05.json.gz`](./conformance-results/validator-r4-raw-loop111-g1-2026-10-05.json.gz)
-- [`conformance-results/validator-r4-receipts-loop111-g1-2026-10-05.json.gz`](./conformance-results/validator-r4-receipts-loop111-g1-2026-10-05.json.gz)
-- [`conformance-results/validator-r4-acceptance-loop111-g1-2026-10-05.json`](./conformance-results/validator-r4-acceptance-loop111-g1-2026-10-05.json)
-- [`conformance-results/validator-r4-measurement-origin-loop111-g1-2026-10-05.json`](./conformance-results/validator-r4-measurement-origin-loop111-g1-2026-10-05.json)
-- [`conformance-results/validator-mii-clean-loop111-g1-2026-10-05.json`](./conformance-results/validator-mii-clean-loop111-g1-2026-10-05.json)
-- [`conformance-results/validator-mii-measurement-origin-loop111-g1-2026-10-05.json`](./conformance-results/validator-mii-measurement-origin-loop111-g1-2026-10-05.json)
+- [`conformance-results/validator-release-inventory-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-release-inventory-0.9.18-2026-10-22-g4.json)
+- [`conformance-results/validator-r4-raw-0.9.18-2026-10-22-g4.json.gz`](./conformance-results/validator-r4-raw-0.9.18-2026-10-22-g4.json.gz)
+- [`conformance-results/validator-r4-receipts-0.9.18-2026-10-22-g4.json.gz`](./conformance-results/validator-r4-receipts-0.9.18-2026-10-22-g4.json.gz)
+- [`conformance-results/validator-r4-acceptance-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-r4-acceptance-0.9.18-2026-10-22-g4.json)
+- [`conformance-results/validator-r4-measurement-origin-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-r4-measurement-origin-0.9.18-2026-10-22-g4.json)
+- [`conformance-results/validator-mii-clean-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-mii-clean-0.9.18-2026-10-22-g4.json)
+- [`conformance-results/validator-mii-measurement-origin-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-mii-measurement-origin-0.9.18-2026-10-22-g4.json)
+- [`conformance-results/validator-isolated-quality-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-isolated-quality-0.9.18-2026-10-22-g4.json)
 
 </details>
 

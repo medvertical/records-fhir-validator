@@ -41,7 +41,7 @@ export function buildConstraintViolationIssue(
     : undefined;
   const escalationNote = escalateToError ? ' [escalated from warning in strict mode]' : '';
 
-  return createValidationIssue({
+  const issue = createValidationIssue({
     code: issueCode,
     path: isDom6 ? `${elementPath.replace(/\.$/, '')}.text` : elementPath,
     resourceType: resource.resourceType,
@@ -55,7 +55,9 @@ export function buildConstraintViolationIssue(
       constraintKey: constraint.key,
       originalSeverity: constraint.severity,
       escalated: escalateToError,
+      ...(constraint.source ? { source: constraint.source } : {}),
     },
     severityOverride,
   });
+  return constraint.source ? { ...issue, definitionProfile: constraint.source } : issue;
 }

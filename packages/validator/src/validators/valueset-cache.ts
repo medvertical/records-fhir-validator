@@ -13,6 +13,7 @@ import { canonicalPinCacheKey } from '../package/canonical-pin-scope.js';
 import type { ValueSet, CodeSystem } from './valueset-types.js';
 import { logger } from '../logger.js';
 import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
+import { CollectableDefinitionCache } from '../cache/collectable-definition-cache.js';
 import { captureValidationDependencyCacheHit } from '../validation-dependency-snapshot.js';
 
 // ============================================================================
@@ -52,7 +53,7 @@ export class ValueSetCache {
         return this.registeredResources.get(type, key, this.sourceContexts.context()?.fhirVersion);
     }
 
-    private read<T>(cache: BoundedLruCache<string, T>, key: string, domain: string): T | undefined {
+    private read<T>(cache: Pick<BoundedLruCache<string, T>, 'get'>, key: string, domain: string): T | undefined {
         const scopedKey = this.contextKey(key);
         return captureValidationDependencyCacheHit(domain, scopedKey, () => {
             const scoped = cache.get(scopedKey);
@@ -61,7 +62,7 @@ export class ValueSetCache {
         });
     }
 
-    private has<T>(cache: BoundedLruCache<string, T>, key: string): boolean {
+    private has<T>(cache: Pick<BoundedLruCache<string, T>, 'has'>, key: string): boolean {
         return cache.has(this.contextKey(key)) || (this.sourceContexts.permitsPlainCache()
             && cache.has(canonicalPinCacheKey(this.plainKey(key))));
     }
@@ -74,17 +75,17 @@ export class ValueSetCache {
     }
 
     private valueSetCache: BoundedLruCache<string, Set<string>>;
-    private codeSystemCache: BoundedLruCache<string, CodeSystem>;
-    private valueSetFileCache: BoundedLruCache<string, ValueSet | null>;
-    private codeSystemFileCache: BoundedLruCache<string, CodeSystem | null>;
+    private codeSystemCache: CollectableDefinitionCache<CodeSystem>;
+    private valueSetFileCache: CollectableDefinitionCache<ValueSet>;
+    private codeSystemFileCache: CollectableDefinitionCache<CodeSystem>;
     private serverExpansionCache: BoundedLruCache<string, ServerExpansionEntry>;
 
     constructor(maxEntriesPerDomain: number = 5_000) {
         this.registeredResources = new RegisteredTerminologyResources(maxEntriesPerDomain);
         this.valueSetCache = new BoundedLruCache(maxEntriesPerDomain);
-        this.codeSystemCache = new BoundedLruCache(maxEntriesPerDomain);
-        this.valueSetFileCache = new BoundedLruCache(maxEntriesPerDomain);
-        this.codeSystemFileCache = new BoundedLruCache(maxEntriesPerDomain);
+        this.codeSystemCache = new CollectableDefinitionCache(maxEntriesPerDomain);
+        this.valueSetFileCache = new CollectableDefinitionCache(maxEntriesPerDomain);
+        this.codeSystemFileCache = new CollectableDefinitionCache(maxEntriesPerDomain);
         this.serverExpansionCache = new BoundedLruCache(maxEntriesPerDomain);
     }
 
@@ -122,7 +123,7 @@ export class ValueSetCache {
 
     setValueSetFile(url: string, valueSet: ValueSet | null): void {
         url = this.contextKey(url);
-        this.valueSetFileCache.set(url, valueSet);
+        this.valueSetFileCache.set(url, valueSet, this.collectable(valueSet));
     }
 
     // -------------------------------------------------------------------------
@@ -137,12 +138,12 @@ export class ValueSetCache {
     getCodeSystem(systemUrl: string): CodeSystem | undefined {
         const registered = this.registered('CodeSystem', systemUrl) as CodeSystem | undefined;
         if (registered) return captureValidationDependencyCacheHit('codesystem', this.contextKey(systemUrl), () => registered);
-        return this.read(this.codeSystemCache, systemUrl, 'codesystem');
+        return this.read(this.codeSystemCache, systemUrl, 'codesystem') ?? undefined;
     }
 
     setCodeSystem(systemUrl: string, codeSystem: CodeSystem): void {
         systemUrl = this.contextKey(systemUrl);
-        this.codeSystemCache.set(systemUrl, codeSystem);
+        this.codeSystemCache.set(systemUrl, codeSystem, this.collectable(codeSystem));
     }
 
     hasCodeSystemFile(url: string): boolean {
@@ -158,7 +159,13 @@ export class ValueSetCache {
 
     setCodeSystemFile(url: string, codeSystem: CodeSystem | null): void {
         url = this.contextKey(url);
-        this.codeSystemFileCache.set(url, codeSystem);
+        this.codeSystemFileCache.set(url, codeSystem, this.collectable(codeSystem));
+    }
+
+    private collectable(resource: ValueSet | CodeSystem | null): boolean {
+        // Only a closed immutable source can safely reload an evicted definition with identical content.
+        return resource !== null && Object.isFrozen(resource)
+            && !!this.sourceContexts.context()?.terminologySnapshotSha256;
     }
 
     // -------------------------------------------------------------------------

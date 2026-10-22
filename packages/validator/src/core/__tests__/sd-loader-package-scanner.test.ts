@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { scanCacheDirectory, scanPackageDirectory } from '../sd-loader-package-scanner';
+import { createProfileIndexWriter } from '../sd-loader-persistent-index';
 
 describe('sd-loader-package-scanner', () => {
   const tempDirs: string[] = [];
@@ -55,7 +56,9 @@ describe('sd-loader-package-scanner', () => {
 
     const externalProfile = 'http://example.org/fhir/StructureDefinition/external-profile';
     const firstProfiles = new Set<string>([externalProfile]);
-    const firstScanned = await scanCacheDirectory(root, firstProfiles);
+    const firstScanned = await scanCacheDirectory(root, firstProfiles, {
+      indexWriter: createProfileIndexWriter(root),
+    });
 
     expect(firstScanned).toBe(1);
     expect(firstProfiles.has(latestProfile)).toBe(true);
@@ -95,7 +98,9 @@ describe('sd-loader-package-scanner', () => {
       'StructureDefinition-copied.json',
       profile,
     );
-    await scanCacheDirectory(buildRoot, new Set<string>());
+    await scanCacheDirectory(buildRoot, new Set<string>(), {
+      indexWriter: createProfileIndexWriter(buildRoot),
+    });
     await cp(buildRoot, runtimeRoot, { recursive: true });
 
     const runtimePackageDir = path.join(runtimeRoot, 'example.fhir.package#1.0.0');
@@ -122,7 +127,9 @@ describe('sd-loader-package-scanner', () => {
       'StructureDefinition-first.json',
       'http://example.org/fhir/StructureDefinition/first-profile',
     );
-    await scanCacheDirectory(root, new Set<string>());
+    await scanCacheDirectory(root, new Set<string>(), {
+      indexWriter: createProfileIndexWriter(root),
+    });
 
     const secondProfile = 'http://example.org/fhir/StructureDefinition/second-profile';
     await writeStructureDefinition(
@@ -132,11 +139,14 @@ describe('sd-loader-package-scanner', () => {
       secondProfile,
     );
     await writePackageManifest(root, 'example.fhir.package#1.0.0', 'updated package metadata');
+    const indexPath = path.join(root, 'sdloader-profile-index.json');
+    const staleIndexBytes = await readFile(indexPath, 'utf-8');
 
     const rescannedProfiles = new Set<string>();
     await scanCacheDirectory(root, rescannedProfiles);
 
     expect(rescannedProfiles.has(secondProfile)).toBe(true);
+    expect(await readFile(indexPath, 'utf-8')).toBe(staleIndexBytes);
   });
 });
 

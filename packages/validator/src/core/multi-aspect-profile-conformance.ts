@@ -8,16 +8,11 @@ import type { ProfileConformanceCheck } from '../validators/sd-fhirpath-profile-
 import type { MultiAspectDeps } from './multi-aspect-dependencies.js';
 import type { ValidateOneFn } from './multi-aspect-types.js';
 import { profileResourceTypeApplicability } from './profile-resource-type.js';
+import { logger } from '../logger.js';
 
 // Bundle entries are validated one level down already, and document chains
 // run deep (eCR: Composition → Encounter → PractitionerRole → Practitioner).
 const CONFORMANCE_MAX_DEPTH = 5;
-
-type ResourceVerdicts = WeakMap<object, Map<string, boolean>>;
-type ScopeVerdicts = WeakMap<object, WeakMap<object, ResourceVerdicts>>;
-const verdictsBySession = new WeakMap<ValidateOneFn, ScopeVerdicts>();
-const NO_ENCLOSING_BUNDLE = {};
-const NO_CONTAINING_RESOURCE = {};
 
 interface ProfileConformanceScope {
   sdLoader: MultiAspectDeps['sdLoader'];
@@ -37,8 +32,8 @@ interface ProfileConformanceScope {
  * DocumentReferences to conform to IHE MHD's profile without declaring it,
  * and a KBV Provenance fails its profile when the Condition it points at
  * fails its own. Only errors count against conformance. The depth bound
- * stops profiles and references that require each other; verdicts are kept
- * per validation session and depth, as a deeper one saw fewer of the targets.
+ * stops profiles and references that require each other. Each question
+ * rechecks dynamic dependencies even if an earlier call was complete.
  */
 export function createProfileConformanceCheck(scope: ProfileConformanceScope): ProfileConformanceCheck | undefined {
   if (scope.recursionDepth >= CONFORMANCE_MAX_DEPTH) {
@@ -51,11 +46,9 @@ export function createProfileConformanceCheck(scope: ProfileConformanceScope): P
       return undefined;
     };
   }
-  const sessionVerdicts = scopedProfileVerdicts(scope);
-
-  const key = (profileUrl: string) => `${scope.fhirVersion}|${scope.recursionDepth}|${profileUrl}`;
   return async (resource, profileUrl, referencingProfile = scope.referencingProfile) => {
     let profile: StructureDefinition | null;
+    const loadStartedAt = performance.now();
     try {
       if (referencingProfile && scope.sdLoader.loadReferencedProfile) {
         profile = await scope.sdLoader.loadReferencedProfile(profileUrl, referencingProfile, scope.fhirVersion);
@@ -67,11 +60,14 @@ export function createProfileConformanceCheck(scope: ProfileConformanceScope): P
       }
     } catch (error: unknown) {
       return reportProfileConformanceFailure(scope, profileUrl, error, 'profile-load-error');
+    } finally {
+      const durationMs = performance.now() - loadStartedAt;
+      if (durationMs >= 500) logger.warn('[ProfileConformance] Slow dependency resolution', {
+        ...profileCanonicalMetadata(profileUrl), durationMs, recursionDepth: scope.recursionDepth, fhirVersion: scope.fhirVersion,
+      });
     }
-    if (profile?.version && profileDefinitionSourceKey(profile)) profileUrl = `${profile.url}|${profile.version}`;
-    const verdictKey = `${key(profileUrl)}|${profile ? profileDefinitionSourceKey(profile) ?? '' : ''}`;
-    const known = sessionVerdicts.get(resource)?.get(verdictKey);
-    if (known !== undefined) return known;
+    const sourceKey = profile ? profileDefinitionSourceKey(profile) : undefined;
+    if (profile?.version && sourceKey) profileUrl = `${profile.url}|${profile.version}`;
     if (!profile) {
       scope.onIncomplete?.(createValidationInfoIssue(
         'profile', 'profile-conformance-incomplete',
@@ -102,7 +98,7 @@ export function createProfileConformanceCheck(scope: ProfileConformanceScope): P
         false,
         scope.containingResource,
         true,
-      ));
+      ), sourceKey);
     } catch (error: unknown) {
       return reportProfileConformanceFailure(scope, profileUrl, error, 'profile-evaluation-error');
     }
@@ -136,31 +132,8 @@ export function createProfileConformanceCheck(scope: ProfileConformanceScope): P
     }
     const conforms = !result.aspects.some(aspect =>
       aspect.issues.some(issue => issue.severity === 'error' || issue.severity === 'fatal'));
-    sessionVerdicts.set(resource, (sessionVerdicts.get(resource) ?? new Map()).set(verdictKey, conforms));
     return conforms;
   };
-}
-
-/** The same resource can resolve different reference targets in each enclosing scope. */
-function scopedProfileVerdicts(scope: ProfileConformanceScope): ResourceVerdicts {
-  let scopes = verdictsBySession.get(scope.validateOne);
-  if (!scopes) {
-    scopes = new WeakMap();
-    verdictsBySession.set(scope.validateOne, scopes);
-  }
-  const bundle = scope.enclosingBundle ?? NO_ENCLOSING_BUNDLE;
-  let containers = scopes.get(bundle);
-  if (!containers) {
-    containers = new WeakMap();
-    scopes.set(bundle, containers);
-  }
-  const container = scope.containingResource ?? NO_CONTAINING_RESOURCE;
-  let verdicts = containers.get(container);
-  if (!verdicts) {
-    verdicts = new WeakMap();
-    containers.set(container, verdicts);
-  }
-  return verdicts;
 }
 
 function isIncompleteConformanceIssue(issue: ValidationIssue): boolean {

@@ -16,6 +16,7 @@ import { ValueSetCache } from './valueset-cache.js';
 import { SDFHIRPathConstraintRunner } from './sd-fhirpath-constraint-runner.js';
 import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope.js';
 import type { ProfileConformanceLookup } from './sd-fhirpath-profile-conformance.js';
+import type { ReferenceResolver } from './slice-types.js';
 
 export { evaluateSpecialisedRootConstraint } from './sd-fhirpath-specialised-root-constraints.js';
 
@@ -40,6 +41,7 @@ export interface SDFHIRPathContext {
     terminologyResolver?: FHIRPathTerminologyResolver;
     /** Conformance to the profiles conformsTo() names, established beforehand. */
     profileConformance?: ProfileConformanceLookup;
+    referenceResolver?: ReferenceResolver | null;
 }
 
 export class SDFHIRPathExecutor {
@@ -85,6 +87,7 @@ export class SDFHIRPathExecutor {
             bundleResources ?? bundle,
             this.valueSetCache,
             context.profileConformance,
+            context.referenceResolver,
         );
         const userInvocationTable = createSDFHIRPathInvocationTable(fhirPathContext);
         const evaluationScope: SDFHIRPathEvaluationScope = {
@@ -97,6 +100,7 @@ export class SDFHIRPathExecutor {
             focusResource: context.focusResource,
             terminologyResolver,
             userInvocationTable,
+            referenceResolver: context.referenceResolver,
         };
 
         const matchResult = this.elementMatcher.match(resource, structureDef);

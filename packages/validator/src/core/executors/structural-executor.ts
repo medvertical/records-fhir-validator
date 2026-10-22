@@ -4,6 +4,7 @@ import type { TerminologyResolutionConfig } from '../../validators/valueset-vali
 import type { StructureDefinitionLoader } from '../structure-definition-loader.js';
 import type { StructureDefinition } from '../structure-definition-types.js';
 import { createExecutorFailureIssue } from './executor-failure-issue.js';
+import { withProfileBindingPreparation } from '../../validators/profile-binding-selection.js';
 import {
   StructuralValidationPipeline,
   type StructuralResource,
@@ -46,7 +47,7 @@ export class StructuralExecutor {
     context?: StructuralValidationContext,
   ): Promise<ValidationIssue[]> {
     try {
-      return await this.pipeline.validate(resourceOrContext, context);
+      return await withProfileBindingPreparation(() => this.pipeline.validate(resourceOrContext, context));
     } catch {
       logger.error('[StructuralExecutor] Validation failed');
       return [createExecutorFailureIssue('structural', 'Structural')];
@@ -63,13 +64,13 @@ export class StructuralExecutor {
     getValueAtPath: StructuralValueAtPath,
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ): Promise<ValidationIssue[]> {
-    return this.pipeline.validateRequiredFields(
+    return withProfileBindingPreparation(() => this.pipeline.validateRequiredFields(
       resource,
       structureDef,
       profileUrl,
       getValueAtPath,
       fhirVersion,
-    );
+    ));
   }
 
   /**

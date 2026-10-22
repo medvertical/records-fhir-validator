@@ -62,7 +62,7 @@ export function projectSemanticAspectResult(
       }
       if (['profile-not-resolved', 'structural-resource-type-mismatch'].includes(issue.code ?? '')
         || (typeof issue.details === 'object' && issue.details?.validationComplete === false)) {
-        if (!result.structureDef) throw new Error('Required validation dependency could not be completed');
+        if (!result.structureDef && aspect.aspect !== 'custom_rule') throw new Error('Required validation dependency could not be completed');
         markDependentAspects(aspect.aspect);
       }
     }

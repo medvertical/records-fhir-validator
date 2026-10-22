@@ -4,10 +4,6 @@ import { patientNarrativeDedupeKey } from './patient-narrative-issue-reconciliat
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import type { AspectResult, MultiAspectValidateResult, ValidateOneFn } from './multi-aspect-types.js';
 
-function canonicalWithoutVersion(profile: string): string {
-  return profile.split('|')[0];
-}
-
 function issueIdentity(issue: ValidationIssue): string {
   return issue.code === 'dom-6'
     ? patientNarrativeDedupeKey(issue, issue.path ?? '')
@@ -43,13 +39,12 @@ export async function validateDeclaredProfiles(
   ...args: Parameters<ValidateOneFn>
 ): Promise<MultiAspectValidateResult> {
   const primary = await validateOne(...args);
-  // `X|2.0.0` and `X` name one profile; validating both would check the
-  // resource against two releases of it.
-  const covered = new Set([canonicalWithoutVersion(args[1])]);
+  // Different versions are separate claims; an unversioned URL may resolve
+  // to another installed release and cannot be assumed to be an alias.
+  const covered = new Set([args[1]]);
   const additional = getDeclaredProfiles(args[0]).filter(profile => {
-    const canonical = canonicalWithoutVersion(profile);
-    if (covered.has(canonical)) return false;
-    covered.add(canonical);
+    if (covered.has(profile)) return false;
+    covered.add(profile);
     return true;
   });
   if (additional.length === 0) return primary;

@@ -29,11 +29,14 @@ import type { SingleResourceConformanceInput, SingleResourceProfileConformance }
 import type { SnapshotGenerator } from './snapshot-generator.js';
 import type { StructureDefinitionLoader } from './structure-definition-loader.js';
 import { createValidationErrorIssue, dedupeResourceTreeIssues } from './validation-utils.js';
+import type { CustomRuleSelectedRelease } from '../custom-rules/applicability.js';
+import { createValidationSourceContext } from './validator-terminology-snapshot-context.js';
 
 export interface RecordsSingleResourceValidationInput {
   resource: unknown;
   profileUrl?: string;
   fhirVersion: 'R4' | 'R5' | 'R6';
+  selectedRelease?: CustomRuleSelectedRelease | null;
   settings?: ValidationSettings;
   fhirClient?: FhirClientLike;
   referenceResolver?: ReferenceResolver | null;
@@ -98,7 +101,7 @@ export async function executeRecordsResourceValidation(
       'Resource is missing resourceType field',
     )];
   }
-  const profileSourceContext = { organizationId, serverId, fhirVersion };
+  const profileSourceContext = createValidationSourceContext({ organizationId, serverId, fhirVersion, settings });
   // Batch validation and bundle-entry recursion already resolve `#id` and
   // bundle-local references. A top-level single resource must not be the one
   // path where a resolve() discriminator counts its own contained targets as
@@ -154,6 +157,7 @@ export async function executeRecordsResourceValidation(
       resource,
       profileUrl: declaredProfileUrl,
       fhirVersion,
+      selectedRelease: input.selectedRelease,
       structureDef,
       strictMode: context.strictMode,
       settings,

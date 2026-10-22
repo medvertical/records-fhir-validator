@@ -30,6 +30,12 @@ export type BestPracticeSettings = Pick<
 const RULES_BY_RESOURCE_TYPE: Readonly<Record<string, BestPracticeRule[]>> = {
     Observation: [
         {
+            code: 'best-practice-missing-subject',
+            message: 'All Observations should have a `subject`',
+            path: 'Observation.subject',
+            shouldReport: resource => !hasValue(resource.subject),
+        },
+        {
             code: 'best-practice-missing-effective',
             message:
                 'All Observations should have an `effectiveDateTime` or an `effectivePeriod`',

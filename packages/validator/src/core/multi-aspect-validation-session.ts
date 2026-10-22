@@ -21,6 +21,7 @@ import { projectSemanticAspectResult, resolveSemanticAspectPlan, type SemanticAs
 import { createReferenceResourceFetcher } from '../reference/reference-resource-fetcher.js';
 import { validateDeclaredProfiles } from './multi-aspect-embedded-profiles.js';
 import { createProfileConformanceCheck } from './multi-aspect-profile-conformance.js';
+import { isCustomRuleReleaseModelCoherent, type CustomRuleSelectedRelease } from '../custom-rules/applicability.js';
 
 const EMBEDDED_RESOURCE_MAX_DEPTH = 3;
 
@@ -37,6 +38,7 @@ interface MultiAspectValidationSessionOptions {
   externalReferenceResolver?: ReferenceResolver;
   serverId?: number;
   profileSources?: ReadonlyMap<unknown, ProfileApplicationSource>;
+  selectedRelease?: CustomRuleSelectedRelease | null;
 }
 
 export class MultiAspectValidationSession {
@@ -47,8 +49,10 @@ export class MultiAspectValidationSession {
   private readonly sdFHIRPathExecutor: SDFHIRPathExecutor;
   private readonly resourcePreparation: MultiAspectResourcePreparation;
   private readonly referenceResourceFetcher;
+  private readonly selectedRelease: CustomRuleSelectedRelease | null | undefined;
 
   constructor(private readonly options: MultiAspectValidationSessionOptions) {
+    this.selectedRelease = options.selectedRelease;
     this.typedSettings = options.settings as ValidationSettings | undefined;
     this.aspectPlan = resolveSemanticAspectPlan(options.aspects);
     this.policy = new MultiAspectSessionPolicy(this.typedSettings);
@@ -77,6 +81,9 @@ export class MultiAspectValidationSession {
     profileUrl: string,
     fhirVersion: 'R4' | 'R5' | 'R6',
   ): Promise<MultiAspectValidateResult> => withProfileReferenceInventorySnapshot(async () => {
+    if (!isCustomRuleReleaseModelCoherent(this.selectedRelease, fhirVersion)) {
+      throw new Error('Selected validation release is incompatible with the validator model');
+    }
     const source = this.options.profileSources?.get(resource);
     const result = source === undefined || source === 'resource-meta'
       ? await validateDeclaredProfiles(this.validateOne, this.options.shouldStop, resource, profileUrl, fhirVersion, 0)
@@ -110,7 +117,24 @@ export class MultiAspectValidationSession {
       enclosingBundle,
       containingResource,
     );
-    if (prepared.kind === 'missing-profile') return prepared.result;
+    if (prepared.kind === 'missing-profile') {
+      if (this.aspectPlan.executors.has('custom_rule')) {
+        const runAspect = this.policy.createRunner({
+          collectedAspects: prepared.result.aspects,
+          fhirVersion,
+          profileUrl,
+          throwIfStopped: () => this.throwIfStopped(),
+        });
+        await runAspect('custom_rule', async () => this.policy.runCustomRules
+          ? this.options.deps.customRuleExecutor.validate({
+            resource,
+            fhirVersion,
+            selectedRelease: this.selectedRelease === undefined ? fhirVersion : this.selectedRelease,
+            organizationId: this.options.organizationId,
+          }) : []);
+      }
+      return prepared.result;
+    }
 
     const { context, profileFallbackIssue, profileSourceContext, profileLoadIssue } = prepared;
     const collectedAspects: AspectResult[] = [];
@@ -131,6 +155,7 @@ export class MultiAspectValidationSession {
       settings: this.typedSettings,
       organizationId: this.options.organizationId,
       profileSourceContext,
+      selectedRelease: this.selectedRelease === undefined ? fhirVersion : this.selectedRelease,
       profileFallbackIssue,
       runCustomRules: this.policy.runCustomRules,
       context,
@@ -153,7 +178,7 @@ export class MultiAspectValidationSession {
       context.structureDef,
       collectedAspects,
     );
-    if (!skipEmbeddedValidation && recursionDepth < EMBEDDED_RESOURCE_MAX_DEPTH) {
+    if (!skipEmbeddedValidation) {
       await appendMandatedProfileValidationResults(
         context.resource,
         context.profileUrl,

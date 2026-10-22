@@ -1,5 +1,6 @@
 import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology.js';
 import type { FHIRPathBundleInput } from './fhirpath-functions.js';
+import type { ReferenceResolver } from './slice-types.js';
 
 export interface SDFHIRPathEvaluationScope {
   bundle?: FHIRPathBundleInput;
@@ -12,4 +13,5 @@ export interface SDFHIRPathEvaluationScope {
   focusResource?: unknown;
   terminologyResolver?: FHIRPathTerminologyResolver;
   userInvocationTable: unknown;
+  referenceResolver?: ReferenceResolver | null;
 }

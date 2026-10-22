@@ -51,6 +51,13 @@ export interface DeepProfileValidationContext {
     profileUrl?: string;
 }
 
+interface PreparedElementConstraints {
+    fixed: ReturnType<typeof extractFixedConstraint>;
+    pattern: unknown;
+    min: number | undefined;
+    max: number | undefined;
+}
+
 // ============================================================================
 // Deep Profile Validator
 // ============================================================================
@@ -101,8 +108,20 @@ export class DeepProfileValidator {
         // Skip root element
         if (path === resourceType) return [];
 
+        const constraints: PreparedElementConstraints = {
+            fixed: extractFixedConstraint(elementDef),
+            pattern: extractPatternValue(elementDef),
+            min: extractMinValue(elementDef),
+            max: extractMaxValue(elementDef),
+        };
+        // Structural/cardinality checks have their own owner. Unconstrained
+        // snapshot paths cannot produce any of this validator's findings.
+        if (constraints.fixed?.value === undefined && constraints.pattern === undefined
+            && constraints.min === undefined && constraints.max === undefined
+            && elementDef.binding?.strength !== 'required' && elementDef.maxLength === undefined) return [];
+
         return getValidationTargets(resource, path).flatMap(target =>
-            this.validateTarget(target, resourceType, elementDef)
+            this.validateTarget(target, resourceType, elementDef, constraints)
         );
     }
 
@@ -110,13 +129,14 @@ export class DeepProfileValidator {
         target: ValidationTarget,
         resourceType: string,
         elementDef: ElementDefinition,
+        constraints: PreparedElementConstraints,
     ): ValidationIssue[] {
         const issues: ValidationIssue[] = [];
         const value = target.value;
         const path = target.fullPath || elementDef.path;
 
         // 1. Check fixed values
-        const fixedConstraint = extractFixedConstraint(elementDef);
+        const fixedConstraint = constraints.fixed;
         const fixedValue = fixedConstraint?.value;
         if (fixedConstraint && fixedValue !== undefined && value !== undefined) {
             if (!valueMatchesFixedConstraint(value, fixedValue, fixedConstraint.key)) {
@@ -131,7 +151,7 @@ export class DeepProfileValidator {
         }
 
         // 2. Check pattern values
-        const patternValue = extractPatternValue(elementDef);
+        const patternValue = constraints.pattern;
         if (patternValue !== undefined && value !== undefined) {
             if (!matchesPattern(value, patternValue)) {
                 const mismatch = describePatternMismatch(path, value, patternValue);
@@ -177,8 +197,8 @@ export class DeepProfileValidator {
 
         // 5. Check minValue/maxValue for numerical types
         if (typeof value === 'number') {
-            const minValue = extractMinValue(elementDef);
-            const maxValue = extractMaxValue(elementDef);
+            const minValue = constraints.min;
+            const maxValue = constraints.max;
 
             if (minValue !== undefined && value < minValue) {
                 issues.push(createValidationIssue({

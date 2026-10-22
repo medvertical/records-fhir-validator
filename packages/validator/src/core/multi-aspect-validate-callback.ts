@@ -3,6 +3,7 @@ import type { ProfileApplicationSource } from '@records-fhir/validation-types';
 import type { MultiAspectDeps } from './multi-aspect-dependencies.js';
 import type { MultiAspectValidateResult } from './multi-aspect-types.js';
 import { MultiAspectValidationSession } from './multi-aspect-validation-session.js';
+import type { CustomRuleSelectedRelease } from '../custom-rules/applicability.js';
 
 /** Compose one isolated validation session, including its profile cache and recursive context. */
 export function buildMultiAspectValidateCallback(
@@ -18,6 +19,7 @@ export function buildMultiAspectValidateCallback(
   externalReferenceResolver?: ReferenceResolver,
   serverId?: number,
   profileSources?: ReadonlyMap<unknown, ProfileApplicationSource>,
+  selectedRelease?: CustomRuleSelectedRelease | null,
 ): (
   resource: unknown,
   profileUrl: string,
@@ -33,5 +35,6 @@ export function buildMultiAspectValidateCallback(
     externalReferenceResolver,
     serverId,
     profileSources,
+    selectedRelease,
   }).validate;
 }

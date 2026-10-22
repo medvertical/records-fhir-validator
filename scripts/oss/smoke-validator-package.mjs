@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
+const consumerNode = process.env.RECORDS_PACKAGE_SMOKE_NODE || process.execPath;
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -158,7 +159,7 @@ try {
 
   await run('npm', ['audit', '--omit=dev', '--audit-level=moderate'], { cwd: packageDir });
 
-  await run('node', [
+  await run(consumerNode, [
     '--input-type=module',
     '--eval',
     [
@@ -261,7 +262,7 @@ if (outcome.resourceType !== 'OperationOutcome' || outcome.issue.length === 0) {
 `,
   );
 
-  await run('node', ['smoke.mjs'], { cwd: packageDir });
+  await run(consumerNode, ['smoke.mjs'], { cwd: packageDir });
 
   await mkdir(join(packageDir, 'fixtures'), { recursive: true });
   await writeFile(
@@ -280,8 +281,9 @@ if (outcome.resourceType !== 'OperationOutcome' || outcome.issue.length === 0) {
   await writeMinimalR4CorePackage(cliPackageCache);
 
   await run(
-    './node_modules/.bin/records-fhir-validator',
+    consumerNode,
     [
+      join(packageDir, 'node_modules/@records-fhir/validator/dist/cli.js'),
       'fixtures',
       '--include',
       'fixtures/**/*.json',
@@ -311,7 +313,8 @@ if (outcome.resourceType !== 'OperationOutcome' || outcome.issue.length === 0) {
     throw new Error('Expected --summary-only JSON output to omit results');
   }
 
-  console.log('OSS validator package smoke test passed');
+  const { stdout: consumerVersion } = await run(consumerNode, ['--version']);
+  console.log(`OSS validator package smoke test passed (consumer Node ${consumerVersion.trim()})`);
 } finally {
   if (process.env.KEEP_SMOKE_TMP !== '1') {
     await rm(tmp, { force: true, recursive: true });

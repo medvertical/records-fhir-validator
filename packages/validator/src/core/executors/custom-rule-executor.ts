@@ -18,11 +18,15 @@ import type { StructureDefinition } from '../structure-definition-types.js';
 import { logger } from '../../logger.js';
 import { validationFailureMetadata } from '../../utils/validation-execution-failure.js';
 import { resourceTypeOf } from '../fhir-resource.js';
+import { evaluateCustomRuleApplicability, normalizeCustomRuleSelectedRelease, type CustomRuleSelectedRelease } from '../../custom-rules/applicability.js';
+import { createCustomRuleApplicabilityUnknownIssue } from '../../custom-rules/applicability-issue.js';
 
 export interface CustomRuleValidationContext {
     resource: unknown;
     structureDef?: StructureDefinition;
     fhirVersion?: 'R4' | 'R5' | 'R6';
+    selectedRelease?: CustomRuleSelectedRelease | null;
+    profileResolutionFallback?: boolean;
     organizationId?: number;
 }
 
@@ -67,6 +71,15 @@ export class CustomRuleExecutor {
         const issues: ValidationIssue[] = [];
         const { resource } = context;
         const resourceType = resourceTypeOf(resource);
+        const selectedRelease = normalizeCustomRuleSelectedRelease(context.selectedRelease);
+        const fhirVersion = context.fhirVersion ?? 'R4';
+        const applicabilityBasis = {
+            selectedRelease,
+            engineVersion: fhirVersion,
+            profileResolutionFallback: context.profileResolutionFallback,
+            profile: context.structureDef?.type === resourceType
+                ? { canonical: context.structureDef.url, version: context.structureDef.version } : null,
+        };
 
         try {
             // Fetch enabled rules for this resource type. The source is
@@ -81,6 +94,12 @@ export class CustomRuleExecutor {
             logger.debug(`[CustomRuleExecutor] Validating ${resourceType} against ${rules.length} custom rules`);
 
             for (const rule of rules) {
+                const applicability = evaluateCustomRuleApplicability(rule, applicabilityBasis);
+                if (applicability.status === 'not-applicable') continue;
+                if (applicability.status === 'unknown') {
+                    issues.push(createCustomRuleApplicabilityUnknownIssue(resourceType, rule.ruleId, selectedRelease, applicability.reason));
+                    continue;
+                }
                 try {
                     // Sandbox pre-flight: reject pathological customer-supplied
                     // expressions before fhirpath.js runs. fhirpath.js is
@@ -95,7 +114,11 @@ export class CustomRuleExecutor {
                             resourceType,
                             customMessage: `Custom rule '${rule.name}' was not evaluated: ${sandbox.reason}`,
                             severityOverride: 'warning',
+                            aspectOverride: 'custom_rule',
                             details: {
+                                selectedRelease,
+                                checkOutcome: 'not-performed',
+                                validationComplete: false,
                                 ruleId: rule.ruleId,
                                 ruleName: rule.name,
                                 sandboxMetrics: sandbox.metrics,
@@ -114,7 +137,7 @@ export class CustomRuleExecutor {
                             rootResource: resource,
                             context: resource
                         },
-                        getFhirPathModel(context.fhirVersion),
+                        getFhirPathModel(fhirVersion),
                         // Suppress fhirpath.js trace() output (causes TRACE:[unmatched] [] logs)
                         { traceFn: () => { } }
                     );
@@ -124,11 +147,13 @@ export class CustomRuleExecutor {
                     if (!passed) {
                         issues.push(createValidationIssue({
                             code: 'custom-rule-violation',
-                            path: resourceType, // Uses resourceType; per-field paths can be added when rules define them
+                            path: rule.path || resourceType,
                             resourceType,
                             customMessage: rule.validationMessage || `Custom rule '${rule.name}' failed`,
                             severityOverride: rule.severity,
+                            aspectOverride: 'custom_rule',
                             details: {
+                                selectedRelease,
                                 ruleId: rule.ruleId,
                                 ruleName: rule.name,
                                 expression: rule.expression,
@@ -148,7 +173,11 @@ export class CustomRuleExecutor {
                         resourceType,
                         customMessage: `Failed to evaluate custom rule '${rule.name}'`,
                         severityOverride: 'warning', // Don't fail validation for bad rule syntax
+                        aspectOverride: 'custom_rule',
                         details: {
+                            selectedRelease,
+                            checkOutcome: 'execution-failure',
+                            validationComplete: false,
                             ruleId: rule.ruleId,
                             ...validationFailureMetadata(ruleError),
                         }
@@ -174,7 +203,7 @@ export class CustomRuleExecutor {
                 customMessage: 'Custom rules could not be loaded; this validation result is incomplete',
                 severityOverride: 'warning',
                 aspectOverride: 'custom_rule',
-                details: { sourceStatus: 'unavailable' },
+                details: { selectedRelease, sourceStatus: 'unavailable', checkOutcome: 'execution-failure', validationComplete: false },
             })];
         }
     }

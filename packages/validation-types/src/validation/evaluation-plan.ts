@@ -42,6 +42,10 @@ export interface EvaluationPlanSnapshot {
     }>;
     enabledRuleCount: number;
     scopes: QualityRuleScope[];
+    observationMode?: 'outer-resources' | 'validation-units';
+    /** Missing or v1 values retain the legacy namespace-blind observation contract. */
+    deduplication?: 'resource-identity-and-content-hash' | 'confirmed-namespace-and-content-hash-v2';
+    referenceResolution?: 'selected-scope-only';
   };
   governance: {
     enabledAdvisoryCount: number;

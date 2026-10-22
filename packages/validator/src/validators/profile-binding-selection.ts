@@ -7,6 +7,7 @@ import { createValidationIssue } from '../issues/issue-factory.js';
 import { extractSlicingInfo } from './slice-info-extractor.js';
 import { assessElementSliceMembership } from './slicing-match-policy.js';
 import { prepareProfileBindingSlicingBases } from './profile-binding-slicing-bases.js';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 export interface SelectedProfileBinding { binding: Binding | undefined; issues: ValidationIssue[] }
@@ -20,8 +21,25 @@ interface BindingSelectionContext {
   loader: StructureDefinitionLoader;
 }
 
+type BindingDefinitions = ReturnType<typeof prepareBindingDefinitions>;
+interface BindingPathMatches { candidates: ElementDefinition[]; duplicateBindings: ElementDefinition[] }
+const invocationDefinitions = new AsyncLocalStorage<WeakMap<StructureDefinition, Map<FhirVersion, BindingDefinitions>>>();
+
+/** Only definition indexes are shared; resolved dependencies and occurrence proofs remain selector-local. */
+export function withProfileBindingPreparation<T>(validate: () => Promise<T>): Promise<T> {
+  return invocationDefinitions.run(new WeakMap(), validate);
+}
+
 /** Prepared definitions are invocation-local; occurrence membership is never cached by an indexless path. */
 export function createProfileBindingSelector(context: BindingSelectionContext) {
+  let prepared: ReturnType<typeof prepareProfileBindingSelector> | undefined;
+  return (baseBinding: Binding | undefined, fullPath: string): Promise<SelectedProfileBinding> => {
+    prepared ??= prepareProfileBindingSelector(context);
+    return prepared(baseBinding, fullPath);
+  };
+}
+
+function prepareBindingDefinitions(context: BindingSelectionContext) {
   const preparedBases = prepareProfileBindingSlicingBases(context.profile, context.fhirVersion);
   const elements = preparedBases.elements;
   const preparedProfile = context.profile && elements !== context.profile.snapshot?.element
@@ -33,12 +51,61 @@ export function createProfileBindingSelector(context: BindingSelectionContext) {
     if (byId.has(element.id)) duplicateIds.add(element.id);
     byId.set(element.id, element);
   }
+  const bindings = elements.filter(element => element.binding);
+  return { preparedBases, elements, preparedProfile, duplicateIds, byId, bindings,
+    matchesByPath: new Map<string, BindingPathMatches>() };
+}
+
+function matchingBindings(definitions: BindingDefinitions, fullPath: string): BindingPathMatches {
+  const path = fullPath.replace(/\[\d+\]/g, '');
+  const cached = definitions.matchesByPath.get(path);
+  if (cached) return cached;
+  const matches: BindingPathMatches = { candidates: [], duplicateBindings: [] };
+  for (const element of definitions.bindings) {
+    const sliced = element.id?.includes(':');
+    const duplicate = element.id && definitions.duplicateIds.has(element.id);
+    if ((!sliced && !duplicate) || !matchesDefinitionInstancePath(element.path, path, definitions.elements)) continue;
+    if (sliced) matches.candidates.push(element);
+    if (duplicate) matches.duplicateBindings.push(element);
+  }
+  // Bound untrusted path cardinality without retaining occurrence values or membership proofs.
+  if (definitions.matchesByPath.size < 1024) definitions.matchesByPath.set(path, matches);
+  return matches;
+}
+
+function bindingDefinitions(context: BindingSelectionContext): BindingDefinitions {
+  const scope = invocationDefinitions.getStore();
+  if (!scope || !context.profile) return prepareBindingDefinitions(context);
+  let byVersion = scope.get(context.profile);
+  if (!byVersion) { byVersion = new Map(); scope.set(context.profile, byVersion); }
+  let definitions = byVersion.get(context.fhirVersion);
+  if (!definitions) { definitions = prepareBindingDefinitions(context); byVersion.set(context.fhirVersion, definitions); }
+  return definitions;
+}
+
+function prepareProfileBindingSelector(context: BindingSelectionContext) {
+  const definitions = bindingDefinitions(context);
+  const { preparedBases, elements, preparedProfile, duplicateIds, byId } = definitions;
   const groups = new Map<string, ReturnType<typeof extractSlicingInfo>>();
+  const siblingsByPath = new Map<string, ElementDefinition[]>();
+  let lastProfileUrl: string | undefined;
+  let lastProfile: StructureDefinition | null = null;
+  let latestRead = 0;
+  const loadProfile = async (url: string): Promise<StructureDefinition | null> => {
+    if (url === lastProfileUrl && lastProfile) return lastProfile;
+    lastProfileUrl = url;
+    lastProfile = null;
+    const read = ++latestRead;
+    const profile = await context.loader.loadReferencedProfile(url, context.profile, context.fhirVersion);
+    // Concurrent selectors must not let an older read replace newer evidence.
+    if (read === latestRead && profile) lastProfile = profile;
+    return profile;
+  };
   const prepare = (base: ElementDefinition) => {
     let pending = groups.get(base.id!);
     if (!pending) {
       pending = extractSlicingInfo(base.path, preparedProfile!,
-        url => context.loader.loadReferencedProfile(url, context.profile, context.fhirVersion), null, base.id);
+        loadProfile, null, base.id);
       groups.set(base.id!, pending);
     }
     return pending;
@@ -50,8 +117,13 @@ export function createProfileBindingSelector(context: BindingSelectionContext) {
     if (node === undefined) return 'unknown';
     const info = await prepare(base);
     if (!info || info.slicing.discriminator?.length !== base.slicing.discriminator.length) return 'unknown';
-    const siblings = elements.filter(element => element.path === slice.path && element.sliceName
-      && element.id && slicingBaseId(element.id) === baseId);
+    const siblingKey = JSON.stringify([baseId, slice.path]);
+    let siblings = siblingsByPath.get(siblingKey);
+    if (!siblings) {
+      siblings = elements.filter(element => element.path === slice.path && element.sliceName
+        && element.id && slicingBaseId(element.id) === baseId);
+      siblingsByPath.set(siblingKey, siblings);
+    }
     const names = new Set(siblings.map(element => element.sliceName));
     const prepared = info.slices.filter(candidate => names.has(candidate.sliceName));
     if (prepared.length !== siblings.length || new Set(prepared.map(candidate => candidate.sliceName)).size !== prepared.length) return 'unknown';
@@ -62,10 +134,7 @@ export function createProfileBindingSelector(context: BindingSelectionContext) {
       ? 'matched' : 'nonmember';
   };
   return async (baseBinding: Binding | undefined, fullPath: string): Promise<SelectedProfileBinding> => {
-    const candidates = elements.filter(element => element.binding && element.id?.includes(':')
-      && matchesDefinitionInstancePath(element.path, fullPath, elements));
-    const duplicateBindings = elements.filter(element => element.binding && element.id && duplicateIds.has(element.id)
-      && matchesDefinitionInstancePath(element.path, fullPath, elements));
+    const { candidates, duplicateBindings } = matchingBindings(definitions, fullPath);
     if (!candidates.length && !duplicateBindings.length) return { binding: baseBinding, issues: [] };
     const selected: ElementDefinition[] = [];
     const unresolved: { id: string; state: Membership }[] = duplicateBindings.map(element => ({ id: element.id!, state: 'unknown' }));

@@ -122,7 +122,8 @@ async function selectedBinding(binding: Binding | undefined, path: string, input
   dependencies: ComplexTypeSubElementDependencies) {
   try {
     const selection = dependencies.selectBinding ? await dependencies.selectBinding(binding, path) : { binding, issues: [] };
-    return { ...selection, binding: selection.binding ? await pinnedBinding(selection.binding, input, dependencies.valueSetValidator) : undefined };
+    return { ...selection, binding: selection.binding
+      ? await pinnedBinding(selection.binding, input, dependencies.valueSetValidator) : undefined };
   } catch {
     return { binding: undefined, issues: [bindingFailure(path, input, binding)] };
   }
@@ -262,12 +263,7 @@ async function validateSubValue(
     return [
       ...await validateCodedSubElementBinding(subValue, effectiveElementDef, fullPath, input, dependencies),
       ...await dependencies.validateNested(
-        subValue,
-        effectiveElementDef,
-        fullPath,
-        input.profileUrl,
-        input.parentStructureDef,
-        input.fhirVersion,
+        subValue, effectiveElementDef, fullPath, input.profileUrl, input.parentStructureDef, input.fhirVersion,
       ),
     ];
   }

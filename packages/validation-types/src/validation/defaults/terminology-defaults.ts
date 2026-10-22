@@ -93,7 +93,7 @@ export const DEFAULT_TERMINOLOGY_SERVERS: TerminologyServer[] = [
   {
     id: 'termbox-healthsamurai',
     name: 'Health Samurai Termbox',
-    url: 'https://tx.health-samurai.io/fhir',
+    url: 'https://tx.health-samurai.io/fhir/r4',
     enabled: false,
     fhirVersions: ['R4'],
     status: 'unknown',

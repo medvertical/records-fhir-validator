@@ -20,7 +20,7 @@ const scope = (validateOne: ValidateOneFn, onIncomplete: (issue: ValidationIssue
 
 describe('profile conformance completeness reporting', () => {
   it.each(['terminology-codesystem-unverified', 'profile-slice-validation-incomplete'])(
-    'reports %s as unknown information and retries before caching a completed verdict', async code => {
+    'reports %s as unknown information and rechecks a completed verdict', async code => {
       const onIncomplete = vi.fn();
       const validateOne = vi.fn<ValidateOneFn>(async () => completed([incomplete(code)]));
       const check = createProfileConformanceCheck(scope(validateOne, onIncomplete))!;
@@ -33,7 +33,7 @@ describe('profile conformance completeness reporting', () => {
       validateOne.mockResolvedValue(completed());
       await expect(check(resource, profileUrl)).resolves.toBe(true);
       await expect(check(resource, profileUrl)).resolves.toBe(true);
-      expect(validateOne).toHaveBeenCalledTimes(2);
+      expect(validateOne).toHaveBeenCalledTimes(3);
     },
   );
 

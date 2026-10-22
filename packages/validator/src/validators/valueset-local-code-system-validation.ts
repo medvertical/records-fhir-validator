@@ -11,6 +11,7 @@ import {
 } from './valueset-code-system-rules.js';
 import { assessLocalDisplay, displayUnverifiedMessage } from './valueset-display-authority.js';
 import { specialV2Concept } from './v2-special-concepts.js';
+import { hasNonEnumerableCodeGrammar } from './finite-valueset-expansion.js';
 import type { FhirVersion } from './valueset-expansion-cache-key.js';
 import type { ValueSetPackageLoader } from './valueset-package-loader.js';
 import type { CodeSystem, CodeSystemConcept } from './valueset-types.js';
@@ -59,7 +60,8 @@ export async function validateCodeInLocalCodeSystem(
     const finalize = (result: CodeSystemValidationResult): CodeSystemValidationResult =>
       inventory.kind === 'named-inventory' ? verifiedCodeSystemResult(result) : result;
     if (!concept) {
-      const incompleteCodeSystem = codeSystem.content !== 'complete';
+      const grammar = hasNonEnumerableCodeGrammar(codeSystem);
+      const incompleteCodeSystem = codeSystem.content !== 'complete' || grammar;
       return {
         valid: false,
         reason: 'code-unknown',
@@ -67,7 +69,7 @@ export async function validateCodeInLocalCodeSystem(
         message:
           `Unknown code '${code}' in CodeSystem '${system}'` +
           `${codeSystem.version ? ` version '${codeSystem.version}'` : ''}` +
-          (incompleteCodeSystem
+          (grammar ? '; the named concepts do not cover the CodeSystem compositional grammar' : incompleteCodeSystem
             ? '; the CodeSystem does not declare complete content, so the code may exist outside the listed concepts'
             : ''),
       };

@@ -150,4 +150,6 @@ export const AdvisorRuleSchema = z.object({
     expiresAt: z.string().datetime().optional(),
     origin: z.enum(['builtin', 'local', 'pack']).optional(),
     sourcePackRef: z.string().max(193).optional(),
+    source: z.object({ profileReference: z.string().max(2000).optional(), packageId: z.string().max(200).optional(),
+        packageVersion: z.string().max(100).optional(), path: z.string().max(1000).optional(), ruleKey: z.string().max(200).optional() }).optional(),
 });

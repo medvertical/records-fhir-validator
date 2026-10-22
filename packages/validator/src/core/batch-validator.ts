@@ -18,14 +18,16 @@ import {
 } from './batch-resource-planning.js';
 import { preloadProfiles } from './profile-batch-preloader.js';
 import { createValidationErrorIssue as _createValidationErrorIssue } from './validation-utils.js';
-import type { ProfileSourceContext } from '../persistence/index.js';
 import { operationalResourceReference } from '../utils/sensitive-logging-metadata.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import type { ProfileWarmupCoordinator } from './profile-warmup-coordinator.js';
 import { isRecord, resourceIdOf, resourceTypeOf } from './fhir-resource.js';
+import type { CustomRuleSelectedRelease } from '../custom-rules/applicability.js';
+import { createValidationSourceContext } from './validator-terminology-snapshot-context.js';
 
 export interface BatchValidationOptions {
   fhirVersion?: 'R4' | 'R5' | 'R6';
+  selectedRelease?: CustomRuleSelectedRelease | null;
   maxConcurrency?: number;
   profileUrl?: string;
   /** Original selection source for each input resource, before host profile materialization. */
@@ -90,11 +92,7 @@ export async function executeBatchValidation<T = ValidationIssue[]>(
   }
   const fhirVersion = options.fhirVersion || 'R4';
   const maxConcurrency = options.maxConcurrency || 10;
-  const profileSourceContext: ProfileSourceContext = {
-    organizationId: options.organizationId,
-    serverId: options.serverId,
-    fhirVersion,
-  };
+  const profileSourceContext = createValidationSourceContext({ ...options, fhirVersion });
 
   context.sdLoader.setProfileResolutionContext(profileSourceContext, options.settings);
 
@@ -231,12 +229,16 @@ async function validateBatchWorkItems<T>(
       if (workIndex >= workItems.length) return;
       const { resource, profileUrl } = workItems[workIndex];
       const resourceStart = Date.now();
+      let executionStart: number | undefined;
+      let executionMs = 0;
 
       try {
-        const validate = () => {
+        const validate = async () => {
           throwIfBatchStopped(options);
           if (workerFailed) throw new BatchValidationAbortedError();
-          return context.validateResource(resource, profileUrl, fhirVersion);
+          executionStart = Date.now();
+          try { return await context.validateResource(resource, profileUrl, fhirVersion); }
+          finally { executionMs = Date.now() - executionStart; }
         };
         const result = options.scheduleValidation
           ? await options.scheduleValidation(validate)
@@ -250,6 +252,8 @@ async function validateBatchWorkItems<T>(
           logger.warn('[RecordsValidator] Slow validation', {
             ...operationalResourceReference(resourceTypeOf(resource), resourceIdOf(resource)),
             durationMs: resourceTime,
+            queueWaitMs: (executionStart ?? Date.now()) - resourceStart,
+            executionMs,
             ...(aspectBreakdown ? { aspectBreakdown } : {}),
           });
         }

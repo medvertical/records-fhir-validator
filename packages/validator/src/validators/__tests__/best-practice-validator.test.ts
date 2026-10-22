@@ -4,6 +4,16 @@ import { BestPracticeValidator, validateBestPractices } from '../best-practice-v
 const validator = new BestPracticeValidator();
 
 describe('BestPracticeValidator Observation rules', () => {
+  it('recommends a subject only when the Observation has none', () => {
+    const observation = { resourceType: 'Observation', status: 'final', code: { text: 'Example' } };
+    const options = { bestPracticeSeverity: 'warning' as const };
+    expect(validateBestPractices(validator, { resourceType: 'Observation', resource: observation }, options))
+      .toContainEqual(expect.objectContaining({ code: 'best-practice-missing-subject', severity: 'warning' }));
+    expect(validator.validate({ resourceType: 'Observation', resource: {
+      ...observation, subject: { reference: 'Patient/p1' },
+    } }).some(issue => issue.code === 'best-practice-missing-subject')).toBe(false);
+  });
+
   it('keeps HAPI-like Observation performer advice without generic method or interpretation noise', () => {
     const issues = validator.validate({
       resourceType: 'Observation',

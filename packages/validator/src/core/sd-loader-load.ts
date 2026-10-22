@@ -25,6 +25,7 @@ import {
   urlMatchesRequestedFhirVersion,
 } from './sd-loader-version-utils.js';
 import { sanitizeProfile } from './sd-loader-profile-sanitizer.js';
+import { FHIR_TYPE_TABLE_R4, FHIR_TYPE_TABLE_R5, FHIR_TYPE_TABLE_R6 } from '../input/fhir-type-table.generated.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import type { PackageProfileIndexCache } from './sd-loader-package-profile-index.js';
 import { profileCanonicalMetadata } from '../utils/sensitive-logging-metadata.js';
@@ -59,6 +60,8 @@ export interface LoadProfileContext {
   autoDownloadState: AutoDownloadState;
   packageProfileIndexCache?: PackageProfileIndexCache;
 }
+
+const coreTypes = { R4: FHIR_TYPE_TABLE_R4, R5: FHIR_TYPE_TABLE_R5, R6: FHIR_TYPE_TABLE_R6 };
 
 /**
  * Load a StructureDefinition by URL.
@@ -109,6 +112,17 @@ export async function loadProfile(
         ctx.availableProfiles.add(resolvedUrl);
       }
       return sanitized;
+    }
+
+    // A release pin owns core definitions. A mutable host cache can contain a
+    // differently projected copy of the same version and must not replace it.
+    const corePackage = ctx.selectedCorePackageId ?? `hl7.fhir.${fhirVersion.toLowerCase()}.core`;
+    if (ctx.packageVersionPins[corePackage] && lookupUrl.startsWith('http://hl7.org/fhir/StructureDefinition/')) {
+      const fixed = await loadFromLocalCache(resolvedUrl, ctx.packageSources, fhirVersion,
+        ctx.packageVersionPins, ctx.packageProfileIndexCache, ctx.selectedCorePackageId);
+      if (fixed && matchesRequest(fixed)) return sanitizeProfile(fixed);
+      const type = lookupUrl.split('/').at(-1)?.split('|')[0] ?? '';
+      if (ctx.profileSourceContext?.terminologySnapshotSha256 && Object.hasOwn(coreTypes[fhirVersion], type)) return null;
     }
 
     // Check in-memory cache first (version-specific)

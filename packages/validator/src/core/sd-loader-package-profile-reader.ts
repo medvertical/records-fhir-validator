@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { StructureDefinition } from './structure-definition-types.js';
 import { readStablePackageFile } from '../package/package-file-read-authority.js';
 import { reportUnreadablePackageResource } from '../package/package-store-diagnostics.js';
+import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
 
 export type IndexedProfile = {
   sd: StructureDefinition;
@@ -61,24 +62,71 @@ export type ProfileFileResult =
   | { status: 'not-profile' }
   | { status: 'unavailable'; cause: 'unsafe-file' | 'resource-unreadable' | 'resource-too-large' | 'identity-mismatch' | 'source-changed' };
 
+export interface ProfileFileIdentity { resourceType: 'StructureDefinition'; url: string; version?: string; fhirVersion?: unknown }
+type ParsedIdentityResult = Exclude<ProfileFileResult, { status: 'read' }>
+  | { status: 'read'; profile: ProfileFileIdentity; sha256: string };
+type ProfileIdentityResult = Exclude<ParsedIdentityResult, { status: 'read' | 'not-profile' }>
+  | { status: 'read'; profile: ProfileFileIdentity; sha256: string; signature: string }
+  | { status: 'not-profile'; signature: string };
+const parsedIdentities = new BoundedLruCache<string, ParsedIdentityResult>(6_144);
+export function clearPackageProfileIdentityCache(): void { parsedIdentities.clear(); }
+
+/** Memoize syntax projection by actual bytes, never the availability or ownership of a file. */
+export async function readProfileFileIdentityResult(packagePath: string, filename: string, expectedBoundary?: string): Promise<ParsedIdentityResult> {
+  const result = await readProfileFileIdentityWithSignature(packagePath, filename, expectedBoundary);
+  if (result.status === 'read') return { status: 'read', sha256: result.sha256, profile: result.profile };
+  if (result.status === 'not-profile') return { status: 'not-profile' };
+  return result;
+}
+
+/** A catalog retains the verified file identity as well as its parsed profile identity. */
+export async function readProfileFileIdentityWithSignature(packagePath: string, filename: string, expectedBoundary?: string): Promise<ProfileIdentityResult> {
+  try {
+    const result = await readStablePackageFile(packagePath, filename, 32 * 1024 * 1024, expectedBoundary);
+    if (result.status === 'absent') return { status: 'unavailable', cause: 'resource-unreadable' };
+    if (result.status !== 'read') return result;
+    const sha256 = createHash('sha256').update(result.bytes).digest('hex');
+    let identity = parsedIdentities.get(sha256);
+    if (!identity) {
+      const parsed = parseProfileBytes(result.bytes, sha256);
+      if (parsed.status === 'read') {
+        const { resourceType, url, version, fhirVersion } = parsed.profile;
+        identity = { status: 'read', sha256, profile: { resourceType, url,
+          ...(version !== undefined ? { version } : {}), ...(fhirVersion !== undefined ? { fhirVersion } : {}) } };
+      } else identity = parsed;
+      // Bound attacker-controlled metadata as well as the number of retained hashes.
+      if (identity.status !== 'unavailable' && Buffer.byteLength(JSON.stringify(identity)) <= 2_048) parsedIdentities.set(sha256, identity);
+    }
+    return identity.status === 'read' ? { ...identity, signature: result.signature, profile: { ...identity.profile } }
+      : identity.status === 'not-profile' ? { ...identity, signature: result.signature } : { ...identity };
+  } catch (error: unknown) {
+    reportUnreadablePackageResource('SDLoader', path.join(packagePath, filename), error);
+    return { status: 'unavailable', cause: 'resource-unreadable' };
+  }
+}
+
 export async function readProfileFileResult(packagePath: string, filename: string, expectedBoundary?: string): Promise<ProfileFileResult> {
   try {
     const result = await readStablePackageFile(packagePath, filename, 32 * 1024 * 1024, expectedBoundary);
     if (result.status === 'absent') return { status: 'unavailable', cause: 'resource-unreadable' };
     if (result.status !== 'read') return result;
-    const bytes = result.bytes;
-    const profile = JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')) as StructureDefinition;
-    if (typeof profile?.resourceType !== 'string') return { status: 'unavailable', cause: 'identity-mismatch' };
-    if (profile.resourceType !== 'StructureDefinition') return { status: 'not-profile' };
-    if ((profile.version !== undefined && typeof profile.version !== 'string')
-      || (profile.fhirVersion !== undefined && typeof profile.fhirVersion !== 'string')) {
-      return { status: 'unavailable', cause: 'identity-mismatch' };
-    }
-    return typeof profile.url === 'string' ? { status: 'read', profile, sha256: createHash('sha256').update(bytes).digest('hex') } : { status: 'unavailable', cause: 'identity-mismatch' };
+    return parseProfileBytes(result.bytes);
   } catch (error: unknown) {
     reportUnreadablePackageResource('SDLoader', path.join(packagePath, filename), error);
     return { status: 'unavailable', cause: 'resource-unreadable' };
   }
+}
+
+function parseProfileBytes(bytes: Buffer, sha256?: string): ProfileFileResult {
+  const profile = JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/, '')) as StructureDefinition;
+  if (typeof profile?.resourceType !== 'string') return { status: 'unavailable', cause: 'identity-mismatch' };
+  if (profile.resourceType !== 'StructureDefinition') return { status: 'not-profile' };
+  if ((profile.version !== undefined && typeof profile.version !== 'string')
+    || (profile.fhirVersion !== undefined && typeof profile.fhirVersion !== 'string')) {
+    return { status: 'unavailable', cause: 'identity-mismatch' };
+  }
+  return typeof profile.url === 'string' ? { status: 'read', profile,
+    sha256: sha256 ?? createHash('sha256').update(bytes).digest('hex') } : { status: 'unavailable', cause: 'identity-mismatch' };
 }
 
 export async function readProfileFile(packagePath: string, filename: string): Promise<StructureDefinition | null> {

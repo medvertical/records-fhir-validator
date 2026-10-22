@@ -4,7 +4,7 @@ import type { ElementDefinition } from '../core/structure-definition-types.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import type { ConstraintEvaluationEngine } from './constraint-evaluation-engine.js';
 import { buildUserInvocationTable } from './fhirpath-custom-functions.js';
-import { elementExistsInResource, hasEmptyBackboneElement } from './constraint-path-utils.js';
+import { elementExistsInResource, getEvaluationContext, hasEmptyBackboneElement } from './constraint-path-utils.js';
 import { createSliceDefinitionMatcher } from './constraint-slice-targets.js';
 import {
   isConstraint,
@@ -36,6 +36,17 @@ export class ConstraintValidationPipeline {
     if (!isFhirResource(input) || !Array.isArray(elements)) return [];
     const resource = input;
     const rootResource = options?.rootResource ?? resource;
+    const targetsByPath = new Map<string, ReturnType<typeof getValidationTargets>>();
+    const contextsByPath = new Map<string, unknown>();
+    const getTargets: typeof getValidationTargets = (_resource, path) => {
+      let targets = targetsByPath.get(path);
+      if (!targets) { targets = getValidationTargets(resource, path); targetsByPath.set(path, targets); }
+      return targets;
+    };
+    const readContext = (path: string): unknown => {
+      if (!contextsByPath.has(path)) contextsByPath.set(path, getEvaluationContext(resource, path, getTargets));
+      return contextsByPath.get(path);
+    };
     const state: ConstraintValidationState = {
       strictnessMode: options?.strictMode ? 'strict' : 'standard',
       fhirVersion: options?.fhirVersion || 'R4',
@@ -45,10 +56,13 @@ export class ConstraintValidationPipeline {
         this.valueSetCache,
         this.operationCache,
         options?.profileConformance,
+        options?.referenceResolver,
       ),
       bundle: options?.bundle,
+      referenceResolver: options?.referenceResolver,
       rootResource,
       focusResource: options?.focusResource,
+      getEvaluationContext: readContext,
     };
     const issues: ValidationIssue[] = [];
     const matchesSlice = createSliceDefinitionMatcher(elements);
@@ -57,13 +71,13 @@ export class ConstraintValidationPipeline {
     for (const element of elements) {
       if (!isElementWithConstraints(element)) continue;
       const isRootElement = element.path === resource.resourceType;
-      const elementExists = isRootElement || this.shouldValidatePresentElement(resource, element);
+      const elementExists = isRootElement || this.shouldValidatePresentElement(resource, element, getTargets);
       if (!isRootElement && !elementExists) continue;
 
       const elementType = resolveElementType(element);
       let validationTargets: ReturnType<typeof getValidationTargets> | null = null;
       const getElementValidationTargets = () => {
-        validationTargets ??= getValidationTargets(resource, element.path);
+        validationTargets ??= getTargets(resource, element.path);
         return validationTargets;
       };
 
@@ -108,14 +122,15 @@ export class ConstraintValidationPipeline {
   private shouldValidatePresentElement(
     resource: FhirResource,
     element: ElementDefinition,
+    getTargets: typeof getValidationTargets,
   ): boolean {
-    if (elementExistsInResource(resource, element.path)) return true;
+    if (elementExistsInResource(resource, element.path, getTargets)) return true;
     const isOptional = element.min === undefined || element.min === 0;
     const isBackbone = element.type?.some(
       type => type.code === 'BackboneElement' || type.code === 'Element',
     );
     if (isOptional && !isBackbone) return false;
-    return Boolean(isBackbone && hasEmptyBackboneElement(resource, element.path));
+    return Boolean(isBackbone && hasEmptyBackboneElement(resource, element.path, getTargets));
   }
 
   private logRootCoreConstraints(

@@ -10,6 +10,107 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.9.18] — 2026-10-22
+
+This release includes the unpublished 0.9.1–0.9.18 development changes and
+ships with `@records-fhir/validation-types` 0.1.14. The 0.9.0 changes below
+are also new to npm consumers upgrading from 0.8.0.
+
+- Release unused immutable snapshot CodeSystem and ValueSet definitions from SDK caches; reload collected catalogs from the same fixed source without changing terminology outcomes or dependency evidence. Mutable and registered definitions keep their existing ownership.
+
+- Resolve reference targets in independent instance extensions through the global selection while preserving explicitly declared extension editions and their package authority.
+
+- Resolve independent instance extension URLs through the configured global selection; preserve package authority for explicitly declared and nested extension profiles, including unavailable dependencies.
+
+- Retain the actual referrer's package authority when host and SDK package roots are aliases of the same directory; different physical stores and escaping resource symlinks remain guarded.
+
+- Use verified named concepts from frozen compositional CodeSystems while keeping unlisted grammar expressions unverified. Do not treat a complete named catalog as a complete expansion of the grammar.
+
+- Retain the immutable terminology snapshot identity through nested batch, aspect, single-resource and datatype validation. Reject nested attempts to drop or change snapshot, tenant, server or FHIR scope before consulting mutable sources.
+- Resolve explicitly pinned core definitions from their package artifact before mutable host/memory projections of the same edition. Missing pinned core resource/datatype artifacts fail closed during snapshot execution; versioned HL7 extensions retain their guarded host resolution.
+
+- Preserve the exact package edition selected for recursive conformance in snapshot checks; global selections and changed content remain guarded.
+
+- Mark unavailable snapshot CodeSystem authority explicitly as unverified, including systems without a configured external route; retain incomplete conformance evidence.
+
+### Fixed
+- Replay explicitly captured unavailable profile decisions without remote lookup while retaining incomplete conformance evidence.
+
+
+### Fixed
+- Enforce immutable terminology snapshot profile scope on cached and referenced definitions, including swallowed load failures.
+- Resolve published R4 cross-version profiles without rewriting their canonical; preserve ICU ECT canonical identities.
+
+
+### Changed
+
+- Share verified package reads within a validation batch when the batch has no externally visible callbacks. Fall back to ordinary per-resource resolution if the existing dependency snapshot budget is reached. A bounded catalog reuses complete, file-signature-verified fallback inventories between these batches, including profiles omitted from package indexes; changed or unreadable package files force a fresh scan. Callback-bearing batches reuse only bounded package metadata and use direct inventory reads, keeping profile definitions and dependency captures scoped to each resource; metadata eviction never makes a validation incomplete.
+- Recheck recursive profile conformance after complete results so changed terminology, host references and package definitions remain observable. Reuse successful type-profile resolution only within one binding selector, and recheck unavailable dependencies.
+- Start read-only reference validation while profile and terminology prerequisites run, then publish its governed issues at the existing aspect boundary. Drain admitted reference work on cancellation; keep validation findings and completeness unchanged.
+
+### Fixed
+
+- Include the standard Observation subject recommendation when best-practice checks are enabled, using the configured advisory severity.
+
+- Keep configured best-practice warnings when the same field has only informational MustSupport advice; weaker presence advice no longer hides the warning.
+
+- Preserve the defining StructureDefinition of inherited FHIRPath constraints separately from the applied profile, including incomplete evaluations.
+
+- Use the caller's reference resolver in both FHIRPath constraint paths, including `resolve().exists()` prechecks. Keep contained and Bundle targets first and keep resolver state within the request; unsupported asynchronous results remain incomplete validation evidence.
+
+- Index slice descendants and typed ancestors within each extraction instead of repeatedly scanning the complete StructureDefinition. Preserve definition order, duplicate-ID precedence, reslicing and malformed-definition handling; keep profile and terminology dependency resolution unchanged. Normalize profile element arrays without per-element temporary arrays and reuse package-directory discovery only within the current terminology request, observing configuration changes and loader invalidation. For fallback package inventories, reuse bounded identity-only JSON projections by the SHA-256 of freshly verified file bytes; continue all physical ownership, content-change, malformed-file and selected-definition checks, and clear the projections with the validator profile cache.
+- Increase the bounded, content-addressed package-profile identity cache so large terminology and IG packages do not repeatedly parse the same verified JSON during validation. File ownership, content hashes, unavailable outcomes and cache invalidation keep their existing behavior.
+- Reuse generated package snapshots only after checking the current parent/type definitions and their provenance. Avoid full profile copies for identity lookups, prepare slice-binding selection only when used, and discover URL package stores only for applicable URL rules. Keep cached snapshots detached and consolidate committed-page progress writes without changing validation coverage or findings.
+- Copy package manifest and index metadata by their known shape during implicit per-resource inventory capture, preserving nested isolation and the existing snapshot limits. Skip the unused settings copy in unscoped profile resolution; tenant-scoped host lookups still receive detached settings.
+- Reuse a computed profile source key within recursive conformance and a generated-snapshot cache lookup. Implicit per-resource package inventories retain their byte and entry limits but skip canonical evidence serialization and hashing that no caller consumes; explicit dependency snapshots keep their reproducible hashes.
+- Reduce repeated resource-path resolution within a profile constraint validation and avoid traversing unconstrained snapshot paths in deep profile checks. Keep caches local to each validation. Add profile subphase and scheduler wait diagnostics without changing validation findings.
+- Reuse static binding-path candidates within each structural invocation while keeping indexed occurrence membership independent. Avoid copying request settings for already captured profile references, retaining synchronous policy capture and detached host inputs for actual lookups. Stop CodeSystem archive work after the first assertable match and close streams on misses and failures.
+## [0.9.0] — 2026-10-11
+
+### Added
+
+- Expose the existing FHIRPath model selector through the host embedding
+  surface so application-level quality checks use the same release model.
+
+
+### Changed
+
+- Use Node 24 LTS for the validator GitHub Action and exported repository builds.
+  Published packages retain their Node 20 minimum runtime requirement.
+
+
+### Fixed
+
+- Imposed profile passes preserve existing causal Composition slice evidence instead of adding the same bare slice minimum again.
+
+- Preserve missing CodeSystem/version diagnostics from terminology responses.
+  Unconfigured, unavailable or circuit-blocked CodeSystem checks no longer
+  silently pass; fallback servers retain the input's requested version.
+- Preserve the requested terminology release in tenant-host lookups, including
+  cross-version packages whose core vocabularies differ from their FHIR representation.
+- Slice cardinality findings now retain the exact versioned profile that defined
+  the slice, so a finding can open the applicable profile definition even when
+  another validation context is active.
+- Apply native custom rules only to their selected FHIR release and resolved
+  profile. Preserve R4B separately from its R4 engine model, and record unavailable
+  applicability or failed execution as incomplete rather than a clean pass.
+- Custom FHIRPath rules can restrict execution to FHIR versions and canonical profile references (including exact profile versions). Rules outside that scope are skipped, and violations retain their authored element path.
+- Advisor rules match canonical profile identities and full element paths without also matching similarly named profiles or sibling fields. A trailing slash explicitly selects a profile namespace, preserving the built-in MII family rules. Invariant identifiers match exactly; a trailing hyphen retains explicit identifier-prefix matching.
+- Expose the shared release-aware FHIRPath model context to embedding applications so DQA expressions resolve logical choice paths consistently with resource validation.
+- Open and open-at-end slices no longer report an unread reference target as a confirmed nonmember. Target-dependent slice membership remains incomplete when the reference cannot be resolved, including optional open slices with no minimum. Known nonmember, cardinality and closed-slice findings are retained beside unknown targets. Explicitly enabled target-profile prefetch reuses the supplied host resolver instead of fetching the same target again; the opt-in policy is unchanged.
+- Preserve primitive values together with their underscore extensions and FHIR types when evaluating profile constraints, including extension-only array entries.
+- Retain slice discriminators when evaluating constraints inherited from an extension profile, so a percentage rule does not run against a boolean sibling.
+- Resolve choice-cast slicing discriminators through required ValueSet bindings inherited from type profiles, including named profile-element references. Report incomplete slicing when a required discriminator binding cannot be loaded. Validator 0.9.0.
+- Runtime StructureDefinition package scans now read valid indexes or rescan in memory without persisting an index by default. Host consumers that require persistence must explicitly pass a source-bound profile index writer; bundled-profile installation retains its explicit build and verification. Pinned scans never replace the general index. Explicit index write failures now reject instead of reporting success. Missing or stale indexes may increase repeated runtime scan costs; cold-start performance has not been measured. Writer source binding is lexical, not a filesystem permission, symlink-containment or TOCTOU guarantee.
+- Recursive reference traversal no longer publishes ordinary clinical backlinks (for example Encounter.diagnosis.condition ↔ Condition.encounter) or Patient links as circular-reference conformance warnings. Traversal remains bounded and cycle-safe. Relationship-specific cycles in the documented strict CarePlan, Encounter, Location and Organization hierarchies remain warnings with their source field and relationship; different relationships, foreign URLs and historical version references are not conflated. This is bounded local-current-reference detection, not complete cross-server or custom-profile hierarchy validation.
+- Apply embedded resources’ additional profiles without revalidating their descendants; retain code-inferred provenance and mandated constraints at the embedding depth limit. Choose the newest ballot when an installed package contains multiple prerelease definitions.
+- Only required terminology bindings may establish value/pattern slice identity,
+  at the slice root or a child discriminator path. Extensible, preferred, example
+  and missing binding strengths no longer claim entries belonging to explicit
+  patterned slices. Unidentifiable slices remain explicitly unverified instead
+  of generating inferred cardinality errors; required bindings and explicit
+  pattern cardinality checks remain enforced.
+
 ## [0.8.0] — 2026-10-05
 
 This release consolidates the unpublished 0.7.1–0.7.5 development series

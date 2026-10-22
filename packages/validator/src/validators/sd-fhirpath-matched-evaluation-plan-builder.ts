@@ -96,6 +96,7 @@ export class SDFHIRPathMatchedEvaluationPlanBuilder {
         fhirVersion: scope.fhirVersion,
         bundle: scope.bundle,
         terminologyResolver: scope.terminologyResolver,
+        referenceResolver: scope.referenceResolver,
       }],
     };
   }

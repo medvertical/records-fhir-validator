@@ -3,8 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "license": "Apache-2.0",
   "packageManager": "npm@11.19.0",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/medvertical/records-fhir-validator.git"
@@ -33,11 +33,11 @@
   },
   "devDependencies": {
     "@typescript/native": "npm:typescript@^7.0.2",
-    "@types/node": "^20.16.11",
-    "tar-stream": "^3.2.1",
+    "@types/node": "^24.19.1",
+    "tar-stream": "^3.2.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.3",
-    "vite": "7.3.6",
-    "vitest": "4.1.11"
+    "vite": "7.3.7",
+    "vitest": "4.1.12"
   }
 }

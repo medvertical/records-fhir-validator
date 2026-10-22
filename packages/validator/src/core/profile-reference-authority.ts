@@ -2,7 +2,7 @@ import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../issues/issue-factory.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
-import path from 'node:path';
+import { realpath } from 'node:fs/promises';
 import { type PackageRef } from '../package/canonical-pin-store.js';
 import { dependencyClosureEntries } from '../package/canonical-pin-dependency-closure.js';
 import { copyProfilePackageProvenance, lookupProfilePackageDirectory,
@@ -50,11 +50,12 @@ const CORE_PACKAGE = /^hl7\.fhir\.r[456][ab]?\.(?:core|examples)$/i;
 const selectedDefinition = new AsyncLocalStorage<{ profile: StructureDefinition; key: string; family: 'R4' | 'R5' | 'R6' }>();
 
 /** Recursive conformance retains the already-read package definition instead of selecting globally again. */
-export function withSelectedProfileDefinition<T>(profile: StructureDefinition, family: 'R4' | 'R5' | 'R6', run: () => T): T {
+export function withSelectedProfileDefinition<T>(profile: StructureDefinition, family: 'R4' | 'R5' | 'R6', run: () => T,
+  sourceKey?: string): T {
   const origin = lookupProfilePackageProvenance(profile);
   if (!origin) return selectedDefinition.exit(run);
+  const key = sourceKey ?? createHash('sha256').update(JSON.stringify([origin, lookupProfilePackageDirectory(profile), profile])).digest('hex');
   const copied = structuredClone(profile); copyProfilePackageProvenance(profile, copied);
-  const key = createHash('sha256').update(JSON.stringify([origin, lookupProfilePackageDirectory(profile), copied])).digest('hex');
   return selectedDefinition.run({ profile: copied, key, family }, run);
 }
 export function selectedProfileLookup(url: string, family: 'R4' | 'R5' | 'R6') {
@@ -62,6 +63,13 @@ export function selectedProfileLookup(url: string, family: 'R4' | 'R5' | 'R6') {
   if (!selected || selected.family !== family || !profileMatchesCanonical(selected.profile, url, family)) return undefined;
   const profile = structuredClone(selected.profile); copyProfilePackageProvenance(selected.profile, profile);
   return { ...selected, profile };
+}
+
+/** Identity-only readers must not copy the complete selected definition. */
+export function selectedProfileIdentity(url: string, family: 'R4' | 'R5' | 'R6'): Readonly<{ key: string; type: string }> | undefined {
+  const selected = selectedDefinition.getStore();
+  if (!selected || selected.family !== family || !profileMatchesCanonical(selected.profile, url, family)) return undefined;
+  return { key: selected.key, type: selected.profile.type };
 }
 
 /** Unscoped host references keep their normal lookup policy and do not enter the implicit package inventory budget. */
@@ -80,18 +88,19 @@ export async function resolveProfileReferenceAuthority(
     status: 'unavailable', receipt: { canonical, source: origin, ...(dependency ? { dependency } : {}), cause },
   });
   try {
-    const manifests = await captureValidationDependency('profile', 'profile-reference-installed-manifests', scope.storeDirs,
+    let manifests = await captureValidationDependency('profile', 'profile-reference-installed-manifests', scope.storeDirs,
       () => sharedPinStore.listInstalledManifestCandidates(scope.storeDirs), owner?.reuseScope, owner?.currentScope);
     const sourceDirectory = lookupProfilePackageDirectory(source!);
     if (sourceDirectory) {
-      const sourceRank = scope.storeDirs.findIndex(store => [path.join(store, `${origin.name}#${origin.version}`, 'package'),
-        path.join(store, `${origin.name}#${origin.version}`)].some(candidate => path.resolve(candidate) === path.resolve(sourceDirectory)));
-      const actual = manifests.find(manifest => manifest.storeRank === sourceRank
-        && manifest.ref.name === origin.name && manifest.ref.version === origin.version
-        && path.resolve(manifest.packageDirectory!) === path.resolve(sourceDirectory));
+      const sourcePath = await realpath(sourceDirectory);
+      let actual: typeof manifests[number] | undefined;
+      for (const manifest of manifests) {
+        if (manifest.ref.name === origin.name && manifest.ref.version === origin.version && manifest.packageDirectory
+          && await realpath(manifest.packageDirectory) === sourcePath) { actual = manifest; break; }
+      }
       if (!actual) return unavailable('source-missing');
       // An equal package ref in an earlier store does not own this issued profile.
-      manifests.unshift(actual);
+      manifests = [actual, ...manifests.filter(manifest => manifest !== actual)];
     }
     const entries = dependencyClosureEntries(manifests, origin, scope.packageVersionPins, name => CORE_PACKAGE.test(name));
     for (const entry of entries) {

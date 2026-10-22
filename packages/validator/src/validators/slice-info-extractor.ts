@@ -9,11 +9,8 @@
 
 import type { StructureDefinition, ElementDefinition, SlicingDefinition } from '../core/structure-definition-types.js';
 import type { SliceDefinition } from './slice-types.js';
-import {
-  extractFixedFromElement,
-  extractPatternFromElement,
-  getValueAtPath,
-} from './slice-utils.js';
+import { createSliceElementIndex } from './slice-element-index.js';
+import { extractFixedFromElement, extractPatternFromElement, getValueAtPath } from './slice-utils.js';
 import { loadResolvedCodeDiscriminatorEvidence, type ResolvedCodeDefinitionResolver } from './slice-resolved-code-discriminator.js';
 import { inferChoiceSliceType } from './slice-choice-type-inference.js';
 import { logger } from '../logger.js';
@@ -55,71 +52,59 @@ export async function extractSlicingInfo(
   resolveOwnedCodeDefinition?: ResolvedCodeDefinitionResolver,
 ): Promise<{ slicing: SlicingDefinition; slices: SliceDefinition[]; selectedSlicingElementId?: string } | null> {
   const elements = getProfileElements(profileSD);
-
+  const pathElements = elements.filter(element => element.path === elementPath);
   const baseElement = slicingElementId
-    ? elements.find(element =>
-        element.id === slicingElementId
-        && element.path === elementPath
-        && getSlicingDefinition(element)
-      )
-    : elements.find(element =>
-        element.path === elementPath && getSlicingDefinition(element)
-      );
-  const candidateSliceElements = elements.filter(element =>
-    element.path === elementPath &&
-    typeof element.sliceName === 'string' &&
-    element.sliceName.length > 0 &&
-    isSliceInScope(element, slicingElementId)
+    ? pathElements.find(
+      element => element.id === slicingElementId && getSlicingDefinition(element),
+    )
+    : pathElements.find(
+      element => getSlicingDefinition(element),
+    );
+  const candidateSliceElements = pathElements.filter(element =>
+    typeof element.sliceName === 'string' && element.sliceName.length > 0
+      && isSliceInScope(element, slicingElementId),
   );
   if ((!baseElement || !baseElement.slicing) && candidateSliceElements.length === 0) return null;
 
-  const slicingDef = getSlicingDefinition(baseElement)
-    ?? inferInheritedSlicing(candidateSliceElements);
+  const slicingDef = getSlicingDefinition(baseElement) ?? inferInheritedSlicing(candidateSliceElements);
   const childBindingDiscriminatorPaths = collectChildBindingDiscriminatorPaths(slicingDef);
   const slices: SliceDefinition[] = [];
   const sliceScopeId = slicingElementId ?? getNonEmptyString(baseElement?.id);
+  const elementIndex = createSliceElementIndex(elements,
+    candidateSliceElements.filter(element => isSliceInScope(element, sliceScopeId)));
+  const constraintIdsIndexable = elementIndex
+    && elements.every(element => element.id == null || typeof element.id === 'string');
   const seenSliceIds = new Set<string>();
 
-  for (const element of elements) {
-    if (
-      element.path !== elementPath
-      || typeof element.sliceName !== 'string'
-      || element.sliceName.length === 0
-      || !isSliceInScope(element, sliceScopeId)
-    ) continue;
-    const sliceIdentity = getNonEmptyString(element.id)
-      ?? `${element.path}:${element.sliceName}`;
+  for (const element of pathElements) {
+    if (typeof element.sliceName !== 'string' || element.sliceName.length === 0
+      || !isSliceInScope(element, sliceScopeId)) continue;
+    const sliceIdentity = getNonEmptyString(element.id) ?? `${element.path}:${element.sliceName}`;
     if (seenSliceIds.has(sliceIdentity)) continue;
     seenSliceIds.add(sliceIdentity);
 
     const sliceDef: SliceDefinition = {
       sliceName: element.sliceName,
       path: element.path,
-      min: typeof element.min === 'number' && Number.isFinite(element.min)
-        ? element.min
-        : 0,
+      min: typeof element.min === 'number' && Number.isFinite(element.min) ? element.min : 0,
       max: getNonEmptyString(element.max) ?? '*',
       discriminator: slicingDef.discriminator,
       type: getElementTypes(element),
     };
+    applyRootSliceConstraints(sliceDef, element, constraintIdsIndexable
+      ? elementIndex.descendants(`${element.id ?? `${elementPath}:${element.sliceName}`}.`) : elements);
 
-    applyRootSliceConstraints(sliceDef, element, elements);
-
-    const slicePrefix = element.id
-      ? `${element.id}.`
-      : `${elementPath}:${element.sliceName}.`;
+    const slicePrefix = element.id ? `${element.id}.` : `${elementPath}:${element.sliceName}.`;
     const childPatterns = new Map<string, unknown>();
     const childFixed = new Map<string, unknown>();
     const childMin = new Map<string, number>();
     const childMax = new Map<string, number>();
     const childTypes = new Map<string, Array<{ code: string; profile?: string[]; targetProfile?: string[] }>>();
     const childBindingValueSets = new Map<string, string>();
-    const childBindingCodes = new Map<string, Set<string>>();
 
-    for (const candidate of elements) {
+    for (const candidate of elementIndex?.descendants(slicePrefix) ?? elements) {
       if (typeof candidate.id !== 'string') continue;
       if (!candidate.id.startsWith(slicePrefix)) continue;
-
       const relativePath = candidate.id.substring(slicePrefix.length);
       const childPattern = extractPatternFromElement(candidate);
       if (childPattern !== undefined) childPatterns.set(relativePath, childPattern);
@@ -133,26 +118,20 @@ export async function extractSlicingInfo(
       const bindingValueSet = discriminatingBindingValueSet(candidate);
       if (bindingValueSet && childBindingAppliesToDiscriminatorPath(relativePath, childBindingDiscriminatorPaths)) {
         childBindingValueSets.set(relativePath, bindingValueSet);
-        if (!valueSetLoader) continue;
-        try {
-          const codes = normalizeCodes(await valueSetLoader.loadValueSet(bindingValueSet));
-          if (codes.length > 0) {
-            childBindingCodes.set(relativePath, new Set(codes));
-            logChildBindingLoaded(codes.length, element.sliceName, relativePath);
-          }
-        } catch {
-          logChildBindingLoadFailed(element.sliceName, relativePath, bindingValueSet);
-        }
       }
     }
 
-    await mergeProfiledTypeMetadata({ element, childTypes, childPatterns, childFixed, childMin, typeProfileResolver });
+    await mergeProfiledTypeMetadata({ element, childTypes, childPatterns, childFixed, childMin, childBindingValueSets, typeProfileResolver });
     await mergeAncestorTypeProfileSliceMetadata({
-      element, elements, elementPath, sliceDef,
+      element, elements: elementIndex?.ancestors(element.id) ?? elements, elementPath, sliceDef,
       childPatterns, childFixed, childMin, childTypes,
       resolver: typeProfileResolver,
     });
     inferChoiceSliceType(sliceDef, elementPath);
+
+    const childBindingCodes = await loadChildBindingCodes(
+      childBindingValueSets, childBindingDiscriminatorPaths, valueSetLoader, element.sliceName,
+    );
 
     if (childPatterns.size > 0) sliceDef.childPatterns = childPatterns;
     if (childFixed.size > 0) sliceDef.childFixed = childFixed;
@@ -165,14 +144,36 @@ export async function extractSlicingInfo(
     await mergeRootBindingCodes(sliceDef, element, valueSetLoader);
     await loadResolvedCodeDiscriminatorEvidence(sliceDef, typeProfileResolver, element, profileSD, resolveOwnedCodeDefinition);
     if (lacksDiscriminatingValue(profileSD, sliceDef, element)) sliceDef.undiscriminated = true;
-
     slices.push(sliceDef);
   }
 
   logSliceExtraction(slices.length, elementPath);
   return { slicing: slicingDef, slices,
-    ...(baseElement?.slicing && getNonEmptyString(baseElement.id) ? { selectedSlicingElementId: baseElement.id } : {}),
-  };
+    ...(baseElement?.slicing && getNonEmptyString(baseElement.id)
+      ? { selectedSlicingElementId: baseElement.id } : {}) };
+}
+
+async function loadChildBindingCodes(
+  bindings: Map<string, string>,
+  discriminatorPaths: Set<string>,
+  loader: ValueSetLoaderLike | null,
+  sliceName: string,
+): Promise<Map<string, Set<string>>> {
+  const resolved = new Map<string, Set<string>>();
+  if (!loader) return resolved;
+  for (const [relativePath, valueSet] of bindings) {
+    if (!childBindingAppliesToDiscriminatorPath(relativePath, discriminatorPaths)) continue;
+    try {
+      const codes = normalizeCodes(await loader.loadValueSet(valueSet));
+      if (codes.length > 0) {
+        resolved.set(relativePath, new Set(codes));
+        logChildBindingLoaded(codes.length, sliceName, relativePath);
+      }
+    } catch {
+      logChildBindingLoadFailed(sliceName, relativePath, valueSet);
+    }
+  }
+  return resolved;
 }
 
 async function mergeProfiledTypeMetadata(input: {
@@ -181,10 +182,11 @@ async function mergeProfiledTypeMetadata(input: {
   childPatterns: Map<string, unknown>;
   childFixed: Map<string, unknown>;
   childMin: Map<string, number>;
+  childBindingValueSets: Map<string, string>;
   typeProfileResolver: TypeProfileResolverFn;
 }): Promise<void> {
-  const { element, childTypes, childPatterns, childFixed, childMin, typeProfileResolver } = input;
-  await mergeTypeProfilePatterns(element, childPatterns, childFixed, childMin, typeProfileResolver);
+  const { element, childTypes, childPatterns, childFixed, childMin, childBindingValueSets, typeProfileResolver } = input;
+  await mergeTypeProfilePatterns(element, childPatterns, childFixed, childMin, typeProfileResolver, childBindingValueSets);
   await mergeChildTypeProfileConstraints(
     childTypes, childPatterns, childFixed, typeProfileResolver,
   );
@@ -292,10 +294,8 @@ function logRootBindingLoadFailed(sliceName: string | undefined, valueSet: strin
 }
 
 function recordChildCardinality(
-  candidate: ElementDefinition,
-  relativePath: string,
-  childMin: Map<string, number>,
-  childMax: Map<string, number>,
+  candidate: ElementDefinition, relativePath: string,
+  childMin: Map<string, number>, childMax: Map<string, number>,
 ): void {
   if ((candidate.min ?? 0) > 0) childMin.set(relativePath, candidate.min!);
   const maximum = candidate.max === undefined || candidate.max === '*' ? NaN : Number(candidate.max);

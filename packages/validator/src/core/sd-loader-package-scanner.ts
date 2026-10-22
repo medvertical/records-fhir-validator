@@ -1,12 +1,13 @@
 /**
  * StructureDefinition Loader - Package Scan Orchestrator
  * 
- * Owns persistent-index policy and delegates filesystem walking to the focused
+ * Owns read-only index reuse and delegates filesystem walking to the focused
  * package source walker. Compatibility exports remain available here.
  */
 
 import { logger } from '../logger.js';
-import { loadFromPersistentIndex, saveToPersistentIndex } from './sd-loader-persistent-index.js';
+import path from 'node:path';
+import { loadFromPersistentIndex, type ProfileIndexWriter } from './sd-loader-persistent-index.js';
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import { sensitiveValueMetadata } from '../utils/sensitive-logging-metadata.js';
 import { walkPackageSource } from './sd-loader-package-source-walker.js';
@@ -19,17 +20,21 @@ export {
 
 export interface ScanCacheDirectoryOptions {
   packageVersionPins?: Record<string, string>;
+  indexWriter?: ProfileIndexWriter;
 }
 
 /**
  * Scan cache directory for available StructureDefinitions
- * Uses persistent index to avoid rescanning on every startup (saves 2-4s)
+ * Reuses valid indexes; persistence requires an explicit source-bound writer.
  */
 export async function scanCacheDirectory(
   sourcePath: string,
   availableProfiles: Set<string>,
   options: ScanCacheDirectoryOptions = {}
 ): Promise<number> {
+  if (options.indexWriter && options.indexWriter.sourcePath !== path.resolve(sourcePath)) {
+    throw new Error('Profile index writer is bound to a different source');
+  }
   try {
     const startTime = Date.now();
     const startProfileCount = availableProfiles.size;
@@ -71,12 +76,10 @@ export async function scanCacheDirectory(
       `[SDLoader] ✓ Found ${profilesAdded} profiles from ${walkResult.scannedCount} packages in ${elapsed}ms`,
     );
 
-    // 3. Save to persistent index for next startup. Pinned scans are deliberately
-    // not persisted because the active pin set changes which local package
-    // versions are eligible.
-    if (!hasVersionPins) {
-      await saveToPersistentIndex(
-        sourcePath,
+    // Runtime scans stay read-only. Explicit builds may persist, but pins
+    // change eligibility and must never replace the general source index.
+    if (!hasVersionPins && options.indexWriter) {
+      await options.indexWriter.save(
         walkResult.sourceProfiles,
         walkResult.packageDetails,
         { deduplicatePackages: deduplicateEnabled },
@@ -90,6 +93,7 @@ export async function scanCacheDirectory(
       '[SDLoader] Package source scan failed',
       validationFailureMetadata(error),
     );
+    if (options.indexWriter) throw error;
     return 0;
   }
 }

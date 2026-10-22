@@ -127,6 +127,7 @@ export function acquireRecordsValidatorRuntime(
 async function validateRecordsRequest(
   request: RecordsValidationRequest,
 ): Promise<ValidationIssue[]> {
+  const selectedRelease = request.selectedRelease;
   const { context, instance } = await getConfiguredRecordsValidator(
     request.fhirVersion ?? 'R4',
     request.runtimeScopeKey,
@@ -140,6 +141,8 @@ async function validateRecordsRequest(
     request.referenceResolver,
     request.organizationId,
     request.serverId,
+    0,
+    selectedRelease === undefined ? context.publicVersion : selectedRelease,
   );
 }
 
@@ -186,11 +189,12 @@ export const recordsValidator: RecordsValidatorSingleton = {
   },
   async validateAll(inputs, options) {
     return validateAllResources({
-      validate: (resource, profileUrl, releaseContext, settings, fhirClient) =>
+      validate: (resource, profileUrl, releaseContext, settings, fhirClient, selectedRelease) =>
         validateRecordsRequest({
           resource,
           profileUrl,
           fhirVersion: releaseContext.publicVersion,
+          selectedRelease,
           settings,
           fhirClient,
         }),
@@ -200,6 +204,7 @@ export const recordsValidator: RecordsValidatorSingleton = {
         configurePublicReleaseRuntime(instance, releaseContext);
         return instance.validateBatch(resources, {
           ...batchOptions,
+          selectedRelease: batchOptions.selectedRelease === undefined ? releaseContext.publicVersion : batchOptions.selectedRelease,
           settings: settingsWithPublicRelease(batchOptions.settings, releaseContext),
         });
       },

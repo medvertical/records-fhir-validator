@@ -27,6 +27,7 @@ import type { ReferenceResolver } from '../validators/slicing-validator.js';
 import type { TerminologyResourceValidator } from '../validators/terminology-resource-validator.js';
 import type { FhirResource } from './fhir-resource.js';
 import type { SingleResourceProfileConformance } from './single-resource-profile-conformance.js';
+import type { CustomRuleSelectedRelease } from '../custom-rules/applicability.js';
 import {
   shouldRunCustomRules,
   shouldValidateBestPractices,
@@ -37,6 +38,7 @@ export interface SingleResourceValidationInput {
   resource: FhirResource;
   profileUrl: string;
   fhirVersion: 'R4' | 'R5' | 'R6';
+  selectedRelease?: CustomRuleSelectedRelease | null;
   structureDef: StructureDefinition;
   strictMode: boolean;
   settings?: ValidationSettings;
@@ -73,6 +75,8 @@ export async function collectSingleResourceValidationIssues(
       resourceType: input.resource.resourceType,
       profileUrl: input.profileUrl,
       fhirVersion: input.fhirVersion,
+      selectedRelease: input.selectedRelease,
+      profileResolutionFallback: Boolean(input.profileFallbackIssue),
       structureDef: input.structureDef,
       strictMode: input.strictMode,
       settings: input.settings,

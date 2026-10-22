@@ -1,5 +1,7 @@
 import { getBoundProfileSourceRevision, getProfileSourceCaptureScope, withProfileSourceSnapshot } from '../persistence/profile-source.js';
 import { clearCanonicalPinCaches } from '../package/canonical-pin-context.js';
+import { clearPackageProfileIdentityCache } from './sd-loader-package-profile-reader.js';
+import { clearProfileReferenceFallbackCatalog } from './profile-reference-fallback-catalog.js';
 import type { PackageDownloader } from '../package/package-downloader.js';
 import type { PackageRegistryClient } from '../package/package-registry-client.js';
 import { logger } from '../logger.js';
@@ -72,6 +74,7 @@ export class StructureDefinitionLoaderRuntime {
       availableProfiles: this.availableProfiles,
       packageVersionPins: this.policy.getPackageVersionPins(),
       prewarmProfileSource: resolved.prewarmProfileSource,
+      preloadPackageInventory: resolved.preloadPackageInventory,
       cache: this.cache,
       maxCacheEntries: this.maxCacheEntries,
       externalProfileCacheKeys: this.externalProfileCacheKeys,
@@ -137,6 +140,8 @@ export class StructureDefinitionLoaderRuntime {
     // Pin caches mirror the on-disk package stores the profile cache was
     // filled from; both must reset together or pins go stale after installs.
     clearCanonicalPinCaches();
+    clearPackageProfileIdentityCache();
+    clearProfileReferenceFallbackCatalog();
     logger.info('[SDLoader] Cache cleared');
   }
 
@@ -161,7 +166,9 @@ export class StructureDefinitionLoaderRuntime {
       selectedCorePackageId: this.policy.selectedCorePackage,
       profileSourcesConfig: this.policy.getProfileSourcesConfig(),
       profileSourceContext: profileSourceContext && structuredClone(profileSourceContext),
-      profileResolutionSettings: profileResolutionSettings && structuredClone(profileResolutionSettings),
+      // Only tenant profile resolution passes settings to a host source; unscoped package loads never read them.
+      profileResolutionSettings: profileSourceContext?.organizationId !== undefined && profileResolutionSettings
+        ? structuredClone(profileResolutionSettings) : undefined,
       resolvePinnedCanonical: this.policy.capturePinnedCanonicalResolver(),
       canCache: () => this.policy.revision === policyRevision && getProfileSourceRevision() === sourceRevision,
       autoDownloadState: this.autoDownloadState,

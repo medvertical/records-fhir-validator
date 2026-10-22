@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { projectSemanticAspectResult, resolveSemanticAspectPlan } from '../semantic-aspect-plan';
 import type { AspectResult } from '../multi-aspect-types';
 import type { ValidationIssue } from '@records-fhir/validation-types';
+import { base, definition } from './custom-rule-applicability-fixtures.js';
 
 const bucket = (aspect: string, issues: ValidationIssue[] = []): AspectResult => ({
   aspect, issues, evidenceIssues: issues, validationTime: 0,
@@ -9,6 +10,12 @@ const bucket = (aspect: string, issues: ValidationIssue[] = []): AspectResult =>
 });
 
 describe('semantic aspect execution and projection', () => {
+  it('retains custom-rule incompleteness without a loaded definition or thrown profile dependency', () => {
+    const result = projectSemanticAspectResult({ isValid: true, aspects: [bucket('custom_rule', [
+      { aspect: 'custom_rule', code: 'custom-rule-applicability-unknown', severity: 'warning', message: 'Unknown', details: { validationComplete: false, checkOutcome: 'unknown' } },
+    ])] }, resolveSemanticAspectPlan(['custom_rule']));
+    expect(result).toMatchObject({ isValid: false, aspects: [{ aspect: 'custom_rule', isValid: false }] });
+  });
   it.each(['structural', 'profile', 'terminology', 'reference', 'invariant'])('%s includes cross-producing executors', aspect => {
     expect(resolveSemanticAspectPlan([aspect]).executors).toEqual(new Set([aspect, 'structural', 'profile', 'invariant']));
   });
@@ -30,7 +37,7 @@ describe('semantic aspect execution and projection', () => {
 
   it('honors explicit incomplete evidence independently of its issue code', () => {
     expect(() => projectSemanticAspectResult({ isValid: true, aspects: [bucket('structural'), bucket('profile', [
-      { message: 'Incomplete', severity: 'information', details: { validationComplete: false } },
+      { aspect: 'profile', message: 'Incomplete', severity: 'information', details: { validationComplete: false } },
     ])] }, resolveSemanticAspectPlan(['structural']))).toThrow('dependency could not be completed');
   });
 
@@ -39,7 +46,7 @@ describe('semantic aspect execution and projection', () => {
     dependency.evidenceIssues = [{ aspect: 'profile', code: 'profile-not-resolved', severity: 'warning',
       disposition: 'suppressed', message: 'Missing requested profile', details: { validationComplete: false } }];
     const result = projectSemanticAspectResult({ isValid: false,
-      structureDef: { resourceType: 'StructureDefinition' },
+      structureDef: definition(base + 'Patient'),
       aspects: aspect === 'profile' ? [dependency] : [bucket(aspect), dependency],
     }, resolveSemanticAspectPlan([aspect]));
     expect(result).toMatchObject({ isValid: false, aspects: [{ aspect, isValid: false, issues: [] }] });

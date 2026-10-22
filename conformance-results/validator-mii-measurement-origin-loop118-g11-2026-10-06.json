@@ -1,0 +1,17 @@
+{
+  "schema": "records.validator.mii-clean-measurement.v1",
+  "before": "e3ec400a3dff37b5cfd3b29112fc5170d4596c90232b94e5c9d80618a12010fa",
+  "after": "e3ec400a3dff37b5cfd3b29112fc5170d4596c90232b94e5c9d80618a12010fa",
+  "startedAt": "2026-10-06T11:32:26.739Z",
+  "finishedAt": "2026-10-06T11:39:03.377Z",
+  "command": [
+    "env",
+    "PATH=/Users/sheydin/.nvm/versions/node/v22.18.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+    "NODE_ENV=test",
+    "RECORDS_VALIDATOR_TOOLING_SHA=accaa7c4f4de4e9e2e78b64ea1d64776a7cff267",
+    "node",
+    "scripts/release/run-isolated-validator-quality.mjs"
+  ],
+  "exitCode": 0,
+  "reportSha256": "8db95d197f8ad86439ba66b9ad03053cfa4efdabafe62eb9d65983fa273f9dbc"
+}

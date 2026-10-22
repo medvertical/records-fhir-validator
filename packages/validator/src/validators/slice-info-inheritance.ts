@@ -32,6 +32,7 @@ export async function mergeTypeProfilePatterns(
   childFixed: Map<string, unknown>,
   childMin: Map<string, number>,
   resolver: TypeProfileResolverFn,
+  childBindingValueSets?: Map<string, string>,
 ): Promise<void> {
   if (!resolver) return;
   // Read the raw type entries rather than getElementTypes(), which drops the
@@ -67,13 +68,18 @@ export async function mergeTypeProfilePatterns(
           : undefined;
         if (referencedElements) {
           for (const [relativePath, typeElement] of referencedElements) {
-            mergeTypeProfileChildAt(relativePath, typeElement, childPatterns, childFixed, childMin);
+            mergeTypeProfileChildAt(
+              relativePath, typeElement, childPatterns, childFixed, childMin, childBindingValueSets,
+            );
           }
           continue;
         }
         for (const typeElement of getProfileElements(typeDefinition)) {
           if (!typeElement.path.startsWith(`${typeRoot}.`)) continue;
-          mergeTypeProfileChild(typeElement, typeRoot, childPatterns, childFixed, childMin);
+          mergeTypeProfileChildAt(
+            getTypeProfileRelativePath(typeElement, typeRoot),
+            typeElement, childPatterns, childFixed, childMin, childBindingValueSets,
+          );
         }
       } catch (error) {
         logger.debug('[SlicingValidator] Failed to resolve type profile', {
@@ -175,25 +181,13 @@ export async function mergeChildTypeProfileConstraints(
 }
 
 
-function mergeTypeProfileChild(
-  element: ElementDefinition,
-  typeRoot: string,
-  childPatterns: Map<string, unknown>,
-  childFixed: Map<string, unknown>,
-  childMin: Map<string, number>,
-): void {
-  mergeTypeProfileChildAt(
-    getTypeProfileRelativePath(element, typeRoot),
-    element, childPatterns, childFixed, childMin,
-  );
-}
-
 function mergeTypeProfileChildAt(
   relativePath: string,
   element: ElementDefinition,
   childPatterns: Map<string, unknown>,
   childFixed: Map<string, unknown>,
   childMin: Map<string, number>,
+  childBindingValueSets?: Map<string, string>,
 ): void {
   if (!childPatterns.has(relativePath)) {
     const pattern = extractPatternFromElement(element);
@@ -204,6 +198,10 @@ function mergeTypeProfileChildAt(
     if (fixed !== undefined) childFixed.set(relativePath, fixed);
   }
   if ((element.min ?? 0) > 0 && !childMin.has(relativePath)) childMin.set(relativePath, element.min!);
+  if (element.binding?.strength === 'required' && element.binding.valueSet
+    && !childBindingValueSets?.has(relativePath)) {
+    childBindingValueSets?.set(relativePath, element.binding.valueSet);
+  }
 }
 
 async function mergeAncestorProfile(

@@ -94,11 +94,11 @@ export function validateExampleUrl(
 export async function unlessPackageDefined(
   issue: ValidationIssue | null,
   value: unknown,
-  directories: readonly string[] = resolveValueSetPackageDirectories(),
+  directories?: readonly string[],
 ): Promise<ValidationIssue | null> {
   if (!issue || issue.code !== 'structural-example-url' || typeof value !== 'string') return issue;
   const [url, version] = value.split('#')[0].split('|');
-  return await isPackageDefinedUrl(url, version, directories) ? null : issue;
+  return await isPackageDefinedUrl(url, version, directories ?? resolveValueSetPackageDirectories()) ? null : issue;
 }
 
 const SPEC_PAGE_TYPES = new Set(['uri', 'url']);

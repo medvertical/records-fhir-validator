@@ -64,8 +64,10 @@ export function getExtensionMaxCardinalityKey(issue: ValidationIssue): string | 
 
 export function isRedundantMustSupportBestPracticeIssue(
   issue: ValidationIssue,
-  mustSupportPaths: Set<string>,
+  mustSupportIssuesByPath: ReadonlyMap<string, readonly ValidationIssue[]>,
 ): boolean {
   if (!issue.code?.startsWith('best-practice-')) return false;
-  return mustSupportPaths.has(normalizeRequiredElementPath(issue));
+  const severityRank: Record<string, number> = { info: 0, information: 0, warning: 1, error: 2, fatal: 3 };
+  return mustSupportIssuesByPath.get(normalizeRequiredElementPath(issue))?.some(related =>
+    (severityRank[related.severity] ?? 0) >= (severityRank[issue.severity] ?? 0)) ?? false;
 }

@@ -19,6 +19,8 @@ export type {
 } from '../core/operation-outcome-converter.js';
 export { InvariantRegistry } from '../validators/invariant-registry.js';
 export { ValueSetCache } from '../validators/valueset-cache.js';
+export { expandFiniteValueSet, assessStoredExpansion, assessFiniteCodeSystem } from '../validators/finite-valueset-expansion.js';
+export type { FiniteExpansion, FiniteTerminologyResolver } from '../validators/finite-valueset-expansion.js';
 export type { ServerExpansionEntry } from '../validators/valueset-cache.js';
 export type {
   CodeSystem,

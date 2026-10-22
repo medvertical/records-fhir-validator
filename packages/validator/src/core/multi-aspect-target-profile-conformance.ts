@@ -11,6 +11,8 @@ import type { ProfiledTargetHit, ReferenceResolver, ReferenceTargetValidator } f
 import { isProfiledCanonical } from '../validators/reference-target-type-resolution.js';
 import type { ProfileConformanceCheck, ProfileConformanceVerdict } from '../validators/sd-fhirpath-profile-conformance.js';
 import { createValidationIssue } from '../issues/index.js';
+import { extractExtensionDefinitions, normalizeExtensionUrlForMatching } from '../validators/extension-definition-extractor.js';
+import { loadExtensionProfile } from '../validators/extension-profile-cache.js';
 
 const CORE_DEFINITION = 'http://hl7.org/fhir/StructureDefinition/';
 
@@ -37,7 +39,7 @@ export async function validateReferenceTargetProfileConformance(params: {
   /** Loads an extension's definition, whose value element may name targetProfiles of its own. */
   pinExtensionProfile?: (url: string, definition: StructureDefinition) => Promise<string>;
   onIncomplete?: (issue: ValidationIssue) => void;
-  loadExtensionDefinition?: (url: string) => Promise<StructureDefinition | null | undefined>;
+  loadExtensionDefinition?: (url: string, parent?: StructureDefinition) => Promise<StructureDefinition | null | undefined>;
   loadReferenceTargetDefinition?: (url: string, source: ProfileReferenceSource) => Promise<StructureDefinition | null>;
 }): Promise<ValidationIssue[]> {
   const { resource, structureDef, referenceTargetValidator, resolveReference, conformsTo } = params;
@@ -99,17 +101,24 @@ export function targetProfileResolver(
  */
 export async function collectExtensionTargetHits(
   resource: unknown,
-  loadDefinition: (url: string) => Promise<StructureDefinition | null | undefined>,
+  loadDefinition: (url: string, parent?: StructureDefinition) => Promise<StructureDefinition | null | undefined>,
   _pinProfile?: (url: string, definition: StructureDefinition) => Promise<string>,
   onIncomplete?: (issue: ValidationIssue) => void,
 ): Promise<ProfiledTargetHit[]> {
   if (!isRecord(resource) || typeof resource.resourceType !== 'string') return [];
-  const found: Array<{ url: string; path: string; reference: string }> = [];
+  const found: Array<{ url: string; path: string; reference: string; parents: string[] }> = [];
   collectExtensionReferences(resource, resource.resourceType, true, found);
   const hits: ProfiledTargetHit[] = [];
   for (const item of found) {
     let definition: StructureDefinition | null | undefined;
-    try { definition = await loadDefinition(item.url); }
+    try {
+      for (const ancestor of item.parents) {
+        definition = definition ? await loadDefinition(ancestor, definition) : await loadDefinition(ancestor);
+        if (!definition) break;
+      }
+      if (item.parents.length && !definition) continue;
+      definition = definition ? await loadDefinition(item.url, definition) : await loadDefinition(item.url);
+    }
     catch (error: unknown) {
       if (error instanceof ProfileReferenceUnavailableError) onIncomplete?.(profileReferenceUnavailableIssue(error, item.path));
       continue;
@@ -134,20 +143,26 @@ function collectExtensionReferences(
   value: unknown,
   path: string,
   isRoot: boolean,
-  found: Array<{ url: string; path: string; reference: string }>,
+  found: Array<{ url: string; path: string; reference: string; parents: string[] }>,
+  parents: string[] = [],
+  isExtension = false,
 ): void {
   if (Array.isArray(value)) {
-    value.forEach((item, index) => collectExtensionReferences(item, `${path}[${index}]`, false, found));
+    value.forEach((item, index) => collectExtensionReferences(item, `${path}[${index}]`, false, found, parents, isExtension));
     return;
   }
   if (!isRecord(value)) return;
   const reference = isRecord(value.valueReference) ? value.valueReference.reference : undefined;
-  if (typeof value.url === 'string' && /^[a-z][a-z0-9+.-]*:/i.test(value.url) && typeof reference === 'string' && reference) {
-    found.push({ url: value.url, path: `${path}.valueReference`, reference });
+  const absoluteUrl = isExtension && typeof value.url === 'string' && /^[a-z][a-z0-9+.-]*:/i.test(value.url) ? value.url : undefined;
+  if (absoluteUrl && typeof reference === 'string' && reference) {
+    found.push({ url: absoluteUrl, path: `${path}.valueReference`, reference, parents });
   }
+  const ancestors = absoluteUrl ? [...parents, absoluteUrl] : parents;
   for (const [key, child] of Object.entries(value)) {
     if (isRoot && (key === 'contained' || (value.resourceType === 'Bundle' && key === 'entry'))) continue;
-    collectExtensionReferences(child, `${path}.${key.replace(/^_/, '')}`, false, found);
+    const extensionArray = key === 'extension' || key === 'modifierExtension';
+    collectExtensionReferences(child, `${path}.${key.replace(/^_/, '')}`, false, found,
+      extensionArray ? ancestors : parents, extensionArray);
   }
 }
 
@@ -203,7 +218,9 @@ export async function loadExtensionTargetDefinition(
   loader: StructureDefinitionLoader, generator: SnapshotGenerator, url: string,
   source: StructureDefinition, family: 'R4' | 'R5' | 'R6',
 ): Promise<StructureDefinition | null> {
-  const profile = await loader.loadReferencedProfile(url, source, family);
+  const declaration = extractExtensionDefinitions(source).byUrl.get(normalizeExtensionUrlForMatching(url));
+  const profile = await loadExtensionProfile(loader, declaration?.profileUrl ?? url,
+    declaration?.profileUrl ? source : null, family);
   if (!profile || profile.snapshot?.element?.length || !profile.differential?.element?.length) return profile;
   const element = await generator.generateSnapshot(profile, { fhirVersion: family, cacheResults: false });
   const materialized = { ...profile, snapshot: { element } };

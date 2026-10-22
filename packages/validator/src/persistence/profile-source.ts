@@ -13,6 +13,7 @@ export interface ProfileResolutionEntry {
 
 /** Request-local package scope supplied by the embedding application. */
 export interface ProfileSourceContext {
+    terminologySnapshotSha256?: string;
     organizationId?: number;
     serverId?: number;
     fhirVersion?: 'R4' | 'R5' | 'R6';
@@ -27,6 +28,15 @@ export interface ProfileSourceContext {
  * fall through to a shared source.
  */
 export interface ProfileLookupSource {
+    isSnapshotProfileUnavailable?(request: string, context: ProfileSourceContext,
+        parent?: { url?: string; version?: string }): Promise<boolean>;
+    assertSnapshotProfileClaims?(canonicals: readonly string[], context: ProfileSourceContext): Promise<void>;
+    assertSnapshotProfile?(
+        request: string,
+        profile: StructureDefinition | null,
+        context: ProfileSourceContext,
+        parent?: { url?: string; version?: string },
+    ): Promise<void>;
     /**
      * Directories containing IG-package subdirectories (`<name>#<version>/`).
      * Declaring them lets terminology resolution search the same host-owned
@@ -71,6 +81,7 @@ export interface ExternalProfileSource {
 }
 
 export interface CanonicalResourceSource {
+    assertTerminologySnapshot?(settings: ValidationSettings, context: ProfileSourceContext): Promise<void>;
     findCanonicalResource?(
         url: string,
         resourceType: string,

@@ -440,7 +440,7 @@ describe('validate-code cache', () => {
     }
   });
 
-  it('keeps fail-open acceptance with explicit unavailable evidence when no terminology server is configured', async () => {
+  it('leaves direct CodeSystem validation unverified when no terminology server is configured', async () => {
     vi.resetModules();
     const get = vi.fn();
 
@@ -457,6 +457,8 @@ describe('validate-code cache', () => {
     });
 
     const { TerminologyApiClient } = await import('../terminology-api-client');
+    const { isVerifiedCodeSystemResult } = await import('../code-system-validation-evidence');
+    const { buildCodeSystemResultIssues } = await import('../../core/executors/terminology-code-system-result-issues');
     const client = new TerminologyApiClient({
       strategy: 'local-first',
     });
@@ -465,13 +467,23 @@ describe('validate-code cache', () => {
       '77606-2',
       'http://loinc.org',
       'Weight-for-length Per age and sex',
+      undefined,
+      '2.0.0',
     );
 
-    expect(result).toEqual({
-      valid: true,
-      reason: 'no-server',
-      message: 'CodeSystem membership was not verified because no terminology server is configured.',
-    });
+    expect(result).toMatchObject({ valid: true, reason: 'no-server', message: expect.stringContaining('no terminology server') });
+    expect(isVerifiedCodeSystemResult(result)).toBe(false);
+    expect(buildCodeSystemResultIssues(
+      { code: '77606-2', system: 'http://loinc.org', version: '2.0.0' },
+      result, 'Observation.code.coding', 0, true,
+    )).toEqual([expect.objectContaining({
+      code: 'terminology-codesystem-unverified', severity: 'information',
+      path: 'Observation.code.coding[0].code',
+      details: expect.objectContaining({
+        reason: 'no-server', validationComplete: false, validationStatus: 'incomplete',
+        codeSystemVersion: '2.0.0',
+      }),
+    })]);
     expect(get).not.toHaveBeenCalled();
 
     vi.doUnmock('axios');

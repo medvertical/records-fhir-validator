@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-05T22:41:56.050Z",
+  "generatedAt": "2026-10-22T21:05:46.119Z",
   "corpusRoot": "quality-corpus/r4/profiled/mii-2026",
   "fhirVersion": "R4",
   "summary": {
@@ -605,7 +605,7 @@
       "file": "mii-2026-base-condition-condition-mii-exa-diagnose-mehrfachcodierung-primaercode.json",
       "resourceType": "Condition",
       "errorCount": 0,
-      "warningCount": 3,
+      "warningCount": 7,
       "falsePositives": [],
       "clean": true
     },
@@ -829,7 +829,7 @@
       "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-cr.json",
       "resourceType": "ImagingStudy",
       "errorCount": 0,
-      "warningCount": 5,
+      "warningCount": 8,
       "falsePositives": [],
       "clean": true
     },
@@ -837,7 +837,7 @@
       "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-ct.json",
       "resourceType": "ImagingStudy",
       "errorCount": 0,
-      "warningCount": 4,
+      "warningCount": 7,
       "falsePositives": [],
       "clean": true
     },
@@ -845,7 +845,7 @@
       "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-mr-series.json",
       "resourceType": "ImagingStudy",
       "errorCount": 0,
-      "warningCount": 3,
+      "warningCount": 6,
       "falsePositives": [],
       "clean": true
     },
@@ -853,7 +853,7 @@
       "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-mr.json",
       "resourceType": "ImagingStudy",
       "errorCount": 0,
-      "warningCount": 4,
+      "warningCount": 7,
       "falsePositives": [],
       "clean": true
     },
@@ -861,7 +861,7 @@
       "file": "mii-2026-bildgebung-imaging-study-imaging-study-mii-exa-bildgebung-bildgebungsstudie-us.json",
       "resourceType": "ImagingStudy",
       "errorCount": 0,
-      "warningCount": 4,
+      "warningCount": 7,
       "falsePositives": [],
       "clean": true
     },
@@ -1717,7 +1717,7 @@
       "file": "mii-2026-molgen-condition-condition-mii-exa-molgen-bundle-befund-2-nipbl-condition-lab.json",
       "resourceType": "Condition",
       "errorCount": 0,
-      "warningCount": 3,
+      "warningCount": 4,
       "falsePositives": [],
       "clean": true
     },
@@ -1725,7 +1725,7 @@
       "file": "mii-2026-molgen-condition-condition-mii-exa-molgen-condition-nipbl-clinical.json",
       "resourceType": "Condition",
       "errorCount": 0,
-      "warningCount": 4,
+      "warningCount": 5,
       "falsePositives": [],
       "clean": true
     },
@@ -1773,7 +1773,7 @@
       "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-befundbericht-comprehensive-wes.json",
       "resourceType": "DiagnosticReport",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1781,7 +1781,7 @@
       "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-1.json",
       "resourceType": "DiagnosticReport",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1789,7 +1789,7 @@
       "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-2.json",
       "resourceType": "DiagnosticReport",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1797,7 +1797,7 @@
       "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-fgfr2-fusion.json",
       "resourceType": "DiagnosticReport",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1805,7 +1805,7 @@
       "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-srcc.json",
       "resourceType": "DiagnosticReport",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1813,7 +1813,7 @@
       "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-trurisk-panel.json",
       "resourceType": "DiagnosticReport",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1821,7 +1821,7 @@
       "file": "mii-2026-molgen-diagnostic-report-diagnostic-report-mii-exa-molgen-molekulargenetischer-befundbericht-tumorboard-3.json",
       "resourceType": "DiagnosticReport",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1901,7 +1901,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-1.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1909,7 +1909,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-2.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 1,
+      "warningCount": 2,
       "falsePositives": [],
       "clean": true
     },
@@ -1917,7 +1917,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-brca1.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1925,7 +1925,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-cnv-4.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1933,7 +1933,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-comprehensive.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1941,7 +1941,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-fgfr2-fusion.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1949,7 +1949,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-diagnostische-implikation-srcc-ctnna1.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1957,7 +1957,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-genotyp-1.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 1,
+      "warningCount": 2,
       "falsePositives": [],
       "clean": true
     },
@@ -1965,7 +1965,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-genotyp-2.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 1,
+      "warningCount": 2,
       "falsePositives": [],
       "clean": true
     },
@@ -1973,7 +1973,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-genotyp-brca1.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 1,
+      "warningCount": 2,
       "falsePositives": [],
       "clean": true
     },
@@ -1989,7 +1989,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-molekulare-konsequenz-1.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -1997,7 +1997,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-molekulare-konsequenz-2.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -2005,7 +2005,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-molekulare-konsequenz-brca1.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2013,7 +2013,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-molekulare-konsequenz-cnv-4.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2061,7 +2061,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-therapeutische-implikation-1.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -2069,7 +2069,7 @@
       "file": "mii-2026-molgen-observation-observation-mii-exa-molgen-therapeutische-implikation-fgfr2-fusion.json",
       "resourceType": "Observation",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -2213,7 +2213,7 @@
       "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-analysis-braf.json",
       "resourceType": "Procedure",
       "errorCount": 0,
-      "warningCount": 1,
+      "warningCount": 0,
       "falsePositives": [],
       "clean": true
     },
@@ -2221,7 +2221,7 @@
       "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-analysis-cornelia-de-lange.json",
       "resourceType": "Procedure",
       "errorCount": 0,
-      "warningCount": 1,
+      "warningCount": 0,
       "falsePositives": [],
       "clean": true
     },
@@ -2229,7 +2229,7 @@
       "file": "mii-2026-molgen-procedure-procedure-mii-exa-molgen-genomic-study-analysis-trurisk-panel.json",
       "resourceType": "Procedure",
       "errorCount": 0,
-      "warningCount": 1,
+      "warningCount": 0,
       "falsePositives": [],
       "clean": true
     },
@@ -2285,7 +2285,7 @@
       "file": "mii-2026-molgen-service-request-service-request-mii-exa-molgen-anforderung-1.json",
       "resourceType": "ServiceRequest",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -2405,7 +2405,7 @@
       "file": "mii-2026-onkologie-adverse-event-adverse-event-mii-exa-onko-oxaliplatin-neuropathy.json",
       "resourceType": "AdverseEvent",
       "errorCount": 0,
-      "warningCount": 0,
+      "warningCount": 1,
       "falsePositives": [],
       "clean": true
     },
@@ -2413,7 +2413,7 @@
       "file": "mii-2026-onkologie-adverse-event-adverse-event-mii-pr-onko-nebenwirkung-0.json",
       "resourceType": "AdverseEvent",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2533,7 +2533,7 @@
       "file": "mii-2026-onkologie-condition-condition-mii-exa-onko-diagnose.json",
       "resourceType": "Condition",
       "errorCount": 0,
-      "warningCount": 9,
+      "warningCount": 11,
       "falsePositives": [],
       "clean": true
     },
@@ -2757,7 +2757,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-folfox-5fu-statement.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2765,7 +2765,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-folfox-leucovorin-statement.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2773,7 +2773,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-folfox-oxaliplatin-statement.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2781,7 +2781,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-medikation-iberdomide-unii.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 1,
+      "warningCount": 2,
       "falsePositives": [],
       "clean": true
     },
@@ -2789,7 +2789,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-medikation-imatinib-atc-version-transition.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 4,
+      "warningCount": 5,
       "falsePositives": [],
       "clean": true
     },
@@ -2797,7 +2797,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-modification-5fu-phase1.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2805,7 +2805,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-modification-5fu-phase2.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2813,7 +2813,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-modification-leucovorin-phase1.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2821,7 +2821,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-modification-leucovorin-phase2.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2829,7 +2829,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-modification-oxaliplatin-phase1.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2837,7 +2837,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-systemische-therapie-medikation1.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2845,7 +2845,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-mii-exa-onko-systemische-therapie-medikation2.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2853,7 +2853,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-patient-kim-musterperson-systemic-therapy-medication-1a.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2861,7 +2861,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-patient-kim-musterperson-systemic-therapy-medication-1b.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2869,7 +2869,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-patient-kim-musterperson-systemic-therapy-medication-2a.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2877,7 +2877,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-patient-kim-musterperson-systemic-therapy-medication-2b.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -2885,7 +2885,7 @@
       "file": "mii-2026-onkologie-medication-statement-medication-statement-patient-kim-musterperson-systemic-therapy-medication-3.json",
       "resourceType": "MedicationStatement",
       "errorCount": 0,
-      "warningCount": 2,
+      "warningCount": 3,
       "falsePositives": [],
       "clean": true
     },
@@ -4037,7 +4037,7 @@
       "file": "mii-2026-patho-service-request-service-request-mii-exa-patho-request.json",
       "resourceType": "ServiceRequest",
       "errorCount": 0,
-      "warningCount": 1,
+      "warningCount": 2,
       "falsePositives": [],
       "clean": true
     },

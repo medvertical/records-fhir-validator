@@ -31,6 +31,65 @@ const validManifest = {
 } as const;
 
 describe('quality rule-pack contract', () => {
+  it('requires explicit R4 source-comparison semantics and bounded unambiguous choice paths', () => {
+    const implementation = { kind: 'cohort-temporal-comparison', leftPath: 'issued', rightPaths: ['effectiveDateTime', 'effectiveInstant'],
+      nonTemporalRightPaths: ['effectivePeriod', 'effectiveTiming'], operator: 'not-before', comparisonModel: 'cql-execution-3.3.2-utc' };
+    const candidate = { ...validManifest, rules: [{ ...validManifest.rules[0], scope: 'cohort', implementation }] };
+    expect(parseQualityRulePackManifest(candidate).rules[0].implementation).toEqual(implementation);
+    for (const patch of [
+      { leftPath: 'issued.first()' }, { rightPaths: ['constructor'] }, { rightPaths: [] },
+      { rightPaths: ['effectiveDateTime', 'effectiveDateTime'] }, { nonTemporalRightPaths: ['effectiveDateTime'] },
+      { nonTemporalRightPaths: ['effectivePeriod', 'effectivePeriod'] }, { nonTemporalRightPaths: ['effective[0]'] },
+      { leftPath: Array.from({ length: 13 }, () => 'field').join('.') }, { operator: 'before' },
+      { comparisonModel: 'host-timezone' }, { unreviewedOption: true },
+    ]) expect(qualityRulePackManifestSchema.safeParse({ ...candidate,
+      rules: [{ ...candidate.rules[0], implementation: { ...implementation, ...patch } }] }).success).toBe(false);
+    for (const fhirVersions of [[], ['R5'], ['R4', 'R5']]) expect(qualityRulePackManifestSchema.safeParse({ ...candidate,
+      rules: [{ ...candidate.rules[0], applicability: { ...validManifest.rules[0].applicability, fhirVersions } }] }).success).toBe(false);
+    expect(qualityRulePackManifestSchema.safeParse({ ...candidate, rules: [{ ...candidate.rules[0], scope: 'resource' }] }).success).toBe(false);
+  });
+  it('allows explicit concept membership without changing legacy primitive defaults', () => {
+    const implementation = { kind: 'external-membership', sourceId: 'synthetic-concepts', valueExpression: 'verificationStatus',
+      observationMode: 'single-codeable-concept', missingValuePolicy: 'member' };
+    const parsed = parseQualityRulePackManifest({ ...validManifest,
+      rules: [{ ...validManifest.rules[0], scope: 'external-reference', implementation }] });
+    expect(parsed.rules[0].implementation).toEqual(implementation);
+    const primitive = parseQualityRulePackManifest({ ...validManifest,
+      rules: [{ ...validManifest.rules[0], scope: 'external-reference',
+        implementation: { kind: 'external-membership', sourceId: 'synthetic-values', valueExpression: 'gender' } }] });
+    expect(primitive.rules[0].implementation).not.toHaveProperty('observationMode');
+    expect(primitive.rules[0].implementation).not.toHaveProperty('missingValuePolicy');
+  });
+
+  it('allows explicit structured distributions without changing primitive manifest defaults', () => {
+    const implementation = { kind: 'cohort-distribution', valueExpression: 'verificationStatus',
+      observationMode: 'single-structured', missingValuePolicy: 'null-stratum' };
+    const parsed = parseQualityRulePackManifest({ ...validManifest, rules: [{ ...validManifest.rules[0], scope: 'cohort', implementation }] });
+    expect(parsed.rules[0].implementation).toMatchObject({ ...implementation, valueMode: 'redacted' });
+    const primitive = parseQualityRulePackManifest({ ...validManifest, rules: [{ ...validManifest.rules[0], scope: 'cohort',
+      implementation: { kind: 'cohort-distribution', valueExpression: 'gender' } }] });
+    expect(primitive.rules[0].implementation).not.toHaveProperty('observationMode');
+    expect(primitive.rules[0].implementation).not.toHaveProperty('missingValuePolicy');
+  });
+
+  it('requires compound distribution evidence to remain hash-only', () => {
+    expect(qualityRulePackManifestSchema.safeParse({ ...validManifest, rules: [{ ...validManifest.rules[0], scope: 'cohort',
+      implementation: { kind: 'cohort-distribution', valueExpression: 'code.coding', observationMode: 'coding-collection',
+        valueMode: 'coded', codeSystem: 'https://example.org/codes' } }] }).success).toBe(false);
+  });
+  it('allows hash-only FHIR primitive observations with a bounded relative field path', () => {
+    const implementation = { kind: 'cohort-distribution', valueExpression: 'period.start',
+      observationMode: 'fhir-primitive', missingValuePolicy: 'null-stratum' };
+    const parsed = parseQualityRulePackManifest({ ...validManifest, rules: [{ ...validManifest.rules[0], scope: 'cohort', implementation }] });
+    expect(parsed.rules[0].implementation).toMatchObject({ ...implementation, valueMode: 'redacted' });
+    for (const valueExpression of ['status.first()', 'status[0]', '%resource.status', 'status | status', 'constructor',
+      'period.prototype', Array.from({ length: 13 }, () => 'field').join('.')]) {
+      expect(qualityRulePackManifestSchema.safeParse({ ...validManifest, rules: [{ ...validManifest.rules[0], scope: 'cohort',
+        implementation: { ...implementation, valueExpression } }] }).success).toBe(false);
+    }
+    expect(qualityRulePackManifestSchema.safeParse({ ...validManifest, rules: [{ ...validManifest.rules[0], scope: 'cohort',
+      implementation: { ...implementation, valueMode: 'coded', codeSystem: 'https://example.org/codes' } }] }).success).toBe(false);
+  });
   it('parses a bounded versioned manifest', () => {
     expect(parseQualityRulePackManifest(validManifest)).toMatchObject({
       id: 'example-quality',

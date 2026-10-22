@@ -45,13 +45,13 @@ export function buildTerminologyResolutionConfig(settings: ValidationSettings): 
     DEFAULT_RESOLUTION_CONFIG.serverDelegation as NonNullable<TerminologyResolutionConfig['serverDelegation']>;
 
   return {
-    strategy: primaryTerminologyServer
+    strategy: settings.terminologyResolution?.snapshot ? 'local-only' : primaryTerminologyServer
       ? (settings.terminologyResolution?.strategy || 'local-first')
       : 'local-only',
-    serverUrl: primaryTerminologyServer?.url,
+    serverUrl: settings.terminologyResolution?.snapshot ? undefined : primaryTerminologyServer?.url,
     defaultCodeSystemVersions: settings.terminologyResolution?.defaultCodeSystemVersions,
     auth: primaryTerminologyServer?.authConfig,
-    servers: (settings.terminologyServers || []).map(server => ({
+    servers: (settings.terminologyResolution?.snapshot ? [] : settings.terminologyServers || []).map(server => ({
       id: server.id,
       url: server.url,
       enabled: server.enabled,

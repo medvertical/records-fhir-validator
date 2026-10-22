@@ -71,7 +71,12 @@ function matchesRule(issue: ValidationIssue, match: AdvisorRuleMatch): boolean {
 
   if (match.path) {
     const paths = Array.isArray(match.path) ? match.path : [match.path];
-    if (!paths.some((path: string) => issue.path === path || issue.path?.includes(path))) return false;
+    if (!paths.some((path: string) => {
+      if (!/^[A-Z][A-Za-z]+(?:\.|$)/.test(path)) return issue.path === path || issue.path?.includes(path);
+      const actual = issue.path?.replace(/\[\d+\]/g, '');
+      const expected = path.replace(/\[\d+\]/g, '');
+      return actual === expected || actual?.startsWith(`${expected}.`) || actual?.startsWith(`${expected}[`);
+    })) return false;
   }
 
   if (match.message) {
@@ -95,17 +100,22 @@ function matchesRule(issue: ValidationIssue, match: AdvisorRuleMatch): boolean {
 
   if (match.profile) {
     const profiles = Array.isArray(match.profile) ? match.profile : [match.profile];
-    if (!profiles.some(profile => issue.profile === profile || issue.profile?.includes(profile))) return false;
+    if (!profiles.some(profile => /^(https?:|urn:)/.test(profile)
+      ? profile.endsWith('/') ? issue.profile?.startsWith(profile)
+        : profile.includes('|') ? issue.profile === profile : issue.profile?.split('|', 1)[0] === profile
+      : issue.profile === profile || issue.profile?.includes(profile))) return false;
   }
 
   if (match.ruleId) {
     const ruleIds = Array.isArray(match.ruleId) ? match.ruleId : [match.ruleId];
-    if (!ruleIds.some(ruleId => issue.ruleId === ruleId || issue.ruleId?.startsWith(ruleId))) return false;
+    if (!ruleIds.some(ruleId => issue.ruleId === ruleId || (ruleId.endsWith('-') && issue.ruleId?.startsWith(ruleId)))) return false;
   }
 
   if (match.resourceType) {
     const types = Array.isArray(match.resourceType) ? match.resourceType : [match.resourceType];
-    if (!types.some((resourceType: string) => issue.path?.startsWith(resourceType))) return false;
+    if (!types.some((resourceType: string) => issue.resourceType
+      ? issue.resourceType === resourceType
+      : issue.path === resourceType || issue.path?.startsWith(`${resourceType}.`) || issue.path?.startsWith(`${resourceType}[`))) return false;
   }
 
   return true;

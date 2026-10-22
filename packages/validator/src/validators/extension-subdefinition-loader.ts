@@ -22,7 +22,7 @@ export async function getSubExtensionDefinitions(
   fhirVersion: 'R4' | 'R5' | 'R6',
   sdLoader: StructureDefinitionLoader,
   cache: ExtensionProfileCache<Map<string, ExtensionDefinition>>,
-  referencingProfile?: ProfileReferenceSource,
+  referencingProfile?: ProfileReferenceSource | null,
 ): Promise<Map<string, ExtensionDefinition> | undefined> {
   let parentSD: StructureDefinition | null = null;
   try {

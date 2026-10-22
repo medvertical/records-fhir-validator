@@ -166,6 +166,7 @@ describe('PackageDownloader local cache resolution', () => {
       '1.0.0',
       { force: true },
     )).resolves.toMatchObject({ success: true });
+    expect(await readFile(path.join(cacheRoot, 'example.fhir#1.0.0', 'package.tgz'))).toEqual(archive);
     await expect(access(path.join(cacheRoot, 'sdloader-profile-index.json'))).rejects.toMatchObject({
       code: 'ENOENT',
     });

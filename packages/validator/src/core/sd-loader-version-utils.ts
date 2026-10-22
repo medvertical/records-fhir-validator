@@ -25,13 +25,14 @@ export function matchesRequestedFhirVersion(
  * so the version in the URL says nothing about where it may be used.
  */
 const CROSS_VERSION_EXTENSION_URL = /^https?:\/\/hl7\.org\/fhir\/(\d\.\d)(?:\.\d+)?\/StructureDefinition\/extension-/;
+const CROSS_VERSION_PROFILE_URL = /^https?:\/\/hl7\.org\/fhir\/[456]\.0(?:\.\d+)?\/StructureDefinition\/profile-/;
 
 export function crossVersionExtensionSourceRelease(url: string): string | null {
   return url.match(CROSS_VERSION_EXTENSION_URL)?.[1] ?? null;
 }
 
 export function urlFhirVersionFamily(url: string): FhirVersionFamily | null {
-  if (crossVersionExtensionSourceRelease(url)) return null;
+  if (crossVersionExtensionSourceRelease(url) || CROSS_VERSION_PROFILE_URL.test(url)) return null;
   const match = url.match(/\/fhir\/([456])\.0(?:\.\d+)?\/StructureDefinition\//);
   if (!match) return null;
   if (match[1] === '4') return 'R4';
@@ -53,7 +54,8 @@ export function normalizeVersionedCoreStructureDefinitionUrl(
   url: string,
   fhirVersion: FhirVersionFamily
 ): string {
-  if (!urlMatchesRequestedFhirVersion(url, fhirVersion) || crossVersionExtensionSourceRelease(url)) return url;
+  if (!urlMatchesRequestedFhirVersion(url, fhirVersion) || crossVersionExtensionSourceRelease(url)
+    || CROSS_VERSION_PROFILE_URL.test(url)) return url;
 
   const [canonicalUrl, version] = url.split('|');
   const match = canonicalUrl.match(/^http:\/\/hl7\.org\/fhir\/[456]\.0(?:\.\d+)?\/StructureDefinition\/(.+)$/);
@@ -113,11 +115,7 @@ export function normalizeKnownStructureDefinitionCanonicalUrl(url: string): stri
     /^(https:\/\/www\.medizininformatik-initiative\.de\/fhir\/ext\/modul-molgen\/StructureDefinition\/)(genomic-study(?:-analysis)?)$/i,
     (_match, prefix: string, profileId: string) => `${prefix}mii-pr-molgen-${profileId}`,
   );
-  const normalizedMiiIcu = normalizedMiiMolgen.replace(
-    /^(https:\/\/www\.medizininformatik-initiative\.de\/fhir\/ext\/modul-icu\/StructureDefinition\/mii-pr-icu-)ect-(.+)$/i,
-    '$1$2',
-  );
-  const normalized = normalizedMiiIcu
+  const normalized = normalizedMiiMolgen
     .replace(
       /^https:\/\/www\.medizininformatik-initiative\.de\/fhir\/ext\/modul-mtb\/StructureDefinition\/mii-pr-mtb-biomarker-insituhybridization$/i,
       'https://www.medizininformatik-initiative.de/fhir/ext/modul-mtb/StructureDefinition/mii-pr-mtb-insituhybridization',

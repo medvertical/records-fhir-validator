@@ -30,9 +30,11 @@ export interface CodeSystemValidationResult {
     reason?:
         | 'delegation-disabled'
         | 'no-server'
+        | 'snapshot-unavailable'
         | 'circuit-open'
         | 'code-unknown'
         | 'system-unresolvable'
+        | 'server-failure'
         | 'display-mismatch'
         | 'display-unverified'
         | 'remote-budget-exhausted'

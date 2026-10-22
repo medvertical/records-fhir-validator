@@ -49,11 +49,12 @@ export class ConstraintEvaluationPrecheckPipeline {
     state: ConstraintValidationState;
     terminologyResolverConfigured: boolean;
   }): Promise<ConstraintPrecheckResult> {
+    const readContext = state.getEvaluationContext ?? (path => getEvaluationContext(resource, path));
     const htmlIssues: ValidationIssue[] = [];
     if (appendHtmlChecksConstraintIssues(
       htmlIssues,
       expression,
-      getEvaluationContext(resource, elementPath),
+      readContext(elementPath),
       elementPath,
       resource.resourceType,
       profileUrl,
@@ -62,7 +63,7 @@ export class ConstraintEvaluationPrecheckPipeline {
       return { handled: true, issues: htmlIssues };
     }
 
-    const resolvedContext = resolveConstraintContext(resource, elementPath, expression, state.fhirVersion);
+    const resolvedContext = resolveConstraintContext(resource, elementPath, expression, state.fhirVersion, readContext);
     // A configured resolver owns its package selection and terminology policy.
     const simpleMemberOf = terminologyResolverConfigured ? null : await this.memberOfPrechecks.evaluateSimple(
       resolvedContext.expression,
@@ -95,6 +96,7 @@ export class ConstraintEvaluationPrecheckPipeline {
       fhirVersion: state.fhirVersion,
       bundle: state.bundle,
       expressionCache: this.expressionCache,
+      referenceResolver: state.referenceResolver,
     });
     if (resolveExists !== null) {
       return this.outcome(resolveExists, resource, elementPath, constraint, profileUrl, state);

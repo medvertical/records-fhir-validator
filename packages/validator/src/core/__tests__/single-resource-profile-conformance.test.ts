@@ -181,7 +181,7 @@ describe('single-resource recursive profile conformance', () => {
     expect(issues.some(issue => issue.code === 'reference-target-profile-noncompliant')).toBe(false);
   }));
 
-  it('rechecks an unavailable profile in the same callback and then reuses a complete verdict', async () => withValidator(async (validator, settings) => {
+  it('rechecks an unavailable profile and later completed verdict in the same callback', async () => withValidator(async (validator, settings) => {
     const { bundle, patient } = fixture(true);
     const observed = observe(validator, bundle);
     await validator.validate(bundle, bundleUrl, 'R4', settings);
@@ -199,7 +199,7 @@ describe('single-resource recursive profile conformance', () => {
     const count = reads.mock.calls.length;
     await expect(check!(probe, patientUrl)).resolves.toBe(true);
     expect(reads).toHaveBeenCalledTimes(count + 1);
-    expect(observed.evaluations.filter(resource => resource === probe)).toHaveLength(1);
+    expect(observed.evaluations.filter(resource => resource === probe)).toHaveLength(2);
   }));
 
   it('uses governed findings rather than suppressed raw errors to disprove conformance', async () => withValidator(async (validator, settings) => {
@@ -273,7 +273,7 @@ describe('single-resource recursive profile conformance', () => {
     }), 'R4');
   }));
 
-  it('revalidates an incomplete known failure without caching it as a completed false', async () => withValidator(async (validator, settings) => {
+  it('revalidates an incomplete known failure without treating it as completed false', async () => withValidator(async (validator, settings) => {
     const { bundle, composition } = fixture(false);
     const observed = observe(validator, bundle);
     await validator.validate(bundle, bundleUrl, 'R4', settings);

@@ -41,7 +41,7 @@ async function assertUnknownThenRecovery(issues: ValidationIssue[]) {
   recovered = true;
   await expect(check(resource, profile)).resolves.toBe(true);
   await expect(check(resource, profile)).resolves.toBe(true);
-  expect(calls).toBe(3);
+  expect(calls).toBe(4);
 }
 
 describe('Generic unresolved slicing preserves explicit completeness', () => {
@@ -77,17 +77,17 @@ describe('Generic unresolved slicing preserves explicit completeness', () => {
   });
 });
 
-describe('Completeness flags do not redefine ordinary findings or cache scope', () => {
-  it.each(['warning', 'information', 'error'] as const)('complete %s retains its known severity verdict and cache', async severity => {
+describe('Completeness flags do not redefine ordinary findings or conformance scope', () => {
+  it.each(['warning', 'information', 'error'] as const)('complete %s retains its known severity verdict', async severity => {
     let calls = 0; const issues = completeIssues(severity);
     const validateOne: ValidateOneFn = async () => { calls++; return collected(issues); };
     const check = createProfileConformanceCheck({ sdLoader, validateOne, fhirVersion: 'R4', recursionDepth: 0 })!;
     const resource = { resourceType: 'List' };
     await expect(check(resource, profile)).resolves.toBe(severity !== 'error');
-    await expect(check(resource, profile)).resolves.toBe(severity !== 'error'); expect(calls).toBe(1);
+    await expect(check(resource, profile)).resolves.toBe(severity !== 'error'); expect(calls).toBe(2);
     expect(issues[0].details).toBeUndefined();
   });
-  it('suppressed unknown evidence still prevents cached complete true', async () => {
+  it('suppressed unknown evidence still prevents complete true', async () => {
     let calls = 0; const evidence = unknownReferenceIssues({ type: 'type', path: 'item.resolve()' });
     const validateOne: ValidateOneFn = async () => { calls++; return collected([], evidence); };
     const check = createProfileConformanceCheck({ sdLoader, validateOne, fhirVersion: 'R4', recursionDepth: 0 })!;
@@ -102,7 +102,7 @@ describe('Completeness flags do not redefine ordinary findings or cache scope', 
     const r5 = createProfileConformanceCheck({ sdLoader, validateOne, fhirVersion: 'R5', recursionDepth: 0 })!;
     const resource = { resourceType: 'List' };
     await expect(r4(resource, profile)).resolves.toBe(true); await expect(r4(resource, profile)).resolves.toBe(true);
-    await expect(r5(resource, profile)).resolves.toBeUndefined(); await expect(r5(resource, profile)).resolves.toBeUndefined(); expect(calls).toBe(3);
+    await expect(r5(resource, profile)).resolves.toBeUndefined(); await expect(r5(resource, profile)).resolves.toBeUndefined(); expect(calls).toBe(4);
   });
   it('nested depth does not reuse an unrelated complete verdict', async () => {
     let calls = 0;

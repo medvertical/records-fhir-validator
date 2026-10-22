@@ -153,21 +153,24 @@ describe('embedded resource extension ownership', () => {
     expect(unknownErrors(issues)).toEqual([]);
     expect(h.execute).toHaveBeenCalledWith(expect.objectContaining({ rootResource: resource, focusResource: child,
       resourceType: 'Extension', structureDef: sd, fhirVersion: 'R4' }));
-    expect(h.loadReferencedProfile).toHaveBeenCalledWith(extensionUrl, undefined, 'R4');
+    expect(h.loadProfile).toHaveBeenCalledWith(extensionUrl, 'R4');
+    expect(h.loadReferencedProfile).not.toHaveBeenCalled();
   });
 
-  it('keeps existence, context and definition with the same selected child owner', async () => {
+  it.each(['Patient', 'Bundle'])('checks the global %s context for an independent extension across child profiles', async expression => {
     const otherUrl = `${childUrl}-other`;
     const first = profile('Patient', childUrl);
     const second = profile('Patient', otherUrl);
-    const selected = { ...profile('Extension', extensionUrl), kind: 'complex-type' };
+    const selected = { ...profile('Extension', extensionUrl), kind: 'complex-type',
+      context: [{ type: 'element', expression }] };
     const conflicting = { ...selected, version: '2.0.0', context: [{ type: 'element', expression: 'Bundle' }] };
-    const h = harness(new Map([[childUrl, first], [otherUrl, second]]));
+    const h = harness(new Map([[childUrl, first], [otherUrl, second], [extensionUrl, selected]]));
     h.loadReferencedProfile.mockImplementation(async (_url, source) => source === first ? selected : conflicting);
     const { issues } = await h.validate({ resourceType: 'Patient', meta: { profile: [childUrl, otherUrl] },
       extension: [{ url: extensionUrl, valueString: 'resolved' }] });
-    expect(issues.some(issue => issue.code === 'profile-extension-context-wrong')).toBe(false);
-    expect(h.loadReferencedProfile.mock.calls.every(([, source]) => source === first)).toBe(true);
+    expect(issues.some(issue => issue.code === 'profile-extension-context-wrong')).toBe(expression === 'Bundle');
+    expect(h.loadProfile).toHaveBeenCalledWith(extensionUrl, 'R4');
+    expect(h.loadReferencedProfile).not.toHaveBeenCalled();
     expect(h.execute).toHaveBeenCalledWith(expect.objectContaining({ structureDef: selected }));
   });
 

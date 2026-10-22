@@ -66,6 +66,7 @@ interface ContainedValidationOptions {
     resource: FhirResourceRecord,
     profileUrl: string,
     recursionDepth: number,
+    skipEmbeddedValidation?: boolean,
   ): Promise<ValidationIssue[]>;
 }
 
@@ -90,8 +91,8 @@ export async function validateContainedResourceTree(
     const declared = getDeclaredProfiles(candidate);
     const profiles = declared.length ? declared : [`http://hl7.org/fhir/StructureDefinition/${candidate.resourceType}`];
     const issues: ValidationIssue[] = [];
-    for (const profile of profiles) {
-      issues.push(...await options.validate(candidate, profile, options.recursionDepth + 1));
+    for (const [index, profile] of profiles.entries()) {
+      issues.push(...await options.validate(candidate, profile, options.recursionDepth + 1, index > 0));
     }
     return issues
       .filter(issue =>

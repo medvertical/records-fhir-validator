@@ -6,6 +6,9 @@ import { logger } from '../logger.js';
 import { createValidationErrorIssue } from './validation-utils.js';
 import { withIssuesSchemaVersion } from './issue-schema-version.js';
 import { applyBestPracticeSeverity } from '../strictness/index.js';
+import { isCustomRuleReleaseModelCoherent, normalizeCustomRuleSelectedRelease } from '../custom-rules/applicability.js';
+import { createCustomRuleApplicabilityUnknownIssue } from '../custom-rules/applicability-issue.js';
+import { resourceTypeOf } from './fhir-resource.js';
 import {
   createSafeValidationFailureMessage,
   validationFailureMetadata,
@@ -24,6 +27,7 @@ export async function validateRecordsResource(
     resource,
     profileUrl,
     fhirVersion,
+    selectedRelease,
     settings,
     fhirClient,
     referenceResolver,
@@ -33,11 +37,17 @@ export async function validateRecordsResource(
     organizationId,
     serverId,
   } = input;
+  if (!isCustomRuleReleaseModelCoherent(selectedRelease, fhirVersion)) {
+    return withIssuesSchemaVersion([createCustomRuleApplicabilityUnknownIssue(
+      resourceTypeOf(resource), undefined, normalizeCustomRuleSelectedRelease(selectedRelease), 'release-model-mismatch',
+    )], fhirVersion);
+  }
   const startTime = Date.now();
   const executionInput: RecordsSingleResourceValidationInput = {
     resource,
     profileUrl,
     fhirVersion,
+    selectedRelease: selectedRelease === undefined ? fhirVersion : selectedRelease,
     settings,
     fhirClient,
     referenceResolver,
@@ -75,24 +85,27 @@ export function createSingleResourceRecursiveValidation(
   context: {
     recursionDepth: number;
     maxDepth: number;
-    validate(input: RecordsSingleResourceValidationInput, recursionDepth: number): Promise<ValidationIssue[]>;
+    skipEmbeddedValidation?: boolean;
+    validate(input: RecordsSingleResourceValidationInput, recursionDepth: number, skipEmbeddedValidation?: boolean): Promise<ValidationIssue[]>;
   },
 ): Pick<RecordsSingleResourceValidationContext,
   'validateContainedResourcesIfNeeded' | 'validateParametersResourcesIfNeeded' | 'validateAgainstProfile'> {
   const validateEmbedded = (
     resource: FhirResourceRecord, profileUrl: string, recursionDepth: number,
-    containingResource: Record<string, unknown>,
-  ) => context.validate({ ...input, resource, profileUrl, containingResource }, recursionDepth);
+    containingResource: Record<string, unknown>, skipEmbeddedValidation = false,
+  ) => context.validate({ ...input, resource, profileUrl, containingResource }, recursionDepth, skipEmbeddedValidation);
   return {
-    validateContainedResourcesIfNeeded: target => validateContainedResourceTree(target, {
+    validateContainedResourcesIfNeeded: target => context.skipEmbeddedValidation ? Promise.resolve([]) : validateContainedResourceTree(target, {
       recursionDepth: context.recursionDepth, maxDepth: context.maxDepth,
-      validate: (embedded, profile, nextDepth) => validateEmbedded(embedded, profile, nextDepth, target),
+      validate: (embedded, profile, nextDepth, skipEmbeddedValidation = false) =>
+        validateEmbedded(embedded, profile, nextDepth, target, skipEmbeddedValidation),
     }),
-    validateParametersResourcesIfNeeded: target => validateParametersResourceTree(target, {
+    validateParametersResourcesIfNeeded: target => context.skipEmbeddedValidation ? Promise.resolve([]) : validateParametersResourceTree(target, {
       recursionDepth: context.recursionDepth, maxDepth: context.maxDepth,
-      validate: (embedded, profile, nextDepth) => validateEmbedded(embedded, profile, nextDepth, embedded),
+      validate: (embedded, profile, nextDepth, skipEmbeddedValidation = false) =>
+        validateEmbedded(embedded, profile, nextDepth, embedded, skipEmbeddedValidation),
     }),
     validateAgainstProfile: (target, profile) =>
-      validateEmbedded(target, profile, context.recursionDepth + 1, input.containingResource ?? target),
+      validateEmbedded(target, profile, context.recursionDepth, input.containingResource ?? target, true),
   };
 }

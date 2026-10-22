@@ -6,6 +6,9 @@ export interface EngineCustomRule {
     severity: 'error' | 'warning' | 'information';
     validationMessage?: string | null;
     category?: string | null;
+    fhirVersions?: readonly string[] | null;
+    profilesAny?: readonly string[];
+    path?: string;
 }
 
 /** Optional host capability for organization-scoped business rules. */

@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { TerminologySourceContexts } from './terminology-source-context.js';
+import { TerminologySourceContexts, type TerminologySourceSnapshot } from './terminology-source-context.js';
 import { ValueSetPackagePublicationContexts } from './valueset-package-publication-context.js';
 /**
  * Boundary for resolving terminology resources from FHIR package stores: the
@@ -41,6 +41,7 @@ export class ValueSetPackageResourceAccess {
     private readonly publicationContexts = new ValueSetPackagePublicationContexts();
     private readonly explicitPackageDirectories: string[] | null;
     private sourceContexts = new TerminologySourceContexts();
+    private defaultDirectoriesByRequest = new WeakMap<TerminologySourceSnapshot, { configuration: string; directories: readonly string[] }>();
 
     bindSourceContexts(contexts: TerminologySourceContexts): void { this.sourceContexts = contexts; }
 
@@ -57,8 +58,15 @@ export class ValueSetPackageResourceAccess {
     getPackageDirectories(): string[] {
         if (this.explicitPackageDirectories) return [...this.explicitPackageDirectories];
         const snapshot = this.sourceContexts.current();
-        return snapshot ? Array.from(new Set([...(snapshot.packageDirectories ?? []), ...defaultPackageDirectories()]))
-            : resolveValueSetPackageDirectories();
+        if (!snapshot) return resolveValueSetPackageDirectories();
+        const configuration = packageDirectoryConfigurationKey();
+        let defaults = this.defaultDirectoriesByRequest.get(snapshot);
+        // Reuse optional-module discovery within a request, while observing live environment changes.
+        if (defaults?.configuration !== configuration) {
+            defaults = { configuration, directories: defaultPackageDirectories() };
+            this.defaultDirectoriesByRequest.set(snapshot, defaults);
+        }
+        return Array.from(new Set([...(snapshot.packageDirectories ?? []), ...defaults.directories]));
     }
 
     /**
@@ -77,6 +85,7 @@ export class ValueSetPackageResourceAccess {
 
     clear(): void {
         this.packageIndexCache.clear();
+        this.defaultDirectoriesByRequest = new WeakMap();
     }
 
     async findResourceWithStatus<T extends CanonicalResource>(
@@ -145,7 +154,12 @@ export class ValueSetPackageResourceAccess {
         preferredFhirMajor?: string,
         requestedVersion?: string,
     ): Promise<T | null> {
-        const hostExact = await this.findInHostPackages<T>(canonical, resourceType, requestedVersion);
+        if (this.getSourceContext()?.terminologySnapshotSha256) {
+            const snapshotResource = await this.findInHostPackages<T>(canonical, resourceType, requestedVersion, preferredFhirMajor);
+            if (!snapshotResource) this.markLookupBlocked();
+            return snapshotResource;
+        }
+        const hostExact = await this.findInHostPackages<T>(canonical, resourceType, requestedVersion, preferredFhirMajor);
         if (hostExact) return hostExact;
 
         const local = await this.findInLocalStores<T>(
@@ -159,7 +173,7 @@ export class ValueSetPackageResourceAccess {
         if (local && (!requestedVersion || local.version === requestedVersion)) return local;
 
         if (requestedVersion) {
-            const hostFallback = await this.findInHostPackages<T>(canonical, resourceType, undefined);
+            const hostFallback = await this.findInHostPackages<T>(canonical, resourceType, undefined, preferredFhirMajor);
             if (hostFallback && isSameMajorFallback(hostFallback.version, requestedVersion)) return hostFallback;
         }
         return local;
@@ -216,13 +230,16 @@ export class ValueSetPackageResourceAccess {
         canonical: string,
         resourceType: string,
         requestedVersion: string | undefined,
+        preferredFhirMajor?: string,
     ): Promise<T | null> {
         const context = this.sourceContexts.context();
         const source = this.sourceContexts.current()?.source ?? getProfileSource();
         if (context?.organizationId === undefined || !source.findCanonicalResource) return null;
         try {
+            const fhirVersion = preferredFhirMajor === '4' ? 'R4'
+                : preferredFhirMajor === '5' ? 'R5' : preferredFhirMajor === '6' ? 'R6' : context.fhirVersion;
             const resource = await source.findCanonicalResource(
-                canonical, resourceType, requestedVersion, context,
+                canonical, resourceType, requestedVersion, { ...context, fhirVersion },
             );
             if (resource !== null && resource !== undefined && !isHostResource<T>(resource, canonical, resourceType))
                 this.markLookupBlocked();
@@ -292,6 +309,14 @@ function defaultPackageDirectories(): string[] {
     ];
 
     return Array.from(new Set(directories));
+}
+
+function packageDirectoryConfigurationKey(): string {
+    const cachePath = process.env.FHIR_PACKAGE_CACHE_PATH;
+    const cwd = cachePath && !path.isAbsolute(expandHomePath(cachePath)) ? process.cwd() : undefined;
+    return JSON.stringify([cwd, cachePath, process.env.FHIR_BUNDLED_PROFILES_PATH,
+        process.env.RECORDS_BUNDLED_PROFILES_PATH, process.env.HOME, process.env.USERPROFILE,
+        process.env.HOMEDRIVE, process.env.HOMEPATH]);
 }
 
 function expandHomePath(pathValue: string): string {

@@ -1,10 +1,12 @@
 import { normalizeFhirReferenceKey } from '../core/fhir-reference-key.js';
 import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types.js';
 import { makeTypedResourceNode, unwrapFhirPathValue } from './fhirpath-node-unwrap.js';
+import type { ReferenceResolver } from './slice-types.js';
 
 export interface FHIRPathEvaluationContext {
   rootResource: unknown;
   bundle?: unknown;
+  referenceResolver?: ReferenceResolver | null;
 }
 
 /**
@@ -65,7 +67,24 @@ function resolveSingleReference(
     const target = bundleEntryResource(bundle, rawReference, normalizedReference);
     if (target !== undefined) return target;
   }
+  if (context.referenceResolver) {
+    const target = resolveWithHost(rawReference, context.referenceResolver);
+    if (target !== undefined) return target;
+  }
   return absoluteReferenceStub(rawReference, normalizedReference);
+}
+
+export function resolveWithHost(reference: string, resolver: ReferenceResolver): unknown {
+  const resolved = resolver(reference);
+  if (resolved === null || resolved === undefined) return undefined;
+  if (isObjectRecord(resolved) && typeof resolved.then === 'function') {
+    void Promise.resolve(resolved).catch(() => {});
+    throw new Error('FHIRPath reference resolution requires a synchronous resource');
+  }
+  if (!isObjectRecord(resolved) || typeof resolved.resourceType !== 'string') {
+    throw new Error('FHIRPath reference resolver returned an invalid resource');
+  }
+  return resolved;
 }
 
 function bundleEntryResource(bundle: unknown, rawReference: string, normalizedReference: string | null): unknown {

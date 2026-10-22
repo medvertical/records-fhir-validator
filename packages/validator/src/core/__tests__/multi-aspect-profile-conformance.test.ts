@@ -35,14 +35,14 @@ describe('conformsTo() by validation against the profile', () => {
     );
   });
 
-  it('holds a resource with an error not to conform, and validates it once per session', async () => {
+  it('holds a resource with an error not to conform, and rechecks it in the same session', async () => {
     const validateOne = validateOneReporting(issue('error'));
     const check = createProfileConformanceCheck(scope(validateOne))!;
     const organization = { resourceType: 'Organization' };
 
     await expect(check(organization, MCSD_ORGANIZATION)).resolves.toBe(false);
     await expect(createProfileConformanceCheck(scope(validateOne))!(organization, MCSD_ORGANIZATION)).resolves.toBe(false);
-    expect(validateOne).toHaveBeenCalledTimes(1);
+    expect(validateOne).toHaveBeenCalledTimes(2);
   });
 
   it('distinguishes an inapplicable profile from one it cannot read', async () => {
@@ -116,7 +116,7 @@ describe('conformsTo() by validation against the profile', () => {
     const check = createProfileConformanceCheck({ ...scope(validateOne, 4), sdLoader })!;
     await expect(check(resource, MCSD_ORGANIZATION)).resolves.toBe(true);
     await expect(check(resource, MCSD_ORGANIZATION)).resolves.toBe(true);
-    expect(validateOne).toHaveBeenCalledTimes(1);
+    expect(validateOne).toHaveBeenCalledTimes(2);
     expect(loadProfile).toHaveBeenCalledTimes(2);
   });
 
@@ -130,7 +130,7 @@ describe('conformsTo() by validation against the profile', () => {
     expect(validateOne).toHaveBeenCalledTimes(2);
   });
   it.each(['internal-error', 'validation-error', 'profile-not-found', 'profile-not-resolved'])(
-    'does not cache incomplete %s evidence as a verdict', async code => {
+    'rechecks incomplete %s evidence before the next verdict', async code => {
       const validateOne = validateOneReporting({ ...issue('error'), code });
       const check = createProfileConformanceCheck(scope(validateOne))!;
       const resource = { resourceType: 'Organization' };
@@ -213,6 +213,29 @@ describe('conformsTo() by validation against the profile', () => {
       .resolves.toBe(false);
   });
 
+  it('preserves ordered incomplete causes and independent definitive failure evidence', async () => {
+    const onIncomplete = vi.fn();
+    const sourceUnavailable = { ...issue('information'), code: 'profile-reference-unavailable',
+      details: { validationComplete: false } };
+    const validateOne = vi.fn<ValidateOneFn>(async () => ({ isValid: false, aspects: [{
+      aspect: 'profile', validationTime: 0, isValid: false,
+      issues: [{ ...issue('error'), code: 'structural-cardinality-min' }],
+      evidenceIssues: [sourceUnavailable,
+        { ...issue('information'), code: 'terminology-binding-unverified', details: { validationComplete: false } },
+        { ...issue('error'), code: 'internal-error' }, sourceUnavailable],
+    }] }));
+    const check = createProfileConformanceCheck({ ...scope(validateOne), onIncomplete })!;
+    await expect(check({ resourceType: 'Organization' }, MCSD_ORGANIZATION)).resolves.toBe(false);
+    expect(onIncomplete.mock.calls.map(([reported]) => reported.code)).toEqual([
+      'profile-reference-unavailable', 'profile-reference-unavailable', 'validation-error',
+    ]);
+    expect(onIncomplete).toHaveBeenLastCalledWith(expect.objectContaining({ details: {
+      validationComplete: false, profile: MCSD_ORGANIZATION,
+      causes: ['profile-reference-unavailable', 'terminology-binding-unverified', 'internal-error'],
+    } }));
+  });
+
+
 });
 
 const operationalProfileUrl = 'http://example.test/StructureDefinition/conformance-load-patient';
@@ -267,7 +290,7 @@ describe('conformsTo() with the actual profile loader and aspect API', () => {
   }));
 
   it.each(['promise rejection', 'synchronous throw'])(
-    'retains a safe diagnosis for a loader %s and recovers before caching', async failure => withActualProfileLoader(async (loader, validateOne) => {
+    'retains a safe diagnosis for a loader %s and rechecks after recovery', async failure => withActualProfileLoader(async (loader, validateOne) => {
       const sensitiveException = 'Patient/clinical-marker <Patient><name>PHI</name></Patient> https://host.invalid?token=secret';
       const error = new TypeError(sensitiveException);
       const reads = vi.spyOn(loader, 'loadProfile');
@@ -297,20 +320,20 @@ describe('conformsTo() with the actual profile loader and aspect API', () => {
       await expect(check(resource, operationalProfileUrl)).resolves.toBe(true);
       const readCount = recoveredReads.mock.calls.length;
       await expect(check(resource, operationalProfileUrl)).resolves.toBe(true);
-      expect(recoveredReads).toHaveBeenCalledTimes(readCount + 1);
-      expect(validateOne).toHaveBeenCalledTimes(1);
+      expect(recoveredReads.mock.calls.slice(readCount)).toContainEqual([operationalProfileUrl, 'R4']);
+      expect(validateOne).toHaveBeenCalledTimes(2);
       expect(onIncomplete).toHaveBeenCalledTimes(2);
     }),
   );
 
   it.each([{ identifier: true, verdict: true }, { identifier: false, verdict: false }])(
-    'keeps the actual completed verdict $verdict and its session cache', async ({ identifier, verdict }) => withActualProfileLoader(async (loader, validateOne) => {
+    'keeps the actual completed verdict $verdict while rechecking dependencies', async ({ identifier, verdict }) => withActualProfileLoader(async (loader, validateOne) => {
       const onIncomplete = vi.fn();
       const check = createProfileConformanceCheck({ ...scope(validateOne), sdLoader: loader, onIncomplete })!;
       const resource = { resourceType: 'Patient', ...(identifier ? { identifier: [{ value: 'fixture' }] } : {}) };
       await expect(check(resource, operationalProfileUrl)).resolves.toBe(verdict);
       await expect(check(resource, operationalProfileUrl)).resolves.toBe(verdict);
-      expect(validateOne).toHaveBeenCalledTimes(1);
+      expect(validateOne).toHaveBeenCalledTimes(2);
       expect(onIncomplete).not.toHaveBeenCalled();
     }),
   );
@@ -387,14 +410,14 @@ describe('conformsTo() pinning and preparation execution faults', () => {
       await expect(check(resource, operationalProfileUrl)).resolves.toBe(verdict);
       const callsAfterRecovery = validateOne.mock.calls.length;
       await expect(check(resource, operationalProfileUrl)).resolves.toBe(verdict);
-      expect(validateOne).toHaveBeenCalledTimes(callsAfterRecovery);
+      expect(validateOne).toHaveBeenCalledTimes(callsAfterRecovery + 1);
       expect(onIncomplete).toHaveBeenCalledTimes(3);
     }));
 });
 
 
 describe('unavailable profile definition evidence', () => {
-  it.each(['warning', 'error'] as const)('reevaluates missing definitions before caching a known %s verdict', async severity => {
+  it.each(['warning', 'error'] as const)('reevaluates missing definitions and a later known %s verdict', async severity => {
     let available = false;
     const loadProfile = vi.fn(async () => available ? operationalProfile : null);
     const validateOne = validateOneReporting(issue(severity));
@@ -412,7 +435,7 @@ describe('unavailable profile definition evidence', () => {
     await expect(check(resource, operationalProfileUrl)).resolves.toBe(severity === 'warning');
     await expect(check(resource, operationalProfileUrl)).resolves.toBe(severity === 'warning');
     expect(loadProfile).toHaveBeenCalledTimes(3);
-    expect(validateOne).toHaveBeenCalledTimes(1);
+    expect(validateOne).toHaveBeenCalledTimes(2);
     expect(onIncomplete).toHaveBeenCalledTimes(1);
   });
 

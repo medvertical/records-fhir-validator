@@ -78,6 +78,7 @@ export class SDFHIRPathCollectedEvaluationPlanBuilder {
         bundle: scope.bundle,
         checkHtml: target.checkHtml,
         terminologyResolver: scope.terminologyResolver,
+        referenceResolver: scope.referenceResolver,
       })),
     };
   }

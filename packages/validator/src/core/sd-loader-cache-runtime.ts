@@ -9,6 +9,7 @@ interface StructureDefinitionCacheInitialization {
   availableProfiles: Set<string>;
   packageVersionPins: Record<string, string>;
   prewarmProfileSource: boolean;
+  preloadPackageInventory?: boolean;
   cache: Map<string, StructureDefinition>;
   maxCacheEntries: number;
   externalProfileCacheKeys: Set<string>;
@@ -19,11 +20,13 @@ export async function initializeStructureDefinitionCache(
 ): Promise<void> {
   const startTime = Date.now();
   try {
-    await scanProfileSources({
-      packageSources: input.packageSources,
-      availableProfiles: input.availableProfiles,
-      packageVersionPins: input.packageVersionPins,
-    });
+    if (input.preloadPackageInventory !== false) {
+      await scanProfileSources({
+        packageSources: input.packageSources,
+        availableProfiles: input.availableProfiles,
+        packageVersionPins: input.packageVersionPins,
+      });
+    }
     if (input.prewarmProfileSource) {
       await warmUpProfilesFromDatabase({
         cache: input.cache,

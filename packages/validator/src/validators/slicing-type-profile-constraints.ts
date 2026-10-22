@@ -100,10 +100,9 @@ async function validateTargetTypeProfiles(input: {
       input.visitedProfiles.add(visitKey);
       try {
         const typeProfile = await input.typeProfileResolver(versionedProfileUrl);
-        const constraintElements = (typeProfile?.snapshot?.element ?? typeProfile?.differential?.element ?? [])
-          .filter(candidate => (candidate.constraint?.length ?? 0) > 0);
+        const profileElements = typeProfile?.snapshot?.element ?? typeProfile?.differential?.element ?? [];
         const typeRoot = typeProfile?.type;
-        if (!typeProfile || !typeRoot || constraintElements.length === 0) continue;
+        if (!typeProfile || !typeRoot || !profileElements.some(candidate => candidate.constraint?.length)) continue;
         // The slice value is wrapped as a pseudo-resource so element paths
         // match the type profile, but FHIRPath `%resource` must still see the
         // resource that contains the slice (e.g. gender-amtlich-1 reads
@@ -123,11 +122,11 @@ async function validateTargetTypeProfiles(input: {
         const ownResource = isFhirResource(input.target.value) && input.target.value.resourceType === typeRoot;
         const value = ownResource ? input.target.value : { ...asRecord(input.target.value), resourceType: typeRoot };
         const profileConformance = ownResource && input.profileConformance
-          ? await precomputeProfileConformance(constraintElements, value, input.profileConformance)
+          ? await precomputeProfileConformance(profileElements, value, input.profileConformance)
           : undefined;
         const profileIssues = await input.constraintValidator.validate(
           value,
-          constraintElements,
+          profileElements,
           typeProfile.url,
           {
             fhirVersion: input.fhirVersion,

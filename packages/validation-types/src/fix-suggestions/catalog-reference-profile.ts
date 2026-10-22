@@ -75,8 +75,9 @@ export const CATALOG_REFERENCE_PROFILE: Record<string, FixSuggestion> = {
         fix: 'Check reference format, target existence, and type constraints.',
     },
     'reference-circular': {
-        why: 'A circular reference chain was detected (A → B → A).',
-        fix: 'Break the cycle by removing one of the bidirectional references or using a contained resource.',
+        why: 'A reference relationship declared as a strict hierarchy returns to the same resource.',
+        fix: 'Correct the identified hierarchical relationship, such as partOf. Ordinary clinical backlinks and Patient links do not need to be removed.',
+        specUrl: 'https://hl7.org/fhir/R4/references.html#circular',
     },
     'reference-recursive-timeout': {
         why: 'Reference resolution was aborted because the chain is too deep.',

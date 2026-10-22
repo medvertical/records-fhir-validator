@@ -307,14 +307,14 @@ export function buildUserInvocationTable(
     cache: ValueSetCache = new ValueSetCache(),
     operationCache?: TerminologyOperationCache,
     profileConformance?: ProfileConformanceLookup,
+    referenceResolver?: FHIRPathEvaluationContext['referenceResolver'],
 ) {
-    const ctx: FHIRPathEvaluationContext = { rootResource, bundle };
     // Only functions fhirpath.js cannot provide itself (they need bundle
     // context, terminology caches, or raw-object navigation). Natively
     // implemented functions (hasValue, descendants, aggregate, subsetOf,
     // supersetOf) must NOT be overridden with weaker approximations.
     return {
-        resolve: resolveFunction(ctx),
+        resolve: resolveFunction({ rootResource, bundle, referenceResolver }),
         extension: extensionInvocationEntry,
         conformsTo: createConformsToFunction(profileConformance),
         memberOf: createMemberOfFunction(cache),

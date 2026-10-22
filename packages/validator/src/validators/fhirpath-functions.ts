@@ -4,6 +4,8 @@ import { makeTypedResourceNode, unwrapFhirPathValue } from './fhirpath-node-unwr
 import { normalizeFhirReferenceKey } from '../core/fhir-reference-key.js';
 import { ValueSetCache } from './valueset-cache.js';
 import type { ProfileConformanceLookup } from './sd-fhirpath-profile-conformance.js';
+import { resolveWithHost } from './fhirpath-custom-resolve-function.js';
+import type { ReferenceResolver } from './slice-types.js';
 
 export { extensionFunction } from './fhirpath-custom-functions.js';
 
@@ -20,6 +22,7 @@ export interface FHIRPathContext {
     valueSetCache?: ValueSetCache;
     /** Conformance the validator established before evaluation, for conformsTo */
     profileConformance?: ProfileConformanceLookup;
+    referenceResolver?: ReferenceResolver | null;
 }
 
 export type FHIRPathBundleInput =
@@ -86,7 +89,7 @@ function resolveReferenceValue(item: unknown, context: FHIRPathContext): unknown
         );
     }
 
-    return undefined;
+    return context.referenceResolver ? resolveWithHost(reference, context.referenceResolver) : undefined;
 }
 
 // ============================================================================
@@ -192,6 +195,7 @@ export function createFHIRPathContext(
     bundleResources?: FHIRPathBundleInput,
     cache: ValueSetCache = new ValueSetCache(),
     profileConformance?: ProfileConformanceLookup,
+    referenceResolver?: ReferenceResolver | null,
 ): FHIRPathContext {
     const resourceMap = new Map<string, unknown>();
 
@@ -240,6 +244,7 @@ export function createFHIRPathContext(
         bundleResources: resourceMap,
         valueSetCache: cache,
         ...(profileConformance ? { profileConformance } : {}),
+        ...(referenceResolver ? { referenceResolver } : {}),
     };
 }
 

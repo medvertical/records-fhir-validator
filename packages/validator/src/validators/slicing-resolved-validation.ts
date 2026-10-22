@@ -21,7 +21,8 @@ import type { ReferenceResolver, SliceDefinition } from './slice-types.js';
 import { buildUndiscriminatedSliceIssues } from './slicing-undiscriminated-slices.js';
 import { assessSlicingVerifiability } from './slicing-verifiability.js';
 import { normalizeDiscriminatorPath, usesDirectExistsDiscrimination } from './slice-discriminator-constraints.js';
-import { usesResolvedCodeDiscrimination } from './slice-resolved-code-discriminator.js';
+import { resolvedCodeTargetIsUnavailable, usesResolvedCodeDiscrimination } from './slice-resolved-code-discriminator.js';
+import { referenceDiscriminatorCouldNotBeResolved } from './slicing-match-policy.js';
 
 interface ResolvedSlicingValidationOptions {
   elements: unknown[];
@@ -139,7 +140,10 @@ export async function validateResolvedSlicing(
   // Open slicing permits unmatched elements, but the reference validator still
   // says so: an element nobody claimed is usually an unnoticed authoring slip,
   // and staying silent about it was a parity gap.
-  const knownUnmatchedElements = assignment.provedUnmatchedElements ?? assignment.unmatchedElements;
+  const knownUnmatchedElements = assignment.provedUnmatchedElements ?? assignment.unmatchedElements.filter(({ element }) =>
+    !(options.slicing.discriminator ?? []).some(discriminator =>
+      referenceDiscriminatorCouldNotBeResolved(element, discriminator, options.referenceResolver)
+      || resolvedCodeTargetIsUnavailable(element, discriminator, options.referenceResolver)));
   if (knownUnmatchedElements.length > 0 && options.slicing.rules !== 'closed') {
     for (const { index } of knownUnmatchedElements) {
       issues.push(createValidationIssue({

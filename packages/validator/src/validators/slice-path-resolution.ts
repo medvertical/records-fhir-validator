@@ -2,6 +2,7 @@ import {
   getPrimitiveSidecar,
   resolveFhirSegmentValue,
 } from '../core/fhir-primitive-sidecar.js';
+import { normalizeChoiceDiscriminatorPath } from './slice-discriminator-path.js';
 
 export function getValueAtPath(obj: unknown, path: string): unknown {
   if (!path || path === '$this') return obj;
@@ -9,7 +10,7 @@ export function getValueAtPath(obj: unknown, path: string): unknown {
   const normalizedPath = path.startsWith('$this.')
     ? path.slice('$this.'.length)
     : path;
-  const parts = normalizedPath.split('.');
+  const parts = normalizeChoiceDiscriminatorPath(normalizedPath, 'instance').split('.');
   const resolved = resolvePathParts(obj, parts, 0, new WeakSet<object>());
   return resolved ?? null;
 }
