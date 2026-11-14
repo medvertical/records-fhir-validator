@@ -1,3 +1,4 @@
+import { createDefaultValidationSettings } from '@records-fhir/validation-types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -83,6 +84,43 @@ import {
 } from './validator-singleton';
 
 describe('Records validator runtime scope registry', () => {
+  const hostRuntime = {
+    key: 'test-catalog-v1',
+    fhirVersion: 'R4' as const,
+    config: { packageVersionPins: { 'example.profiles.r4': '1.0.0' } },
+  };
+
+  it('isolates explicitly configured runtimes from neutral hosts', async () => {
+    const settings = createDefaultValidationSettings('R4');
+    const a = { resource: { resourceType: 'Patient' }, fhirVersion: 'R4' as const, organizationId: 8081,
+      runtimeScopeKey: '8081:10:scope', settings };
+    const b = { ...a, organizationId: 8082, runtimeScopeKey: '8082:20:scope' };
+    await Promise.all([recordsValidator.validateRequest(a, hostRuntime), recordsValidator.validateRequest(b)]);
+    expect(mocks.configs.map(config => config.packageVersionPins)).toEqual([
+      hostRuntime.config.packageVersionPins, undefined,
+    ]);
+    await recordsValidator.validateRequest(a);
+    expect(mocks.configs).toHaveLength(3);
+    expect(mocks.configs[2].packageVersionPins).toBeUndefined();
+    await recordsValidator.clearTerminologyCache({ runtimeScopePrefix: '8081:' });
+    await recordsValidator.clearTerminologyCache({ runtimeScopePrefix: '8082:' });
+  });
+
+  it('reuses the same host configuration for batch validation and leased profile loading', async () => {
+    const settings = createDefaultValidationSettings('R4');
+    await recordsValidator.validateBatch([{ resourceType: 'Patient' }], {
+      settings, fhirVersion: 'R4', runtimeScopeKey: '8083:10:batch',
+    }, hostRuntime);
+    expect(mocks.configs[0].packageVersionPins).toEqual(hostRuntime.config.packageVersionPins);
+    const lease = acquireRecordsValidatorRuntime('8083:10:batch', 'R4', hostRuntime);
+    await lease.ready();
+    expect(mocks.constructor).toHaveBeenCalledOnce();
+    await lease.loadProfileWithSnapshot('http://hl7.org/fhir/StructureDefinition/Patient');
+    await expect(lease.loadProfileWithSnapshot('http://hl7.org/fhir/StructureDefinition/Patient', 'R5')).rejects.toThrow('FHIR R4');
+    lease.release();
+    await recordsValidator.clearTerminologyCache({ runtimeScopePrefix: '8083:' });
+  });
+
   it('preserves explicit unknown selected release for public requests and batches', async () => {
     await recordsValidator.validateRequest({ resource: { resourceType: 'Patient' }, fhirVersion: 'R4', selectedRelease: null, runtimeScopeKey: '71:10:unknown-release' });
     expect(mocks.validate.mock.lastCall?.[9]).toBeNull();

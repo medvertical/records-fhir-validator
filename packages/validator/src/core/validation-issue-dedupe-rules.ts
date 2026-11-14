@@ -37,7 +37,6 @@ import {
   normalizeRequiredElementPath,
 } from './validation-issue-dedupe-utils.js';
 import {
-  isMiiGenderConstraintIssue,
   isRedundantBundleInvariantIssue,
   isRedundantBundleInvariantPresenceIssue,
   isRedundantGenericConstraintIssue,
@@ -84,8 +83,6 @@ function createConstraintRules(context: DedupeContext): DedupeSuppressionRule[] 
       isRedundantProfileSpecificConstraintIssue(issue, context.invariantSpecificConstraintKeys)),
     rule('specific-required-over-cardinality-min', issue =>
       isRedundantCardinalityMinIssue(issue, context.specificRequiredElementPaths)),
-    rule('german-gender-extension-over-mii-gender', issue =>
-      context.hasGermanGenderExtensionMissing && isMiiGenderConstraintIssue(issue)),
     rule('cardinality-min-over-required', issue =>
       isRedundantRequiredElementIssue(issue, context.cardinalityMinPaths)),
     rule('profile-extension-min-over-required', issue =>

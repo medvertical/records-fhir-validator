@@ -10,28 +10,28 @@ interface RuntimeEntry<T> {
 }
 
 /** Retryable global/scoped runtime registry with leased LRU eviction. */
-export class ValidatorRuntimeRegistry<T> {
+export class ValidatorRuntimeRegistry<T, Configuration = never> {
   private defaultInstance: T | null = null;
   private defaultPromise: Promise<T> | null = null;
   private readonly scopedEntries = new Map<string, RuntimeEntry<T>>();
 
   constructor(
-    private readonly factory: (scoped: boolean) => Promise<T>,
+    private readonly factory: (scoped: boolean, configuration?: Configuration) => Promise<T>,
     private readonly maxScopedEntries: number,
   ) {}
 
-  get(runtimeScopeKey?: string): Promise<T> {
+  get(runtimeScopeKey?: string, configuration?: Configuration): Promise<T> {
     return runtimeScopeKey
-      ? this.getScopedEntry(runtimeScopeKey).promise
+      ? this.getScopedEntry(runtimeScopeKey, configuration).promise
       : this.getDefault();
   }
 
-  acquire(runtimeScopeKey?: string): RuntimeLease<T> {
+  acquire(runtimeScopeKey?: string, configuration?: Configuration): RuntimeLease<T> {
     if (!runtimeScopeKey) {
       return { promise: this.getDefault(), release: () => undefined };
     }
 
-    const entry = this.getScopedEntry(runtimeScopeKey);
+    const entry = this.getScopedEntry(runtimeScopeKey, configuration);
     entry.leases++;
     let released = false;
     return {
@@ -90,7 +90,7 @@ export class ValidatorRuntimeRegistry<T> {
     return pending;
   }
 
-  private getScopedEntry(runtimeScopeKey: string): RuntimeEntry<T> {
+  private getScopedEntry(runtimeScopeKey: string, configuration?: Configuration): RuntimeEntry<T> {
     const existing = this.scopedEntries.get(runtimeScopeKey);
     if (existing) {
       this.scopedEntries.delete(runtimeScopeKey);
@@ -99,7 +99,7 @@ export class ValidatorRuntimeRegistry<T> {
     }
 
     const entry = { leases: 0 } as RuntimeEntry<T>;
-    entry.promise = this.factory(true).then(
+    entry.promise = (configuration === undefined ? this.factory(true) : this.factory(true, configuration)).then(
       instance => {
         if (this.scopedEntries.get(runtimeScopeKey) === entry) entry.instance = instance;
         return instance;

@@ -21,9 +21,9 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Validate against base StructureDefinitions
-        uses: medvertical/records-fhir-validator@v0.10.1
+        uses: medvertical/records-fhir-validator@v0.10.2
         with:
-          validator-version: '0.10.1'
+          validator-version: '0.10.2'
           paths: |
             fhir/**/*.json
             examples/**/*.json
@@ -35,9 +35,9 @@ jobs:
 
       # --- Optional: validate against a specific profile -------------------
       # - name: Validate against MII KDS Person profile
-      #   uses: medvertical/records-fhir-validator@v0.10.1
+      #   uses: medvertical/records-fhir-validator@v0.10.2
       #   with:
-      #     validator-version: '0.10.1'
+      #     validator-version: '0.10.2'
       #     paths: 'fhir/patients/*.json'
       #     profile-url: 'https://www.medizininformatik-initiative.de/fhir/core/modul-person/StructureDefinition/PatientIn'
       #     fhir-version: R4

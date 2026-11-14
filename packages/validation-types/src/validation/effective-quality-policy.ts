@@ -1,3 +1,4 @@
+import type { WorkspaceValidationModule } from './workspace-modules.js';
 import type {
   QualityAdvisoryRuleDefinition,
   QualityComparisonClass,
@@ -88,6 +89,8 @@ export interface EffectiveQualityPolicySnapshot {
   environment: string;
   /** Defaults to true for snapshots captured before scoped DQA enablement existed. */
   qualityAssessmentEnabled?: boolean;
+  /** Captured selections; absent on historical snapshots and neutral workspaces. */
+  workspaceModules?: WorkspaceValidationModule[];
   runConstraints?: { qualityAssessmentRequired: boolean; requiredPacks: string[] };
   runContext?: {
     basePolicyFingerprint: `sha256:${string}`;

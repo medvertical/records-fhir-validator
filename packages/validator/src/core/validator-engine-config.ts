@@ -2,6 +2,8 @@ import { expandHomePath } from './validator-runtime-settings.js';
 import type { ProfileDatePolicy } from '../validators/profile-date-policy.js';
 import type { ProfileVersionAlias } from './profile-version-aliases.js';
 import type { PackageDependencyAlias } from '../package/package-dependency-aliases.js';
+import type { ProfileSupplement } from './profile-supplement.js';
+import type { ValidationCanonicalAliases } from './validation-canonical-alias-context.js';
 
 export interface RecordsValidatorConfig {
   packageCachePath?: string;
@@ -36,6 +38,8 @@ export interface RecordsValidatorConfig {
   profileVersionAliases?: readonly ProfileVersionAlias[];
   /** Explicit dependency-name repairs for profile closure lookup; omitted for generic validation. */
   profileDependencyAliases?: readonly PackageDependencyAlias[];
+  profileSupplements?: readonly ProfileSupplement[];
+  canonicalAliases?: ValidationCanonicalAliases;
 }
 
 const DEFAULT_PROFILE_CACHE_MAX_ENTRIES = 192;
@@ -68,6 +72,8 @@ export function resolveRecordsValidatorConfig(config: RecordsValidatorConfig): R
     profileDatePolicy: config.profileDatePolicy,
     profileVersionAliases: config.profileVersionAliases,
     profileDependencyAliases: config.profileDependencyAliases,
+    profileSupplements: config.profileSupplements,
+    canonicalAliases: config.canonicalAliases,
     bundledProfilesPath: config.bundledProfilesPath !== undefined
       ? config.bundledProfilesPath
       : process.env.RECORDS_BUNDLED_PROFILES_PATH,

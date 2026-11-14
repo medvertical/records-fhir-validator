@@ -1,7 +1,7 @@
+import { createValidationCanonicalAliasContext, withValidationCanonicalAliases } from './validation-canonical-alias-context.js';
 import { withBatchProfileMetadataCache, withProfileReferenceBatchSnapshot, withProfileReferenceInventorySnapshot } from '../validation-dependency-snapshot.js';
 import type { ValidationIssue, ValidationSettings } from '@records-fhir/validation-types';
 import type { StructureDefinitionLoader } from './structure-definition-loader.js';
-
 import type { TerminologyResolutionConfig } from '../validators/valueset-validator.js';
 import type { FhirClientLike } from './profile-loader-utils.js';
 import type { BatchValidationOptions } from './batch-validator.js';
@@ -38,6 +38,7 @@ export type { RecordsValidatorConfig, ValidationContext } from './validator-engi
 
 export class RecordsValidator {
   private config: RecordsValidatorConfig;
+  private readonly canonicalAliasContext: ReturnType<typeof createValidationCanonicalAliasContext>;
   private readonly components: RecordsValidatorComponents;
   private available: boolean = false;
   private initializationPromise: Promise<void>;
@@ -46,6 +47,7 @@ export class RecordsValidator {
 
   constructor(config: RecordsValidatorConfig = {}) {
     this.config = resolveRecordsValidatorConfig(config);
+    this.canonicalAliasContext = createValidationCanonicalAliasContext(this.config.canonicalAliases);
 
     this.components = createRecordsValidatorComponents(this.config);
     this.runtimeControls = new ValidatorRuntimeControls(
@@ -67,14 +69,13 @@ export class RecordsValidator {
   isAvailable(): boolean {
     return this.available;
   }
-
   async validateBatch(
     resources: unknown[],
     options: BatchValidationOptions = {}
   ): Promise<Map<unknown, ValidationIssue[]> | Map<unknown, MultiAspectValidateResult>> {
     const validationOptions = { ...options, selectedRelease: options.selectedRelease === undefined ? options.fhirVersion ?? 'R4' : options.selectedRelease };
     const terminologyContext = await resolveTerminologySourceContext(options);
-    return withSnapshotProfileChecks(terminologyContext, () => this.components.valuesetValidator.withSourceContext(terminologyContext, async () => {
+    return withValidationCanonicalAliases(this.canonicalAliasContext, () => withSnapshotProfileChecks(terminologyContext, () => this.components.valuesetValidator.withSourceContext(terminologyContext, async () => {
     await this.waitForInitialization();
     this.runtimeControls.applySettings(validationOptions.settings as ValidationSettings | undefined);
 
@@ -83,7 +84,7 @@ export class RecordsValidator {
     // per-resource captures while sharing only bounded package metadata.
     return options.onResourceValidated || options.onEmbeddedResourceValidated || options.scheduleValidation
       ? withBatchProfileMetadataCache(run) : withProfileReferenceBatchSnapshot(run);
-    }), resources);
+    }), resources));
   }
 
   async validateAspects(
@@ -92,7 +93,7 @@ export class RecordsValidator {
   ): Promise<MultiAspectValidateResult> {
     const validationOptions = { ...options, selectedRelease: options.selectedRelease === undefined ? options.fhirVersion ?? 'R4' : options.selectedRelease };
     const terminologyContext = await resolveTerminologySourceContext(options);
-    return withSnapshotProfileChecks(terminologyContext, () => this.components.valuesetValidator.withSourceContext(terminologyContext, async () => {
+    return withValidationCanonicalAliases(this.canonicalAliasContext, () => withSnapshotProfileChecks(terminologyContext, () => this.components.valuesetValidator.withSourceContext(terminologyContext, async () => {
     await this.waitForInitialization();
     this.runtimeControls.applySettings(validationOptions.settings as ValidationSettings | undefined);
     return validateRecordsAspects(
@@ -100,7 +101,7 @@ export class RecordsValidator {
       validationOptions,
       this.createBatchValidationContext(),
     );
-    }), [resource]);
+    }), [resource]));
   }
 
   private createBatchValidationContext(): RecordsBatchValidationContext {
@@ -126,12 +127,12 @@ export class RecordsValidator {
     selectedRelease: CustomRuleSelectedRelease | null = fhirVersion,
   ): Promise<ValidationIssue[]> {
     const terminologyContext = await resolveTerminologySourceContext({ organizationId, serverId, fhirVersion, settings });
-    return withSnapshotProfileChecks(terminologyContext, () => withProfileReferenceInventorySnapshot(() => this.components.valuesetValidator.withSourceContext(terminologyContext, async () => {
+    return withValidationCanonicalAliases(this.canonicalAliasContext, () => withSnapshotProfileChecks(terminologyContext, () => withProfileReferenceInventorySnapshot(() => this.components.valuesetValidator.withSourceContext(terminologyContext, async () => {
     return this.validateWithInput(
       { resource, profileUrl, fhirVersion, selectedRelease, settings, fhirClient, referenceResolver, organizationId, serverId },
       recursionDepth,
     );
-    })), [resource]);
+    })), [resource]));
   }
 
   private async validateWithInput(
@@ -250,7 +251,8 @@ export class RecordsValidator {
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ): Promise<boolean> {
     await this.waitForInitialization();
-    return this.runtimeControls.isProfileSupported(profileUrl, fhirVersion);
+    return withValidationCanonicalAliases(this.canonicalAliasContext,
+      () => this.runtimeControls.isProfileSupported(profileUrl, fhirVersion));
   }
 
   getSupportedProfiles(): string[] {
@@ -265,7 +267,8 @@ export class RecordsValidator {
     profileUrl: string,
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ) {
-    return this.runtimeControls.loadProfileWithSnapshot(profileUrl, fhirVersion);
+    return withValidationCanonicalAliases(this.canonicalAliasContext,
+      () => this.runtimeControls.loadProfileWithSnapshot(profileUrl, fhirVersion));
   }
 
   registerQuestionnaire(questionnaire: unknown): boolean {

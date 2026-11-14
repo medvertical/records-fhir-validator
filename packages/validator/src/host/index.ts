@@ -62,6 +62,9 @@ export { CustomRuleExecutor } from '../core/executors/custom-rule-executor.js';
 export { isCustomRuleApplicable } from '../core/executors/custom-rule-applicability.js';
 export { RuleRegistry } from '../business-rules/rule-registry.js';
 export { getCombinedFHIRPathCacheStats } from '../validator-singleton.js';
+export type { RecordsValidatorRuntimeConfiguration } from '../validator-singleton-types.js';
+export { profileDatePolicySchema, ProfileDatePolicyValidator } from '../validators/profile-date-policy.js';
+export { ProfileVersionAliases } from '../core/profile-version-aliases.js';
 export {
   normalizeKnownStructureDefinitionCanonicalUrl,
   StructureDefinitionLoader,

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { writeMinimalR4CorePackage, writeMiiPresetSmokePackage } from './smoke-fhir-packages.mjs';
 
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
 const consumerNode = process.env.RECORDS_PACKAGE_SMOKE_NODE || process.execPath;
@@ -46,72 +47,6 @@ function run(command, args, options = {}) {
   });
 }
 
-function structureDefinition(type, elements) {
-  return {
-    resourceType: 'StructureDefinition',
-    url: `http://hl7.org/fhir/StructureDefinition/${type}`,
-    version: '4.0.1',
-    fhirVersion: '4.0.1',
-    name: type,
-    status: 'active',
-    kind: 'resource',
-    abstract: false,
-    type,
-    snapshot: {
-      element: [
-        { id: type, path: type, min: 0, max: '*' },
-        ...elements,
-      ],
-    },
-  };
-}
-
-async function writePackageResource(packageDir, filename, resource) {
-  await writeFile(join(packageDir, filename), `${JSON.stringify(resource, null, 2)}\n`, 'utf8');
-}
-
-async function writeMinimalR4CorePackage(cacheRoot) {
-  const packageDir = join(cacheRoot, 'hl7.fhir.r4.core#4.0.1', 'package');
-  await mkdir(packageDir, { recursive: true });
-  await writePackageResource(packageDir, 'package.json', {
-    name: 'hl7.fhir.r4.core',
-    version: '4.0.1',
-    fhirVersions: ['4.0.1'],
-  });
-  await writePackageResource(packageDir, 'StructureDefinition-Patient.json', structureDefinition('Patient', [
-    {
-      id: 'Patient.gender',
-      path: 'Patient.gender',
-      min: 0,
-      max: '1',
-      type: [{ code: 'code' }],
-      binding: {
-        strength: 'required',
-        valueSet: 'http://hl7.org/fhir/ValueSet/administrative-gender',
-      },
-    },
-    {
-      id: 'Patient.birthDate',
-      path: 'Patient.birthDate',
-      min: 0,
-      max: '1',
-      type: [{ code: 'date' }],
-    },
-  ]));
-  await writePackageResource(packageDir, 'ValueSet-administrative-gender.json', {
-    resourceType: 'ValueSet',
-    url: 'http://hl7.org/fhir/ValueSet/administrative-gender',
-    version: '4.0.1',
-    status: 'active',
-    expansion: {
-      contains: ['male', 'female', 'other', 'unknown'].map((code) => ({
-        system: 'http://hl7.org/fhir/administrative-gender',
-        code,
-      })),
-    },
-  });
-}
-
 async function packWorkspace(workspace, destination) {
   const { stdout } = await run('npm', [
     'pack',
@@ -128,7 +63,8 @@ async function packWorkspace(workspace, destination) {
   }
   const allowed = /^(?:dist\/|examples\/|(?:README|CHANGELOG|CONTRIBUTING|SECURITY)\.md$|LICENSE(?:\.FHIRsmith)?$|package\.json$)/;
   const forbidden = /(^|\/)(?:__tests__|__fixtures__|node_modules|\.env)(?:\/|$)|\.(?:test|spec)\.[cm]?[jt]sx?(?:\.map)?$|(?:^|\/)iso4217-provider-snapshot\.json$/;
-  const unexpected = packed.files.find(({ path }) => !allowed.test(path) || forbidden.test(path));
+  const privateModules = /^(?:dist\/modules\/|dist\/.*workspace-validation-modules)|(?:^|\/)erp-2\.22\.json$/;
+  const unexpected = packed.files.find(({ path }) => !allowed.test(path) || forbidden.test(path) || privateModules.test(path));
   if (unexpected) throw new Error(`Unexpected file in ${workspace} tarball: ${unexpected.path}`);
   if (workspace === '@records-fhir/validator' && !packed.files.some(({ path }) => path === 'LICENSE.FHIRsmith')) {
     throw new Error('The validator tarball is missing its FHIRsmith license.');
@@ -196,6 +132,9 @@ try {
     }
   }
 
+  const packageCache = join(packageDir, 'fhir-package-cache');
+  await writeMinimalR4CorePackage(packageCache);
+  await writeMiiPresetSmokePackage(packageCache);
   await writeFile(
     join(packageDir, 'smoke.mjs'),
     `
@@ -203,10 +142,21 @@ import {
   ValueSetValidator,
   createFilesystemProfileSource,
   getRecordsValidatorClass,
+  parseFhirJson,
   setEngineLogger,
   setProfileSource,
 } from '@records-fhir/validator';
 import { toOperationOutcome } from '@records-fhir/validator/conformance';
+import { createMii2026ValidationSettings } from '@records-fhir/validation-types';
+
+for (const specifier of ['@records-fhir/validator/modules', '@records-fhir/validation-types/validation/workspace-modules']) {
+  try {
+    await import(specifier);
+    throw new Error('Unexpected package export: ' + specifier);
+  } catch (error) {
+    if (error.code !== 'ERR_PACKAGE_PATH_NOT_EXPORTED') throw error;
+  }
+}
 
 const noopLogger = {
   debug() {},
@@ -219,14 +169,32 @@ setEngineLogger(noopLogger);
 setProfileSource(createFilesystemProfileSource({ packageDirs: [] }));
 
 const RecordsValidator = await getRecordsValidatorClass();
+const packageCachePath = new URL('./fhir-package-cache', import.meta.url).pathname;
 const validator = new RecordsValidator({
   autoDownload: false,
   enableCaching: false,
-  packageCachePath: new URL('./fhir-package-cache', import.meta.url).pathname,
+  packageCachePath,
+  bundledProfilesPath: packageCachePath,
 });
 
 if (typeof validator.validate !== 'function') {
   throw new Error('RecordsValidator.validate is not available');
+}
+
+const miiSettings = createMii2026ValidationSettings({ packageDownload: { autoDownload: false } });
+const profileUrl = 'https://example.test/StructureDefinition/Patient';
+const { resources } = parseFhirJson(JSON.stringify({
+  resourceType: 'Patient', id: 'preset-smoke', meta: { profile: [profileUrl] },
+}));
+const miiResult = await validator.validateBatch(resources, { fhirVersion: 'R4', settings: miiSettings });
+const miiIssues = miiResult.get(resources[0]);
+const loaded = await validator.loadProfileWithSnapshot(profileUrl, 'R4');
+const pins = validator.getSdLoader().getPackageVersionPins();
+if (miiSettings.packageDownload.workspaceModules !== undefined
+  || pins['de.medizininformatikinitiative.kerndatensatz.base'] !== '2026.0.0'
+  || loaded?.url !== profileUrl || loaded?.version !== '2026.0.0'
+  || !Array.isArray(miiIssues) || miiIssues.some(issue => issue.severity === 'error')) {
+  throw new Error('Packed KDS 2026 preset did not validate against the pinned profile: ' + JSON.stringify(miiIssues));
 }
 
 const metadataIssues = await validator.validateMetadata({

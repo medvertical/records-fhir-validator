@@ -8,11 +8,11 @@ import type { TerminologyResolutionConfig } from './validators/valueset-validato
 import { ValidatorRuntimeRegistry } from './validator-runtime-registry.js';
 import {
   configurePublicReleaseRuntime,
-  preparePublicReleaseRuntime,
   settingsWithPublicRelease,
 } from './public-release-runtime.js';
 import type {
   RecordsValidationRequest,
+  RecordsValidatorRuntimeConfiguration,
   RecordsValidatorRuntimeLease,
   RecordsValidatorSingleton,
 } from './validator-singleton-types.js';
@@ -21,19 +21,20 @@ export { resolveScopedProfileCacheMaxEntries } from './validator-singleton-defau
 import { mergeConstraintDiagnostics } from './validator-constraint-diagnostics.js';
 import { mergeFHIRPathCacheStats } from './validator-fhirpath-cache-stats.js';
 import { snapshotTerminologyConfig } from './validators/terminology-config-snapshot.js';
-import { resolveConfiguredRecordsBatchRuntime } from './validator-batch-runtime.js';
+import { prepareConfiguredRecordsRuntime, resolveConfiguredRecordsBatchRuntime, resolveConfiguredRecordsRuntime } from './validator-configured-runtime.js';
+import type { RecordsValidatorConfig } from './core/validator-engine-config.js';
 export type {
   RecordsValidationRequest,
   RecordsValidatorAdministration,
   RecordsValidatorInspection,
-  RecordsValidatorRuntimeLease, RecordsValidatorSingleton,
+  RecordsValidatorRuntimeConfiguration, RecordsValidatorRuntimeLease, RecordsValidatorSingleton,
   RecordsValidatorValidation,
 } from './validator-singleton-types.js';
 
 let globalTerminologyResolutionConfig: TerminologyResolutionConfig | undefined;
 let globalPinnedCanonicals: Map<string, string> | undefined;
 
-async function createRecordsValidator(scoped = false): Promise<RecordsValidator> {
+async function createRecordsValidator(scoped = false, config?: RecordsValidatorConfig): Promise<RecordsValidator> {
   const instance = new RecordsValidator({
     enableCaching: true,
     strictMode: false,
@@ -41,6 +42,7 @@ async function createRecordsValidator(scoped = false): Promise<RecordsValidator>
     allowedPackages: [...singletonDefaults.defaultAllowedPackages],
     profileCacheMaxEntries: scoped ? singletonDefaults.resolveScopedProfileCacheMaxEntries() : undefined,
     prewarmProfileSource: !scoped,
+    ...config,
   });
   if (globalTerminologyResolutionConfig) {
     instance.configureTerminologyResolution(globalTerminologyResolutionConfig);
@@ -57,19 +59,11 @@ const runtimeRegistry = new ValidatorRuntimeRegistry(
   singletonDefaults.MAX_SCOPED_VALIDATOR_INSTANCES,
 );
 
-async function getRecordsValidator(runtimeScopeKey?: string): Promise<RecordsValidator> {
-  return runtimeRegistry.get(runtimeScopeKey);
+async function getRecordsValidator(runtimeScopeKey?: string, config?: RecordsValidatorConfig): Promise<RecordsValidator> {
+  return runtimeRegistry.get(runtimeScopeKey, config);
 }
 
-async function getConfiguredRecordsValidator(
-  fhirVersion: PublicFhirVersion = 'R4',
-  runtimeScopeKey?: string,
-) {
-  const prepared = preparePublicReleaseRuntime(fhirVersion, runtimeScopeKey);
-  const instance = await getRecordsValidator(prepared.runtimeScopeKey);
-  configurePublicReleaseRuntime(instance, prepared.context);
-  return { context: prepared.context, instance };
-}
+const getConfiguredRecordsValidator = resolveConfiguredRecordsRuntime.bind(undefined, getRecordsValidator);
 
 function currentOrDefaultValidatorPromises(): Promise<RecordsValidator>[] {
   const current = runtimeRegistry.currentPromises();
@@ -78,19 +72,20 @@ function currentOrDefaultValidatorPromises(): Promise<RecordsValidator>[] {
 
 export function acquireRecordsValidatorRuntime(
   runtimeScopeKey?: string, fhirVersion: PublicFhirVersion = 'R4',
+  runtime?: RecordsValidatorRuntimeConfiguration,
 ): RecordsValidatorRuntimeLease {
-  const prepared = preparePublicReleaseRuntime(fhirVersion, runtimeScopeKey);
-  const primaryLease = runtimeRegistry.acquire(prepared.runtimeScopeKey);
+  const prepared = prepareConfiguredRecordsRuntime(fhirVersion, runtimeScopeKey, runtime);
+  const primaryLease = runtimeRegistry.acquire(prepared.runtimeScopeKey, runtime?.config);
   const acquiredLeases = new Map<string | undefined, typeof primaryLease>([
     [prepared.runtimeScopeKey, primaryLease],
   ]);
   let released = false;
 
   function leaseForVersion(requestedVersion: PublicFhirVersion) {
-    const requested = preparePublicReleaseRuntime(requestedVersion, runtimeScopeKey);
+    const requested = prepareConfiguredRecordsRuntime(requestedVersion, runtimeScopeKey, runtime);
     let requestedLease = acquiredLeases.get(requested.runtimeScopeKey);
     if (!requestedLease) {
-      requestedLease = runtimeRegistry.acquire(requested.runtimeScopeKey);
+      requestedLease = runtimeRegistry.acquire(requested.runtimeScopeKey, runtime?.config);
       acquiredLeases.set(requested.runtimeScopeKey, requestedLease);
     }
     return { lease: requestedLease, prepared: requested };
@@ -126,11 +121,13 @@ export function acquireRecordsValidatorRuntime(
 
 async function validateRecordsRequest(
   request: RecordsValidationRequest,
+  runtime?: RecordsValidatorRuntimeConfiguration,
 ): Promise<ValidationIssue[]> {
   const selectedRelease = request.selectedRelease;
   const { context, instance } = await getConfiguredRecordsValidator(
     request.fhirVersion ?? 'R4',
     request.runtimeScopeKey,
+    runtime,
   );
   return instance.validate(
     request.resource,
@@ -179,12 +176,12 @@ export const recordsValidator: RecordsValidatorSingleton = {
     const { context, instance } = await getConfiguredRecordsValidator(fhirVersion);
     return instance.validateStructure(resource, context.engineVersion, recursionDepth);
   },
-  async validateBatch(resources, options = {}) {
-    const configured = await resolveConfiguredRecordsBatchRuntime(getRecordsValidator, options);
+  async validateBatch(resources, options = {}, runtime) {
+    const configured = await resolveConfiguredRecordsBatchRuntime(getRecordsValidator, options, runtime);
     return configured.instance.validateBatch(resources, configured.options);
   },
-  async validateAspects(resource, options) {
-    const configured = await resolveConfiguredRecordsBatchRuntime(getRecordsValidator, options);
+  async validateAspects(resource, options, runtime) {
+    const configured = await resolveConfiguredRecordsBatchRuntime(getRecordsValidator, options, runtime);
     return configured.instance.validateAspects(resource, configured.options);
   },
   async validateAll(inputs, options) {
@@ -199,14 +196,10 @@ export const recordsValidator: RecordsValidatorSingleton = {
           fhirClient,
         }),
       validateBatch: async (resources, batchOptions, releaseContext) => {
-        const prepared = preparePublicReleaseRuntime(releaseContext.publicVersion);
-        const instance = await getRecordsValidator(prepared.runtimeScopeKey);
-        configurePublicReleaseRuntime(instance, releaseContext);
-        return instance.validateBatch(resources, {
-          ...batchOptions,
-          selectedRelease: batchOptions.selectedRelease === undefined ? releaseContext.publicVersion : batchOptions.selectedRelease,
-          settings: settingsWithPublicRelease(batchOptions.settings, releaseContext),
+        const configured = await resolveConfiguredRecordsBatchRuntime(getRecordsValidator, {
+          ...batchOptions, fhirVersion: releaseContext.publicVersion,
         });
+        return configured.instance.validateBatch(resources, configured.options);
       },
     }, inputs, options);
   },

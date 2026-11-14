@@ -52,6 +52,7 @@ export function createValidatorExecutionComponents(
       core.constraintValidator,
       config.profileDatePolicy ? new ProfileDatePolicyValidator(config.profileDatePolicy, config.packageVersionPins) : undefined,
       core.sdLoader,
+      config.profileSupplements,
     ),
     terminologyExecutor,
     referenceExecutor: new ReferenceExecutor(),

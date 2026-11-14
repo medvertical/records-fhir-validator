@@ -3,6 +3,7 @@ import { getProfileSource, setProfileSource } from '../../persistence/profile-so
 import { ValueSetValidator } from '../valueset-validator.js';
 import { expandFiniteValueSet } from '../finite-valueset-expansion.js';
 import { codeSystemIdentitiesEquivalent, normalizeKnownCodeSystemCanonical } from '../code-system-canonical-aliases.js';
+import { createValidationCanonicalAliasContext, withValidationCanonicalAliases } from '../../core/validation-canonical-alias-context.js';
 import { isVerifiedCodeSystemResult } from '../code-system-validation-evidence.js';
 import { resolveCodeSystemVersion, snapshotTerminologyConfig } from '../terminology-config-snapshot.js';
 import type { CodeSystem, ValueSet } from '../valueset-types.js';
@@ -37,8 +38,13 @@ describe('registered HPO system identities', () => {
     expect(codeSystemIdentitiesEquivalent(alias, preferred)).toBe(true);
     for (const other of [alias + '/extra', alias.replace('http:', 'https:'), alias.replace('hp.owl', 'HP.owl'),
       'http://purl.obolibrary.org/obo/mondo.owl']) expect(codeSystemIdentitiesEquivalent(other, preferred)).toBe(false);
-    const oldOnko = 'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-therapie-stellungzurop';
-    expect(codeSystemIdentitiesEquivalent(oldOnko, normalizeKnownCodeSystemCanonical(oldOnko))).toBe(false);
+    const predecessor = 'https://example.test/CodeSystem/predecessor';
+    const replacement = 'https://example.test/CodeSystem/replacement';
+    const configured = createValidationCanonicalAliasContext({ codeSystems: { [predecessor]: replacement } });
+    withValidationCanonicalAliases(configured, () => {
+      expect(normalizeKnownCodeSystemCanonical(predecessor)).toBe(replacement);
+      expect(codeSystemIdentitiesEquivalent(predecessor, replacement)).toBe(false);
+    });
   });
 
   it('shares exact local authority across both names without borrowing another edition or namespace', async () => {

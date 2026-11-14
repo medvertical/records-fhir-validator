@@ -18,8 +18,7 @@ import type { Constraint, StructureDefinition } from '../structure-definition-ty
 import type { ExtensionValidator } from '../../validators/extension-validator.js';
 import type { SlicingValidator, ReferenceResolver } from '../../validators/slicing-validator.js';
 import type { ConstraintValidator } from '../../validators/constraint-validator.js';
-import { GermanIdentifierValidator } from '../../validators/german-identifier-validator.js';
-import { GermanExtensionValidator } from '../../validators/german-extension-validator.js';
+import type { ProfileSupplement } from '../profile-supplement.js';
 import { deepProfileValidator } from '../../validators/deep-profile-validator.js';
 import { SDFHIRPathExecutor } from '../../validators/sd-fhirpath-executor.js';
 import type { FHIRPathTerminologyResolver } from '../../validators/fhirpath-async-terminology.js';
@@ -70,8 +69,6 @@ export class ProfileExecutor {
   private extensionValidator: ExtensionValidator;
   private profileSlicingValidation: ProfileSlicingValidation;
   private constraintValidator: ConstraintValidator;
-  private germanIdentifierValidator: GermanIdentifierValidator;
-  private germanExtensionValidator: GermanExtensionValidator;
   private readonly ownSDFHIRPathExecutor = new SDFHIRPathExecutor();
 
   constructor(
@@ -80,12 +77,11 @@ export class ProfileExecutor {
     constraintValidator: ConstraintValidator,
     private readonly datePolicy?: ProfileDatePolicyValidator,
     private readonly profileLoader?: Pick<StructureDefinitionLoader, 'loadReferencedProfile'>,
+    private readonly supplements: readonly ProfileSupplement[] = [],
   ) {
     this.extensionValidator = extensionValidator;
     this.profileSlicingValidation = new ProfileSlicingValidation(slicingValidator);
     this.constraintValidator = constraintValidator;
-    this.germanIdentifierValidator = new GermanIdentifierValidator();
-    this.germanExtensionValidator = new GermanExtensionValidator();
   }
 
   /**
@@ -180,20 +176,8 @@ export class ProfileExecutor {
         finishPhase('identifiers');
       }
 
-      // 4. Validate German identifier systems (GKV/PKV assigner validation)
-      if (this.germanIdentifierValidator.isGermanProfile(profileUrl)) {
-        const germanIdIssues = this.germanIdentifierValidator.validateIdentifiers(
-          resource,
-          profileUrl
-        );
-        issues.push(...germanIdIssues);
-
-        // 5. Validate German extension requirements (gender extension for "other")
-        const germanExtIssues = this.germanExtensionValidator.validateExtensions(
-          resource,
-          profileUrl
-        );
-        issues.push(...germanExtIssues);
+      for (const supplement of this.supplements) {
+        issues.push(...supplement.validate(resource, profileUrl));
       }
 
       const aliasIssue = profileCanonicalAliasIssue(resource, context.resourceType, profileUrl, structureDef);

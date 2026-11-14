@@ -11,6 +11,15 @@ import type { ValidationIssue, ValidationSettings } from '@records-fhir/validati
 import type { AnomalyDetectorConfig, AnomalyFinding } from './validators/anomaly-detector.js';
 import type { TerminologyResolutionConfig } from './validators/valueset-validator.js';
 import type { CustomRuleSelectedRelease } from './custom-rules/applicability.js';
+import type { RecordsValidatorConfig } from './core/validator-engine-config.js';
+
+/** Trusted in-process host configuration for a scoped validator. */
+export interface RecordsValidatorRuntimeConfiguration {
+  /** Change the key whenever the effective instance configuration changes. */
+  readonly key: string;
+  readonly config: Readonly<RecordsValidatorConfig>;
+  readonly fhirVersion?: PublicFhirVersion;
+}
 
 export type RecordsBatchValidationOptions =
   Omit<NonNullable<Parameters<RecordsValidator['validateBatch']>[1]>, 'fhirVersion' | 'selectedRelease'> & {
@@ -36,7 +45,7 @@ export interface RecordsValidationRequest extends PublicValidationRequest {
 }
 
 export interface RecordsValidatorValidation {
-  validateRequest(request: RecordsValidationRequest): Promise<ValidationIssue[]>;
+  validateRequest(request: RecordsValidationRequest, runtime?: RecordsValidatorRuntimeConfiguration): Promise<ValidationIssue[]>;
   /** @deprecated Use validateRequest() so optional values cannot be shifted accidentally. */
   validate(
     resource: unknown,
@@ -58,10 +67,12 @@ export interface RecordsValidatorValidation {
   validateBatch(
     resources: Parameters<RecordsValidator['validateBatch']>[0],
     options?: RecordsBatchValidationOptions,
+    runtime?: RecordsValidatorRuntimeConfiguration,
   ): ReturnType<RecordsValidator['validateBatch']>;
   validateAspects(
     resource: Parameters<RecordsValidator['validateAspects']>[0],
     options: RecordsBatchValidationOptions,
+    runtime?: RecordsValidatorRuntimeConfiguration,
   ): ReturnType<RecordsValidator['validateAspects']>;
   validateAll(inputs: PublicValidationInput[], options?: PublicBatchValidationOptions): Promise<PublicValidationResult[]>;
   detectAnomalies(resources: unknown[], config?: Partial<AnomalyDetectorConfig>): Promise<AnomalyFinding[]>;

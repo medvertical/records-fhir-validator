@@ -36,7 +36,7 @@ see [the lock-refresh guidance](./SECURITY.md#dependency-checks-for-080--6-octob
 upstream correction permitted by the existing dependency ranges.
 
 ```sh
-npm install @records-fhir/validator@0.10.1 @records-fhir/validation-types@0.2.0
+npm install @records-fhir/validator@0.10.2 @records-fhir/validation-types@0.2.1
 ```
 
 Run the CLI against a JSON, XML, or NDJSON input:
@@ -66,9 +66,9 @@ const issues = await recordsValidator.validateRequest({
 Gate pull requests with the GitHub Action:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.10.1
+- uses: medvertical/records-fhir-validator@v0.10.2
   with:
-    validator-version: '0.10.1'
+    validator-version: '0.10.2'
     paths: resources/**/*.json
     fhir-version: R4
     fail-on: error
@@ -102,7 +102,7 @@ Excluded from the public boundary:
 ## Install
 
 ```sh
-npm install @records-fhir/validator@0.10.1 @records-fhir/validation-types@0.2.0
+npm install @records-fhir/validator@0.10.2 @records-fhir/validation-types@0.2.1
 ```
 
 For local profile validation, supply the exact FHIR Core and implementation-guide
@@ -134,13 +134,13 @@ depending on your trade-off between freshness and stability:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Always-latest within current major | `medvertical/records-fhir-validator@v0` | Force-moved on every stable release; never advances onto a prerelease |
-| Exact release (recommended for production CI) | `medvertical/records-fhir-validator@v0.10.1` | Immutable by release policy |
+| Exact release (recommended for production CI) | `medvertical/records-fhir-validator@v0.10.2` | Immutable by release policy |
 | Fixed Action source | `medvertical/records-fhir-validator@<commit-sha>` | Use the full commit SHA |
 
 These references pin only the Action wrapper. It installs the npm validator
 independently; without `validator-version` it selects `latest`, even when the
 Action uses an exact tag or commit SHA. Pair a fixed Action ref with an exact
-`validator-version` such as `'0.10.1'`, without `^` or `~`, as shown above.
+`validator-version` such as `'0.10.2'`, without `^` or `~`, as shown above.
 Update both pins deliberately. Transitive npm dependencies, runner images,
 FHIR packages and terminology sources require separate controls for reproducible
 results.
@@ -391,6 +391,36 @@ const validator = new RecordsValidator({
 
 const issues = await validator.validate({ resourceType: 'Patient' });
 ```
+
+### MII KDS 2026
+
+Use `createMii2026ValidationSettings()` to select the pinned KDS 2026 IG
+packages for standalone FHIR R4 validation. Place the required IGs, core FHIR
+package and declared dependencies in a local package cache, using the
+`<package-id>#<version>/package/` layout. Supply a terminology source when
+validation needs evidence beyond the installed resources.
+
+```js
+import { readFile } from 'node:fs/promises';
+import { getRecordsValidatorClass, parseFhirJson } from '@records-fhir/validator';
+import { createMii2026ValidationSettings } from '@records-fhir/validation-types';
+
+const packageCachePath = new URL('./fhir-package-cache/', import.meta.url).pathname;
+const settings = createMii2026ValidationSettings({
+  packageDownload: { autoDownload: false },
+});
+const RecordsValidator = await getRecordsValidatorClass();
+const validator = new RecordsValidator({
+  packageCachePath,
+  bundledProfilesPath: packageCachePath,
+  autoDownload: false,
+});
+const { resources } = parseFhirJson(await readFile('./patient.json', 'utf8'));
+console.log(await validator.validateBatch(resources, { fhirVersion: 'R4', settings }));
+```
+
+The SDK uses the resource's declared profile. Records workspace activation,
+additional checks and DQA programs are managed in the Records application.
 
 ### FHIR version routing (R4B)
 

@@ -98,15 +98,6 @@ export function isRedundantBundleInvariantPresenceIssue(
   return bundleInvariantPresencePaths.has(normalizeRequiredElementPath(issue));
 }
 
-export function isMiiGenderConstraintIssue(issue: ValidationIssue): boolean {
-  if (issue.code === 'constraint-violation-mii-pat-1') return true;
-  const details = issue.details;
-  return issue.code === 'profile-constraint-violation' && Boolean(
-    details && typeof details === 'object' && !Array.isArray(details) &&
-    (details as Record<string, unknown>).constraintKey === 'mii-pat-1'
-  );
-}
-
 export function isRedundantGenericConstraintIssue(issue: ValidationIssue, specificKeys: Set<string>): boolean {
   if (!['profile-constraint-violation', 'profile-constraint-warning'].includes(issue.code ?? '') || specificKeys.size === 0) return false;
   const details = issue.details;

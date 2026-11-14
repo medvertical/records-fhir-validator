@@ -12,7 +12,7 @@ const contextSchema = z.object({
   packages: z.array(z.string().regex(/^[^#]+#[^#]+$/)).min(1),
   validFrom: calendarDate.optional(), validTill: calendarDate.optional(),
 }).strict();
-const policySchema = z.object({
+export const profileDatePolicySchema = z.object({
   id: z.string().min(1), version: z.string().min(1), sourceSha256: z.string().regex(/^[a-f0-9]{64}$/),
   fhirVersion: z.enum(['R4', 'R5', 'R6']), timeZone: z.string().min(1), selectedContext: z.string().min(1),
   contexts: z.record(z.string(), contextSchema), rules: z.array(z.object({
@@ -22,7 +22,7 @@ const policySchema = z.object({
   }).strict()).min(1),
 }).strict();
 
-export type ProfileDatePolicy = z.infer<typeof policySchema>;
+export type ProfileDatePolicy = z.infer<typeof profileDatePolicySchema>;
 type PolicyRule = ProfileDatePolicy['rules'][number];
 type Compiled = ReturnType<typeof fhirpath.compile<{ async: false }>>;
 
@@ -33,7 +33,7 @@ export class ProfileDatePolicyValidator {
   private readonly packagePins: Readonly<Record<string, string>>;
 
   constructor(policy: ProfileDatePolicy, packagePins: Readonly<Record<string, string>> = {}) {
-    this.policy = policySchema.parse(policy);
+    this.policy = profileDatePolicySchema.parse(policy);
     this.packagePins = { ...packagePins };
     new Intl.DateTimeFormat('en', { timeZone: this.policy.timeZone });
     const selected = this.policy.contexts[this.policy.selectedContext];

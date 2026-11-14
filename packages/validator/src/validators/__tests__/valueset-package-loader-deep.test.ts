@@ -1,3 +1,4 @@
+import { createValidationCanonicalAliasContext, withValidationCanonicalAliases } from '../../core/validation-canonical-alias-context';
 import { versionedCacheKey } from '../valueset-package-utils.js';
 /**
  * ValueSet Package Loader — Deep Expansion Tests
@@ -19,6 +20,9 @@ import { ValueSetPackageLoader } from '../valueset-package-loader';
 import { ValueSetPackageResourceAccess } from '../valueset-package-resource-access';
 import { ValueSetCache } from '../valueset-cache';
 import type { ValueSet, CodeSystem } from '../valueset-types';
+
+const examplePredecessorSystem = 'https://example.test/CodeSystem/predecessor';
+const exampleCurrentSystem = 'https://example.test/CodeSystem/current';
 
 const originalPackageCachePath = process.env.FHIR_PACKAGE_CACHE_PATH;
 
@@ -444,17 +448,19 @@ describe('ValueSetPackageLoader canonical package scan', () => {
         expect(cache.sourceContexts.run('R4', () => cache.getCodeSystemFile(canonical))).toMatchObject({ url: canonical });
     });
 
-    it('loads the current MII Onkologie CodeSystem through its predecessor canonical', async () => {
+    it('loads a CodeSystem through an explicitly configured predecessor canonical', async () => withValidationCanonicalAliases(createValidationCanonicalAliasContext({
+        codeSystems: { [examplePredecessorSystem]: exampleCurrentSystem },
+    }), async () => {
         const root = await fs.mkdtemp(path.join(os.tmpdir(), 'valueset-package-loader-'));
-        const packageDir = path.join(root, 'de.medizininformatikinitiative.kerndatensatz.onkologie#2026.0.3', 'package');
+        const packageDir = path.join(root, 'example.profiles.r4#1.0.0', 'package');
         await fs.mkdir(packageDir, { recursive: true });
 
         const predecessor =
-            'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-therapie-stellungzurop';
+            examplePredecessorSystem;
         const current =
-            'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-onko-therapie-stellungzurop';
+            exampleCurrentSystem;
         await fs.writeFile(
-            path.join(packageDir, 'CodeSystem-mii-cs-onko-therapie-stellungzurop.json'),
+            path.join(packageDir, 'CodeSystem-current.json'),
             JSON.stringify({
                 resourceType: 'CodeSystem',
                 url: current,
@@ -473,7 +479,7 @@ describe('ValueSetPackageLoader canonical package scan', () => {
         });
         expect(cache.sourceContexts.run('R4', () => cache.getCodeSystem(predecessor))).toMatchObject({ url: current });
         expect(cache.sourceContexts.run('R4', () => cache.getCodeSystem(current))).toMatchObject({ url: current });
-    });
+    }));
 
     it('does not let a negative CodeSystem cache entry hide a later package match', async () => {
         const root = await fs.mkdtemp(path.join(os.tmpdir(), 'valueset-package-loader-'));

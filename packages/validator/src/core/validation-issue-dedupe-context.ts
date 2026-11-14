@@ -34,7 +34,6 @@ import {
 import {
   getEffectiveRuleId,
   getSpecificConstraintKey,
-  isGermanGenderExtensionMissingIssue,
   isInvariantSpecificConstraintIssue,
   isSpecificNameInvariantIssue,
   isStructuralDateTimeMissingTimezoneIssue,
@@ -78,7 +77,6 @@ export interface DedupeContext {
   preferredInvalidUriIssues: Map<string, ValidationIssue>;
   preferredDisplayMismatchIssues: Map<string, ValidationIssue>;
   preferredTerminologyCodeInvalidIssues: Map<string, ValidationIssue>;
-  hasGermanGenderExtensionMissing: boolean;
 }
 
 export function collectDedupeContext(issues: ValidationIssue[]): DedupeContext {
@@ -131,7 +129,6 @@ function createDedupeContext(issues: ValidationIssue[]): DedupeContext {
     preferredInvalidUriIssues: new Map(),
     preferredDisplayMismatchIssues: new Map(),
     preferredTerminologyCodeInvalidIssues: new Map(),
-    hasGermanGenderExtensionMissing: issues.some(isGermanGenderExtensionMissingIssue),
   };
 }
 

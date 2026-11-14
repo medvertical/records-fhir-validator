@@ -10,6 +10,33 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.10.2] — 2026-11-14
+
+Ships with `@records-fhir/validation-types` 0.2.1.
+
+### Added
+
+- Allow embedding applications to configure isolated runtimes with profile
+  supplements, canonical aliases, package pins and date policies.
+
+### Changed
+
+- Records applies its German profile supplements and MII predecessor aliases
+  through private workspace modules. Standalone callers can select the KDS 2026
+  package pins with `createMii2026ValidationSettings()` and supply additional
+  aliases or supplemental checks through the SDK.
+
+### Compatibility
+
+- The standalone SDK and KDS 2026 preset support Node 20.0.
+
+### Validation evidence
+
+- All seven offline quality lanes passed. Of 390 R4 comparison cases, 387
+  passed the original comparison and three were accepted under documented
+  Unknown contracts. The KDS 2026 preset passed all 442 clean-corpus cases,
+  with 110 documented exclusions.
+
 ## [0.10.1] — 2026-11-14
 
 Ships with `@records-fhir/validation-types` 0.2.0 and includes the SDK
@@ -2661,7 +2688,8 @@ extracted from the Records DataOps Control Plane.
   are explicitly out of scope for this package and are not blended
   into the headline conformance score.
 
-[Unreleased]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.10.1...HEAD
+[Unreleased]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.10.2...HEAD
+[0.10.2]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.10.1...validator-v0.10.2
 [0.10.1]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.9.18...validator-v0.10.1
 [0.5.0]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.4.4...validator-v0.5.0
 [0.4.4]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.4.3...validator-v0.4.4

@@ -195,10 +195,10 @@
   },
   "currentRelease": {
     "candidate": {
-      "validator": "0.10.1",
-      "validationTypes": "0.2.0"
+      "validator": "0.10.2",
+      "validationTypes": "0.2.1"
     },
-    "measuredAt": "2026-11-13T23:16:37.289Z",
+    "measuredAt": "2026-11-14T10:51:56.176Z",
     "r4Json": {
       "expectedCount": 390,
       "rawCount": 390,
@@ -217,10 +217,10 @@
       "clean": 442,
       "excluded": 110
     },
-    "inventorySha256": "3467d7fb5d8360f26262cf0009117cd819ce84ab718402b59fe458976db15942",
-    "runtimeSha256": "5cb2072d2c311a263e506dcfab10b1e07bb552b02bb4b57d7ba3656883aab167",
-    "r4ReportSha256": "fb3fad3624194fedf887d9f984c196a19878fedc7953b5e3e5d02e6fa547b0ed",
-    "miiReportSha256": "191f88b85ec55060faa6849e08df80d8cfa69517c05c2ba147617b0878084c89",
+    "inventorySha256": "907501a668a650ed625f6e2ed9a28b07c8af101e626b0969fa5897157e819ee7",
+    "runtimeSha256": "a1567d41c3a68aa9a4e3ea9d55d5431fe576b196c000fe6842c42f291a716bdb",
+    "r4ReportSha256": "86b0dd8f506f86b0255b7e9611cc3f036648397bf66b2d2f848b0386d889ef17",
+    "miiReportSha256": "7b7fdf7fe526f1ba5baad5494fe43127c1efceb891ec5dd41ca9d7d68043e1c6",
     "limits": {
       "r4LiveAuthorityReobserved": false,
       "originalMeasurementReused": true

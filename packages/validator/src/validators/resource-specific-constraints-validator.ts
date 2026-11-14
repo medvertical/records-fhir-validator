@@ -8,7 +8,6 @@ import { logger } from '../logger.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { validateCompositionConstraints } from './resource-specific-composition-constraints.js';
 import { validateMeasureDefinition } from './measure-definition-rules.js';
-import { validateGermanMedicationDosage } from './resource-specific-medication-dosage.js';
 import { validateObservationConstraints } from './resource-specific-observation-constraints.js';
 
 type FhirResource = Record<string, unknown> & { resourceType: string };
@@ -57,7 +56,7 @@ export class ResourceSpecificConstraintsValidator {
   validate(
     value: unknown,
     existingIssues: ValidationIssue[] = [],
-    profileUrl?: string,
+    _profileUrl?: string,
   ): ValidationIssue[] {
     if (!isFhirResource(value)) return [];
     const resource = value;
@@ -81,10 +80,6 @@ export class ResourceSpecificConstraintsValidator {
         return validateObservationConstraints(resource);
       case 'Measure':
         return validateMeasureDefinition(resource);
-      case 'MedicationRequest':
-      case 'MedicationDispense':
-      case 'MedicationStatement':
-        return validateGermanMedicationDosage(resource, profileUrl);
       default:
         return [];
     }

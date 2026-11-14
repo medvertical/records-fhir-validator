@@ -559,7 +559,7 @@ describe("dedupeIssues", () => {
     ]);
   });
 
-  it("prefers the explicit German gender extension issue over mii-pat-1 constraints", () => {
+  it("does not suppress a profile constraint based on a project-specific rule name", () => {
     const deduped = dedupeIssues([
       issue({
         code: "constraint-violation-mii-pat-1",
@@ -584,8 +584,8 @@ describe("dedupeIssues", () => {
       }),
     ]);
 
-    expect(deduped).toHaveLength(1);
-    expect(deduped[0].code).toBe("profile-extension-missing");
+    expect(deduped.map(finding => finding.code)).toContain("profile-extension-missing");
+    expect(deduped.some(finding => finding.ruleId === "mii-pat-1" || finding.code === "constraint-violation-mii-pat-1")).toBe(true);
   });
 
   it("suppresses required and mustSupport copies when cardinality min already reports the same path", () => {

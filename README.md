@@ -35,9 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: medvertical/records-fhir-validator@v0.10.1
+      - uses: medvertical/records-fhir-validator@v0.10.2
         with:
-          validator-version: '0.10.1'
+          validator-version: '0.10.2'
           paths: |
             examples/**/*.json
             test/fixtures/**/*.json
@@ -48,9 +48,9 @@ jobs:
 The same two pins apply when validating against a specific profile:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.10.1
+- uses: medvertical/records-fhir-validator@v0.10.2
   with:
-    validator-version: '0.10.1'
+    validator-version: '0.10.2'
     paths: resources/**/*.json
     profile-url: http://hl7.org/fhir/StructureDefinition/Patient
     fhir-version: R4
@@ -66,7 +66,7 @@ Action pinning (always pair a fixed Action ref with an exact `validator-version`
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Latest stable in current major | `medvertical/records-fhir-validator@v0` | Floating tag, force-moved on stable releases only |
-| Exact released version | `medvertical/records-fhir-validator@v0.10.1` | Immutable consumer tag |
+| Exact released version | `medvertical/records-fhir-validator@v0.10.2` | Immutable consumer tag |
 | Fixed Action source | `medvertical/records-fhir-validator@<commit-sha>` | Full commit SHA; npm version still needs its own pin |
 
 The floating major tag is an explicit opt-in to Action updates. These two pins
@@ -101,7 +101,7 @@ within the dependency's existing range.
 ```
 
 ```sh
-npm install @records-fhir/validator@0.10.1 @records-fhir/validation-types@0.2.0
+npm install @records-fhir/validator@0.10.2 @records-fhir/validation-types@0.2.1
 ```
 
 Run the CLI against one file or a folder:
@@ -180,8 +180,8 @@ includes `file`, `resourceType`, `profileUrl`, and `issues`. With
 
 ## What Is Included
 
-- `@records-fhir/validator` 0.10.1 - Apache-2.0 validation engine.
-- `@records-fhir/validation-types` 0.2.0 - Apache-2.0 validation-domain types.
+- `@records-fhir/validator` 0.10.2 - Apache-2.0 validation engine.
+- `@records-fhir/validation-types` 0.2.1 - Apache-2.0 validation-domain types.
 - Composite GitHub Action at repository root.
 - Standalone examples under `packages/validator/examples/`.
 - Boundary audit and smoke-test scripts.
@@ -234,7 +234,7 @@ The exporting package versions are listed above. They are not the measured versi
 
 ### Current candidate release acceptance
 
-Candidate validator 0.10.1; validation-types 0.2.0.
+Candidate validator 0.10.2; validation-types 0.2.1.
 Scoped R4 JSON acceptance was **390/390**. The raw criterion passed **387/390**, with 3 raw failures, 0 skips and 0 runtime errors. The 3 cases accepted by contract retain their Unknown verdicts.
 MII clean precision: **442/442**, with **110 explicit exclusions**. This is clean-corpus precision, not reference parity or site certification.
 Export verification authenticates the selected artifacts, unchanged validation/measurement inputs and retained input archives. Consumer guidance and evidence-verification tooling are compared separately; the original full inventory and measurement epoch remain unchanged. This does not verify a built runtime or installed profile packages, replay validation, or create a fresh measurement.

@@ -29,9 +29,9 @@ npx -p @records-fhir/validator records-fhir-validator ./fixtures --summary-only 
 The GitHub workflow pins both the composite Action and its npm validator:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.10.1
+- uses: medvertical/records-fhir-validator@v0.10.2
   with:
-    validator-version: '0.10.1'
+    validator-version: '0.10.2'
     paths: 'examples/**/*.json'
 ```
 

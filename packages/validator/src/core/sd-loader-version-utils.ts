@@ -1,3 +1,4 @@
+import { selectedCanonicalAlias } from './validation-canonical-alias-context.js';
 
 export type FhirVersionFamily = 'R4' | 'R5' | 'R6';
 
@@ -111,23 +112,7 @@ export function normalizeKnownStructureDefinitionCanonicalUrl(url: string): stri
     /^https?:\/\/hl7\.org\/fhir\/us\/davinci-crd(?:\/R4)?\/StructureDefinition\/profile-devicerequest-r4$/i,
     'http://hl7.org/fhir/us/davinci-crd/StructureDefinition/profile-devicerequest',
   );
-  const normalizedMiiMolgen = normalizedDaVinci.replace(
-    /^(https:\/\/www\.medizininformatik-initiative\.de\/fhir\/ext\/modul-molgen\/StructureDefinition\/)(genomic-study(?:-analysis)?)$/i,
-    (_match, prefix: string, profileId: string) => `${prefix}mii-pr-molgen-${profileId}`,
-  );
-  const normalized = normalizedMiiMolgen
-    .replace(
-      /^https:\/\/www\.medizininformatik-initiative\.de\/fhir\/ext\/modul-mtb\/StructureDefinition\/mii-pr-mtb-biomarker-insituhybridization$/i,
-      'https://www.medizininformatik-initiative.de/fhir/ext/modul-mtb/StructureDefinition/mii-pr-mtb-insituhybridization',
-    )
-    .replace(
-      /^https:\/\/www\.medizininformatik-initiative\.de\/fhir\/ext\/modul-mtb\/StructureDefinition\/mii-pr-mtb-immunohistochemistry-msi$/i,
-      'https://www.medizininformatik-initiative.de/fhir/ext/modul-mtb/StructureDefinition/mii-pr-mtb-msi',
-    )
-    .replace(
-      /^https:\/\/www\.medizininformatik-initiative\.de\/fhir\/ext\/modul-mtb\/StructureDefinition\/mii-pr-mtb-systemische-therapie-medication-statement$/i,
-      'https://www.medizininformatik-initiative.de/fhir/ext/modul-mtb/StructureDefinition/mii-pr-mtb-systemtherapie-medication-statement',
-    );
+  const normalized = selectedCanonicalAlias('profiles', normalizedDaVinci);
   return version ? `${normalized}|${version}` : normalized;
 }
 

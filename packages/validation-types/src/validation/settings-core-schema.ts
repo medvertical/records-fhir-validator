@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { WorkspaceValidationModulesSchema } from './workspace-modules.js';
 
 export const ValidationAspectSchema = z.enum([
     'structural', 'profile', 'terminology', 'reference', 'invariant', 'custom_rule', 'metadata', 'anomaly'
@@ -51,6 +52,7 @@ export function normalizeProfileSourcesConfig(value: unknown): z.infer<typeof Pr
 }
 
 export const PackageDownloadConfigSchema = z.object({
+    workspaceModules: WorkspaceValidationModulesSchema.optional(),
     versionPolicy: z.enum(['prefer-stable', 'prefer-latest']),
     pinnedVersions: z.record(z.string(), z.string()),
     serverBindings: z.array(z.object({
