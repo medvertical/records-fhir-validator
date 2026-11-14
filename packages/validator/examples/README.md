@@ -26,13 +26,19 @@ npx -p @records-fhir/validator records-fhir-validator ./fixtures --fail-on=warni
 npx -p @records-fhir/validator records-fhir-validator ./fixtures --summary-only --output validation-report.json
 ```
 
-The GitHub workflow uses the composite Action and needs no extra setup:
+The GitHub workflow pins both the composite Action and its npm validator:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0
+- uses: medvertical/records-fhir-validator@v0.10.1
   with:
+    validator-version: '0.10.1'
     paths: 'examples/**/*.json'
 ```
+
+Update both pins deliberately. An exact Action tag or commit SHA alone does not
+pin the npm validator: omitting `validator-version` installs `latest`. These pins
+select the two releases; transitive dependencies, FHIR packages and terminology
+sources need separate controls for reproducible results.
 
 ## Profile-specific validation
 

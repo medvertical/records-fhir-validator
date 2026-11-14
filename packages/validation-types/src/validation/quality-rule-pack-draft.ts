@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { qualityRuleAssessmentIssue } from './quality-assessment-basis.js';
 
 import {
   boundedQualityRuleId,
@@ -11,7 +12,7 @@ import {
 
 /** Mutable authoring shape; immutable publication still requires one rule. */
 export const qualityRulePackDraftManifestSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.union([z.literal(1), z.literal(2)]),
   id: boundedQualityRuleId,
   version: boundedQualityRuleVersion,
   name: z.string().min(1).max(256),
@@ -28,6 +29,9 @@ export const qualityRulePackDraftManifestSchema = z.object({
 }).strict().superRefine((manifest, context) => {
   const ids = new Set<string>();
   for (const [index, rule] of manifest.rules.entries()) {
+    const assessmentIssue = qualityRuleAssessmentIssue(manifest.schemaVersion, rule);
+    if (assessmentIssue) context.addIssue({ code: z.ZodIssueCode.custom,
+      path: ['rules', index, 'assessment'], message: assessmentIssue });
     if (ids.has(rule.id)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -57,6 +61,7 @@ export interface QualityRulePackDraftTestSummary {
   passedMetrics: number;
   failedMetrics: number;
   notEvaluableMetrics: number;
+  observedMetrics?: number;
   findingCount: number;
   truncatedFindingCount: number;
 }

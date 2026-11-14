@@ -109,7 +109,8 @@ export async function mergeAncestorTypeProfileSliceMetadata(input: {
     if (!relativePath) continue;
     for (const typeSpec of getElementTypes(ancestor)) {
       for (const profileUrl of typeSpec.profile ?? []) {
-        await mergeAncestorProfile(profileUrl, relativePath, input);
+        const relativeId = input.element.id!.slice(ancestor.id!.length + 1);
+        await mergeAncestorProfile(profileUrl, relativePath, relativeId, input);
       }
     }
   }
@@ -207,6 +208,7 @@ function mergeTypeProfileChildAt(
 async function mergeAncestorProfile(
   profileUrl: string,
   relativePath: string,
+  relativeId: string,
   input: Parameters<typeof mergeAncestorTypeProfileSliceMetadata>[0],
 ): Promise<void> {
   try {
@@ -214,10 +216,12 @@ async function mergeAncestorProfile(
     const typeElements = getProfileElements(typeDefinition);
     const typeRoot = getNonEmptyString(typeDefinition?.type) ?? '';
     if (!typeRoot) return;
-    const inheritedElement = typeElements.find(candidate =>
+    const candidates = typeElements.filter(candidate =>
       candidate.path === `${typeRoot}.${relativePath}`
       && candidate.sliceName === input.element.sliceName
     );
+    const inheritedElement = candidates.find(candidate => candidate.id === `${typeRoot}.${relativeId}`)
+      ?? (candidates.length === 1 ? candidates[0] : undefined);
     if (!inheritedElement) return;
     mergeInheritedSliceElement(input.sliceDef, inheritedElement);
     mergeInheritedSliceChildren(inheritedElement, typeElements, input);

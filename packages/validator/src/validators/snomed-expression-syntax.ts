@@ -18,9 +18,13 @@ export type SnomedExpressionSyntaxResult =
   };
 
 type SyntaxFailure = Extract<SnomedExpressionSyntaxResult, { kind: 'invalid' | 'unverified' }>;
-type ParserState = { input: string; offset: number; failure?: SyntaxFailure };
+type ConceptReferenceVisitor = (identifier: string, offset: number) => void;
+type ParserState = { input: string; offset: number; failure?: SyntaxFailure; onConceptReference?: ConceptReferenceVisitor };
 
-export function classifySnomedExpressionSyntax(input: string): SnomedExpressionSyntaxResult {
+export function classifySnomedExpressionSyntax(
+  input: string,
+  onConceptReference?: ConceptReferenceVisitor,
+): SnomedExpressionSyntaxResult {
   const { maxInputLength } = SNOMED_EXPRESSION_SYNTAX_LIMITS;
   if (input.length > maxInputLength) {
     return { kind: 'unverified', reason: 'input-length-limit', offset: maxInputLength, limit: maxInputLength };
@@ -29,7 +33,7 @@ export function classifySnomedExpressionSyntax(input: string): SnomedExpressionS
   if (unicodeOffset !== undefined) {
     return { kind: 'invalid', offset: unicodeOffset, expected: 'Unicode scalar value' };
   }
-  const state: ParserState = { input, offset: 0 };
+  const state: ParserState = { input, offset: 0, onConceptReference };
   skipWhitespace(state);
   if (input.startsWith('===', state.offset) || input.startsWith('<<<', state.offset)) {
     state.offset += 3;
@@ -119,6 +123,7 @@ function parseConceptReference(state: ParserState): boolean {
   if (state.offset - start < 6 || state.offset - start > 18) {
     return invalid(state, '6–18 digit concept identifier');
   }
+  state.onConceptReference?.(state.input.slice(start, state.offset), start);
   skipWhitespace(state);
   if (state.input[state.offset] !== '|') return true;
   state.offset++;

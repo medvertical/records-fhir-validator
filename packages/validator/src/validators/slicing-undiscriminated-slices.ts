@@ -25,6 +25,9 @@ export function buildUndiscriminatedSliceIssues(
     customMessage: `Slicing cannot be evaluated: slice '${slice.path}:${slice.sliceName}'`
       + `${profileUrl ? ` in profile ${profileUrl}` : ''} has no fixed value, pattern or required binding`
       + ' for its discriminator',
-    details: { sliceName: slice.sliceName, reason: 'undiscriminated-slice' },
+    details: {
+      sliceName: slice.sliceName, reason: 'undiscriminated-slice',
+      validationComplete: false, validationStatus: 'incomplete',
+    },
   })));
 }

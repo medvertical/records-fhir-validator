@@ -44,6 +44,8 @@ export function createValidatorCoreRuntime(
       autoDownload: config.autoDownload,
       allowedPackages: config.allowedPackages,
       packageVersionPins: config.packageVersionPins,
+      profileVersionAliases: config.profileVersionAliases,
+      profileDependencyAliases: config.profileDependencyAliases,
       maxCacheEntries: profileCacheMaxEntries,
       prewarmProfileSource: config.prewarmProfileSource,
       preloadPackageInventory: config.preloadPackageInventory,

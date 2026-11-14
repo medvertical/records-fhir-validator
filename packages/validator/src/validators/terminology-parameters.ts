@@ -4,6 +4,7 @@ import {
   getNestedString,
   getOperationOutcomeIssueValues,
   getParametersEntries,
+  getSingleParameterValue,
   isTerminologyResponseRecord,
 } from './terminology-response-utils.js';
 
@@ -18,17 +19,11 @@ const SUBSUMPTION_OUTCOMES = new Set<SubsumptionOutcome>([
 const UNRESOLVABLE_DEFINITION = /(?:value\s?set|code\s?system).*?(?:could not be (?:found|resolved)|not (?:found|supported|resolved))|unable to (?:find|resolve).*?(?:value\s?set|code\s?system)|does not support (?:this |the )?(?:code\s?system|value\s?set)/i;
 
 export function validateCodeSucceeded(parameters: unknown): boolean {
-  const entries = getParametersEntries(parameters);
-  if (!entries) return false;
-  const resultParam = entries.find(parameter => parameter.name === 'result');
-  return resultParam?.valueBoolean === true;
+  return valueSetValidationOutcome(parameters) === 'valid';
 }
 
 export function extractSubsumptionOutcome(parameters: unknown): SubsumptionOutcome | undefined {
-  const entries = getParametersEntries(parameters);
-  if (!entries) return undefined;
-  const outcomeParam = entries.find(parameter => parameter.name === 'outcome');
-  const outcome = outcomeParam?.valueCode;
+  const outcome = getSingleParameterValue(parameters, 'outcome', 'valueCode');
   return typeof outcome === 'string' && SUBSUMPTION_OUTCOMES.has(outcome as SubsumptionOutcome)
     ? outcome as SubsumptionOutcome
     : undefined;
@@ -58,7 +53,7 @@ export function operationOutcomeCannotResolveBinding(outcome: unknown): boolean 
 export function valueSetValidationOutcome(parameters: unknown): CodeBindingOutcome {
   if (operationOutcomeCannotResolveBinding(parameters)) return 'unverified';
   const entries = getParametersEntries(parameters);
-  const result = entries?.find(parameter => parameter.name === 'result')?.valueBoolean;
+  const result = getSingleParameterValue(parameters, 'result', 'valueBoolean');
   if (result === true) return 'valid';
   if (result !== false) return 'unverified';
   const message = entries?.find(parameter => parameter.name === 'message')?.valueString;

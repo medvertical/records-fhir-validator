@@ -1,17 +1,17 @@
 import { parseMixedNamedInventory, assessSelectedNamedMembership, importedNamedCodeRejection, selectedInventoryConcept } from './imported-terminology-inventory.js';
-import { verifiedCodeSystemResult } from './code-system-validation-evidence.js';
+import { rejectedCodeSystemDisplayResult, verifiedCodeSystemResult } from './code-system-validation-evidence.js';
 import { validateProviderCode } from './built-in-terminology-provider.js';
 import type { CodeSystemValidationIssue, CodeSystemValidationResult } from './terminology-api-client.js';
 import type { ValueSetCache } from './valueset-cache.js';
 import {
   fhirVersionToPackageMajor,
-  findCodeSystemConcept,
   isAssertableCodeSystem,
   isDeprecatedConcept,
 } from './valueset-code-system-rules.js';
 import { assessLocalDisplay, displayUnverifiedMessage } from './valueset-display-authority.js';
 import { specialV2Concept } from './v2-special-concepts.js';
 import { hasNonEnumerableCodeGrammar } from './finite-valueset-expansion.js';
+import { assessLocalCodeSystemAuthority } from './local-code-system-authority.js';
 import type { FhirVersion } from './valueset-expansion-cache-key.js';
 import type { ValueSetPackageLoader } from './valueset-package-loader.js';
 import type { CodeSystem, CodeSystemConcept } from './valueset-types.js';
@@ -43,6 +43,8 @@ export async function validateCodeInLocalCodeSystem(
 
     const inventory = parseMixedNamedInventory(codeSystem);
     if (inventory.kind === 'unverified') return null;
+    const ordinary = inventory.kind === 'not-mixed-import' ? assessLocalCodeSystemAuthority(codeSystem, code) : undefined;
+    if (ordinary?.kind === 'unverified') return null;
     let concept: CodeSystemConcept | undefined | null;
     if (inventory.kind === 'named-inventory') {
       const family = deps.cache.sourceContexts.context()?.fhirVersion;
@@ -56,12 +58,12 @@ export async function validateCodeInLocalCodeSystem(
       if (membership.kind === 'unverified') return null;
       if (membership.kind === 'absent-named-concept') return importedNamedCodeRejection(membership, code) ?? null;
       concept = selectedInventoryConcept(membership);
-    } else concept = findCodeSystemConcept(codeSystem.concept, code) ?? specialV2Concept(system, code);
+    } else concept = (ordinary?.kind === 'present' ? ordinary.concept : null) ?? specialV2Concept(system, code);
     const finalize = (result: CodeSystemValidationResult): CodeSystemValidationResult =>
       inventory.kind === 'named-inventory' ? verifiedCodeSystemResult(result) : result;
     if (!concept) {
       const grammar = hasNonEnumerableCodeGrammar(codeSystem);
-      const incompleteCodeSystem = codeSystem.content !== 'complete' || grammar;
+      const incompleteCodeSystem = ordinary?.kind === 'absent' ? !ordinary.complete : codeSystem.content !== 'complete' || grammar;
       return {
         valid: false,
         reason: 'code-unknown',
@@ -70,7 +72,7 @@ export async function validateCodeInLocalCodeSystem(
           `Unknown code '${code}' in CodeSystem '${system}'` +
           `${codeSystem.version ? ` version '${codeSystem.version}'` : ''}` +
           (grammar ? '; the named concepts do not cover the CodeSystem compositional grammar' : incompleteCodeSystem
-            ? '; the CodeSystem does not declare complete content, so the code may exist outside the listed concepts'
+            ? '; the local CodeSystem inventory does not establish absence, so the code may exist outside the listed concepts'
             : ''),
       };
     }
@@ -93,7 +95,7 @@ export async function validateCodeInLocalCodeSystem(
           : `Wrong Display Name '${display}' for ${system}#${code}. `) +
         `Valid display is '${expectedDisplay}'`
       );
-      return finalize({
+      return finalize(rejectedCodeSystemDisplayResult({
         valid: false,
         reason: 'display-mismatch',
         display: expectedDisplay,
@@ -105,7 +107,7 @@ export async function validateCodeInLocalCodeSystem(
           message,
           source: 'local-code-system',
         }, ...lifecycleIssues],
-      });
+      }));
     }
 
     return finalize({

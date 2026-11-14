@@ -41,7 +41,8 @@ export async function loadProfileWithSnapshot(
   return captureValidationDependency('profile', 'loadProfileWithSnapshot', [profileUrl, fhirVersion, sdLoader.getProfileResolutionContext?.(), selectedProfileIdentity(profileUrl, fhirVersion)?.key], () => withProfileSourceSnapshot(async () => {
     const cacheKey = `${profileUrl}:${fhirVersion}:snapshot`;
     const structureDef = await sdLoader.loadProfile(profileUrl, fhirVersion);
-    if (!structureDef || !resolvedProfileMatchesRequest(structureDef, profileUrl, fhirVersion)) return null;
+    if (!structureDef || !(sdLoader.matchesProfileRequest?.(structureDef, profileUrl, fhirVersion)
+      ?? resolvedProfileMatchesRequest(structureDef, profileUrl, fhirVersion))) return null;
     return ensureSnapshot(structureDef, snapshotGenerator, profileCache, cacheKey, profileUrl, fhirVersion, profileResolutionOwnerKey(captureScope));
   }), captureScope, sdLoader.getDependencyCaptureScope ? () => sdLoader.getDependencyCaptureScope() : undefined);
 }
@@ -75,7 +76,8 @@ export async function loadProfileForValidation(
       ? await withSnapshotProfileLookup(profileUrl, context, undefined,
         () => resolveTenantProfile(effectiveUrl, fhirVersion, context, capturedSettings))
       : await sdLoader.loadProfile(profileUrl, fhirVersion);
-    if (!structureDef || !resolvedProfileMatchesRequest(structureDef, profileUrl, fhirVersion, effectiveUrl)) return null;
+    if (!structureDef || !(sdLoader.matchesProfileRequest?.(structureDef, profileUrl, fhirVersion)
+      ?? resolvedProfileMatchesRequest(structureDef, profileUrl, fhirVersion, effectiveUrl))) return null;
     return ensureSnapshot(structureDef, snapshotGenerator, profileCache, cacheKey, profileUrl, fhirVersion, profileResolutionOwnerKey(captureScope));
   }), captureScope, sdLoader.getDependencyCaptureScope ? () => sdLoader.getDependencyCaptureScope() : undefined);
 }

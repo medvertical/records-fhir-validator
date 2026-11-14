@@ -38,6 +38,8 @@ describe('%resource in profile invariants', () => {
   it('finds the resource that contains a node inside a Bundle', () => {
     expect(focusResourceOf(bundle, 'Bundle.entry[1].resource.gender')).toBe(patient);
     expect(focusResourceOf(bundle, 'Bundle.type')).toBe(bundle);
+    expect(focusResourceOf(bundle, 'Bundle.entry[1].resource')).toBe(bundle);
+    expect(focusResourceOf(bundle, 'Bundle.entry[1].resource', true)).toBe(patient);
   });
 
   it('evaluates an extension invariant against the resource carrying the extension', async () => {

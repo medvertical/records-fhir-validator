@@ -8,6 +8,9 @@ import type { FhirVersionFamily } from '../core/sd-loader-version-utils.js';
 import type { ElementDefinition, SlicingDefinition, StructureDefinition } from '../core/structure-definition-types.js';
 import { isConcreteChoiceProperty } from '../core/fhir-choice-property.js';
 import { getInvariantFhirPathModel } from '../core/fhirpath-context.js';
+import { FhirPathDecimalInput } from './fhirpath-decimal-input.js';
+import { withDecimalSourceGuards } from './fhirpath-decimal-guards.js';
+import { rewritePrimitiveComparisons } from './fhirpath-primitive-comparison.js';
 import { extractFixedEntry, extractPatternEntry } from './slice-constraint-values.js';
 import { valueMatchesFixedConstraint } from './slice-fixed-value-matching.js';
 import { matchesPattern } from './slice-pattern-matching.js';
@@ -175,17 +178,24 @@ function satisfiesInvariants(
   const root = elements[0]?.path ?? '';
   const rootResource = isFhirResource(context.rootResource) ? context.rootResource : undefined;
   const resource = isFhirResource(value) ? value : datatypeResourceOf(value, context);
+  const decimalInput = new FhirPathDecimalInput(context.fhirVersion ?? 'R4', root);
+  const projectedRoot = decimalInput.project(rootResource);
+  const projectedResource = decimalInput.project(resource);
+  const projectedValue = decimalInput.project(value);
   // Missing variables stay unbound: FHIRPath then throws and this prepass retains U.
-  const environment = { ...(resource ? { resource } : {}), ...(rootResource ? { rootResource } : {}) };
+  const environment = { ...(projectedResource ? { resource: projectedResource } : {}),
+    ...(projectedRoot ? { rootResource: projectedRoot } : {}) };
   let unknown = false;
   for (const element of elements) for (const constraint of element.constraint ?? []) {
     if (constraint.severity !== 'error' || !constraint.expression || CORE_INVARIANT.test(constraint.key)) continue;
-    for (const instance of valuesAt([value], segmentsBelow(root, element.path))) {
+    for (const instance of valuesAt([projectedValue], segmentsBelow(root, element.path))) {
       try {
         // The type lets FHIRPath resolve primitive sidecar extensions such as CH EPR's family qualifier.
-        const expression = isRecord(instance) ? { base: element.path, expression: constraint.expression } : constraint.expression;
+        const rewritten = rewritePrimitiveComparisons(constraint.expression);
+        const expression = isRecord(instance) ? { base: element.path, expression: rewritten } : rewritten;
         const { status } = classifyConstraintResult(fhirpath.evaluate(
           instance as object, expression, environment, getInvariantFhirPathModel(context.fhirVersion ?? 'R4'),
+          { preciseMath: true, userInvocationTable: withDecimalSourceGuards(undefined, context.fhirVersion ?? 'R4') },
         ));
         if (status === 'failed') return false;
         unknown ||= status === 'non-boolean';

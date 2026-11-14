@@ -35,7 +35,7 @@ import type { ValidationIssue, ValidationSettings } from '@records-fhir/validati
 Subpath imports are exported for stable type boundaries, for example:
 
 ```ts
-import type { ValidationSettings } from '@records-fhir/validation-types/validation-settings';
+import type { ValidationSettings } from '@records-fhir/validation-types/validation/settings';
 ```
 
 ## Development

@@ -7,6 +7,7 @@ import { inferCodeBasedProfiles } from './core/code-inferred-profiles.js';
 import { getPrimaryDeclaredProfile } from './core/declared-profile-utils.js';
 import type { recordsValidator } from './index.js';
 import { parseFhirNdjson, parseFhirXml } from './input/index.js';
+import { parseJsonWithNumberSources } from './input/fhir-json-input.js';
 import type { FhirInputDiagnostic } from './input/fhir-input-types.js';
 
 interface FhirResourceLike {
@@ -166,7 +167,7 @@ function parseInputResources(
   if (extension === '.ndjson') {
     return requireFhirResources(parseFhirNdjson(source).resources, 'NDJSON');
   }
-  const parsed: unknown = JSON.parse(source);
+  const parsed = parseJsonWithNumberSources(source);
   if (!isFhirResource(parsed)) {
     throw new Error('FHIR JSON input must contain an object with resourceType');
   }

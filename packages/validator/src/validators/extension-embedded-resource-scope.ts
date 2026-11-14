@@ -21,7 +21,7 @@ export async function loadEmbeddedExtensionResourceScope(
   resource: Record<string, unknown> & { resourceType: string },
   path: string,
   parent: ExtensionValidationContext,
-  loader: Pick<StructureDefinitionLoader, 'loadProfile'>,
+  loader: Pick<StructureDefinitionLoader, 'loadProfile'> & Partial<Pick<StructureDefinitionLoader, 'matchesProfileRequest'>>,
 ): Promise<EmbeddedExtensionResourceScope> {
   const profiles: StructureDefinition[] = [];
   const issues: ValidationIssue[] = [];
@@ -30,7 +30,8 @@ export async function loadEmbeddedExtensionResourceScope(
     try {
       const profile = await loader.loadProfile(canonical, parent.fhirVersion);
       if (!profile || profile.kind !== 'resource' || profile.abstract !== false
-        || !profileMatchesCanonical(profile, canonical, parent.fhirVersion)
+        || !(loader.matchesProfileRequest?.(profile, canonical, parent.fhirVersion)
+          ?? profileMatchesCanonical(profile, canonical, parent.fhirVersion))
         || profileResourceTypeApplicability(profile, resource.resourceType, parent.fhirVersion) !== true) {
         throw new ProfileReferenceUnavailableError({ canonical, cause: 'embedded-resource-profile-unverified' });
       }

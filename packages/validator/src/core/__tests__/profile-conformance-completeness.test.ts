@@ -19,6 +19,19 @@ const scope = (validateOne: ValidateOneFn, onIncomplete: (issue: ValidationIssue
 });
 
 describe('profile conformance completeness reporting', () => {
+  it('propagates the nested blocker without presenting unrelated informational findings as its root cause', async () => {
+    const onIncomplete = vi.fn();
+    const validateOne = vi.fn<ValidateOneFn>(async () => completed([
+      { id: 'dom-6', aspect: 'profile', severity: 'information', code: 'dom-6', message: 'Narrative is recommended' },
+      { ...incomplete('profile-conformance-incomplete'), details: { validationComplete: false,
+        causes: ['profile-conformance-incomplete'], rootCauses: ['datatype-owner-context-unavailable'] } },
+    ]));
+    await expect(createProfileConformanceCheck(scope(validateOne, onIncomplete))!(
+      { resourceType: 'Organization' }, profileUrl)).resolves.toBeUndefined();
+    expect(onIncomplete).toHaveBeenCalledWith(expect.objectContaining({ details: expect.objectContaining({
+      rootCauses: ['datatype-owner-context-unavailable'],
+    }) }));
+  });
   it.each(['terminology-codesystem-unverified', 'profile-slice-validation-incomplete'])(
     'reports %s as unknown information and rechecks a completed verdict', async code => {
       const onIncomplete = vi.fn();
@@ -28,7 +41,7 @@ describe('profile conformance completeness reporting', () => {
       await expect(check(resource, profileUrl)).resolves.toBeUndefined();
       expect(onIncomplete).toHaveBeenCalledWith(expect.objectContaining({
         code: 'profile-conformance-incomplete', severity: 'info',
-        details: { validationComplete: false, profile: profileUrl, causes: [code] },
+        details: { validationComplete: false, profile: profileUrl, causes: [code], rootCauses: [code] },
       }));
       validateOne.mockResolvedValue(completed());
       await expect(check(resource, profileUrl)).resolves.toBe(true);

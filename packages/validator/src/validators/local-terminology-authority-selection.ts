@@ -6,6 +6,8 @@ import { versionedCacheKey } from './valueset-package-utils.js';
 import { normalizeKnownCodeSystemCanonical } from './code-system-canonical-aliases.js';
 import { captureValidationDependency } from '../validation-dependency-snapshot.js';
 import { builtInProviderSnapshot, providerLookupKey, type LocalTerminologyAuthority } from './built-in-terminology-provider.js';
+import { currencyCanonical } from './iso4217-provider.js';
+import { getProfileSource, getProfileSourceCaptureScope } from '../persistence/profile-source.js';
 
 export type CodeSystemLookup = { codeSystem: CodeSystem | null; blocked: boolean };
 
@@ -34,7 +36,9 @@ export async function resolveLocalTerminologyAuthority(
     const scopeKey = cache.contextKey(providerLookupKey);
     return captureValidationDependency('terminology', 'loadBuiltInTerminologyProvider',
         [canonical, version, contextVersion, scopeKey], async () => {
-            const snapshot = builtInProviderSnapshot(canonical, version);
+            const currencyInventory = canonical === currencyCanonical && version === undefined
+                ? getProfileSource().getCurrencyTerminologyInventory?.() : undefined;
+            const snapshot = builtInProviderSnapshot(canonical, version, currencyInventory);
             return snapshot ? { kind: 'provider' as const, snapshot, scopeKey } : null;
-        });
+        }, getProfileSourceCaptureScope(), getProfileSourceCaptureScope);
 }

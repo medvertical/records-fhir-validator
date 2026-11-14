@@ -1,4 +1,7 @@
 import { expandHomePath } from './validator-runtime-settings.js';
+import type { ProfileDatePolicy } from '../validators/profile-date-policy.js';
+import type { ProfileVersionAlias } from './profile-version-aliases.js';
+import type { PackageDependencyAlias } from '../package/package-dependency-aliases.js';
 
 export interface RecordsValidatorConfig {
   packageCachePath?: string;
@@ -27,6 +30,12 @@ export interface RecordsValidatorConfig {
   preloadPackageInventory?: boolean;
   /** Instance-local filesystem stores for ValueSet/CodeSystem package resolution; [] disables default stores. */
   terminologyPackageDirectories?: string[];
+  /** Explicit profile/date/package context; omitted for generic FHIR validation. */
+  profileDatePolicy?: ProfileDatePolicy;
+  /** Explicit package-bound edition aliases; generic canonical matching stays strict. */
+  profileVersionAliases?: readonly ProfileVersionAlias[];
+  /** Explicit dependency-name repairs for profile closure lookup; omitted for generic validation. */
+  profileDependencyAliases?: readonly PackageDependencyAlias[];
 }
 
 const DEFAULT_PROFILE_CACHE_MAX_ENTRIES = 192;
@@ -56,6 +65,9 @@ export function resolveRecordsValidatorConfig(config: RecordsValidatorConfig): R
     prewarmProfileSource: config.prewarmProfileSource !== false,
     preloadPackageInventory: config.preloadPackageInventory !== false,
     terminologyPackageDirectories: config.terminologyPackageDirectories ? [...config.terminologyPackageDirectories] : undefined,
+    profileDatePolicy: config.profileDatePolicy,
+    profileVersionAliases: config.profileVersionAliases,
+    profileDependencyAliases: config.profileDependencyAliases,
     bundledProfilesPath: config.bundledProfilesPath !== undefined
       ? config.bundledProfilesPath
       : process.env.RECORDS_BUNDLED_PROFILES_PATH,

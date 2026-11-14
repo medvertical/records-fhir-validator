@@ -1,9 +1,6 @@
-import { isPinExemptCanonical } from '../package/canonical-pin-context.js';
 /** Loads and caches FHIR StructureDefinitions from bundled, local, and remote sources. */
 
-import { profileDefinitionSourceKey, ProfileReferenceUnavailableError, resolveProfileReferenceAuthority, rethrowProfileReferenceCaptureFailure, profileReferenceHasPackageAuthority, selectedProfileLookup, selectedProfileIdentity } from './profile-reference-authority.js';
-import { withProfileSourceSnapshot } from '../persistence/profile-source.js';
-import { copyProfilePackageProvenance, lookupProfilePackageDirectory, lookupProfilePackageProvenance } from '../package/canonical-pin-provenance.js';
+import { selectedProfileLookup, selectedProfileIdentity } from './profile-reference-authority.js';
 import { isDeepStrictEqual } from 'node:util';
 import type { StructureDefinition } from './structure-definition-types.js';
 import type { ProfileSourcesConfig, ValidationSettings } from '@records-fhir/validation-types';
@@ -21,8 +18,10 @@ import {
 } from './sd-loader-runtime.js';
 import { pinProfileReference, type ProfileReferenceSource } from './profile-reference-pins.js';
 import { resolveProfileRequest } from './sd-loader-version-utils.js';
-import { isTenantScopedProfileRequest } from './tenant-profile-source-resolution.js';
-import { checkSnapshotProfile, withSnapshotProfileLookup } from './snapshot-profile-checks.js';
+import { isTenantScopedProfileRequest, resolvedProfileMatchesRequest } from './tenant-profile-source-resolution.js';
+import { loadPackageReferencedProfile } from './sd-loader-referenced-profile.js';
+import { ProfileVersionAliases } from './profile-version-aliases.js';
+import { withSnapshotProfileLookup } from './snapshot-profile-checks.js';
 export { normalizeKnownStructureDefinitionCanonicalUrl } from './sd-loader-version-utils.js';
 
 export type { Binding, Constraint, ElementDefinition, ElementType, StructureDefinition } from './structure-definition-types.js';
@@ -30,6 +29,7 @@ export type { ProfileReferenceSource } from './profile-reference-pins.js';
 
 export class StructureDefinitionLoader {
   private readonly runtime: StructureDefinitionLoaderRuntime;
+  private readonly versionAliases: ProfileVersionAliases;
   private profileSourceContext?: ProfileSourceContext;
   private profileResolutionSettings?: ValidationSettings;
 
@@ -39,6 +39,7 @@ export class StructureDefinitionLoader {
     options?: StructureDefinitionLoaderOptions,
   ) {
     this.runtime = new StructureDefinitionLoaderRuntime(cachePath, bundledPath, options);
+    this.versionAliases = new ProfileVersionAliases(options?.profileVersionAliases, options?.packageVersionPins);
   }
 
   async waitForInitialization(): Promise<void> {
@@ -68,7 +69,7 @@ export class StructureDefinitionLoader {
     urls: string[],
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
   ): Promise<Map<string, StructureDefinition>> {
-    if (this.profileSourceContext?.organizationId !== undefined) {
+    if (this.profileSourceContext?.organizationId !== undefined || this.versionAliases.enabled) {
       const scopedProfiles = new Map<string, StructureDefinition>();
       await Promise.all(urls.map(async url => {
         const profile = await this.loadProfile(url, fhirVersion);
@@ -118,25 +119,40 @@ export class StructureDefinitionLoader {
   /** The current effective request, before any profile source or cache lookup. */
   resolveProfileUrl(url: string, fhirVersion: 'R4' | 'R5' | 'R6'): string | null {
     if (selectedProfileIdentity(url, fhirVersion)) return url;
-    return resolveProfileRequest(url, fhirVersion, canonical => this.runtime.policy.resolvePinnedCanonical(canonical));
+    const effective = isTenantScopedProfileRequest(url, this.profileSourceContext) ? url
+      : this.versionAliases.resolve(url, fhirVersion, this.runtime.policy.packagePins);
+    return resolveProfileRequest(effective, fhirVersion, canonical => this.runtime.policy.resolvePinnedCanonical(canonical));
+  }
+
+  matchesProfileRequest(profile: StructureDefinition, url: string, family: 'R4' | 'R5' | 'R6'): boolean {
+    const effective = this.resolveProfileUrl(url, family);
+    return effective !== null && (resolvedProfileMatchesRequest(profile, url, family, effective)
+      || (!isTenantScopedProfileRequest(url, this.profileSourceContext)
+        && this.versionAliases.accepts(profile, url, family, this.runtime.policy.packagePins)));
   }
 
   loadProfile(
     url: string,
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4'
   ): Promise<StructureDefinition | null> {
-    const selected = selectedProfileLookup(url, fhirVersion);
+    const pins = this.runtime.policy.getPackageVersionPins();
+    const alias = !isTenantScopedProfileRequest(url, this.profileSourceContext)
+      && this.versionAliases.binding(url, fhirVersion, pins);
+    const effective = this.resolveProfileUrl(url, fhirVersion);
+    if (!effective) return Promise.resolve(null);
+    const selected = selectedProfileLookup(effective, fhirVersion);
     const captureScope = this.getDependencyCaptureScope();
     const context = this.profileSourceContext, settings = this.profileResolutionSettings;
     // Recursive conformance retains an already selected package edition rather than selecting globally again.
     const snapshotRequest = selected?.profile.version ? `${selected.profile.url}|${selected.profile.version}` : url;
     return withSnapshotProfileLookup(snapshotRequest, context, undefined, () => captureValidationDependency('profile', 'load-profile',
       [url, fhirVersion, context, settings, selected?.key], () => selected ? Promise.resolve(selected.profile) : this.runtime.loadProfile(
-      url,
+      effective,
       fhirVersion,
       context,
       settings,
-    ), captureScope, () => this.getDependencyCaptureScope()));
+    ), captureScope, () => this.getDependencyCaptureScope())).then(profile => !alias ? profile
+      : profile && this.versionAliases.accepts(profile, url, fhirVersion, pins) ? profile : null);
   }
 
   /** Pin before URL-keyed caches; tenant host definitions retain their own resolution authority. */
@@ -146,9 +162,12 @@ export class StructureDefinitionLoader {
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ): Promise<string> {
     if (isTenantScopedProfileRequest(url, this.profileSourceContext)) return Promise.resolve(url);
+    const alias = this.versionAliases.binding(url, fhirVersion, this.runtime.policy.packagePins);
+    if (alias) return this.loadReferencedProfile(url, source, fhirVersion).then(profile => profile ? alias.resolved : url);
     return pinProfileReference(url, source, {
       storeDirs: this.runtime.packageSources,
       packageVersionPins: this.runtime.policy.packagePins,
+      dependencyAliases: this.runtime.profileDependencyAliases,
     }, fhirVersion, { reuseScope: this.getDependencyCaptureScope(), currentScope: () => this.getDependencyCaptureScope() });
   }
 
@@ -158,41 +177,8 @@ export class StructureDefinitionLoader {
     source: ProfileReferenceSource | null | undefined,
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ): Promise<StructureDefinition | null> {
-    const captureScope = this.getDependencyCaptureScope();
-    // The setter owns detached snapshots and replaces them; actual fallback capture detaches its inputs below.
-    const context = this.profileSourceContext, settings = this.profileResolutionSettings;
-    // Reference authority depends on issued package provenance and identity, not the referrer's full definition.
-    const copiedSource = source && { url: source.url, version: source.version };
-    copyProfilePackageProvenance(source, copiedSource);
-    const scope = { storeDirs: [...this.runtime.packageSources], packageVersionPins: this.runtime.policy.getPackageVersionPins() };
-    const inventoryEligible = !isTenantScopedProfileRequest(url, context) && profileReferenceHasPackageAuthority(url, copiedSource);
-    return withSnapshotProfileLookup(url, context, copiedSource ?? undefined, () => captureValidationDependency('profile', 'load-referenced-profile',
-      [url, fhirVersion, context, settings, copiedSource, copiedSource && lookupProfilePackageProvenance(copiedSource),
-        copiedSource && lookupProfilePackageDirectory(copiedSource)], () => {
-        // Capture policy synchronously on a real lookup, before its first await; dependency hits need no fallback copy.
-        const fallback = this.runtime.captureProfileResolver(context, settings, {
-          refreshHostProfile: !isPinExemptCanonical(url.split('|')[0]), retainUnavailableFailures: true,
-        });
-        return withProfileSourceSnapshot(async () => {
-          const authority = isTenantScopedProfileRequest(url, context)
-            ? { status: 'unscoped' as const } : await resolveProfileReferenceAuthority(url, copiedSource, scope, fhirVersion,
-              { reuseScope: captureScope, currentScope: () => this.getDependencyCaptureScope() });
-          if (authority.status === 'unavailable') throw new ProfileReferenceUnavailableError(authority.receipt);
-          if (authority.status === 'selected') {
-            if (captureScope === this.getDependencyCaptureScope()) {
-              const profile = structuredClone(authority.profile); copyProfilePackageProvenance(authority.profile, profile);
-              this.runtime.cache.set(`${profile.url}|${profile.version ?? 'unversioned'}:${fhirVersion}@${profileDefinitionSourceKey(profile)}`, profile);
-              this.runtime.pruneProfileCache();
-            }
-            return authority.profile;
-          }
-          return fallback(url, fhirVersion);
-        });
-       }, captureScope, () => this.getDependencyCaptureScope(), inventoryEligible)
-      .catch(async error => {
-        await checkSnapshotProfile(url, null, context, copiedSource ?? undefined);
-        return rethrowProfileReferenceCaptureFailure(error, url, copiedSource);
-      }));
+    return loadPackageReferencedProfile(this.runtime, this.versionAliases, url, source, fhirVersion,
+      this.profileSourceContext, this.profileResolutionSettings);
   }
 
   /**
@@ -206,7 +192,8 @@ export class StructureDefinitionLoader {
     fhirVersion: 'R4' | 'R5' | 'R6' = 'R4',
   ): Promise<string> {
     const profile = await this.loadReferencedProfile(url, source, fhirVersion);
-    return profile?.version && !url.includes('|') ? `${url}|${profile.version}` : url;
+    return profile?.version && (!url.includes('|') || this.versionAliases.binding(url, fhirVersion, this.runtime.policy.packagePins))
+      ? `${profile.url}|${profile.version}` : url;
   }
 
   async hasBaseProfiles(): Promise<boolean> {

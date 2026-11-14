@@ -53,6 +53,12 @@ export function normalizeProfileSourcesConfig(value: unknown): z.infer<typeof Pr
 export const PackageDownloadConfigSchema = z.object({
     versionPolicy: z.enum(['prefer-stable', 'prefer-latest']),
     pinnedVersions: z.record(z.string(), z.string()),
+    serverBindings: z.array(z.object({
+        packageId: z.string().min(1).max(255).regex(/^[a-z0-9][a-z0-9._-]*$/),
+        version: z.string().min(1).max(100).regex(/^[0-9A-Za-z][0-9A-Za-z.+_-]*$/),
+        checksumSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    }).strict()).max(32).refine(bindings => new Set(bindings.map(binding => binding.packageId)).size === bindings.length,
+        { message: 'Server package bindings require unique package identities' }).optional(),
     approvedPackages: z.array(z.string()),
     // Legacy evidence field; automatic downloads are governed by the allowlist and network policy.
     requireApproval: z.boolean(),

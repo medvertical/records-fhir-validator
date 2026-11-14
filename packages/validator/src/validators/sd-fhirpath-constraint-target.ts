@@ -16,6 +16,7 @@ import type { FHIRPathTerminologyResolver } from './fhirpath-async-terminology.j
 import type { ValueSetCache } from './valueset-cache.js';
 import type { SynchronousFHIRPathExpressionCache } from './constraint-expression-cache.js';
 import type { ReferenceResolver } from './slice-types.js';
+import type { FhirPathDecimalInput } from './fhirpath-decimal-input.js';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
 
@@ -34,6 +35,7 @@ export interface ConstraintTargetEvaluation {
   fhirVersion: FhirVersion;
   bundle?: FHIRPathBundleInput;
   referenceResolver?: ReferenceResolver | null;
+  decimalInput?: FhirPathDecimalInput;
   checkHtml?: boolean;
   memberOfValueSetLoader: ValueSetPackageLoader;
   valueSetCache: ValueSetCache;

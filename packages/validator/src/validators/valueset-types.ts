@@ -180,7 +180,7 @@ export interface ValueSetComposeInclude {
     /** Optional CodeSystem version for this include */
     version?: string;
     /** Explicit list of concepts to include */
-    concept?: Array<{ code: string; display?: string }>;
+    concept?: Array<Pick<CodeSystemConcept, 'code' | 'display' | 'designation'>>;
     /** ValueSets to include (deep composition — requires recursive resolution) */
     valueSet?: string[];
     /** Filter expressions, e.g. `concept is-a 22298006` */
@@ -197,6 +197,7 @@ export interface ValueSetComposeExclude {
 
 export interface ValueSet {
     resourceType: 'ValueSet';
+    language?: string;
     url: string;
     version?: string;
     name?: string;
@@ -213,7 +214,8 @@ export interface ValueSet {
         total?: number;
         offset?: number;
         extension?: Array<{ url: string; valueBoolean?: boolean }>;
-        parameter?: Array<{ name: string; valueBoolean?: boolean; valueString?: string; valueInteger?: number }>;
+        parameter?: Array<{ name: string; valueBoolean?: boolean; valueString?: string; valueInteger?: number;
+            valueUri?: string; valueCode?: string; valueDecimal?: number; valueDateTime?: string }>;
         contains?: ValueSetExpansionContains[];
     };
 }

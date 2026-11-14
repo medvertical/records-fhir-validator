@@ -1,13 +1,14 @@
 import { findImportedInventoryConcept } from './imported-terminology-inventory.js';
 import { normalizeKnownCodeSystemCanonical } from './code-system-canonical-aliases.js';
 import type { CodeSystem, ValueSetComposeInclude } from './valueset-types.js';
-import { canMatchDeclaredPropertyEquality, propertyFilterMembership } from './valueset-property-filter-membership.js';
+import { canMatchDeclaredPropertyFilter, propertyFilterMembership } from './valueset-property-filter-membership.js';
 
 export type ConceptMembership = boolean | null;
 type Filter = NonNullable<ValueSetComposeInclude['filter']>[number];
 type RecordValue = Record<string, unknown>;
 interface Hierarchy {
   concepts: Map<string, RecordValue>;
+  folded?: Map<string, string>;
   ambiguous: Set<string>;
   children: Map<string, Set<string>>;
   closed: boolean;
@@ -19,15 +20,24 @@ const isoCodePattern = (codeSystem: CodeSystem | null, filter: Filter) => codeSy
 const annotationExtensions = new Set(['structuredefinition-wg', 'structuredefinition-fmm',
   'structuredefinition-standards-status', 'structuredefinition-normative-version']
   .map(name => `http://hl7.org/fhir/StructureDefinition/${name}`));
+const rimClassifiesClassCode = 'http://terminology.hl7.org/CodeSystem/utg-concept-properties#rim-ClassifiesClassCode';
+const mifRelationshipKind = 'http://terminology.hl7.org/StructureDefinition/ext-mif-relationship-relationshipKind';
 function record(value: unknown): RecordValue | undefined {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? value as RecordValue : undefined;
 }
-function hasUnknownExtensions(value: RecordValue): boolean {
+function hasUnknownExtensions(value: RecordValue, isPropertyDefinition = false): boolean {
   if (value.extension === undefined) return false;
+  // This UTG property classifies a code from a separate RIM class system.
+  // Its MIF relationship kind contributes no edge to this CodeSystem's hierarchy.
+  const classifiesRimCode = isPropertyDefinition && value.uri === rimClassifiesClassCode
+    && value.code === 'rim-ClassifiesClassCode' && value.type === 'Coding';
   return !Array.isArray(value.extension) || value.extension.some(extension => {
     const entry = record(extension);
-    return !entry || typeof entry.url !== 'string' || !annotationExtensions.has(entry.url);
+    if (!entry || typeof entry.url !== 'string') return true;
+    if (annotationExtensions.has(entry.url)) return false;
+    return !(classifiesRimCode && entry.url === mifRelationshipKind && entry.valueCode === 'Specializes'
+      && Object.keys(entry).every(key => key === 'url' || key === 'valueCode' || key === 'id'));
   });
 }
 export function hasUnknownTerminologyModifiers(raw: unknown): boolean {
@@ -42,7 +52,7 @@ export function supportsLocalFilter(codeSystem: CodeSystem | null, filter: Filte
   if (isoCodePattern(codeSystem, filter)) return Boolean(codeSystem && !hasUnknownTerminologyModifiers(codeSystem));
   if (filter.property === 'concept') return ['=', 'is-a', 'descendent-of', 'is-not-a'].includes(filter.op);
   return Boolean(codeSystem && !hasUnknownTerminologyModifiers(codeSystem)
-    && canMatchDeclaredPropertyEquality(codeSystem, filter, hasUnknownTerminologyModifiers));
+    && canMatchDeclaredPropertyFilter(codeSystem, filter, hasUnknownTerminologyModifiers));
 }
 
 /** Closed complements need complete authority; positive paths/facts need their own trustworthy witness. */
@@ -60,9 +70,12 @@ export function createConceptFilterEvaluator(): typeof conceptFilterMembership {
     }
     let hierarchy = hierarchies.get(codeSystem);
     if (!hierarchy) { hierarchy = buildHierarchy(codeSystem); hierarchies.set(codeSystem, hierarchy); }
+    code = hierarchy.folded?.get(code.toLowerCase()) ?? code;
     const codePattern = isoCodePattern(codeSystem, filter);
     if (codePattern) return hierarchy.concepts.has(code) && !hierarchy.ambiguous.has(code) ? codePattern.test(code) : null;
-    if (filter.property === 'concept') return evaluateHierarchy(hierarchy, code, filter);
+    if (filter.property === 'concept') return evaluateHierarchy(hierarchy, code, {
+      ...filter, value: hierarchy.folded?.get(filter.value.toLowerCase()) ?? filter.value,
+    });
     return hierarchy.ambiguous.has(code) ? null
       : propertyFilterMembership(codeSystem, hierarchy.concepts.get(code), filter, hasUnknownTerminologyModifiers);
   };
@@ -150,6 +163,7 @@ function markCaseAmbiguity(hierarchy: Hierarchy): void {
       hierarchy.ambiguous.add(previous); hierarchy.ambiguous.add(code);
     } else folded.set(key, code);
   }
+  hierarchy.folded = folded;
 }
 function propertyDefinitions(codeSystem: CodeSystem, hierarchy: Hierarchy): Map<string, RecordValue> {
   const definitions = new Map<string, RecordValue>();
@@ -159,7 +173,7 @@ function propertyDefinitions(codeSystem: CodeSystem, hierarchy: Hierarchy): Map<
   for (const raw of codeSystem.property) {
     const definition = record(raw);
     if (!definition || typeof definition.code !== 'string') { hierarchy.closed = false; continue; }
-    if (hasUnknownTerminologyModifiers(definition) || hasUnknownExtensions(definition)) {
+    if (hasUnknownTerminologyModifiers(definition) || hasUnknownExtensions(definition, true)) {
       duplicates.add(definition.code); hierarchy.closed = false; continue;
     }
     if (definitions.has(definition.code)) { duplicates.add(definition.code); hierarchy.closed = false; }
@@ -193,6 +207,8 @@ function relationTarget(property: RecordValue, definition: RecordValue | undefin
   return coding.code;
 }
 function addEdge(hierarchy: Hierarchy, parent: string, child: string): void {
+  parent = hierarchy.folded?.get(parent.toLowerCase()) ?? parent;
+  child = hierarchy.folded?.get(child.toLowerCase()) ?? child;
   if (!hierarchy.concepts.has(parent) || !hierarchy.concepts.has(child)
     || hierarchy.ambiguous.has(parent) || hierarchy.ambiguous.has(child)) {
     hierarchy.closed = false; return;

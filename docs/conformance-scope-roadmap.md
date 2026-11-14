@@ -27,9 +27,9 @@ This document recorded what the validator conformance number meant, why the
 HL7 manifest has more entries than the current score counts, and which test
 classes should be added next.
 
-This preserves the historical scope discussion for the HL7 `FHIR/fhir-test-cases` lane. MII
-reference parity is a separate lane defined in
-[MII Conformance Scope](./mii-conformance-scope.md).
+This preserves the historical scope discussion for the HL7 `FHIR/fhir-test-cases` lane.
+The [validator documentation](https://github.com/medvertical/records-fhir-validator/tree/main/packages/validator#mii-2026-reference-scope)
+describes the separate MII reference comparison.
 
 ## Historical Measurement
 

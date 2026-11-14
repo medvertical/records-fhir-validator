@@ -19,6 +19,7 @@ import { type FhirVersion, versionedExpansionCacheKey } from './valueset-expansi
 import { versionedCacheKey } from './valueset-package-utils.js';
 import { codeSystemCanonicalsEquivalent } from './code-system-canonical-aliases.js';
 import { conceptFilterMembership, hasUnknownTerminologyModifiers } from './valueset-concept-filter-membership.js';
+import { matchesBoundValueSetDisplay } from './valueset-bound-display.js';
 
 type DisplayContext = Parameters<typeof validateDisplayMatchesCodeSystem>[4];
 
@@ -75,6 +76,11 @@ export async function validateDisplayMatchesCodeSystem(
   });
   if (definitions.length > 0 && assessments.length === 0) return null;
   if (assessments.some(assessment => assessment.outcome === 'accepted')) return null;
+  if (assessments.every(assessment => assessment.outcome === 'unverified')
+    && await matchesBoundValueSetDisplay({ codeInfo, reference: valueSetUrl,
+      requestedVersion: codeInfo.version ?? resolveCodeSystemVersion(context, codeInfo.system),
+      displayLanguage: context.displayLanguage, fhirVersion: context.fhirVersion,
+      loader: context.packageLoader, resolveMembership: context.resolveMembership })) return null;
   const displayPath = resolveDisplayPath(rawCode, elementPath, codeInfo);
   if (assessments.length === 0 || assessments.some(assessment => assessment.outcome === 'unverified')) {
     return displayUnverifiedIssue(codeInfo, displayPath, displayUnverifiedMessage(codeInfo, context.displayLanguage),

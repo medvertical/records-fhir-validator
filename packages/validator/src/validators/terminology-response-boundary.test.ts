@@ -79,20 +79,20 @@ describe('terminology response boundaries', () => {
       'http://example.com/system',
     )).toMatchObject({
       valid: false,
-      reason: 'system-unresolvable',
+      reason: 'server-failure',
     });
   });
 
   it.each([
-    { resourceType: 'Parameters', parameter: [] },
-    { resourceType: 'Parameters', parameter: [{ name: 'result', valueBoolean: 'false' }] },
-    { resourceType: 'Parameters', parameter: [
+    [{ resourceType: 'Parameters', parameter: [] }, 'server-failure'],
+    [{ resourceType: 'Parameters', parameter: [{ name: 'result', valueBoolean: 'false' }] }, 'server-failure'],
+    [{ resourceType: 'Parameters', parameter: [
       { name: 'result', valueBoolean: false },
       { name: 'issues', resource: { resourceType: 'OperationOutcome', issue: [{ code: 'not-found' }] } },
-    ] },
-  ])('does not turn an incomplete CodeSystem response into an invalid code: %j', response => {
+    ] }, 'system-unresolvable'],
+  ])('does not turn an incomplete CodeSystem response into an invalid code: %j', (response, reason) => {
     expect(parseCodeSystemValidationParameters(response, 'code', 'http://example.com/system'))
-      .toMatchObject({ valid: false, reason: 'system-unresolvable' });
+      .toMatchObject({ valid: false, reason });
   });
 
   it('keeps the server\'s account of a CodeSystem release it does not hold', () => {

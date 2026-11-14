@@ -20,8 +20,7 @@ requiring a JVM, database, or Records server.
 
 ### GitHub Action
 
-Use the floating major tag for the latest stable validator in the current
-major line:
+Pin both the Action release and the npm validator version used by CI:
 
 ```yaml
 name: Validate FHIR
@@ -36,8 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: medvertical/records-fhir-validator@v0
+      - uses: medvertical/records-fhir-validator@v0.10.1
         with:
+          validator-version: '0.10.1'
           paths: |
             examples/**/*.json
             test/fixtures/**/*.json
@@ -45,24 +45,33 @@ jobs:
           fail-on: error
 ```
 
-For production CI, pin an immutable patch tag:
+The same two pins apply when validating against a specific profile:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.9.18
+- uses: medvertical/records-fhir-validator@v0.10.1
   with:
+    validator-version: '0.10.1'
     paths: resources/**/*.json
     profile-url: http://hl7.org/fhir/StructureDefinition/Patient
     fhir-version: R4
     fail-on: error
 ```
 
-Action pinning:
+The Action installs the validator from npm independently of its own Git ref.
+Omitting `validator-version` selects `latest`, even with an exact Action
+tag or commit SHA. Use an exact npm version, without `^` or `~`.
+
+Action pinning (always pair a fixed Action ref with an exact `validator-version`):
 
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Latest stable in current major | `medvertical/records-fhir-validator@v0` | Floating tag, force-moved on stable releases only |
-| Exact released version | `medvertical/records-fhir-validator@v0.9.18` | Immutable consumer tag |
-| Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | Best for audit and forensics |
+| Exact released version | `medvertical/records-fhir-validator@v0.10.1` | Immutable consumer tag |
+| Fixed Action source | `medvertical/records-fhir-validator@<commit-sha>` | Full commit SHA; npm version still needs its own pin |
+
+The floating major tag is an explicit opt-in to Action updates. These two pins
+fix the selected Action and validator releases; they do not lock transitive npm
+dependencies, runner images, FHIR packages, or terminology services.
 
 The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
 `v<semver>` or a commit SHA for GitHub Action pins.
@@ -70,8 +79,10 @@ The `validator-v<semver>` tag is the npm mirror/release-page tag. Use
 ### npm Package
 
 Add the following to your application's root package.json before installing.
-It selects the patched CSV parser required by the transitive UCUM dependency
-([GHSA-8cw4-87c7-c6xx](https://github.com/advisories/GHSA-8cw4-87c7-c6xx)).
+It selects patched versions of the CSV parser in the UCUM dependency and the
+redirect handler in Axios.
+[CSV parser advisory](https://github.com/advisories/GHSA-8cw4-87c7-c6xx) ·
+[Redirect handler advisory](https://github.com/advisories/GHSA-mrwp-f3q8-3g9p)
 The exported repository includes this override. npm does not inherit a library's
 overrides into a consuming application; consumers must set it at their root.
 Existing consumer locks can also retain an affected transitive js-yaml version.
@@ -83,13 +94,14 @@ within the dependency's existing range.
   "overrides": {
     "@lhncbc/ucum-lhc": {
       "csv-parse": "7.0.2"
-    }
+    },
+    "follow-redirects": "1.16.2"
   }
 }
 ```
 
 ```sh
-npm install @records-fhir/validator@0.9.18 @records-fhir/validation-types@0.1.14
+npm install @records-fhir/validator@0.10.1 @records-fhir/validation-types@0.2.0
 ```
 
 Run the CLI against one file or a folder:
@@ -144,6 +156,8 @@ Missing or incomplete content remains unverifiable.
 The default public export excludes bundled third-party IG artifacts until their
 upstream licenses and notices have been reviewed; installing the validator alone
 does not provide every profile or complete terminology content.
+Configure an ISO 4217 CodeSystem or a terminology server with currency coverage
+to validate currency membership.
 
 ## Output Shape
 
@@ -166,12 +180,13 @@ includes `file`, `resourceType`, `profileUrl`, and `issues`. With
 
 ## What Is Included
 
-- `@records-fhir/validator` 0.9.18 - Apache-2.0 validation engine.
-- `@records-fhir/validation-types` 0.1.14 - Apache-2.0 validation-domain types.
+- `@records-fhir/validator` 0.10.1 - Apache-2.0 validation engine.
+- `@records-fhir/validation-types` 0.2.0 - Apache-2.0 validation-domain types.
 - Composite GitHub Action at repository root.
 - Standalone examples under `packages/validator/examples/`.
 - Boundary audit and smoke-test scripts.
-- Public conformance evidence artifacts under `conformance-results/`.
+- Versioned conformance results and provenance hashes under `release/`.
+- The public-corpus comparison report under `conformance-results/`.
 
 ## Repository Scope
 
@@ -212,20 +227,19 @@ use the documented R4 maintenance adapter.
 
 ## Validation Evidence
 
-Historical evidence set: `validator-archived-evidence-2026-09-09`. Explicitly pinned tracked reports, preserving their original recorded outcomes and exclusions. These measurements do not certify the currently exported package versions. The 0.8.0 current-release acceptance remains historical. A separate, explicitly pinned 0.9.18 SDK measurement supplies current release acceptance without relabeling historical lanes.
+Historical evidence set: `validator-archived-evidence-2026-09-09`.
 
-The explicit report selection and SHA-256 hashes are in [`release/validator-evidence.json`](./release/validator-evidence.json).
+The public results and SHA-256 hashes are in [`release/validator-evidence.json`](./release/validator-evidence.json).
 The exporting package versions are listed above. They are not the measured versions of these historical runs.
 
 ### Current candidate release acceptance
 
-Candidate validator 0.9.18; validation-types 0.1.14.
-Scoped R4 JSON acceptance: **390/390**; unchanged raw criterion: **387/390**, 3 raw failures, 0 skips, 0 runtime errors.
+Candidate validator 0.10.1; validation-types 0.2.0.
+Scoped R4 JSON acceptance was **390/390**. The raw criterion passed **387/390**, with 3 raw failures, 0 skips and 0 runtime errors. The 3 cases accepted by contract retain their Unknown verdicts.
 MII clean precision: **442/442**, with **110 explicit exclusions**. This is clean-corpus precision, not reference parity or site certification.
-Selection and authenticated report inputs: [`conformance-results/validator-current-release.json`](./conformance-results/validator-current-release.json).
-Export verification authenticates the selected artifacts against the maintained repository sources and retained input archives. It does not verify a built runtime or installed profile packages, replay validation, or create a fresh measurement.
+Export verification authenticates the selected artifacts, unchanged validation/measurement inputs and retained input archives. Consumer guidance and evidence-verification tooling are compared separately; the original full inventory and measurement epoch remain unchanged. This does not verify a built runtime or installed profile packages, replay validation, or create a fresh measurement.
 The mandatory release check recomputes the saved SDK outcomes and all separate reference contracts under an identical candidate content inventory. It retains the original measurement epoch and explicitly reports freshlyMeasured=false. Live R4 profile caches and imported terminology are not reloaded or claimed identical by the replay; Unknown membership remains unknown.
-The release check is maintained in the Records source repository; the public export contains the pinned output evidence and portable package tests. Bundled profiles and clinical corpora remain outside the default export.
+The Records source repository retains the full measurement inputs and replay receipts. This repository publishes the scoped results and SHA-256 digests.
 
 ### Public-server comparison
 
@@ -248,7 +262,6 @@ HL7 JSON measurement: 2026-08-25T09:29:45.985Z; recorded Records application ver
 - Executed comparisons: 533; recorded passed: 533; failed: 0; errors: 0; runtime skipped: 3.
 - Java baseline corpus commit: `8923095fc5e3750025f7dd71988c9e89083b1487`.
 - Scope: FHIR JSON resource comparisons under the recorded report policy. XML, adjacent standards and pre-filtered fixtures are excluded.
-- Source report: [`conformance-results/report-2026-08-24.json`](./conformance-results/report-2026-08-24.json).
 
 The counts reproduce recorded statuses under that report’s comparison policy; they do not claim identical issue lists or a fresh measurement.
 
@@ -275,107 +288,17 @@ Runtime skip reasons: Configured terminology server lacks the SNOMED national ed
 
 Measurement: 2026-07-23T10:42:01.818Z; profile scope: `mii-2026-reference`; terminology: `mii-local-blaze`.
 231/231 measured resources passed, 0 failed, 0 execution errors, 22 skipped. MII package-example resources in the recorded profile/terminology scope; not site certification or full Must-Support readiness.
-Source report and measured IG package versions: [`conformance-results/mii-triangulation-2026-07-23.json`](./conformance-results/mii-triangulation-2026-07-23.json).
 
 ## FHIR Schema Dual-Path Scope
 
 Measurement: 2026-07-23T10:56:55.070Z. 555 fixtures; 512 reference-covered.
 418 clean, 71 matched, 11 graph-only, 0 Records-only, 0 divergent, 55 profile-missing, 0 execution errors.
 Graph/current-engine comparison for selected structural/profile issue families; does not broaden the headline JSON lane.
-Report: [`conformance-results/fhir-schema-dual-path-all-2026-07-23.json`](./conformance-results/fhir-schema-dual-path-all-2026-07-23.json); reference supplement: [`conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json`](./conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json).
 
-### Provenance limits and archived support
+### Provenance limits
 
 Legacy reports do not record the npm validator/validation-types package versions or tested source revision; null means unknown and must not be filled from the exporting checkout.
-Oracle identities are declared per lane; unrecorded executable versions remain unknown. The artifact snapshot revision identifies stored files, not the tested runtime revision.
-
-<details><summary>Explicitly selected evidence artifacts</summary>
-
-- [`conformance-results/baseline-passing-archived-0333c754.json`](./conformance-results/baseline-passing-archived-0333c754.json)
-- [`conformance-results/baseline-backlog-discovery-2026-05-03.json`](./conformance-results/baseline-backlog-discovery-2026-05-03.json)
-- [`conformance-results/hl7-validator-testkit-2026-05-20.json`](./conformance-results/hl7-validator-testkit-2026-05-20.json)
-- [`conformance-results/report-2026-07-01.json`](./conformance-results/report-2026-07-01.json)
-- [`conformance-results/report-2026-07-21.json`](./conformance-results/report-2026-07-21.json)
-- [`conformance-results/report-2026-07-23.json`](./conformance-results/report-2026-07-23.json)
-- [`conformance-results/mii-triangulation-2026-07-01.json`](./conformance-results/mii-triangulation-2026-07-01.json)
-- [`conformance-results/mii-triangulation-2026-07-21.json`](./conformance-results/mii-triangulation-2026-07-21.json)
-- [`conformance-results/mii-triangulation-2026-07-23.json`](./conformance-results/mii-triangulation-2026-07-23.json)
-- [`conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json`](./conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json)
-- [`conformance-results/fhir-schema-dual-path-all-2026-07-01.json`](./conformance-results/fhir-schema-dual-path-all-2026-07-01.json)
-- [`conformance-results/fhir-schema-dual-path-all-2026-07-23.json`](./conformance-results/fhir-schema-dual-path-all-2026-07-23.json)
-- [`conformance-results/fhir-schema-dual-path-actions-2026-07-01.json`](./conformance-results/fhir-schema-dual-path-actions-2026-07-01.json)
-- [`conformance-results/fhir-schema-dual-path-actions-2026-07-01.md`](./conformance-results/fhir-schema-dual-path-actions-2026-07-01.md)
-- [`conformance-results/validator-claims-2026-07-01.json`](./conformance-results/validator-claims-2026-07-01.json)
-- [`conformance-results/validator-claims-2026-07-01.md`](./conformance-results/validator-claims-2026-07-01.md)
-- [`conformance-results/validator-claims-2026-07-21.json`](./conformance-results/validator-claims-2026-07-21.json)
-- [`conformance-results/validator-claims-2026-07-21.md`](./conformance-results/validator-claims-2026-07-21.md)
-- [`conformance-results/validator-claims-2026-07-23.json`](./conformance-results/validator-claims-2026-07-23.json)
-- [`conformance-results/validator-claims-2026-07-23.md`](./conformance-results/validator-claims-2026-07-23.md)
-- [`conformance-results/report-2026-08-24.json`](./conformance-results/report-2026-08-24.json)
-- [`conformance-results/mii-clean-triage-2026-09-30.json`](./conformance-results/mii-clean-triage-2026-09-30.json)
-- [`conformance-results/public-parity-2026-09-30.json`](./conformance-results/public-parity-2026-09-30.json)
-- [`conformance-results/public-parity-triage-2026-09-30.json`](./conformance-results/public-parity-triage-2026-09-30.json)
-- [`conformance-results/validator-release-acceptance-2026-10-05-g2.json`](./conformance-results/validator-release-acceptance-2026-10-05-g2.json)
-- [`conformance-results/validator-release-acceptance-2026-10-05-g3.json`](./conformance-results/validator-release-acceptance-2026-10-05-g3.json)
-- [`conformance-results/validator-release-inventory-loop112-g6-2026-10-06.json`](./conformance-results/validator-release-inventory-loop112-g6-2026-10-06.json)
-- [`conformance-results/validator-r4-raw-loop112-g6-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop112-g6-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-receipts-loop112-g6-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop112-g6-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-acceptance-loop112-g6-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop112-g6-2026-10-06.json)
-- [`conformance-results/validator-r4-measurement-origin-loop112-g6-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop112-g6-2026-10-06.json)
-- [`conformance-results/validator-mii-clean-loop112-g6-2026-10-06.json`](./conformance-results/validator-mii-clean-loop112-g6-2026-10-06.json)
-- [`conformance-results/validator-mii-measurement-origin-loop112-g6-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop112-g6-2026-10-06.json)
-- [`conformance-results/validator-release-inventory-loop113-g7-2026-10-06.json`](./conformance-results/validator-release-inventory-loop113-g7-2026-10-06.json)
-- [`conformance-results/validator-r4-raw-loop113-g7-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop113-g7-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-receipts-loop113-g7-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop113-g7-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-acceptance-loop113-g7-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop113-g7-2026-10-06.json)
-- [`conformance-results/validator-r4-measurement-origin-loop113-g7-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop113-g7-2026-10-06.json)
-- [`conformance-results/validator-mii-clean-loop113-g7-2026-10-06.json`](./conformance-results/validator-mii-clean-loop113-g7-2026-10-06.json)
-- [`conformance-results/validator-mii-measurement-origin-loop113-g7-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop113-g7-2026-10-06.json)
-- [`conformance-results/validator-release-inventory-loop114-g8-2026-10-06.json`](./conformance-results/validator-release-inventory-loop114-g8-2026-10-06.json)
-- [`conformance-results/validator-r4-raw-loop114-g8-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop114-g8-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-receipts-loop114-g8-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop114-g8-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-acceptance-loop114-g8-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop114-g8-2026-10-06.json)
-- [`conformance-results/validator-r4-measurement-origin-loop114-g8-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop114-g8-2026-10-06.json)
-- [`conformance-results/validator-mii-clean-loop114-g8-2026-10-06.json`](./conformance-results/validator-mii-clean-loop114-g8-2026-10-06.json)
-- [`conformance-results/validator-mii-measurement-origin-loop114-g8-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop114-g8-2026-10-06.json)
-- [`conformance-results/validator-current-release-loop116-prior-g8-2026-10-06.json.gz`](./conformance-results/validator-current-release-loop116-prior-g8-2026-10-06.json.gz)
-- [`conformance-results/validator-evidence-loop116-prior-g8-2026-10-06.json.gz`](./conformance-results/validator-evidence-loop116-prior-g8-2026-10-06.json.gz)
-- [`conformance-results/validator-release-inventory-loop116-g9-2026-10-06.json`](./conformance-results/validator-release-inventory-loop116-g9-2026-10-06.json)
-- [`conformance-results/validator-r4-raw-loop116-g9-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop116-g9-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-receipts-loop116-g9-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop116-g9-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-acceptance-loop116-g9-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop116-g9-2026-10-06.json)
-- [`conformance-results/validator-r4-measurement-origin-loop116-g9-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop116-g9-2026-10-06.json)
-- [`conformance-results/validator-mii-clean-loop116-g9-2026-10-06.json`](./conformance-results/validator-mii-clean-loop116-g9-2026-10-06.json)
-- [`conformance-results/validator-mii-measurement-origin-loop116-g9-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop116-g9-2026-10-06.json)
-- [`conformance-results/validator-current-release-loop117-prior-g9-2026-10-06.json.gz`](./conformance-results/validator-current-release-loop117-prior-g9-2026-10-06.json.gz)
-- [`conformance-results/validator-evidence-loop117-prior-g9-2026-10-06.json.gz`](./conformance-results/validator-evidence-loop117-prior-g9-2026-10-06.json.gz)
-- [`conformance-results/validator-release-inventory-loop117-g10-2026-10-06.json`](./conformance-results/validator-release-inventory-loop117-g10-2026-10-06.json)
-- [`conformance-results/validator-r4-raw-loop117-g10-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop117-g10-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-receipts-loop117-g10-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop117-g10-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-acceptance-loop117-g10-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop117-g10-2026-10-06.json)
-- [`conformance-results/validator-r4-measurement-origin-loop117-g10-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop117-g10-2026-10-06.json)
-- [`conformance-results/validator-mii-clean-loop117-g10-2026-10-06.json`](./conformance-results/validator-mii-clean-loop117-g10-2026-10-06.json)
-- [`conformance-results/validator-mii-measurement-origin-loop117-g10-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop117-g10-2026-10-06.json)
-- [`conformance-results/validator-current-release-loop118-prior-g10-2026-10-06.json.gz`](./conformance-results/validator-current-release-loop118-prior-g10-2026-10-06.json.gz)
-- [`conformance-results/validator-evidence-loop118-prior-g10-2026-10-06.json.gz`](./conformance-results/validator-evidence-loop118-prior-g10-2026-10-06.json.gz)
-- [`conformance-results/validator-release-inventory-loop118-g11-2026-10-06.json`](./conformance-results/validator-release-inventory-loop118-g11-2026-10-06.json)
-- [`conformance-results/validator-r4-raw-loop118-g11-2026-10-06.json.gz`](./conformance-results/validator-r4-raw-loop118-g11-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-receipts-loop118-g11-2026-10-06.json.gz`](./conformance-results/validator-r4-receipts-loop118-g11-2026-10-06.json.gz)
-- [`conformance-results/validator-r4-acceptance-loop118-g11-2026-10-06.json`](./conformance-results/validator-r4-acceptance-loop118-g11-2026-10-06.json)
-- [`conformance-results/validator-r4-measurement-origin-loop118-g11-2026-10-06.json`](./conformance-results/validator-r4-measurement-origin-loop118-g11-2026-10-06.json)
-- [`conformance-results/validator-mii-clean-loop118-g11-2026-10-06.json`](./conformance-results/validator-mii-clean-loop118-g11-2026-10-06.json)
-- [`conformance-results/validator-mii-measurement-origin-loop118-g11-2026-10-06.json`](./conformance-results/validator-mii-measurement-origin-loop118-g11-2026-10-06.json)
-- [`conformance-results/validator-current-release.json`](./conformance-results/validator-current-release.json)
-- [`conformance-results/validator-release-inventory-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-release-inventory-0.9.18-2026-10-22-g4.json)
-- [`conformance-results/validator-r4-raw-0.9.18-2026-10-22-g4.json.gz`](./conformance-results/validator-r4-raw-0.9.18-2026-10-22-g4.json.gz)
-- [`conformance-results/validator-r4-receipts-0.9.18-2026-10-22-g4.json.gz`](./conformance-results/validator-r4-receipts-0.9.18-2026-10-22-g4.json.gz)
-- [`conformance-results/validator-r4-acceptance-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-r4-acceptance-0.9.18-2026-10-22-g4.json)
-- [`conformance-results/validator-r4-measurement-origin-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-r4-measurement-origin-0.9.18-2026-10-22-g4.json)
-- [`conformance-results/validator-mii-clean-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-mii-clean-0.9.18-2026-10-22-g4.json)
-- [`conformance-results/validator-mii-measurement-origin-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-mii-measurement-origin-0.9.18-2026-10-22-g4.json)
-- [`conformance-results/validator-isolated-quality-0.9.18-2026-10-22-g4.json`](./conformance-results/validator-isolated-quality-0.9.18-2026-10-22-g4.json)
-
-</details>
+The selection records the oracle and available provenance for each historical lane.
 
 
 ## 0.8.0 Publication Record — 6 October 2026
@@ -450,12 +373,12 @@ Repository development uses Node.js 20.19 or later in the current Node 20 LTS li
 
 ```bash
 npm install --global npm@11.19.0
-npm install
+npm ci
 npm test
 ```
 
 These commands execute every portable package unit test against the workspace source.
-Test startup authenticates the included partial CC0 FHIR R4 Core fixtures and copies them into a fresh repository-owned test store. Tests use this store through `FHIR_PACKAGE_CACHE_PATH`, independently of the developer's FHIR cache. [tests/fixtures/fhir-packages/manifest.json](./tests/fixtures/fhir-packages/manifest.json) records the five original files, hashes and scope. This is a finite test prerequisite, not a complete terminology package or a runtime dependency; no fixture downloads occur.
+Test startup authenticates the included partial CC0 FHIR R4 Core fixtures and copies them into a fresh repository-owned test store. Tests use this store through `FHIR_PACKAGE_CACHE_PATH`, independently of the developer's FHIR cache. [tests/fixtures/fhir-packages/manifest.json](./tests/fixtures/fhir-packages/manifest.json) records the original files, hashes and scope. The fixture store is finite and used only by tests. No fixture downloads occur.
 The published SDK and CLI retain their declared Node.js 20.0 minimum.
 The exact test scope is recorded in [tests/test-scope.json](./tests/test-scope.json).
-The explicitly listed profile integration tests remain in the Records monorepo's existing profile-contract lane, with their original assertions and fixture identities. They require the licensed profile catalog or private corpus and are not exported. Synthetic package controls separately cover Quantity bindings, filesystem lookup, issue anchors and expression cache behavior. No private corpus is bundled with this repository.
+The explicitly listed integration tests remain in the Records monorepo's profile-contract lane, with their original assertions and fixture identities. They use profile, terminology or corpus inputs held in that repository. Portable controls cover Quantity bindings, filesystem lookup, issue anchors and expression cache behavior.

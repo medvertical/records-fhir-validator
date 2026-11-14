@@ -1,6 +1,6 @@
 {
   "name": "@records-fhir/validation-types",
-  "version": "0.1.14",
+  "version": "0.2.0",
   "description": "Validation-domain types and runtime schemas, settings policies and fix suggestions for the Records FHIR validator. No database coupling.",
   "type": "module",
   "license": "Apache-2.0",
@@ -38,6 +38,10 @@
     "./validation/aspect-aliases": {
       "types": "./dist/validation/aspect-aliases.d.ts",
       "import": "./dist/validation/aspect-aliases.js"
+    },
+    "./validation/quality-assessment": {
+      "types": "./dist/validation/quality-assessment.d.ts",
+      "import": "./dist/validation/quality-assessment.js"
     },
     "./validation/aspect-enums": {
       "types": "./dist/validation/aspect-enums.d.ts",
@@ -88,6 +92,6 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "4.6.7"
   }
 }

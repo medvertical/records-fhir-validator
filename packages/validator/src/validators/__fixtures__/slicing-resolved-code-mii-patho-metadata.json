@@ -1,8 +1,8 @@
 {
   "kind": "Original MII Patho resolve().code StructureDefinition metadata projection only",
   "packageSource": {
-    "directory": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package",
-    "manifestFile": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/package.json",
+    "directory": "package",
+    "manifestFile": "package.json",
     "manifestSha256": "436183138e6d6a80dc64bcd064266ed9f047a3171f4dfe6e21e830879033b6ec",
     "name": "de.medizininformatikinitiative.kerndatensatz.patho",
     "version": "2026.0.0",
@@ -12,37 +12,37 @@
   },
   "originalSources": [
     {
-      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-report.json",
+      "file": "StructureDefinition-mii-pr-patho-report.json",
       "sha256": "fbdaf8a57d9fc7ffae4bb01ee0b156c764e59ed4c902ae64b26d7875ff67a650",
       "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-report",
       "version": "2026.0.0"
     },
     {
-      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-intraoperative-grouper.json",
+      "file": "StructureDefinition-mii-pr-patho-intraoperative-grouper.json",
       "sha256": "25f9021e935256931de7f97807259c3e6b134cf239b79c70f8b0076c067a0664",
       "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-intraoperative-grouper",
       "version": "2026.0.0"
     },
     {
-      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-macroscopic-grouper.json",
+      "file": "StructureDefinition-mii-pr-patho-macroscopic-grouper.json",
       "sha256": "3441d1a0046f5ae2984e6597467f532825b7e83cbd95321cbbb1dd31ed29a286",
       "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-macroscopic-grouper",
       "version": "2026.0.0"
     },
     {
-      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-microscopic-grouper.json",
+      "file": "StructureDefinition-mii-pr-patho-microscopic-grouper.json",
       "sha256": "69cda786a72166b0d7e36c1f5de4733cbc614298a9b171cbaf1be13bcae9dd5a",
       "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-microscopic-grouper",
       "version": "2026.0.0"
     },
     {
-      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-additional-specified-grouper.json",
+      "file": "StructureDefinition-mii-pr-patho-additional-specified-grouper.json",
       "sha256": "141f579e0b10333c49c632bbf2e9570a1f646a0c90d290e6f37e01b6634e5ac9",
       "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-additional-specified-grouper",
       "version": "2026.0.0"
     },
     {
-      "file": "/Users/sheydin/.codex/worktrees/validator-release-review/records/.cache/review/parity-plan/mii-closed-metadata-catalog/packages/de.medizininformatikinitiative.kerndatensatz.patho#2026.0.0/package/StructureDefinition-mii-pr-patho-diagnostic-conclusion-grouper.json",
+      "file": "StructureDefinition-mii-pr-patho-diagnostic-conclusion-grouper.json",
       "sha256": "0f66e0b787e7eca5890e984ab252b0574d5477a4980a78cd2bdbd17cb435526c",
       "url": "https://www.medizininformatik-initiative.de/fhir/ext/modul-patho/StructureDefinition/mii-pr-patho-diagnostic-conclusion-grouper",
       "version": "2026.0.0"

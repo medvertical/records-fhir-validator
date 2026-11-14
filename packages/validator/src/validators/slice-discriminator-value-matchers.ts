@@ -87,7 +87,7 @@ export function matchPatternDiscriminator(
   if (isProhibitedEmptyWholeElementSlice(slice, 'pattern', path)) return false;
   const value = getValueAtPath(element, path);
   const childPath = normalizeChildConstraintPath(path);
-  if ((!path || path === '$this') && !slice.pattern && !slice.fixed && !bindingDecides(slice)) {
+  if ((!path || path === '$this') && slice.pattern === undefined && slice.fixed === undefined && !bindingDecides(slice)) {
     if (matchWholeElementChildConstraints(value, slice, matchesPattern) === false) return false;
   }
   if (path && path !== '$this') {
@@ -98,7 +98,7 @@ export function matchPatternDiscriminator(
     const binding = matchChildBindingDiscriminator(slice, childPath, value, matchesBinding);
     if (binding !== null) return binding;
   }
-  if (slice.pattern) {
+  if (slice.pattern !== undefined) {
     const pattern = path === '$this' || !path ? slice.pattern : getValueAtPath(slice.pattern, path);
     if (pattern !== undefined && pattern !== null) {
       return matchesPattern(value, pattern)
@@ -111,5 +111,5 @@ export function matchPatternDiscriminator(
   const fixed = slice.fixed === undefined || path === '$this' || !path ? slice.fixed : getValueAtPath(slice.fixed, path);
   if (fixed !== undefined && fixed !== null) return matchesPattern(value, fixed);
   if (slice.bindingCodes?.size) return matchesBinding(value, slice.bindingCodes);
-  return !slice.bindingValueSet;
+  return (!path || path === '$this') && !slice.bindingValueSet;
 }

@@ -1,3 +1,4 @@
+import { copyNumberSources } from '../input/number-source.js';
 import { copyProfilePackageProvenance } from '../package/canonical-pin-provenance.js';
 import { extensionDefinitionCacheKey, loadExtensionProfile, rethrowUnavailableProfile } from './extension-profile-cache.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
@@ -87,10 +88,10 @@ export async function validateAgainstExtensionProfile({
   // itself (the same recursive profile step performed by the reference
   // validator). Keep only constraint diagnostics here; the element-level
   // fixed/type/binding rules are handled below and must not be duplicated.
-  const extensionResource = {
+  const extensionResource = copyNumberSources(extension, {
     resourceType: 'Extension',
     ...extension,
-  };
+  });
   const constraintIssues = await sdFHIRPathExecutor.execute({
     resource: extensionResource,
     rootResource: context.rootResource ?? context.resource,

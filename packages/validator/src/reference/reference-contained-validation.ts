@@ -36,7 +36,7 @@ function validateResourceContainedReferences(
       ref.reference.startsWith('#')
       && !/(?:^|\.)contained\[/.test(ref.path)
       && !/(?:^|\.)entry\[\d+\]\.resource\./.test(ref.path)
-      && !/(?:^|\.)parameter\[\d+\]\.resource\./.test(ref.path),
+      && !/(?:^|\.)parameter\[\d+\](?:\.part\[\d+\])*\.resource\./.test(ref.path),
   );
 
   for (const { path, reference } of containedRefs) {
@@ -66,21 +66,45 @@ function validateResourceContainedReferences(
     }));
   }
 
-  if (resourceType === 'Bundle' && Array.isArray(record.entry)) {
-    record.entry.forEach((entry, index) => {
-      const child = toRecord(entry)?.resource;
-      const childType = getResourceType(child);
-      const childIssues = validateResourceContainedReferences(child, childType, branch);
-      for (const issue of childIssues) {
-        const suffix = issue.path?.startsWith(`${childType}.`)
-          ? issue.path.slice(childType.length + 1)
-          : issue.path;
-        const childPath = `${resourceType}.entry[${index}].resource${suffix ? `.${suffix}` : ''}`;
-        issues.push({ ...issue, path: childPath, expression: childPath });
-      }
-    });
+  for (const { child, pathPrefix } of embeddedResourceScopes(record, resourceType)) {
+    const childType = getResourceType(child);
+    const childIssues = validateResourceContainedReferences(child, childType, branch);
+    for (const issue of childIssues) {
+      const suffix = issue.path?.startsWith(`${childType}.`)
+        ? issue.path.slice(childType.length + 1)
+        : issue.path;
+      const childPath = `${pathPrefix}${suffix ? `.${suffix}` : ''}`;
+      issues.push({ ...issue, path: childPath, expression: childPath });
+    }
   }
   return issues;
+}
+
+function embeddedResourceScopes(record: Record<string, unknown>, resourceType: string) {
+  const scopes: Array<{ child: unknown; pathPrefix: string }> = [];
+  if (resourceType === 'Bundle' && Array.isArray(record.entry)) {
+    record.entry.forEach((entry, index) => scopes.push({
+      child: toRecord(entry)?.resource, pathPrefix: `${resourceType}.entry[${index}].resource`,
+    }));
+  }
+  if (resourceType !== 'Parameters' || !Array.isArray(record.parameter)) return scopes;
+  const pending = record.parameter.map((parameter, index) => ({
+    parameter, path: `${resourceType}.parameter[${index}]`,
+  })).reverse();
+  const visited = new WeakSet<object>();
+  while (pending.length > 0) {
+    const { parameter, path } = pending.pop()!;
+    const entry = toRecord(parameter);
+    if (!entry || visited.has(entry)) continue;
+    visited.add(entry);
+    if (toRecord(entry.resource)) scopes.push({ child: entry.resource, pathPrefix: `${path}.resource` });
+    if (Array.isArray(entry.part)) {
+      for (let index = entry.part.length - 1; index >= 0; index--) {
+        pending.push({ parameter: entry.part[index], path: `${path}.part[${index}]` });
+      }
+    }
+  }
+  return scopes;
 }
 
 function toRecord(value: unknown): Record<string, unknown> | null {

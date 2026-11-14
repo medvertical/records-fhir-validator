@@ -29,7 +29,8 @@
   "overrides": {
     "@lhncbc/ucum-lhc": {
       "csv-parse": "7.0.2"
-    }
+    },
+    "follow-redirects": "1.16.2"
   },
   "devDependencies": {
     "@typescript/native": "npm:typescript@^7.0.2",

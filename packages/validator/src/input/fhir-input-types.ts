@@ -17,7 +17,7 @@ export interface FhirInputDiagnostic {
 }
 
 export interface ParsedFhirInput {
-  format: 'xml' | 'ndjson';
+  format: 'xml' | 'ndjson' | 'json';
   resources: Array<Record<string, unknown>>;
   sourceMap: Record<string, FhirInputLocation>;
   diagnostics?: FhirInputDiagnostic[];

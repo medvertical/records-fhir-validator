@@ -7,6 +7,14 @@ import type {
   QualityRuleScope,
   QualityRuleSeverity,
 } from './quality-rule-pack.js';
+import type { QualityAssessmentOutcome } from './quality-assessment-basis.js';
+import type { QualityAssessmentRecord } from './quality-assessment-record.js';
+export { qualityAssessmentBasisSchema, type QualityAssessmentBasis, type QualityAssessmentOutcome,
+  type QualityAssessmentDecision } from './quality-assessment-basis.js';
+export { evaluateQualityAssessmentCriterion, qualityAssessmentCriterionSchema,
+  type QualityAssessmentCriterion, type QualityAssessmentMeasurement } from './quality-assessment-counts.js';
+export { qualityAssessmentRecordBasisSchema, qualityAssessmentProvenanceSchema, qualityAssessmentRecordSchema,
+  qualityAssessmentBasisOfRecord, type QualityAssessmentRecordBasis, type QualityAssessmentRecord } from './quality-assessment-record.js';
 
 export interface QualityAdvisoryApplication {
   packId: string;
@@ -80,7 +88,8 @@ export interface QualityMetric {
   }>;
   otherCount: number;
   threshold?: { operator: 'gte' | 'gt' | 'lte' | 'lt' | 'eq'; value: number; unit: 'ratio' | 'percent' | 'count' };
-  outcome: QualityRuleOutcome;
+  outcome: QualityAssessmentOutcome;
+  assessment?: QualityAssessmentRecord;
 }
 
 export interface QualityAssessmentSnapshot {

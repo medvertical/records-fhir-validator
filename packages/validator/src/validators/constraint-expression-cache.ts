@@ -1,6 +1,7 @@
 import fhirpath from 'fhirpath';
 import { getInvariantFhirPathModel } from '../core/fhirpath-context.js';
 import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite.js';
+import { comparisonValues, rewritePrimitiveComparisons } from './fhirpath-primitive-comparison.js';
 import {
   VersionedExpressionCache,
   type FHIRPathExpressionCacheStats,
@@ -8,9 +9,11 @@ import {
 
 function compileFHIRPathExpression(expression: string, fhirVersion: 'R4' | 'R5' | 'R6') {
   return fhirpath.compile(
-    rewriteCollectionTypeOperators(expression),
+    rewritePrimitiveComparisons(rewriteCollectionTypeOperators(expression)),
     getInvariantFhirPathModel(fhirVersion),
-    { async: false },
+    { async: false, preciseMath: true, userInvocationTable: {
+      recordsComparisonValue: { fn: comparisonValues, arity: { 0: [] }, internalStructures: true },
+    } },
   );
 }
 

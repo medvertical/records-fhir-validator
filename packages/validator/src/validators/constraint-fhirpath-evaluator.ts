@@ -8,6 +8,7 @@ import {
   type FHIRPathTerminologyResolver,
 } from './fhirpath-async-terminology.js';
 import { toFHIRPathInvocationTable } from './sd-fhirpath-runtime.js';
+import { withDecimalSourceGuards } from './fhirpath-decimal-guards.js';
 
 export function evaluateConstraintFHIRPath(
   context: unknown,
@@ -34,7 +35,7 @@ export function evaluateConstraintFHIRPath(
     });
   }
   const compiled = expressionCache.getOrCompile(expression, fhirVersion);
-  const invocationTable = toFHIRPathInvocationTable(userInvocationTable);
+  const invocationTable = withDecimalSourceGuards(toFHIRPathInvocationTable(userInvocationTable), fhirVersion);
   return compiled(
     context,
     { ...(focusResource === null ? {} : { resource: focusResource ?? rootResource }), rootResource },

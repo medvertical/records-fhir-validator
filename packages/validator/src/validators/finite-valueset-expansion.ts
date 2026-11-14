@@ -1,5 +1,7 @@
 import type { CodeSystem, ValueSet, ValueSetComposeInclude, ValueSetExpansionContains } from './valueset-types.js';
 import { createConceptFilterEvaluator, supportsLocalFilter } from './valueset-concept-filter-membership.js';
+import { finiteTerminologyAuthorityFailure } from './finite-terminology-authority.js';
+import { codeSystemIdentitiesEquivalent, normalizeCodeSystemIdentity } from './code-system-canonical-aliases.js';
 
 export interface FiniteConcept { system?: string; version?: string; code: string }
 export interface FiniteExpansion {
@@ -11,21 +13,34 @@ export interface FiniteExpansion {
 export interface FiniteTerminologyResolver {
   valueSet(canonical: string): Promise<ValueSet | null>;
   codeSystem(canonical: string, version?: string): Promise<CodeSystem | null>;
+  /** The resolver's supported concrete editions; a default selection cannot establish this scope. */
+  codeSystemVersions?(canonical: string): Promise<readonly string[] | null>;
 }
 
 const identity = (c: FiniteConcept) => JSON.stringify([c.system ?? null, c.version ?? null, c.code]);
-const grammarSystems = new Set(['http://unitsofmeasure.org', 'http://varnomen.hgvs.org',
+const grammarSystems = new Set(['http://snomed.info/sct', 'http://unitsofmeasure.org', 'http://varnomen.hgvs.org',
   'urn:ietf:bcp:47', 'urn:ietf:bcp:13', 'urn:ietf:rfc:3986', 'urn:dicom:uid']);
 export const hasNonEnumerableCodeGrammar = (cs: Pick<CodeSystem, 'url' | 'compositional'>): boolean =>
   cs.compositional === true || grammarSystems.has(cs.url);
+type CodeGrammar = Pick<CodeSystem, 'url' | 'version' | 'compositional'>;
+const composeEntries = (valueSet: ValueSet) => [...(valueSet.compose?.include ?? []), ...(valueSet.compose?.exclude ?? [])];
+const hasGrammarCompose = (valueSet: ValueSet, codeSystems: readonly CodeGrammar[] = []): boolean =>
+  composeEntries(valueSet).some(entry => {
+    if (!entry.system || entry.concept?.length) return false;
+    const [system, pipedVersion] = entry.system.split('|');
+    const version = entry.version ?? pipedVersion;
+    return grammarSystems.has(system) || codeSystems.some(cs => codeSystemIdentitiesEquivalent(cs.url, system)
+      && (!version || version === '*' || cs.version === version) && hasNonEnumerableCodeGrammar(cs));
+  });
 const subsetted = (r: Pick<CodeSystem, 'meta' | 'extension'>) => r.meta?.tag?.some(t => t.code === 'SUBSETTED')
   || r.extension?.some(e => e.url === 'http://health-samurai.io/extensions/excised-data');
-const overlaps = (a: FiniteConcept, b: FiniteConcept) => a.system === b.system && a.code === b.code
-  && (!a.version || !b.version || a.version === b.version);
 
 export function assessFiniteCodeSystem(cs: CodeSystem, limit = 250_000) {
+  const failure = finiteTerminologyAuthorityFailure(cs, 'CodeSystem', limit);
+  if (failure) return { concepts: [] as FiniteConcept[], coverage: 'partial' as const, reasons: [failure] };
   const concepts = new Map<string, FiniteConcept>();
   const reasons = new Set<string>();
+  const folded = new Set<string>();
   if (hasNonEnumerableCodeGrammar(cs)) reasons.add('codesystem-grammar-not-enumerable');
   if (subsetted(cs)) reasons.add('codesystem-declared-incomplete');
   if (cs.content !== 'complete' || !Array.isArray(cs.concept)
@@ -34,6 +49,8 @@ export function assessFiniteCodeSystem(cs: CodeSystem, limit = 250_000) {
     if (depth > 30) { reasons.add('codesystem-depth-limit'); return; }
     for (const c of entries) {
       if (!c.code || concepts.has(c.code)) reasons.add('codesystem-invalid-or-duplicate-concept');
+      if (cs.caseSensitive !== true && folded.has(c.code.toLowerCase())) reasons.add('codesystem-invalid-or-duplicate-concept');
+      folded.add(c.code.toLowerCase());
       if (concepts.size >= limit) { reasons.add('expansion-size-limit'); return; }
       concepts.set(c.code, { system: cs.url, version: cs.version, code: c.code });
       if (c.concept) walk(c.concept, depth + 1);
@@ -45,9 +62,13 @@ export function assessFiniteCodeSystem(cs: CodeSystem, limit = 250_000) {
 }
 
 /** A closed finite expansion is evidence of absence; a partial list is not. */
-export function assessStoredExpansion(valueSet: ValueSet, limit = 250_000): FiniteExpansion | null {
+export function assessStoredExpansion(valueSet: ValueSet, limit = 250_000,
+  codeSystems: readonly CodeGrammar[] = []): FiniteExpansion | null {
   const expansion = valueSet.expansion;
   if (!expansion) return null;
+  const failure = finiteTerminologyAuthorityFailure(valueSet, 'ValueSet', limit)
+    ?? finiteTerminologyAuthorityFailure(expansion, 'expansion', limit);
+  if (failure) return { concepts: [], coverage: 'partial', reasons: [failure], source: 'expansion' };
   const concepts = new Map<string, FiniteConcept>();
   const reasons = new Set<string>();
   const walk = (entries: ValueSetExpansionContains[], depth: number, parent?: FiniteConcept) => {
@@ -67,6 +88,8 @@ export function assessStoredExpansion(valueSet: ValueSet, limit = 250_000): Fini
     }
   };
   walk(expansion.contains ?? [], 0);
+  // Providers may enumerate every named concept without flagging the omitted expression space.
+  if (hasGrammarCompose(valueSet, codeSystems)) reasons.add('codesystem-grammar-not-enumerable');
   if (subsetted(valueSet)) reasons.add('expansion-declared-incomplete');
   if (expansion.offset !== undefined && expansion.offset !== 0) reasons.add('expansion-offset');
   if (expansion.parameter?.some(p => (p.name === 'filter' && Boolean(p.valueString))
@@ -81,14 +104,70 @@ export function assessStoredExpansion(valueSet: ValueSet, limit = 250_000): Fini
     coverage: reasons.size ? 'partial' : 'complete', source: 'expansion' };
 }
 
+function expansionSystemEditions(valueSet: ValueSet, expansion: FiniteExpansion) {
+  const editions = new Map<string, Set<string | undefined>>();
+  const add = (system: string, version?: string) => {
+    const versions = editions.get(system) ?? new Set<string | undefined>();
+    versions.add(version); editions.set(system, versions);
+  };
+  for (const concept of expansion.concepts) if (concept.system) add(concept.system, concept.version);
+  for (const parameter of valueSet.expansion?.parameter ?? []) {
+    if (!['system-version', 'check-system-version', 'used-codesystem', 'version'].includes(parameter.name)) continue;
+    const [system, version, extra] = (parameter.valueUri ?? parameter.valueString ?? '').split('|');
+    if (system && version && extra === undefined) {
+      add(system, version);
+      editions.get(system)!.delete(undefined);
+    }
+  }
+  return editions;
+}
+
+async function storedExpansionGrammarFailure(valueSet: ValueSet, resolver: FiniteTerminologyResolver,
+  limit: number, ancestors: Set<string>, editions: Map<string, Set<string | undefined>>,
+  checked = new Map<string, string | null>()): Promise<string | null> {
+  const canonical = `${valueSet.url}|${valueSet.version ?? ''}`;
+  if (ancestors.size >= 20 || ancestors.has(canonical)) return 'composition-cycle-or-depth';
+  if (checked.has(canonical)) return checked.get(canonical)!;
+  const failure = finiteTerminologyAuthorityFailure(valueSet, 'ValueSet', limit);
+  if (failure) return failure;
+  const systems: CodeGrammar[] = [];
+  const entries = composeEntries(valueSet);
+  for (const entry of entries) {
+    if (!entry.system || entry.concept?.length) continue;
+    const [system, pipedVersion] = entry.system.split('|');
+    const version = entry.version ?? pipedVersion;
+    const versions = version && version !== '*' ? [version] : [...(editions.get(system) ?? [undefined])];
+    for (const edition of versions) {
+      const selected = await resolver.codeSystem(system, edition);
+      if (selected && codeSystemIdentitiesEquivalent(selected.url, system) && (!edition || selected.version === edition)) systems.push(selected);
+    }
+  }
+  if (hasGrammarCompose(valueSet, systems)) return 'codesystem-grammar-not-enumerable';
+  const visited = new Set(ancestors).add(canonical);
+  for (const reference of new Set(entries.flatMap(entry => entry.valueSet ?? []))) {
+    const nested = await resolver.valueSet(reference);
+    const [url, version] = reference.split('|');
+    if (!nested || nested.url !== url || version && nested.version !== version) continue;
+    const nestedFailure = await storedExpansionGrammarFailure(nested, resolver, limit, visited, editions, checked);
+    if (nestedFailure) return nestedFailure;
+  }
+  checked.set(canonical, null);
+  return null;
+}
+
 export async function expandFiniteValueSet(valueSet: ValueSet, resolver: FiniteTerminologyResolver,
   limit = 250_000, ancestors = new Set<string>()): Promise<FiniteExpansion> {
-  if ([...(valueSet.compose?.include ?? []), ...(valueSet.compose?.exclude ?? [])].some(entry => entry.system
-    && grammarSystems.has(entry.system.split('|')[0]) && !entry.concept?.length)) {
+  const authorityFailure = finiteTerminologyAuthorityFailure(valueSet, 'ValueSet', limit);
+  if (authorityFailure) return { concepts: [], coverage: 'partial', reasons: [authorityFailure], source: 'compose' };
+  if (hasGrammarCompose(valueSet)) {
     return { concepts: [], coverage: 'partial', reasons: ['codesystem-grammar-not-enumerable'], source: 'compose' };
   }
   const stored = assessStoredExpansion(valueSet, limit);
-  if (stored?.coverage === 'complete') return stored;
+  if (stored?.coverage === 'complete') {
+    // Totals count returned concepts; selected and nested definitions still govern expression closure.
+    const failure = await storedExpansionGrammarFailure(valueSet, resolver, limit, ancestors, expansionSystemEditions(valueSet, stored));
+    return failure ? { ...stored, coverage: 'partial', reasons: [failure] } : stored;
+  }
   const canonical = `${valueSet.url}|${valueSet.version ?? ''}`;
   const partial = (reason: string): FiniteExpansion => ({ concepts: [], coverage: 'partial', reasons: [reason], source: 'compose' });
   if (ancestors.size >= 20 || ancestors.has(canonical)) return partial('composition-cycle-or-depth');
@@ -98,6 +177,17 @@ export async function expandFiniteValueSet(valueSet: ValueSet, resolver: FiniteT
   const reasons = new Set<string>();
   const concepts = new Map<string, FiniteConcept>();
   const evaluateFilter = createConceptFilterEvaluator();
+  const casePolicies = new Map<string, boolean>();
+  const policyKey = (system: string | undefined, version: string | undefined) =>
+    JSON.stringify([system && normalizeCodeSystemIdentity(system), version]);
+  const overlaps = (a: FiniteConcept, b: FiniteConcept) => {
+    if (!codeSystemIdentitiesEquivalent(a.system, b.system) || a.version && b.version && a.version !== b.version) return false;
+    if (a.code === b.code) return true;
+    if (a.code.toLowerCase() !== b.code.toLowerCase()) return false;
+    const policies = [a, b].map(c => casePolicies.get(policyKey(c.system, c.version)));
+    if (policies.includes(undefined)) reasons.add('codesystem-case-policy-unavailable');
+    return policies.every(policy => policy === false);
+  };
   const entry = async (include: ValueSetComposeInclude): Promise<FiniteConcept[]> => {
     if (include.filter?.length && include.concept?.length) { reasons.add('compose-concepts-and-filters'); return []; }
     if ((include.filter?.length ?? 0) > 32) { reasons.add('filter-count-limit'); return []; }
@@ -106,11 +196,32 @@ export async function expandFiniteValueSet(valueSet: ValueSet, resolver: FiniteT
     if (include.system) {
       const [system, pipedVersion] = include.system.split('|');
       const version = include.version ?? pipedVersion;
+      if (version === '*') {
+        const versions = await resolver.codeSystemVersions?.(system);
+        if (!versions?.length || versions.length > 256 || versions.some(edition =>
+          typeof edition !== 'string' || !edition.trim() || edition === '*' || edition.includes('|'))) {
+          reasons.add(`codesystem-supported-versions-unavailable:${system}`);
+          return [];
+        }
+        const members: FiniteConcept[] = [];
+        for (const edition of new Set(versions)) {
+          for (const concept of await entry({ ...include, system, version: edition })) {
+            if (members.length >= limit) { reasons.add('expansion-size-limit'); return members; }
+            members.push(concept);
+          }
+        }
+        return members;
+      }
+      const cs = await resolver.codeSystem(system, version);
+      if (cs && codeSystemIdentitiesEquivalent(cs.url, system) && (!version || cs.version === version)
+        && !finiteTerminologyAuthorityFailure({ ...cs, concept: [] }, 'CodeSystem', 1)) {
+        casePolicies.set(policyKey(system, version), cs.caseSensitive === true);
+        casePolicies.set(policyKey(system, cs.version), cs.caseSensitive === true);
+      }
       if (include.concept?.length) {
         constraints.push(include.concept.map(c => ({ system, version, code: c.code })));
       } else {
-        const cs = await resolver.codeSystem(system, version);
-        if (!cs || cs.content !== 'complete' || cs.url !== system || (version && cs.version !== version)) {
+        if (!cs || cs.content !== 'complete' || !codeSystemIdentitiesEquivalent(cs.url, system) || (version && cs.version !== version)) {
           reasons.add(`codesystem-unavailable-or-incomplete:${system}|${version ?? ''}`);
           constraints.push([]);
         } else {
@@ -147,7 +258,7 @@ export async function expandFiniteValueSet(valueSet: ValueSet, resolver: FiniteT
   for (const include of valueSet.compose.include) {
     for (const concept of await entry(include)) {
       if (concepts.size >= limit) { reasons.add('expansion-size-limit'); break; }
-      concepts.set(identity(concept), concept);
+      concepts.set(identity({ ...concept, system: concept.system && normalizeCodeSystemIdentity(concept.system) }), concept);
     }
   }
   for (const exclude of valueSet.compose.exclude ?? []) {

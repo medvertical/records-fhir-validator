@@ -1,6 +1,7 @@
 import type { SaxesAttributeNS, SaxesTagNS } from 'saxes';
 import type { FhirInputDiagnostic, FhirInputLocation, ParsedFhirInput } from './fhir-input-types.js';
 import { primitiveValue } from './fhir-xml-primitive-value.js';
+import { numberSource, recordNumberSource } from './number-source.js';
 import {
   PRIMITIVE_TYPE_NAMES,
   createSchemaCursor,
@@ -188,6 +189,16 @@ function convertNode(
     const valueIndex = valueAbsent && !array
       ? 0
       : setProperty(output, child.local, valueAbsent ? null : converted.value, forceArray);
+    const stored = output[child.local];
+    if (Array.isArray(stored) && typeof existing === 'number') {
+      const previousSource = numberSource(output, child.local, existing);
+      if (previousSource !== undefined) recordNumberSource(stored, '0', previousSource, existing);
+    }
+    const lexical = attribute(child, 'value');
+    if (typeof converted.value === 'number' && lexical !== undefined) {
+      recordNumberSource(Array.isArray(stored) ? stored : output,
+        Array.isArray(stored) ? String(valueIndex) : child.local, lexical, converted.value);
+    }
     const existingSidecar = output[`_${child.local}`];
     if (array && existingSidecar !== undefined && !Array.isArray(existingSidecar)) {
       output[`_${child.local}`] = [existingSidecar];

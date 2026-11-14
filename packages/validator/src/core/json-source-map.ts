@@ -102,6 +102,27 @@ export function buildJsonSourceMap(source: string): JsonSourceMap {
     return map;
 }
 
+type NumberTokenVisitor = (owner: object, key: string, token: string, value: number) => void;
+type NumberTokens = string | Map<string, NumberTokens>;
+
+/** Visit numeric tokens in source already accepted by JSON.parse. */
+export function visitJsonNumberTokens(source: string, parsed: unknown, visitNumber: NumberTokenVisitor): void {
+    const tokens = new JsonTokeniser(source, true).parseValue('');
+    if (!(tokens instanceof Map) || parsed === null || typeof parsed !== 'object') return;
+    const pending = [{ owner: parsed, tokens }];
+    while (pending.length > 0) {
+        const { owner, tokens } = pending.pop()!;
+        for (const [key, token] of tokens) {
+            if (!Object.hasOwn(owner, key)) continue;
+            const value: unknown = Reflect.get(owner, key);
+            if (typeof token === 'string' && typeof value === 'number') visitNumber(owner, key, token, value);
+            if (token instanceof Map && value !== null && typeof value === 'object') {
+                pending.push({ owner: value, tokens: token });
+            }
+        }
+    }
+}
+
 // ============================================================================
 // Internal Tokeniser
 // ============================================================================
@@ -109,20 +130,20 @@ export function buildJsonSourceMap(source: string): JsonSourceMap {
 class JsonTokeniser {
     public index = 0;
     private readonly source: string;
-    private readonly lineStarts: number[];
+    private lineStarts?: number[];
 
-    constructor(source: string) {
+    constructor(source: string, private readonly captureNumbers = false) {
         this.source = source;
-        this.lineStarts = computeLineStarts(source);
     }
 
     positionAt(offset: number): SourcePosition {
+        const lineStarts = this.lineStarts ??= computeLineStarts(this.source);
         // Binary search for the line containing offset
         let lo = 0;
-        let hi = this.lineStarts.length - 1;
+        let hi = lineStarts.length - 1;
         while (lo < hi) {
             const mid = (lo + hi + 1) >>> 1;
-            if (this.lineStarts[mid] <= offset) {
+            if (lineStarts[mid] <= offset) {
                 lo = mid;
             } else {
                 hi = mid - 1;
@@ -130,7 +151,7 @@ class JsonTokeniser {
         }
         return {
             line: lo,
-            character: offset - this.lineStarts[lo],
+            character: offset - lineStarts[lo],
         };
     }
 
@@ -152,13 +173,13 @@ class JsonTokeniser {
         this.index++;
     }
 
-    parseValue(path: string, map: JsonSourceMap): void {
+    parseValue(path: string, map?: JsonSourceMap): NumberTokens | undefined {
         this.skipWhitespace();
         const ch = this.source[this.index];
         if (ch === '{') {
-            this.parseObject(path, map);
+            return this.parseObject(path, map);
         } else if (ch === '[') {
-            this.parseArray(path, map);
+            return this.parseArray(path, map);
         } else if (ch === '"') {
             this.parseString();
         } else if (ch === 't' || ch === 'f') {
@@ -166,17 +187,19 @@ class JsonTokeniser {
         } else if (ch === 'n') {
             this.parseKeyword('null');
         } else {
-            this.parseNumber();
+            const token = this.parseNumber();
+            return this.captureNumbers ? token : undefined;
         }
     }
 
-    private parseObject(path: string, map: JsonSourceMap): void {
+    private parseObject(path: string, map?: JsonSourceMap): NumberTokens | undefined {
         this.expect('{');
         this.skipWhitespace();
         if (this.source[this.index] === '}') {
             this.index++;
             return;
         }
+        const tokens = this.captureNumbers ? new Map<string, NumberTokens>() : undefined;
         for (;;) {
             this.skipWhitespace();
             const key = this.parseString();
@@ -184,15 +207,10 @@ class JsonTokeniser {
             this.expect(':');
             this.skipWhitespace();
 
-            const childPath = path === '' ? key : `${path}/${key}`;
-            const valueStart = this.index;
-            this.parseValue(childPath, map);
-            const valueEnd = this.index;
-
-            map.set(childPath, {
-                start: this.positionAt(valueStart),
-                end: this.positionAt(valueEnd),
-            });
+            const childTokens = this.parseChild(path, key, map);
+            // JSON.parse keeps the final occurrence of a property, including its descendants.
+            if (childTokens === undefined) tokens?.delete(key);
+            else tokens?.set(key, childTokens);
 
             this.skipWhitespace();
             if (this.source[this.index] === ',') {
@@ -201,31 +219,26 @@ class JsonTokeniser {
             }
             if (this.source[this.index] === '}') {
                 this.index++;
-                return;
+                return tokens?.size ? tokens : undefined;
             }
             throw new Error(`Expected , or } at ${this.index}`);
         }
     }
 
-    private parseArray(path: string, map: JsonSourceMap): void {
+    private parseArray(path: string, map?: JsonSourceMap): NumberTokens | undefined {
         this.expect('[');
         this.skipWhitespace();
         if (this.source[this.index] === ']') {
             this.index++;
             return;
         }
+        const tokens = this.captureNumbers ? new Map<string, NumberTokens>() : undefined;
         let i = 0;
         for (;;) {
             this.skipWhitespace();
-            const childPath = path === '' ? String(i) : `${path}/${i}`;
-            const valueStart = this.index;
-            this.parseValue(childPath, map);
-            const valueEnd = this.index;
-
-            map.set(childPath, {
-                start: this.positionAt(valueStart),
-                end: this.positionAt(valueEnd),
-            });
+            const key = String(i);
+            const childTokens = this.parseChild(path, key, map);
+            if (childTokens !== undefined) tokens?.set(key, childTokens);
 
             this.skipWhitespace();
             if (this.source[this.index] === ',') {
@@ -235,10 +248,21 @@ class JsonTokeniser {
             }
             if (this.source[this.index] === ']') {
                 this.index++;
-                return;
+                return tokens?.size ? tokens : undefined;
             }
             throw new Error(`Expected , or ] at ${this.index}`);
         }
+    }
+
+    private parseChild(path: string, key: string, map?: JsonSourceMap): NumberTokens | undefined {
+        if (!map) return this.parseValue('');
+        const childPath = path === '' ? key : `${path}/${key}`;
+        const valueStart = this.index;
+        this.parseValue(childPath, map);
+        map.set(childPath, {
+            start: this.positionAt(valueStart),
+            end: this.positionAt(this.index),
+        });
     }
 
     private parseString(): string {
@@ -286,7 +310,7 @@ class JsonTokeniser {
         this.index += keyword.length;
     }
 
-    private parseNumber(): void {
+    private parseNumber(): string {
         const match = /-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
         match.lastIndex = this.index;
         const result = match.exec(this.source);
@@ -294,6 +318,7 @@ class JsonTokeniser {
             throw new Error(`Expected number at ${this.index}`);
         }
         this.index += result[0].length;
+        return result[0];
     }
 }
 

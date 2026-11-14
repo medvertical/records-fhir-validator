@@ -17,6 +17,7 @@ import type { TerminologyOperationCache } from './terminology-operation-cache.js
 import { validationFailureMetadata } from '../utils/validation-execution-failure.js';
 import type { TerminologyRequestBroker } from './terminology-request-broker.js';
 import type { RemoteValueSetValidationResult } from './terminology-api-types.js';
+import { operationOutcomeHasRejection } from './terminology-api-outcome.js';
 
 interface ValueSetValidateCodeRequest {
   bindingStrength?: 'required' | 'extensible' | 'preferred' | 'example';
@@ -103,17 +104,18 @@ export async function executeValueSetValidateCodeRequest(
       accepted: outcome === 'valid',
       outcome,
       serverUrl,
-      // An undecidable 200 carries no binding answer the server would stand behind.
-      ...(outcome === 'unverified' ? { reason: 'value-set-not-found' as const } : {}),
+      ...(outcome === 'unverified' ? { reason: operationOutcomeCannotResolveBinding(response.data)
+        ? 'value-set-not-found' as const : 'server-failure' as const } : {}),
     };
-    recordTerminologyResponse(
+    if (result.reason === 'server-failure') circuitBreaker.recordFailure();
+    else recordTerminologyResponse(
       circuitBreaker,
       config,
       'ValueSet/$validate-code',
       serverUrl,
       startedAt,
     );
-    operationCache.storeValidateCode(cacheKey, result);
+    if (result.reason !== 'server-failure') operationCache.storeValidateCode(cacheKey, result);
     return result;
   } catch (error: unknown) {
     const axiosResponse = isAxiosError(error) ? error.response : undefined;
@@ -123,8 +125,12 @@ export async function executeValueSetValidateCodeRequest(
       hasResponseData: axiosResponse?.data !== undefined,
     });
     if (axiosResponse?.status === 422 || axiosResponse?.status === 404) {
-      circuitBreaker.recordSuccess();
       const cannotResolve = operationOutcomeCannotResolveBinding(axiosResponse.data);
+      if (!cannotResolve && !operationOutcomeHasRejection(axiosResponse.data, ['code-invalid', 'invalid-code', 'not-in-vs'])) {
+        circuitBreaker.recordFailure();
+        return { accepted: false, outcome: 'unverified', reason: 'server-failure', serverUrl };
+      }
+      circuitBreaker.recordSuccess();
       const failOpen = cannotResolve || bindingStrength !== 'required';
       if (cannotResolve) {
         operationCache.storeValueSetNotResolvable(

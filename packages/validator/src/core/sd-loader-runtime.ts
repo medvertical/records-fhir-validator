@@ -27,11 +27,13 @@ import { ProfileMemoryCache } from './sd-loader-profile-memory-cache.js';
 import { invalidateProfilePolicyCaches } from './sd-loader-policy-cache.js';
 import { StructureDefinitionLoaderPolicyState } from './sd-loader-policy-state.js';
 import type { StructureDefinition } from './structure-definition-types.js';
+import { PackageDependencyAliases } from '../package/package-dependency-aliases.js';
 
 export type { StructureDefinitionLoaderOptions } from './sd-loader-options.js';
 
 /** Mutable state and lifecycle shared by the StructureDefinitionLoader facade. */
 export class StructureDefinitionLoaderRuntime {
+  readonly profileDependencyAliases: PackageDependencyAliases;
   readonly cache = new ProfileMemoryCache();
   readonly availableProfiles: Set<string> = new Set();
   readonly profileLoadPromises = new Map<string, Promise<StructureDefinition | null>>();
@@ -54,6 +56,7 @@ export class StructureDefinitionLoaderRuntime {
     options?: StructureDefinitionLoaderOptions,
   ) {
     const resolved = resolveStructureDefinitionLoaderOptions(cachePath, bundledPath, options);
+    this.profileDependencyAliases = new PackageDependencyAliases(options?.profileDependencyAliases, resolved.packageVersionPins);
     this.registryClient = resolved.registryClient;
     this.packageDownloader = resolved.packageDownloader;
     this.maxCacheEntries = resolved.maxCacheEntries;

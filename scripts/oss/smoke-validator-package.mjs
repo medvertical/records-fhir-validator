@@ -115,30 +115,34 @@ async function writeMinimalR4CorePackage(cacheRoot) {
 async function packWorkspace(workspace, destination) {
   const { stdout } = await run('npm', [
     'pack',
+    '--json',
     '--workspace',
     workspace,
     '--pack-destination',
     destination,
   ]);
 
-  const tarball = stdout
-    .trim()
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .at(-1);
-
-  if (!tarball) {
+  const [packed] = JSON.parse(stdout);
+  if (!packed?.filename || !Array.isArray(packed.files)) {
     throw new Error(`npm pack did not report a tarball for ${workspace}`);
   }
-
-  return join(destination, basename(tarball));
+  const allowed = /^(?:dist\/|examples\/|(?:README|CHANGELOG|CONTRIBUTING|SECURITY)\.md$|LICENSE(?:\.FHIRsmith)?$|package\.json$)/;
+  const forbidden = /(^|\/)(?:__tests__|__fixtures__|node_modules|\.env)(?:\/|$)|\.(?:test|spec)\.[cm]?[jt]sx?(?:\.map)?$|(?:^|\/)iso4217-provider-snapshot\.json$/;
+  const unexpected = packed.files.find(({ path }) => !allowed.test(path) || forbidden.test(path));
+  if (unexpected) throw new Error(`Unexpected file in ${workspace} tarball: ${unexpected.path}`);
+  if (workspace === '@records-fhir/validator' && !packed.files.some(({ path }) => path === 'LICENSE.FHIRsmith')) {
+    throw new Error('The validator tarball is missing its FHIRsmith license.');
+  }
+  return join(destination, basename(packed.filename));
 }
 
 const tmp = await mkdtemp(join(tmpdir(), 'records-fhir-validator-smoke-'));
 const packageDir = join(tmp, 'consumer');
 const sourcePackage = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'));
-const runtimeSecurityOverrides = { '@lhncbc/ucum-lhc': sourcePackage.overrides['@lhncbc/ucum-lhc'] };
+const runtimeSecurityOverrides = {
+  '@lhncbc/ucum-lhc': sourcePackage.overrides['@lhncbc/ucum-lhc'],
+  'follow-redirects': sourcePackage.overrides['follow-redirects'],
+};
 
 try {
   const typesTarball = await packWorkspace('@records-fhir/validation-types', tmp);

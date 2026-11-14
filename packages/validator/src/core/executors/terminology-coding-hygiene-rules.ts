@@ -1,7 +1,8 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import { createValidationIssue } from '../../issues/index.js';
 import { UcumCodeValidator, ucumCodeHasAnnotation } from '../../validators/ucum-validator.js';
-import { hasInvalidSnomedCheckDigit } from '../../validators/snomed-id-validator.js';
+import { invalidSnomedCodingIdentifierReason } from '../../validators/snomed-id-validator.js';
+import { hasInvalidPznCheckDigit } from '../../validators/pzn-id-validator.js';
 import { classifySnomedExpressionSyntax } from '../../validators/snomed-expression-syntax.js';
 import {
   buildInvalidUcumIssueDetails,
@@ -18,27 +19,63 @@ type CodingHygieneIssue = {
   messageParams?: Record<string, unknown>;
 };
 
-function snomedCheckDigitIssue(value: Record<string, unknown>, path: string): CodingHygieneIssue | undefined {
-  if (value.system !== 'http://snomed.info/sct' || typeof value.code !== 'string'
-    || !hasInvalidSnomedCheckDigit(value.code)) return undefined;
+type SnomedIdentifierReference = { identifier: string; offset: number };
+
+function snomedIdentifierIssue(
+  value: Record<string, unknown>, path: string, reference?: SnomedIdentifierReference,
+): CodingHygieneIssue | undefined {
+  if (value.system !== 'http://snomed.info/sct' || typeof value.code !== 'string') return undefined;
+  const identifier = reference?.identifier ?? value.code;
+  const reason = invalidSnomedCodingIdentifierReason(identifier);
+  if (!reason) return undefined;
+  const explanation = reason === 'snomed-check-digit'
+    ? 'has an invalid Verhoeff check digit'
+    : reason === 'snomed-component-kind'
+      ? 'identifies a description or relationship, which cannot be used as a FHIR SNOMED code'
+      : `uses reserved partition '${identifier.slice(-3, -1)}'`;
   return {
     severity: 'error',
     code: 'terminology-code-invalid',
-    message: `SNOMED CT identifier '${value.code}' has an invalid Verhoeff check digit`,
+    message: `SNOMED CT identifier '${identifier}' ${explanation}`,
     path: `${path}.code`,
     details: {
       code: value.code,
       system: value.system,
-      reason: 'snomed-check-digit',
-      fixHint: 'Verify the intended concept against its source terminology; changing the check digit alone does not establish the intended clinical meaning.',
+      reason,
+      ...(reference ? { invalidIdentifier: identifier, syntaxOffset: reference.offset } : {}),
+      fixHint: 'Verify the intended concept against its source terminology; changing identifier digits alone does not establish the intended clinical meaning.',
+    },
+  };
+}
+
+function pznCheckDigitIssue(value: Record<string, unknown>, path: string): CodingHygieneIssue | undefined {
+  if (value.system !== 'http://fhir.de/CodeSystem/ifa/pzn' || typeof value.code !== 'string'
+    || !hasInvalidPznCheckDigit(value.code)) return undefined;
+  return {
+    severity: 'error',
+    code: 'terminology-code-invalid',
+    message: `PZN '${value.code}' has an invalid modulo 11 check digit`,
+    path: `${path}.code`,
+    details: {
+      code: value.code,
+      system: value.system,
+      reason: 'pzn-check-digit',
+      fixHint: 'Verify the intended product identifier against its source catalog; changing the check digit alone does not establish the intended product.',
     },
   };
 }
 
 function snomedExpressionSyntaxIssue(value: Record<string, unknown>, path: string): CodingHygieneIssue | undefined {
   if (value.system !== 'http://snomed.info/sct' || typeof value.code !== 'string') return undefined;
-  const result = classifySnomedExpressionSyntax(value.code);
-  if (result.kind === 'named-id' || result.kind === 'expression') return undefined;
+  let invalidReference: SnomedIdentifierReference | undefined;
+  const result = classifySnomedExpressionSyntax(value.code, (identifier, offset) => {
+    if (!invalidReference && invalidSnomedCodingIdentifierReason(identifier)) {
+      invalidReference = { identifier, offset };
+    }
+  });
+  if (result.kind === 'named-id' || result.kind === 'expression') {
+    return invalidReference ? snomedIdentifierIssue(value, path, invalidReference) : undefined;
+  }
   const details = {
     code: value.code,
     system: value.system,
@@ -190,8 +227,10 @@ export function validateCodingHygiene(
       });
     }
 
-    const snomedIssue = snomedCheckDigitIssue(value, path) ?? snomedExpressionSyntaxIssue(value, path);
+    const snomedIssue = snomedIdentifierIssue(value, path) ?? snomedExpressionSyntaxIssue(value, path);
     if (snomedIssue) pushOnce(snomedIssue);
+    const pznIssue = pznCheckDigitIssue(value, path);
+    if (pznIssue) pushOnce(pznIssue);
 
     if (value.system === 'http://unitsofmeasure.org' && typeof value.code === 'string') {
       const result = ucumValidator.validate(value.code);

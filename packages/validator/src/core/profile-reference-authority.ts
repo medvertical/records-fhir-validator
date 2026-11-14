@@ -12,6 +12,7 @@ import { profileMatchesCanonical } from './sd-loader-profile-identity.js';
 import type { StructureDefinition } from './structure-definition-types.js';
 import { captureValidationDependency, ValidationDependencySnapshotLimitError } from '../validation-dependency-snapshot.js';
 import { readPackageReference, type ProfileReferenceCaptureOwner } from './profile-reference-package-inventory.js';
+import type { PackageDependencyAliases } from '../package/package-dependency-aliases.js';
 /** The profile whose content names the canonical being resolved. */
 export interface ProfileReferenceSource {
   url?: string;
@@ -19,6 +20,7 @@ export interface ProfileReferenceSource {
 }
 
 export interface ProfileReferencePinScope {
+  dependencyAliases?: PackageDependencyAliases;
   /** Package stores the profile loader reads, in precedence order. */
   storeDirs: readonly string[];
   /** Host package pins; a pinned package resolves only at its pinned release. */
@@ -102,7 +104,7 @@ export async function resolveProfileReferenceAuthority(
       // An equal package ref in an earlier store does not own this issued profile.
       manifests = [actual, ...manifests.filter(manifest => manifest !== actual)];
     }
-    const entries = dependencyClosureEntries(manifests, origin, scope.packageVersionPins, name => CORE_PACKAGE.test(name));
+    const entries = dependencyClosureEntries(manifests, origin, scope.packageVersionPins, name => CORE_PACKAGE.test(name), scope.dependencyAliases);
     for (const entry of entries) {
       if (entry.status === 'unavailable') return unavailable(entry.cause, entry.ref);
       const manifest = entry.manifest;

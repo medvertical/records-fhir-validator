@@ -9,6 +9,8 @@ import type { MultiAspectDeps } from './multi-aspect-dependencies.js';
 import type { ValidateOneFn } from './multi-aspect-types.js';
 import { profileResourceTypeApplicability } from './profile-resource-type.js';
 import { logger } from '../logger.js';
+import { getFhirPathModel } from './fhirpath-context.js';
+import { KNOWN_FHIR_RESOURCE_TYPES } from '../reference/reference-resource-types.js';
 
 // Bundle entries are validated one level down already, and document chains
 // run deep (eCR: Composition → Encounter → PractitionerRole → Practitioner).
@@ -76,7 +78,17 @@ export function createProfileConformanceCheck(scope: ProfileConformanceScope): P
       ));
       return undefined;
     }
-    const applicable = profileResourceTypeApplicability(profile, resource.resourceType, scope.fhirVersion);
+    const datatype = profile.kind === 'complex-type' && profile.type === resource.resourceType
+      && !KNOWN_FHIR_RESOURCE_TYPES.has(profile.type)
+      && Object.hasOwn(getFhirPathModel(scope.fhirVersion).type2Parent, profile.type);
+    if (datatype && (profile.snapshot?.element ?? []).some(element => element.constraint?.some(rule =>
+      /%(?:rootResource|resource)\b/.test(rule.expression ?? '')))) {
+      scope.onIncomplete?.(createValidationInfoIssue('profile', 'profile-conformance-incomplete',
+        'Datatype conformance requires its original owning resource context.',
+        { validationComplete: false, profile: profileUrl, causes: ['datatype-owner-context-unavailable'] }));
+      return undefined;
+    }
+    const applicable = datatype ? true : profileResourceTypeApplicability(profile, resource.resourceType, scope.fhirVersion);
     if (applicable === false) return 'not-applicable';
     if (applicable === undefined) {
       scope.onIncomplete?.(createValidationInfoIssue(
@@ -121,6 +133,8 @@ export function createProfileConformanceCheck(scope: ProfileConformanceScope): P
         'profile', operationalFailure ? 'validation-error' : 'profile-conformance-incomplete',
         'Profile conformance validation could not be completed.',
         { validationComplete: false, profile: profileUrl,
+          rootCauses: [...new Set(result.aspects.flatMap(aspect =>
+            (aspect.evidenceIssues ?? aspect.issues).filter(isIncompleteConformanceIssue).flatMap(conformanceRootCauses)))].slice(0, 32),
           causes: [...new Set(result.aspects.flatMap(aspect =>
             (aspect.evidenceIssues ?? aspect.issues).map(issue => issue.code).filter(Boolean)))],
         },
@@ -134,6 +148,13 @@ export function createProfileConformanceCheck(scope: ProfileConformanceScope): P
       aspect.issues.some(issue => issue.severity === 'error' || issue.severity === 'fatal'));
     return conforms;
   };
+}
+
+function conformanceRootCauses(issue: ValidationIssue): string[] {
+  if (!issue.details || typeof issue.details !== 'object') return issue.code ? [issue.code] : [];
+  const nested = issue.details?.rootCauses ?? issue.details?.causes;
+  return Array.isArray(nested) ? nested.filter((cause): cause is string => typeof cause === 'string').slice(0, 32)
+    : issue.code ? [issue.code] : [];
 }
 
 function isIncompleteConformanceIssue(issue: ValidationIssue): boolean {

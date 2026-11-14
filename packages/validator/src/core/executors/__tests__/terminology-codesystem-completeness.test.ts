@@ -6,6 +6,7 @@ import { aggregateRemoteCodeSystemBudgetIssues } from '../../validation-utils';
 const coding = { system: 'https://example.test/CodeSystem/completeness', code: 'known' };
 const unknown: CodeSystemValidationResult[] = [
   { valid: false, reason: 'system-unresolvable' },
+  { valid: false, reason: 'server-failure' },
   { valid: false, reason: 'code-unknown', incompleteCodeSystem: true },
   { valid: true, reason: 'remote-budget-exhausted' },
   { valid: true, reason: 'national-extension-unverified' },
@@ -19,11 +20,14 @@ describe('CodeSystem result completeness', () => {
   it.each(unknown)('preserves unknown evidence for $reason', result => {
     const issues = resultIssues(result);
     expect(issues).toHaveLength(1);
+    const partialInventory = result.reason === 'code-unknown' && result.incompleteCodeSystem;
     expect(issues[0].details).toMatchObject({
-      validationComplete: false, validationStatus: 'incomplete', reason: result.reason,
+      validationComplete: false, validationStatus: 'incomplete',
+      reason: partialInventory ? 'codesystem-incomplete' : result.reason,
     });
-    expect(issues[0].severity).toBe(result.valid ? 'information' : 'warning');
-    expect(issues[0].path).toBe(`Observation.code.coding[2].${result.reason === 'system-unresolvable' ? 'system' : 'code'}`);
+    expect(issues[0].severity).toBe(result.valid || partialInventory ? 'information' : 'warning');
+    const sourceFailure = result.reason === 'system-unresolvable' || result.reason === 'server-failure';
+    expect(issues[0].path).toBe(`Observation.code.coding[2].${sourceFailure ? 'system' : 'code'}`);
     expect(issues[0].details).not.toHaveProperty('codeSystemVersion');
   });
 
@@ -41,18 +45,32 @@ describe('CodeSystem result completeness', () => {
     expect(issues[0].details).not.toHaveProperty('validationComplete');
   });
 
-  it('does not hide a display rejection beside unknown membership', () => {
+  it.each(['system-unresolvable', 'server-failure'] as const)('does not trust display rejection beside %s', reason => {
     const issues = buildCodeSystemResultIssues({ ...coding, display: 'Unrelated rejected label' }, {
-      valid: false, reason: 'system-unresolvable', display: 'Preferred source label',
+      valid: false, reason, display: 'Preferred source label',
+      issues: [{ code: 'invalid-display', severity: 'error', message: 'Explicit source mismatch' }],
+    }, 'Observation.code.coding', 0, true);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ severity: 'warning', details: { reason, validationComplete: false } });
+    expect(issues.some(issue => issue.code === 'terminology-display-mismatch')).toBe(false);
+  });
+
+  it('retains a display rejection when the CodeSystem result is decisive', () => {
+    const issues = buildCodeSystemResultIssues({ ...coding, display: 'Rejected label' }, {
+      valid: false, reason: 'display-mismatch', display: 'Preferred source label',
       issues: [{ code: 'invalid-display', severity: 'error', message: 'Explicit source mismatch' }],
     }, 'Observation.code.coding', 0, true);
     expect(issues).toContainEqual(expect.objectContaining({ code: 'terminology-display-mismatch', severity: 'error' }));
-    expect(issues).toContainEqual(expect.objectContaining({ severity: 'warning', details: expect.objectContaining({ validationComplete: false }) }));
   });
 
-  it.each(unknown.slice(0, 2))('keeps local-only warnings incomplete for $reason', result => {
+  it.each(unknown.slice(0, 2))('keeps source-failure warnings incomplete for $reason', result => {
     const issues = buildCodeSystemResultIssues(coding, result, 'Observation.code.coding[0]', 0, false, false);
     expect(issues[0]).toMatchObject({ severity: 'warning', details: { validationComplete: false } });
+  });
+
+  it('omits optional incomplete-inventory notices without inventing an invalid code', () => {
+    expect(buildCodeSystemResultIssues(coding, { valid: false, reason: 'code-unknown', incompleteCodeSystem: true },
+      'Observation.code.coding[0]', 0, false, false)).toEqual([]);
   });
 
   it('keeps budget completeness after aggregation', () => {

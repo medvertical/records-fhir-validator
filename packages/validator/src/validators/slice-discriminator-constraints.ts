@@ -120,8 +120,10 @@ export function hasDirectDiscriminatorEvidence(slice: SliceDefinition, path: str
     if (slice.childPatterns && getChildConstraints(slice.childPatterns, candidate).length > 0) return true;
     if (slice.childBindingCodes?.has(candidate)) return true;
   }
-  if (slice.fixed && getValueAtPath(slice.fixed, path) !== undefined) return true;
-  if (slice.pattern && getValueAtPath(slice.pattern, path) !== undefined) return true;
+  const fixed = slice.fixed === undefined ? null : getValueAtPath(slice.fixed, path);
+  if (fixed !== null && fixed !== undefined) return true;
+  const pattern = slice.pattern === undefined ? null : getValueAtPath(slice.pattern, path);
+  if (pattern !== null && pattern !== undefined) return true;
   return (slice.bindingCodes?.size ?? 0) > 0;
 }
 

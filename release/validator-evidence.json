@@ -1,397 +1,235 @@
 {
-  "schemaVersion": 1,
-  "id": "validator-archived-evidence-2026-09-09",
-  "claimStatus": "historical-only",
-  "selectionBasis": "Explicitly pinned tracked reports, preserving their original recorded outcomes and exclusions. These measurements do not certify the currently exported package versions. The 0.8.0 current-release acceptance remains historical. A separate, explicitly pinned 0.9.18 SDK measurement supplies current release acceptance without relabeling historical lanes.",
-  "artifactSnapshotRevision": "772066438429b72fbf554a064c10a707c32afa9a",
-  "missingProvenance": "Legacy reports do not record the npm validator/validation-types package versions or tested source revision; null means unknown and must not be filled from the exporting checkout.",
-  "lanes": {
-    "hl7": {
-      "artifact": "conformance-results/report-2026-08-24.json",
-      "scope": "FHIR JSON resource comparisons under the recorded report policy. XML, adjacent standards and pre-filtered fixtures are excluded.",
-      "measuredPackages": {
-        "validator": null,
-        "validationTypes": null
+  "schema": "records.validator.public-release-evidence.v1",
+  "historical": {
+    "id": "validator-archived-evidence-2026-09-09",
+    "claimStatus": "historical-only",
+    "lanes": {
+      "hl7": {
+        "scope": "FHIR JSON resource comparisons under the recorded report policy. XML, adjacent standards and pre-filtered fixtures are excluded.",
+        "oracle": {
+          "name": "HL7 Java OperationOutcome baselines",
+          "version": null,
+          "fhirTestCasesCommit": "8923095fc5e3750025f7dd71988c9e89083b1487"
+        },
+        "testedSourceRevision": null,
+        "measuredPackages": {
+          "validator": null,
+          "validationTypes": null
+        },
+        "measuredAt": "2026-08-25T09:29:45.985Z",
+        "results": {
+          "measured": 533,
+          "passed": 533,
+          "failed": 0,
+          "skipped": 3,
+          "errors": 0
+        },
+        "reportSha256": "4edc2aa43d2f94e032d660eaa4cf83ffb2f05514a2b140f84f36b9ce95abd3e3"
       },
-      "testedSourceRevision": null,
-      "oracle": {
-        "name": "HL7 Java OperationOutcome baselines",
-        "version": null,
-        "fhirTestCasesCommit": "8923095fc5e3750025f7dd71988c9e89083b1487"
+      "mii": {
+        "scope": "MII package-example resources in the recorded profile/terminology scope; not site certification or full Must-Support readiness.",
+        "oracle": {
+          "name": "MII reference validator",
+          "version": null
+        },
+        "testedSourceRevision": null,
+        "measuredPackages": {
+          "validator": null,
+          "validationTypes": null
+        },
+        "measuredAt": "2026-07-23T10:42:01.818Z",
+        "results": {
+          "measured": 231,
+          "passed": 231,
+          "failed": 0,
+          "skipped": 22,
+          "errors": 0
+        },
+        "reportSha256": "9a20fe8fd4ee5b120adb201436323603d6dca5d61fc35a4b94a50fe499922b51"
+      },
+      "fhirSchema": {
+        "scope": "Graph/current-engine comparison for selected structural/profile issue families; does not broaden the headline JSON lane.",
+        "oracle": {
+          "name": "Java/reference outcomes with CLI supplement",
+          "version": null
+        },
+        "testedSourceRevision": null,
+        "measuredPackages": {
+          "validator": null,
+          "validationTypes": null
+        },
+        "measuredAt": "2026-07-23T10:56:55.070Z",
+        "results": {
+          "selectedFixtures": 555,
+          "clean": 418,
+          "match": 71,
+          "graphOnly": 11,
+          "recordsOnly": 0,
+          "divergent": 0,
+          "profileMissing": 55,
+          "errors": 0,
+          "aliasProfiles": 60,
+          "idFallbackProfiles": 0,
+          "referenceCases": 512,
+          "referenceCoverage": {
+            "covered": 512,
+            "missing": 43,
+            "missingReasons": {
+              "fixture-without-profile": 43
+            }
+          },
+          "totalGraphIssues": 131,
+          "totalRecordsComparableIssues": 116,
+          "totalReferenceComparableIssues": 123,
+          "totalMatchedIssueKeys": 100,
+          "totalGraphReferenceMatchedIssueKeys": 104,
+          "totalRecordsReferenceMatchedIssueKeys": 92,
+          "matchedIssueKeys": {
+            "structure-min|value.unit": 47,
+            "structure-min|code.coding": 15,
+            "pattern|code.coding": 13,
+            "fixed|extension.value.coding.system": 9,
+            "pattern|category.coding": 5,
+            "structure-min|category": 4,
+            "structure-max|code.coding": 3,
+            "pattern|value.code": 3,
+            "structure-min|code.coding.code": 1
+          },
+          "graphOnlyIssueKeys": {
+            "structure-min|reasonreference": 9,
+            "structure-min|focus": 1,
+            "pattern|result": 1,
+            "structure-min|result": 1
+          },
+          "recordsOnlyIssueKeys": {},
+          "referenceComparableIssueKeys": {
+            "structure-min|value.unit": 47,
+            "structure-min|code.coding": 22,
+            "pattern|code.coding": 21,
+            "structure-min|reasonreference": 9,
+            "pattern|extension.value.coding.system": 9,
+            "pattern|category.coding": 5,
+            "pattern|value.code": 3,
+            "pattern|result": 3,
+            "structure-min|focus": 2,
+            "structure-min|code.coding.code": 1,
+            "structure-min|result": 1
+          },
+          "graphReferenceMatchedIssueKeys": {
+            "structure-min|value.unit": 47,
+            "structure-min|code.coding": 14,
+            "pattern|code.coding": 13,
+            "structure-min|reasonreference": 9,
+            "pattern|extension.value.coding.system": 9,
+            "pattern|category.coding": 5,
+            "pattern|value.code": 3,
+            "structure-min|code.coding.code": 1,
+            "structure-min|focus": 1,
+            "pattern|result": 1,
+            "structure-min|result": 1
+          },
+          "recordsReferenceMatchedIssueKeys": {
+            "structure-min|value.unit": 47,
+            "structure-min|code.coding": 14,
+            "pattern|code.coding": 13,
+            "pattern|extension.value.coding.system": 9,
+            "pattern|category.coding": 5,
+            "pattern|value.code": 3,
+            "structure-min|code.coding.code": 1
+          },
+          "graphOnlyAgainstReferenceIssueKeys": {
+            "structure-min|category": 4,
+            "structure-min|code.coding": 1
+          },
+          "recordsOnlyAgainstReferenceIssueKeys": {
+            "structure-min|category": 4,
+            "structure-min|code.coding": 1
+          },
+          "referenceOnlyAgainstGraphIssueKeys": {},
+          "referenceOnlyAgainstRecordsIssueKeys": {
+            "structure-min|reasonreference": 9,
+            "structure-min|focus": 1,
+            "pattern|result": 1,
+            "structure-min|result": 1
+          },
+          "graphOnlyClassifications": {
+            "unresolved-reference-slice-uncertainty": 12
+          },
+          "recordsOnlyClassifications": {},
+          "javaConfirmedRecordsGapClassifications": {
+            "unresolved-reference-slice-uncertainty": 12
+          },
+          "taxonomy": {
+            "clean": 418,
+            "three-way-match": 67,
+            "profile-missing:no-profile": 43,
+            "profile-missing:intentionally-unmapped": 12,
+            "graph-aligns-reference-records-missing": 11,
+            "graph-records-diverge": 11,
+            "local-engines-align-reference-unconfirmed": 5
+          },
+          "taxonomyIssueKeys": {
+            "graphAlignsReferenceRecordsMissing": {
+              "structure-min|reasonreference": 9,
+              "structure-min|focus": 1,
+              "pattern|result": 1,
+              "structure-min|result": 1
+            },
+            "recordsAlignsReferenceGraphMissing": {},
+            "localEnginesAlignReferenceUnconfirmed": {
+              "structure-min|category": 4,
+              "structure-min|code.coding": 1
+            },
+            "localEnginesAlignReferenceUnconfirmedClassifications": {
+              "local-category-cardinality": 4,
+              "local-code-coding-slice-cardinality": 1
+            },
+            "graphOnlyUnconfirmed": {},
+            "recordsOnlyUnconfirmed": {}
+          }
+        },
+        "reportSha256": "13882605621125cd9813bb91a17395e1162d71438078ba00942db5d3fdd20811",
+        "supplementSha256": "c5c39355fd125ff187ea9361aa822f31157187e7cb191d5e89e2d67f10831b5e"
       }
+    }
+  },
+  "currentRelease": {
+    "candidate": {
+      "validator": "0.10.1",
+      "validationTypes": "0.2.0"
     },
-    "mii": {
-      "artifact": "conformance-results/mii-triangulation-2026-07-23.json",
-      "scope": "MII package-example resources in the recorded profile/terminology scope; not site certification or full Must-Support readiness.",
-      "measuredPackages": {
-        "validator": null,
-        "validationTypes": null
-      },
-      "testedSourceRevision": null,
-      "oracle": {
-        "name": "MII reference validator",
-        "version": null
-      }
+    "measuredAt": "2026-11-13T23:16:37.289Z",
+    "r4Json": {
+      "expectedCount": 390,
+      "rawCount": 390,
+      "rawPassCount": 387,
+      "rawFailCount": 3,
+      "rawSkipCount": 0,
+      "rawErrorCount": 0,
+      "acceptedRawCount": 387,
+      "acceptedByContractCount": 3,
+      "acceptedCount": 390,
+      "rejectedCount": 0,
+      "unknownContractCount": 3
     },
-    "fhirSchema": {
-      "artifact": "conformance-results/fhir-schema-dual-path-all-2026-07-23.json",
-      "scope": "Graph/current-engine comparison for selected structural/profile issue families; does not broaden the headline JSON lane.",
-      "measuredPackages": {
-        "validator": null,
-        "validationTypes": null
-      },
-      "testedSourceRevision": null,
-      "oracle": {
-        "name": "Java/reference outcomes with CLI supplement",
-        "version": null
-      },
-      "supplement": "conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json"
+    "miiClean": {
+      "measured": 442,
+      "clean": 442,
+      "excluded": 110
+    },
+    "inventorySha256": "3467d7fb5d8360f26262cf0009117cd819ce84ab718402b59fe458976db15942",
+    "runtimeSha256": "5cb2072d2c311a263e506dcfab10b1e07bb552b02bb4b57d7ba3656883aab167",
+    "r4ReportSha256": "fb3fad3624194fedf887d9f984c196a19878fedc7953b5e3e5d02e6fa547b0ed",
+    "miiReportSha256": "191f88b85ec55060faa6849e08df80d8cfa69517c05c2ba147617b0878084c89",
+    "limits": {
+      "r4LiveAuthorityReobserved": false,
+      "originalMeasurementReused": true
     }
   },
   "artifacts": [
     {
-      "path": "conformance-results/baseline-passing-archived-0333c754.json",
-      "sha256": "0333c754dab19eda6e8619e44471783cf55dd633e5fb5b02edd448351ed57ff3"
-    },
-    {
-      "path": "conformance-results/baseline-backlog-discovery-2026-05-03.json",
-      "sha256": "c3aa8a2e39e04ffa9812ed647ae9d508e722d2b401b39f1c7514df54e122ec7a"
-    },
-    {
-      "path": "conformance-results/hl7-validator-testkit-2026-05-20.json",
-      "sha256": "8fdd44ecdeb00ffc164c97d3b792a1fbea0b29aedea4930805de3ee7c34f4abc"
-    },
-    {
-      "path": "conformance-results/report-2026-07-01.json",
-      "sha256": "feb5735b74b1dc0ea93d148d95cded44fa5c8c5e394915efc888cd7c7e75d6ae"
-    },
-    {
-      "path": "conformance-results/report-2026-07-21.json",
-      "sha256": "90870ded66a966b990d61bcc16750e3a5a7a291739e00b74b19939fb7d35a154"
-    },
-    {
-      "path": "conformance-results/report-2026-07-23.json",
-      "sha256": "a0271c39aee0fa39d84e5ed3e38e2318cea877dccacb260d27b3df7e7460152a"
-    },
-    {
-      "path": "conformance-results/mii-triangulation-2026-07-01.json",
-      "sha256": "264563c04ff6eae6da0e1b3806afbc9bdd224bbd3c76fce29586a696e8d4361b"
-    },
-    {
-      "path": "conformance-results/mii-triangulation-2026-07-21.json",
-      "sha256": "9982a232a1203a740cb6370d798c7e8ff941a15c8562e9ab60935bd3d650d5b6"
-    },
-    {
-      "path": "conformance-results/mii-triangulation-2026-07-23.json",
-      "sha256": "9a20fe8fd4ee5b120adb201436323603d6dca5d61fc35a4b94a50fe499922b51"
-    },
-    {
-      "path": "conformance-results/fhir-schema-reference-cli-supplement-all-2026-07-01.json",
-      "sha256": "c5c39355fd125ff187ea9361aa822f31157187e7cb191d5e89e2d67f10831b5e"
-    },
-    {
-      "path": "conformance-results/fhir-schema-dual-path-all-2026-07-01.json",
-      "sha256": "24fe10d821d9bd7dfa6c48c5032e9a3e78fd0305e00861041accd7356bf2b267"
-    },
-    {
-      "path": "conformance-results/fhir-schema-dual-path-all-2026-07-23.json",
-      "sha256": "13882605621125cd9813bb91a17395e1162d71438078ba00942db5d3fdd20811"
-    },
-    {
-      "path": "conformance-results/fhir-schema-dual-path-actions-2026-07-01.json",
-      "sha256": "c8d557f8e2c358bd6ca2cc9c0f9f90651e2265c85ca79d160526624c194e7f4c"
-    },
-    {
-      "path": "conformance-results/fhir-schema-dual-path-actions-2026-07-01.md",
-      "sha256": "626f64c1cbcaddfa76f9b8899bf147ad9e2a4e5ed8c950dd11e2fe75f5a703ff"
-    },
-    {
-      "path": "conformance-results/validator-claims-2026-07-01.json",
-      "sha256": "157428744626456910df643ac18e32f73dd7d50f08e72e7e19bae19895d67fb9"
-    },
-    {
-      "path": "conformance-results/validator-claims-2026-07-01.md",
-      "sha256": "131f161ecd0c4ff701f23d8da0e2e53e51ab6d5fdebac37ba951a3f38bb58e08"
-    },
-    {
-      "path": "conformance-results/validator-claims-2026-07-21.json",
-      "sha256": "658d64fa723f5e91d0e5f34ca12799fb19a69595bfe20ce8950f99a51237f1ed"
-    },
-    {
-      "path": "conformance-results/validator-claims-2026-07-21.md",
-      "sha256": "2e43c7630ca8471a65a82a001910af521571353a1ba5cc9136587a05fc21c2e9"
-    },
-    {
-      "path": "conformance-results/validator-claims-2026-07-23.json",
-      "sha256": "fb7d9d739433815d5c33146d2588f9a3f27641685e0a3e76485f2a5ec1116141"
-    },
-    {
-      "path": "conformance-results/validator-claims-2026-07-23.md",
-      "sha256": "de462868505ccf3ccb05391a6d6e3ee9185a1c8fbd26456c90e0679dd6ae338c"
-    },
-    {
-      "path": "conformance-results/report-2026-08-24.json",
-      "sha256": "4edc2aa43d2f94e032d660eaa4cf83ffb2f05514a2b140f84f36b9ce95abd3e3"
-    },
-    {
-      "path": "conformance-results/mii-clean-triage-2026-09-30.json",
-      "sha256": "6a5ab966758fdea8489b92e9d01f512b0928ff708b8f18c538951dde5e2e59d4"
-    },
-    {
       "path": "conformance-results/public-parity-2026-09-30.json",
       "sha256": "89a90ce4e4fafa7ca4fa9abce7f75ad8fb1a419566dce3dc3f0a22ed6835e878"
-    },
-    {
-      "path": "conformance-results/public-parity-triage-2026-09-30.json",
-      "sha256": "b227700e60241448a4311787695be487148468e27f03dca5893b4c68ff3d363e"
-    },
-    {
-      "path": "conformance-results/validator-release-acceptance-2026-10-05-g2.json",
-      "sha256": "072e8789747576dbb7fb692b4fa5029784992772455f614bd9fa353b35bce620"
-    },
-    {
-      "path": "conformance-results/validator-release-acceptance-2026-10-05-g3.json",
-      "sha256": "1c2a1e2fbc4809d34463917bc2960a026bb3a1be860dcb6dd8519d21b5285058"
-    },
-    {
-      "path": "conformance-results/validator-release-inventory-loop112-g6-2026-10-06.json",
-      "sha256": "40c6d5399bbaeab9a722757f81609c2ba71e3e6441bf3695c114f618fbbcb238"
-    },
-    {
-      "path": "conformance-results/validator-r4-raw-loop112-g6-2026-10-06.json.gz",
-      "sha256": "e4b40593629e749c656bb1139bd8c6a2cae14e69c52127433a36022463e9865f"
-    },
-    {
-      "path": "conformance-results/validator-r4-receipts-loop112-g6-2026-10-06.json.gz",
-      "sha256": "f13dce8da744d36bf8f35448c8e3a2dfbf3c4de36b43970ead64d7367aa1c0f6"
-    },
-    {
-      "path": "conformance-results/validator-r4-acceptance-loop112-g6-2026-10-06.json",
-      "sha256": "7f02251ef193e8a039d64893d434e343b91fb91646c254e47fc23881d1a69cbb"
-    },
-    {
-      "path": "conformance-results/validator-r4-measurement-origin-loop112-g6-2026-10-06.json",
-      "sha256": "45f21c65f34e184e24cdd4350aa0d4c80839ba319589653c8a26c5f6d21132bb"
-    },
-    {
-      "path": "conformance-results/validator-mii-clean-loop112-g6-2026-10-06.json",
-      "sha256": "dad73c60da832ab5b883c78a92faba7bda45a93e1f962bffa1805f3e2caa8845"
-    },
-    {
-      "path": "conformance-results/validator-mii-measurement-origin-loop112-g6-2026-10-06.json",
-      "sha256": "30a61023156875f1b219b7e7c215b4ef50eddc59fe48457cb6fb31bbfeaed22b"
-    },
-    {
-      "path": "conformance-results/validator-release-inventory-loop113-g7-2026-10-06.json",
-      "sha256": "cf95dde5e1b338fd5d47c947cd72c7480e0531033d19cac57def6ecdcc4e3a0f"
-    },
-    {
-      "path": "conformance-results/validator-r4-raw-loop113-g7-2026-10-06.json.gz",
-      "sha256": "c41a43971245976ee7f68a96c3f3e0add20f9f91a12ba7ae4d39244f26f35a08"
-    },
-    {
-      "path": "conformance-results/validator-r4-receipts-loop113-g7-2026-10-06.json.gz",
-      "sha256": "77cbd9009e4676cebc4556761d3b021790788bb7ec4345eb7272d2941b0fb3ac"
-    },
-    {
-      "path": "conformance-results/validator-r4-acceptance-loop113-g7-2026-10-06.json",
-      "sha256": "ee10390b5abdad412c59824ed33494198f01798b75ea79fcf9cb03e8c5a2d332"
-    },
-    {
-      "path": "conformance-results/validator-r4-measurement-origin-loop113-g7-2026-10-06.json",
-      "sha256": "7459d754ca109da9ba265e81a90e020422bc7c4577565bd38231960dfe6a929f"
-    },
-    {
-      "path": "conformance-results/validator-mii-clean-loop113-g7-2026-10-06.json",
-      "sha256": "8f32a1c7e1d0bddaaa40f745850f08e2d46fcd6aa0f723942434eddb3a270f0f"
-    },
-    {
-      "path": "conformance-results/validator-mii-measurement-origin-loop113-g7-2026-10-06.json",
-      "sha256": "5438cdd5275c59b96ba570fec4a40f67e211887a38ac10e89aeccdba87b8d039"
-    },
-    {
-      "path": "conformance-results/validator-release-inventory-loop114-g8-2026-10-06.json",
-      "sha256": "982cda9dd90fd93b591be00ce266771592a6b06227487a6b7b1405da0d089923"
-    },
-    {
-      "path": "conformance-results/validator-r4-raw-loop114-g8-2026-10-06.json.gz",
-      "sha256": "5db77340113439071938925fff5fae99c0ab81e256b6158b92240ef33439a947"
-    },
-    {
-      "path": "conformance-results/validator-r4-receipts-loop114-g8-2026-10-06.json.gz",
-      "sha256": "df3f51ab5961add66a24f6a746d7b2c266e574b8e8aa95aeeb3190bdbe34841a"
-    },
-    {
-      "path": "conformance-results/validator-r4-acceptance-loop114-g8-2026-10-06.json",
-      "sha256": "e978c15af8f047355d4093980c517041fbfab7e3accda29fbf228081a108cf04"
-    },
-    {
-      "path": "conformance-results/validator-r4-measurement-origin-loop114-g8-2026-10-06.json",
-      "sha256": "46b85df35aaf5944a074b9a6daed9b9ea5836650c3cfea5891a04371d6507272"
-    },
-    {
-      "path": "conformance-results/validator-mii-clean-loop114-g8-2026-10-06.json",
-      "sha256": "16d30ff298a558055c8910f6008ecf19ab590944018ba6d363e3b3022810ab75"
-    },
-    {
-      "path": "conformance-results/validator-mii-measurement-origin-loop114-g8-2026-10-06.json",
-      "sha256": "53be27811f5445b558b7e579076b2365597b84de0b3f630b4e36c8b9e740ebc9"
-    },
-    {
-      "path": "conformance-results/validator-current-release-loop116-prior-g8-2026-10-06.json.gz",
-      "sha256": "636d8981499b8beaa4360a92ea4c6479d3323f66bf7b1dac9fd7f12a227bf018"
-    },
-    {
-      "path": "conformance-results/validator-evidence-loop116-prior-g8-2026-10-06.json.gz",
-      "sha256": "ebdfff01a9cbbc1fedc2b962fc5ddcabe931364156b8e1f7d6ccb947d4c2128b"
-    },
-    {
-      "path": "conformance-results/validator-release-inventory-loop116-g9-2026-10-06.json",
-      "sha256": "40268de96fc8190d1e1e9b896fc431ab8ae70b5e54a7e2ebba8d598c35862b0d"
-    },
-    {
-      "path": "conformance-results/validator-r4-raw-loop116-g9-2026-10-06.json.gz",
-      "sha256": "ba22ff0cd37835b08798b3e5d67496fb469dd81ddf7204778722639324aab996"
-    },
-    {
-      "path": "conformance-results/validator-r4-receipts-loop116-g9-2026-10-06.json.gz",
-      "sha256": "8df2b5ee316439c3c60341bde265832116971ebc61064697fffcf1b40e41fc32"
-    },
-    {
-      "path": "conformance-results/validator-r4-acceptance-loop116-g9-2026-10-06.json",
-      "sha256": "8ffcf7288bdd10474f22199b7fbe2fc3e347498cb4af5c720717b55e975789cc"
-    },
-    {
-      "path": "conformance-results/validator-r4-measurement-origin-loop116-g9-2026-10-06.json",
-      "sha256": "834fe5bcd78d8c8080ba918266195bbc46468d039d2f584212f217d96123f0d2"
-    },
-    {
-      "path": "conformance-results/validator-mii-clean-loop116-g9-2026-10-06.json",
-      "sha256": "94c80a6d841676fecfd385ebf325bceae6333f829160ce78c78c99becd567870"
-    },
-    {
-      "path": "conformance-results/validator-mii-measurement-origin-loop116-g9-2026-10-06.json",
-      "sha256": "87a137157ee9499326c1093ddbfaa675c8cc18e8d6aacf2fdbda0b7a018d575f"
-    },
-    {
-      "path": "conformance-results/validator-current-release-loop117-prior-g9-2026-10-06.json.gz",
-      "sha256": "f88431f1b4b8371ebefd049caf86ed353911f47fbd76a416ba85874b4ae0d336"
-    },
-    {
-      "path": "conformance-results/validator-evidence-loop117-prior-g9-2026-10-06.json.gz",
-      "sha256": "2e26ac0d040bebbd3088104745a3716f3a977d5166fcba1800176dfde049bd94"
-    },
-    {
-      "path": "conformance-results/validator-release-inventory-loop117-g10-2026-10-06.json",
-      "sha256": "01ffc1d144084213bc9aee3d94bc6804e3781c916ceaa3b739f6c960576cd95f"
-    },
-    {
-      "path": "conformance-results/validator-r4-raw-loop117-g10-2026-10-06.json.gz",
-      "sha256": "40a04b915ff74a23bb9e6eb0dd1c1af5767c450253985716676f78f8aaa0a000"
-    },
-    {
-      "path": "conformance-results/validator-r4-receipts-loop117-g10-2026-10-06.json.gz",
-      "sha256": "909311a422ae52f6798acfb226e72272f160c936e8fecedbd743508e01715c3d"
-    },
-    {
-      "path": "conformance-results/validator-r4-acceptance-loop117-g10-2026-10-06.json",
-      "sha256": "6c5a759ec77ade2d825af2e3fec011acad77f6dbcae9251218df8bb12369a025"
-    },
-    {
-      "path": "conformance-results/validator-r4-measurement-origin-loop117-g10-2026-10-06.json",
-      "sha256": "9b254a5517885f038afb0d4781d6405a4119fcf02605e3bd755a08686fcb4158"
-    },
-    {
-      "path": "conformance-results/validator-mii-clean-loop117-g10-2026-10-06.json",
-      "sha256": "cff2d544b1c74b118510a079a13d3c752df502aa0c2f0030f4b61b52b0025794"
-    },
-    {
-      "path": "conformance-results/validator-mii-measurement-origin-loop117-g10-2026-10-06.json",
-      "sha256": "cfee3cbe9db435f384572cd9e2099e9474a4ae8aeae60206fd7b0b610ca5446b"
-    },
-    {
-      "path": "conformance-results/validator-current-release-loop118-prior-g10-2026-10-06.json.gz",
-      "sha256": "f85a9921bb135ec50f763ff3134278031501fa00f23a2ae033a72c4393ac6375"
-    },
-    {
-      "path": "conformance-results/validator-evidence-loop118-prior-g10-2026-10-06.json.gz",
-      "sha256": "582d1e8cde71912ce946dd5b04bba60e07241f6dd102d4a5b9e30f9ec6b2dcd9"
-    },
-    {
-      "path": "conformance-results/validator-release-inventory-loop118-g11-2026-10-06.json",
-      "sha256": "e3ec400a3dff37b5cfd3b29112fc5170d4596c90232b94e5c9d80618a12010fa"
-    },
-    {
-      "path": "conformance-results/validator-r4-raw-loop118-g11-2026-10-06.json.gz",
-      "sha256": "a2609c728ed1f0ed945a40a0fc5a4d9224ab5e2b2337afb8ff160bde3c4943ab"
-    },
-    {
-      "path": "conformance-results/validator-r4-receipts-loop118-g11-2026-10-06.json.gz",
-      "sha256": "40c4decb9a72760b7b06d74b0b4a789d7ed80ed14f67dfa1da90281c54481412"
-    },
-    {
-      "path": "conformance-results/validator-r4-acceptance-loop118-g11-2026-10-06.json",
-      "sha256": "533f083bb89837f5bcb42578c3cafecb06a03dc38f1637cac5f641c8d3398c89"
-    },
-    {
-      "path": "conformance-results/validator-r4-measurement-origin-loop118-g11-2026-10-06.json",
-      "sha256": "7533923759f2db500928376fd99428839713efd89ac99feaac2035fb3c6ad831"
-    },
-    {
-      "path": "conformance-results/validator-mii-clean-loop118-g11-2026-10-06.json",
-      "sha256": "8db95d197f8ad86439ba66b9ad03053cfa4efdabafe62eb9d65983fa273f9dbc"
-    },
-    {
-      "path": "conformance-results/validator-mii-measurement-origin-loop118-g11-2026-10-06.json",
-      "sha256": "38631064f4adc82afff0460b6c52113a206c1a28ac589c78a4608e02e1db9281"
-    },
-    {
-      "path": "conformance-results/validator-current-release.json",
-      "sha256": "fac09508625d4d491b9da13215c40b443d41c31b0f6f4163c15c0aceff5a60e4"
-    },
-    {
-      "path": "conformance-results/validator-release-inventory-0.9.18-2026-10-22-g4.json",
-      "sha256": "7576da083b6bc2f5dd46fc159dcacf73bd95f97ce890d8cc1e777de698393cb7"
-    },
-    {
-      "path": "conformance-results/validator-r4-raw-0.9.18-2026-10-22-g4.json.gz",
-      "sha256": "6aebad6deee256cc4ef6a798af9fb3aee3dbcb4d46fb64e0d6c2691e0f595a73",
-      "contentSha256": "f6d1b01a9623ba3a2d4778e7290ba0d96ef7e65b1965d12d11227063b5cf4966"
-    },
-    {
-      "path": "conformance-results/validator-r4-receipts-0.9.18-2026-10-22-g4.json.gz",
-      "sha256": "7692659fa156029819a7a0c49dec50da3d716b59145d86657213c131638f6279",
-      "contentSha256": "4c8033cb8832d9c5d00ba9af2f58489937e3f11f0e3673c73ea20a86c6014d4d"
-    },
-    {
-      "path": "conformance-results/validator-r4-acceptance-0.9.18-2026-10-22-g4.json",
-      "sha256": "d540e484aa5eb4f4e9443f9de253427de2733f2b84d9f15caf01060e331eb820"
-    },
-    {
-      "path": "conformance-results/validator-r4-measurement-origin-0.9.18-2026-10-22-g4.json",
-      "sha256": "5738763280454b6b3bbbe43b6239bfadbfd8cb9e50b11e9aeec9a206491fa82b"
-    },
-    {
-      "path": "conformance-results/validator-mii-clean-0.9.18-2026-10-22-g4.json",
-      "sha256": "92b1b4350bc68fe2b6476b9b5ec2089bdac832385abe4d0824ffe47cade9e2d6"
-    },
-    {
-      "path": "conformance-results/validator-mii-measurement-origin-0.9.18-2026-10-22-g4.json",
-      "sha256": "7ffc600048bb869e9256af8247922d72e88541888aece996a3f518e2a94e1eb8"
-    },
-    {
-      "path": "conformance-results/validator-isolated-quality-0.9.18-2026-10-22-g4.json",
-      "sha256": "5760d98ce915cb8e20951a9f3ff59c0329b162c119d8c4bb4a08e6cc9f7911ee"
     }
-  ],
-  "measurements": {
-    "publicParity": {
-      "artifact": "conformance-results/public-parity-2026-09-30.json",
-      "scope": "Current validator 0.8.0 compared with the SHA-verified HAPI 6.10.4 reference on the explicitly inventoried offline R4/R5 package stores."
-    },
-    "currentRelease": {
-      "path": "conformance-results/validator-current-release.json",
-      "sha256": "fac09508625d4d491b9da13215c40b443d41c31b0f6f4163c15c0aceff5a60e4"
-    }
-  }
+  ]
 }

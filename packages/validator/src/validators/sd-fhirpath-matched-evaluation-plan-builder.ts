@@ -15,7 +15,7 @@ import {
 import type { SDFHIRPathEvaluationPlan } from './sd-fhirpath-evaluation-plan.js';
 import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope.js';
 import { fixKnownInvariantExpression } from './fhirpath-expression-fixer.js';
-import { focusResourceOf } from './sd-fhirpath-focus-resource.js';
+import { constraintFocusResource } from './sd-fhirpath-focus-resource.js';
 
 const EMPTY_PLAN: SDFHIRPathEvaluationPlan = {
   immediateIssues: [],
@@ -74,6 +74,9 @@ export class SDFHIRPathMatchedEvaluationPlanBuilder {
       scope,
       declaredElementType,
     );
+    const focusResource = constraintFocusResource(scope.resource, scope.rootResource, matched.resourcePath,
+      scope.focusResource, scope.inlinedResourceConstraints?.has(constraint));
+    if (isFhirResource(focusResource)) typeLiteralContext.resourceType = focusResource.resourceType;
     const effectiveExpression = preprocessTypeLiterals(
       fixKnownInvariantExpression(constraint.expression, constraint.key, scope.fhirVersion),
       typeLiteralContext,
@@ -87,7 +90,7 @@ export class SDFHIRPathMatchedEvaluationPlanBuilder {
         expression: choiceCast.expression,
         context: matched.data,
         rootResource: scope.rootResource,
-        focusResource: scope.focusResource ?? (scope.resource === scope.rootResource ? focusResourceOf(scope.resource, matched.resourcePath) : undefined),
+        focusResource,
         resolveRootResource: scope.resource,
         path: matched.resourcePath,
         resourceType: scope.resourceType,
@@ -97,6 +100,7 @@ export class SDFHIRPathMatchedEvaluationPlanBuilder {
         bundle: scope.bundle,
         terminologyResolver: scope.terminologyResolver,
         referenceResolver: scope.referenceResolver,
+        decimalInput: scope.decimalInput,
       }],
     };
   }

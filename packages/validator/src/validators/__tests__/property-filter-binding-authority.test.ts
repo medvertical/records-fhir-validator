@@ -66,6 +66,28 @@ describe('genuine selected scalar property facts', () => {
     expect(check.deps.getExpandedValueSet).not.toHaveBeenCalled();
     if (owner === 'unversioned') expect(check.loader.loadCodeSystemForValueSet).toHaveBeenCalledWith(check.vs, system, 'R4', undefined);
   });
+  it.each(['code', 'string'] as const)('in selects an exact %s fact from a comma-separated list', type => {
+    const cs = factSystem([{ code: 'status', [type === 'code' ? 'valueCode' : 'valueString']: 'active' }], [{ code: 'status', type }]);
+    for (const value of ['active', 'retired,active', 'active,retired', 'active,active']) {
+      expect(conceptFilterMembership(cs, active, { ...status, op: 'in', value })).toBe(true);
+    }
+    for (const value of ['retired', 'Active,retired', ' active,retired', 'active ,retired', ',active', 'active,', '']) {
+      expect(conceptFilterMembership(cs, active, { ...status, op: 'in', value })).toBeNull();
+    }
+  });
+  it('in preserves edition, exclusions, property types and custom-filter boundaries', async () => {
+    const filter: Filter = { ...status, op: 'in', value: 'retired,active' };
+    const check = harness(changed(), [{ system, filter: [filter] }]);
+    await expect(check.exact()).resolves.toBe('valid');
+    await expect(check.unversioned()).resolves.toBe('valid');
+    await expect(check.exact(active, 'missing')).resolves.toBe('unverified');
+    const excluded = harness(changed(), [{ system, filter: [filter] }], [{ system, concept: [{ code: active }] }]);
+    await expect(excluded.exact()).resolves.toBe('invalid');
+    await expect(excluded.unversioned()).resolves.toBe('invalid');
+    expect(conceptFilterMembership(participation as CodeSystem, 'ADM', { property: 'conductible', op: 'in', value: 'false,true' })).toBeNull();
+    expect(conceptFilterMembership(changed({ filter: [{ code: 'status', operator: ['in'], value: 'Custom' }] }), active, filter)).toBeNull();
+    expect(conceptFilterMembership(factSystem([{ code: 'status', valueString: 'active' }]), active, filter)).toBeNull();
+  });
 });
 describe('property authority guards', () => {
   it.each(['complete', 'fragment'] as const)('%s does not certify absence or all repeated values', content => {
@@ -92,7 +114,7 @@ describe('property authority guards', () => {
     ['not-present', changed({ content: 'not-present' })], ['supplement', changed({ content: 'supplement' })], ['example', changed({ content: 'example' })],
     ['malformed filter container', changed({ filter: {} })], ['malformed custom filter', changed({ filter: [null] })],
     ['same-code custom filter', changed({ filter: [{ code: 'status', operator: ['='], value: 'Custom semantics' }] })],
-    ['unsupported operator', changed(), { ...status, op: 'in' }],
+    ['unsupported operator', changed(), { ...status, op: 'not-in' }],
     ['filter modifier', changed(), { ...status, modifierExtension } as Filter],
   ];
   it.each(cases)('%s remains U', (_name, cs, filter) => expect(conceptFilterMembership(cs, active, filter ?? status)).toBeNull());

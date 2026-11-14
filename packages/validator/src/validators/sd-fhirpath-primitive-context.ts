@@ -2,6 +2,7 @@ import fhirpath from 'fhirpath';
 import { getFhirPathModel } from '../core/fhirpath-context.js';
 import { VersionedExpressionCache } from './fhirpath-expression-cache-core.js';
 import { isResolvedPrimitiveSidecarValue } from '../core/fhir-primitive-sidecar.js';
+import { FhirPathDecimalInput } from './fhirpath-decimal-input.js';
 
 /** Keeps primitive values and their underscore metadata together during evaluation. */
 export class SDFHIRPathPrimitiveContext {
@@ -11,6 +12,14 @@ export class SDFHIRPathPrimitiveContext {
       resolveInternalTypes: false,
     }),
   });
+
+  prepare<T, F>(value: unknown, resource: unknown, path: string, version: 'R4' | 'R5' | 'R6',
+    rootResource: T, focusResource: F, decimalInput = new FhirPathDecimalInput(version)) {
+    const root = decimalInput.project(rootResource);
+    const resolutionRoot = decimalInput.project(resource);
+    return { context: this.resolve(decimalInput.project(value), resolutionRoot, path, version),
+      rootResource: root, focusResource: decimalInput.project(focusResource) };
+  }
 
   resolve(value: unknown, resource: unknown, path: string, version: 'R4' | 'R5' | 'R6'): unknown {
     if (!['string', 'number', 'boolean'].includes(typeof value) && !isResolvedPrimitiveSidecarValue(value)) return value;

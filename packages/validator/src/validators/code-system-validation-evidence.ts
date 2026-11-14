@@ -3,7 +3,7 @@ import type { CodeSystemValidationResult } from './terminology-api-types.js';
 // Compatibility acceptance may mean a skipped check. Completion comes from
 // the actual response parser, without changing the public result shape.
 const verifiedResults = new WeakSet<CodeSystemValidationResult>();
-// A typed OperationOutcome can reject a display without establishing code membership.
+// A qualified local label assessment or typed OperationOutcome can reject a display independently of membership.
 const rejectedDisplays = new WeakSet<CodeSystemValidationResult>();
 
 export function rejectedCodeSystemDisplayResult<T extends CodeSystemValidationResult>(result: T): T {

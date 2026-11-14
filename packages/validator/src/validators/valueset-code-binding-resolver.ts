@@ -31,6 +31,7 @@ import { canDelegateCodeValidation } from './valueset-delegation-policy.js';
 import { isSnomedEditionRouteMissing } from './valueset-server-routing.js';
 import { resolveUnversionedLocalFilteredBinding, type LocalFilteredBinding } from './valueset-filtered-local-binding.js';
 import { resolveVersionedLocalBinding, type LocalCodeSystemLookup } from './valueset-versioned-local-binding.js';
+import { expansionHasCaseVariant, resolveValueSetCasePolicy } from './valueset-membership-case-policy.js';
 
 interface CodeBindingResolutionDeps {
   getExpandedValueSet: (valueSetUrl: string, fhirVersion?: FhirVersion) => Promise<Set<string>>;
@@ -95,10 +96,11 @@ export async function resolveValueSetCodeBinding(
   elementPath?: string,
   codeSystemVersion?: string,
 ): Promise<CodeBindingOutcome> {
-  if (isLanguageBinding(valueSetUrl, system)) return validateBCP47(code) ? 'valid' : 'invalid';
+  if (await isLanguageBinding(valueSetUrl, system, deps.packageLoader, fhirVersion, codeSystemVersion ?? resolveCodeSystemVersion(deps.resolutionConfig, system ?? 'urn:ietf:bcp:47'))) return validateBCP47(code) ? 'valid' : 'invalid';
   if (isMimeTypesValueSet(valueSetUrl)) {
     return validateMimeTypeBindingCode(code, system, elementPath) ? 'valid' : 'invalid';
   }
+  system = await resolveImplicitBindingSystem(deps, system, valueSetUrl, fhirVersion);
   if (codeSystemVersion === undefined && resolveCodeSystemVersion(deps.resolutionConfig, system) !== undefined) {
     const selected = await resolveBindingCodeSystemVersion(deps.resolutionConfig, deps.packageLoader, system, valueSetUrl, fhirVersion);
     if (selected !== undefined) return resolveVersionedCodeBinding(deps, code, system, valueSetUrl, bindingStrength, fhirVersion, selected);
@@ -106,27 +108,21 @@ export async function resolveValueSetCodeBinding(
       hasServer: deps.hasTerminologyServer(undefined, fhirVersion), canDelegate: canDelegateCodeValidation(deps.resolutionConfig) });
   }
   if (codeSystemVersion?.trim()) {
-    return resolveVersionedCodeBinding(
-      deps,
-      code,
-      system,
-      valueSetUrl,
-      bindingStrength,
-      fhirVersion,
-      codeSystemVersion,
-    );
+    return resolveVersionedCodeBinding(deps, code, system, valueSetUrl, bindingStrength, fhirVersion, codeSystemVersion);
   }
 
   const lookup = await deps.twoPhaseShadow.lookup(code, system, valueSetUrl, fhirVersion);
   const enforced = deps.twoPhaseShadow.getEnforcedResult(lookup);
-  if (enforced !== undefined) {
+  if (enforced === true) return deps.twoPhaseShadow.finish(lookup, true, { code, system, valueSetUrl }) ? 'valid' : 'invalid';
+  const filtered = await resolveUnversionedLocalFilteredBinding(deps.packageLoader, code, system, valueSetUrl, fhirVersion);
+  if (filtered.kind === 'evaluated') return resolveFilteredCodeBinding(deps, filtered, lookup, code, system, valueSetUrl, bindingStrength, fhirVersion);
+
+  let casePolicy = enforced === false ? await resolveValueSetCasePolicy(deps.packageLoader, system, valueSetUrl, fhirVersion) : undefined;
+  if (enforced !== undefined && !(casePolicy === 'insensitive' && enforced === false)) {
     return deps.twoPhaseShadow.finish(lookup, enforced, { code, system, valueSetUrl })
       ? 'valid'
       : 'invalid';
   }
-
-  const filtered = await resolveUnversionedLocalFilteredBinding(deps.packageLoader, code, system, valueSetUrl, fhirVersion);
-  if (filtered.kind === 'evaluated') return resolveFilteredCodeBinding(deps, filtered, lookup, code, system, valueSetUrl, bindingStrength, fhirVersion);
 
   const expandedCodes = await deps.getExpandedValueSet(valueSetUrl, fhirVersion);
   const fullCodes = system
@@ -141,11 +137,16 @@ export async function resolveValueSetCodeBinding(
       ? 'valid'
       : 'invalid';
   }
+  casePolicy ??= await resolveValueSetCasePolicy(deps.packageLoader, system, valueSetUrl, fhirVersion);
+  const caseVariant = expansionHasCaseVariant(expandedCodes, code, system);
+  if (casePolicy === 'insensitive' && caseVariant) {
+    return deps.twoPhaseShadow.finish(lookup, true, { code, system, valueSetUrl }) ? 'valid' : 'invalid';
+  }
   logRequiredBindingMiss(bindingStrength, system, code, valueSetUrl);
 
   const filteredIncludes = await deps.packageLoader.getIncludeConceptFilters(valueSetUrl, fhirVersion);
   const unenumerableIncludes = await deps.packageLoader.getUnenumerableSystemIncludes(valueSetUrl, fhirVersion);
-  const unverifiableReason = classifyUnverifiableComposeReason(
+  const unverifiableReason = (casePolicy === 'unknown' && caseVariant ? 'incomplete-expansion' : undefined) ?? classifyUnverifiableComposeReason(
     system, code, filteredIncludes, unenumerableIncludes,
   ) ?? (await deps.packageLoader.hasIncompleteExpansion(valueSetUrl, fhirVersion) ? 'incomplete-expansion' : undefined);
   const override = deps.resolveServerForSystem(system, fhirVersion, codeSystemVersion);
@@ -219,6 +220,15 @@ export async function resolveValueSetCodeBinding(
   return deps.twoPhaseShadow.finish(lookup, false, { code, system, valueSetUrl })
     ? 'valid'
     : 'invalid';
+}
+
+async function resolveImplicitBindingSystem(
+  deps: CodeBindingResolutionDeps, system: string | undefined, valueSetUrl: string, fhirVersion?: FhirVersion,
+): Promise<string | undefined> {
+  if (system || !deps.resolutionConfig.defaultCodeSystemVersions) return system;
+  const systems = await deps.packageLoader.getComposeSystems(valueSetUrl, fhirVersion);
+  return systems?.length === 1 && resolveCodeSystemVersion(deps.resolutionConfig, systems[0]) !== undefined
+    ? systems[0] : system;
 }
 
 async function resolveFilteredCodeBinding(
@@ -310,12 +320,7 @@ async function resolveVersionedCodeBinding(
   });
 }
 
-/**
- * A value set can only contain codes from the systems its compose names, so a
- * coding from any other system is not a member even when the expansion cannot
- * be built locally — `http://www.cms.gov/…` is not the `https://www.cms.gov/…`
- * system a value set includes. The reference validator decides the same way.
- */
+/** Systems outside the compose cannot be members, even without a local expansion. */
 async function composeExcludesSystem(
   packageLoader: ValueSetPackageLoader,
   valueSetUrl: string,

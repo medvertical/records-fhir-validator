@@ -1,3 +1,8 @@
+// HL7 NamingSystem/HPO lists both active URI identifiers for the same namespace.
+const CODE_SYSTEM_IDENTITY_ALIASES: ReadonlyMap<string, string> = new Map([
+  ['http://purl.obolibrary.org/obo/hp.owl', 'http://human-phenotype-ontology.org'],
+]);
+
 const CODE_SYSTEM_CANONICAL_ALIASES: ReadonlyMap<string, string> = new Map([
   [
     'https://www.medizininformatik-initiative.de/fhir/ext/modul-onko/CodeSystem/mii-cs-therapie-stellungzurop',
@@ -5,12 +10,22 @@ const CODE_SYSTEM_CANONICAL_ALIASES: ReadonlyMap<string, string> = new Map([
   ],
 ]);
 
+/** Concurrent registered identifiers, excluding compatibility replacements of older canonicals. */
+export function normalizeCodeSystemIdentity(systemUrl: string): string {
+  const [canonical] = systemUrl.split('|');
+  return CODE_SYSTEM_IDENTITY_ALIASES.get(canonical) ?? canonical;
+}
+
+export function codeSystemIdentitiesEquivalent(left: string | undefined, right: string | undefined): boolean {
+  return Boolean(left && right && normalizeCodeSystemIdentity(left) === normalizeCodeSystemIdentity(right));
+}
+
 /**
  * Resolve published predecessor canonicals whose replacement preserves the
  * CodeSystem semantics and code namespace.
  */
 export function normalizeKnownCodeSystemCanonical(systemUrl: string): string {
-  const [canonical] = systemUrl.split('|');
+  const canonical = normalizeCodeSystemIdentity(systemUrl);
   return CODE_SYSTEM_CANONICAL_ALIASES.get(canonical) ?? canonical;
 }
 

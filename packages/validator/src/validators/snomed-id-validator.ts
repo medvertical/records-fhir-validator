@@ -34,3 +34,16 @@ export function hasInvalidSnomedCheckDigit(code: string): boolean {
   }
   return checksum !== 0;
 }
+
+export function invalidSnomedCodingIdentifierReason(
+  code: string,
+): 'snomed-check-digit' | 'snomed-component-kind' | 'snomed-partition' | undefined {
+  if (!/^[1-9][0-9]{5,17}$/.test(code)) return undefined;
+  if (hasInvalidSnomedCheckDigit(code)) return 'snomed-check-digit';
+  const partition = code.slice(-3, -1);
+  // RF2 §6.5 also assigns 16 to postcoordinated expressions. This check does
+  // not establish assignment, expression semantics or edition membership.
+  if (partition === '00' || partition === '10' || partition === '16') return undefined;
+  if (['01', '02', '11', '12'].includes(partition)) return 'snomed-component-kind';
+  return 'snomed-partition';
+}

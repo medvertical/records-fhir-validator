@@ -1,3 +1,4 @@
+import { copyNumberSources } from '../input/number-source.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
 import type { BundleDocumentContextChildResult } from './bundle-document-context-types.js';
 import {
@@ -85,7 +86,7 @@ async function assessTarget<T>(
     && getTargetProfileBlockingIssues(child.issues).length === 0) {
     return { issues: [], resourceType: child.resourceType };
   }
-  const projected = structuredClone(child.entryResource);
+  const projected = copyNumberSources(child.entryResource, structuredClone(child.entryResource));
   const meta = projected.meta && typeof projected.meta === 'object' && !Array.isArray(projected.meta)
     ? projected.meta as Record<string, unknown> : {};
   // A failed declared profile must not invalidate an otherwise conformant alternative.

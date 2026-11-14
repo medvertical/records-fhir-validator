@@ -22,7 +22,7 @@ export function createRecordsValidatorComponents(
 ): RecordsValidatorComponents {
   const coreRuntime = createValidatorCoreRuntime(config);
   const core = coreRuntime.components;
-  const execution = createValidatorExecutionComponents(coreRuntime);
+  const execution = createValidatorExecutionComponents(coreRuntime, config);
   const administration = createValidatorAdministrationComponents(core, execution);
 
   return {

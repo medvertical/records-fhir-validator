@@ -13,6 +13,7 @@ import {
   qualityRuleSourceSchema,
 } from './quality-rule-schema-foundations.js';
 import { qualityThresholdSchema } from './quality-threshold.js';
+import { qualityAssessmentBasisSchema, qualityRuleAssessmentIssue } from './quality-assessment-basis.js';
 export { qualityAdvisoryRuleDefinitionSchema } from './quality-advisory-rule.js';
 export type { QualityAdvisoryRuleDefinition } from './quality-advisory-rule.js';
 export { qualityPolicyLayerSchema, qualityRuleOverrideSchema } from './quality-policy-layer.js';
@@ -199,6 +200,7 @@ export const qualityRuleDefinitionSchema = z.object({
   applicability: qualityApplicabilitySchema,
   implementation: qualityRuleImplementationSchema,
   threshold: qualityThresholdSchema.optional(),
+  assessment: qualityAssessmentBasisSchema.optional(),
   evidencePaths: z.array(boundedQualityPath).max(32).default([]),
   findingMessage: z.string().min(1).max(2_048).optional(),
   source: qualityRuleSourceSchema,
@@ -227,7 +229,7 @@ export const qualityReferenceSetDefinitionSchema = z.object({
 });
 
 export const qualityRulePackManifestSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.union([z.literal(1), z.literal(2)]),
   id: boundedQualityRuleId,
   version: boundedQualityRuleVersion,
   name: z.string().min(1).max(256),
@@ -264,6 +266,9 @@ export const qualityRulePackManifestSchema = z.object({
     });
   }
   for (const [index, rule] of manifest.rules.entries()) {
+    const assessmentIssue = qualityRuleAssessmentIssue(manifest.schemaVersion, rule);
+    if (assessmentIssue) context.addIssue({ code: z.ZodIssueCode.custom,
+      path: ['rules', index, 'assessment'], message: assessmentIssue });
     if (ids.has(rule.id)) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
@@ -304,13 +309,9 @@ export const qualityRulePackManifestSchema = z.object({
       context.addIssue({ code: z.ZodIssueCode.custom, path: ['rules', index, 'applicability', 'fhirVersions'],
         message: 'CQL reference date-time comparisons require explicit pinned FHIR R4 applicability' });
     }
-    if (rule.implementation.kind === 'cohort-distribution' && rule.threshold) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['rules', index, 'threshold'],
-        message: 'Descriptive cohort distributions cannot define a pass/fail threshold',
-      });
-    }
+    if (rule.implementation.kind === 'cohort-distribution' && rule.threshold)
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['rules', index, 'threshold'],
+        message: 'Descriptive cohort distributions cannot define a pass/fail threshold' });
     if (rule.scope === 'external-reference' && rule.implementation.kind !== 'external-membership') {
       context.addIssue({
         code: z.ZodIssueCode.custom,

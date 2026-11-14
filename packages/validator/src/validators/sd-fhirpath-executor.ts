@@ -1,5 +1,6 @@
 import type { ValidationIssue } from '@records-fhir/validation-types';
-import type { StructureDefinition } from '../core/structure-definition-types.js';
+import { isFhirResource } from '../core/fhir-resource.js';
+import type { Constraint, StructureDefinition } from '../core/structure-definition-types.js';
 import type { SDConstraintCollector } from './sd-constraint-collector.js';
 import { SDElementMatcher } from './sd-element-matcher.js';
 import {
@@ -17,6 +18,7 @@ import { SDFHIRPathConstraintRunner } from './sd-fhirpath-constraint-runner.js';
 import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope.js';
 import type { ProfileConformanceLookup } from './sd-fhirpath-profile-conformance.js';
 import type { ReferenceResolver } from './slice-types.js';
+import { FhirPathDecimalInput } from './fhirpath-decimal-input.js';
 
 export { evaluateSpecialisedRootConstraint } from './sd-fhirpath-specialised-root-constraints.js';
 
@@ -35,6 +37,7 @@ export interface SDFHIRPathContext {
      * resource that contains the validated Extension, not the Bundle around it.
      */
     focusResource?: unknown;
+    inlinedResourceConstraints?: ReadonlySet<Constraint>;
     bundle?: FHIRPathBundleInput;
     bundleResources?: Map<string, unknown>; // Map of fullUrl/id to resource
     fhirVersion?: 'R4' | 'R5' | 'R6';
@@ -81,12 +84,13 @@ export class SDFHIRPathExecutor {
 
         const rootResource = context.rootResource ?? resource;
         const profileUrl = structureDef.url;
+        const decimalInput = new FhirPathDecimalInput(fhirVersion, structureDef.type ?? resourceType);
         // Create FHIRPath context and build userInvocationTable once per execute() call
         const fhirPathContext = createFHIRPathContext(
             rootResource,
             bundleResources ?? bundle,
             this.valueSetCache,
-            context.profileConformance,
+            decimalInput.conformance(context.profileConformance),
             context.referenceResolver,
         );
         const userInvocationTable = createSDFHIRPathInvocationTable(fhirPathContext);
@@ -97,10 +101,13 @@ export class SDFHIRPathExecutor {
             resource,
             resourceType,
             rootResource,
-            focusResource: context.focusResource,
+            focusResource: context.focusResource !== undefined ? context.focusResource
+              : structureDef.kind === 'resource' && isFhirResource(resource) ? resource : undefined,
+            inlinedResourceConstraints: context.inlinedResourceConstraints,
             terminologyResolver,
             userInvocationTable,
             referenceResolver: context.referenceResolver,
+            decimalInput,
         };
 
         const matchResult = this.elementMatcher.match(resource, structureDef);

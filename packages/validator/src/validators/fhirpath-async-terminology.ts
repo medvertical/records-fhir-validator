@@ -2,12 +2,14 @@ import fhirpath from 'fhirpath';
 
 import { getInvariantFhirPathModel } from '../core/fhirpath-context.js';
 import { rewriteCollectionTypeOperators } from './fhirpath-as-operator-rewrite.js';
+import { rewritePrimitiveComparisons } from './fhirpath-primitive-comparison.js';
 import { BoundedLruCache } from '../cache/bounded-lru-cache.js';
 import { buildAsyncTerminologyInvocationTable, resolveMemberOfInvocation } from './fhirpath-terminology-invocations.js';
 import { rewriteFHIRPathTerminologyFunctions } from './fhirpath-terminology-rewrite.js';
 import { ConstraintExpressionCache } from './constraint-expression-cache.js';
 import { selectOptionalMemberOfUnion } from './fhirpath-memberof-precheck.js';
 import { FHIRPathTerminologyUnverifiedError } from './fhirpath-terminology-types.js';
+import { withDecimalSourceGuards } from './fhirpath-decimal-guards.js';
 import type {
   FHIRPathInvocationTable as InvocationTable,
   FHIRPathTerminologyResolver,
@@ -147,12 +149,13 @@ function compileAsyncTerminologyExpression(
   userInvocationTable: InvocationTable = {},
 ): CompiledExpression {
   return fhirpath.compile(
-    rewriteCollectionTypeOperators(expression),
+    rewritePrimitiveComparisons(rewriteCollectionTypeOperators(expression)),
     getInvariantFhirPathModel(fhirVersion),
     {
       async: 'always',
+      preciseMath: true,
       userInvocationTable: {
-        ...userInvocationTable,
+        ...withDecimalSourceGuards(userInvocationTable, fhirVersion),
         ...buildAsyncTerminologyInvocationTable(resolver, fhirVersion),
       },
     },

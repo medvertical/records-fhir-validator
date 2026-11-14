@@ -1,6 +1,7 @@
 # Drop this file into `.github/workflows/fhir-validation.yml` to gate every
 # pull request on FHIR resource validity. The composite action installs
-# `@records-fhir/validator` from npm; no Java runtime needed.
+# `@records-fhir/validator` from npm; no Java runtime needed. Keep the Action
+# release and npm validator version pinned separately when updating this file.
 
 name: FHIR Validation
 
@@ -20,23 +21,23 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Validate against base StructureDefinitions
-        uses: medvertical/records-fhir-validator@v0
+        uses: medvertical/records-fhir-validator@v0.10.1
         with:
+          validator-version: '0.10.1'
           paths: |
             fhir/**/*.json
             examples/**/*.json
           fhir-version: R4
           fail-on: error
-          # Pin the validator version for reproducible CI:
-          # validator-version: '0.4.0'
           # Default `warn` keeps CI output focused on validation
           # annotations; raise to `info` or `debug` when troubleshooting:
           # log-level: warn
 
       # --- Optional: validate against a specific profile -------------------
       # - name: Validate against MII KDS Person profile
-      #   uses: medvertical/records-fhir-validator@v0
+      #   uses: medvertical/records-fhir-validator@v0.10.1
       #   with:
+      #     validator-version: '0.10.1'
       #     paths: 'fhir/patients/*.json'
       #     profile-url: 'https://www.medizininformatik-initiative.de/fhir/core/modul-person/StructureDefinition/PatientIn'
       #     fhir-version: R4

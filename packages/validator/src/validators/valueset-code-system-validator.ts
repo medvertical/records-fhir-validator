@@ -122,21 +122,29 @@ async function validateCodeMembershipWithFallbackServers({
 }): Promise<CodeSystemValidationResult> {
   if (!shouldTryCodeMembershipFallback(primaryResult, primaryOverride)) return primaryResult;
 
+  let selectedVersion = codeSystemVersion ?? verifiedVersion(primaryResult);
   const fallbackServers = listFallbackTerminologyServers(
-    resolutionConfig, primaryOverride, system, codeSystemVersion, fhirVersion,
+    resolutionConfig, primaryOverride, system, selectedVersion, fhirVersion,
   );
   if (fallbackServers.length === 0) return primaryResult;
 
   let displayMismatch: CodeSystemValidationResult | undefined;
+  let codeRejection: CodeSystemValidationResult | undefined;
   for (const server of fallbackServers) {
+    const selectedServer = listFallbackTerminologyServers(resolutionConfig, primaryOverride, system, selectedVersion, fhirVersion)
+      .find(candidate => candidate.url === server.url);
+    if (!selectedServer) continue;
     const fallbackResult = await callCodeSystemValidator(
-      apiClient, code, system, display, server, codeSystemVersion, displayLanguage,
+      apiClient, code, system, display, selectedServer, selectedVersion, displayLanguage,
     );
+    selectedVersion ??= verifiedVersion(fallbackResult);
     if (isConfirmedAcceptance(fallbackResult)) return fallbackResult;
     if (isDisplayMismatchResult(fallbackResult)) displayMismatch ??= fallbackResult;
+    if (isVerifiedCodeSystemResult(fallbackResult) && fallbackResult.reason === 'code-unknown'
+      && !fallbackResult.incompleteCodeSystem) codeRejection ??= fallbackResult;
   }
 
-  return displayMismatch ?? primaryResult;
+  return displayMismatch ?? codeRejection ?? primaryResult;
 }
 
 function shouldTryCodeMembershipFallback(
@@ -192,14 +200,15 @@ async function validateDisplayMismatchWithFallbackServers({
   resolutionConfig: TerminologyResolutionConfig;
   system: string;
 }): Promise<CodeSystemValidationResult> {
+  const selectedVersion = codeSystemVersion ?? verifiedVersion(primaryResult);
   const fallbackServers = listFallbackTerminologyServers(
-    resolutionConfig, primaryOverride, system, codeSystemVersion, fhirVersion,
+    resolutionConfig, primaryOverride, system, selectedVersion, fhirVersion,
   );
   if (fallbackServers.length === 0) return primaryResult;
 
   for (const server of fallbackServers) {
     const fallbackResult = await callCodeSystemValidator(
-      apiClient, code, system, display, server, codeSystemVersion, displayLanguage,
+      apiClient, code, system, display, server, selectedVersion, displayLanguage,
     );
     if (isConfirmedAcceptance(fallbackResult)) {
       const retainedIssues = primaryResult.issues?.filter(issue => issue.code !== 'invalid-display') ?? [];
@@ -239,8 +248,9 @@ async function validateInactiveCodeWithFallbackServers({
 }): Promise<CodeSystemValidationResult> {
   if (!isInactiveResult(primaryResult)) return primaryResult;
 
+  const selectedVersion = codeSystemVersion ?? verifiedVersion(primaryResult);
   const fallbackServers = listFallbackTerminologyServers(
-    resolutionConfig, primaryOverride, system, codeSystemVersion, fhirVersion,
+    resolutionConfig, primaryOverride, system, selectedVersion, fhirVersion,
   );
   if (fallbackServers.length === 0) return primaryResult;
 
@@ -248,7 +258,7 @@ async function validateInactiveCodeWithFallbackServers({
     // Validate the code status only. Passing the original display here can
     // turn an otherwise active code into a display-mismatch result.
     const fallbackResult = await callCodeSystemValidator(
-      apiClient, code, system, undefined, server, codeSystemVersion, displayLanguage,
+      apiClient, code, system, undefined, server, selectedVersion, displayLanguage,
     );
     if (isConfirmedAcceptance(fallbackResult) && !isInactiveResult(fallbackResult)) {
       const filteredIssues = primaryResult.issues?.filter(issue => !isInactiveIssue(issue)) ?? [];
@@ -285,6 +295,10 @@ function callCodeSystemValidator(
 function isDisplayMismatchResult(result: CodeSystemValidationResult): boolean {
   return result.reason === 'display-mismatch'
     || Boolean(result.issues?.some(issue => issue.code === 'invalid-display'));
+}
+
+function verifiedVersion(result: CodeSystemValidationResult): string | undefined {
+  return isVerifiedCodeSystemResult(result) ? result.codeSystemVersion : undefined;
 }
 
 function isConfirmedAcceptance(result: CodeSystemValidationResult): boolean {

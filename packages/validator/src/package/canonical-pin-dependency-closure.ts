@@ -1,5 +1,6 @@
 import { compareVersions } from '../package-resolver/version-comparator.js';
 import type { InstalledPackageManifest, PackageManifestCandidate, PackageRef } from './canonical-pin-store.js';
+import type { PackageDependencyAliases } from './package-dependency-aliases.js';
 
 const MAX_CLOSURE_PACKAGES = 64;
 
@@ -15,12 +16,13 @@ export function selectStandInRelease(installedVersions: readonly string[], decla
 
 export type DependencyClosureEntry =
   | { status: 'available'; manifest: InstalledPackageManifest }
-  | { status: 'unavailable'; ref: PackageRef; cause: 'source-missing' | 'dependency-missing' | 'closure-limit' | 'manifest-unreadable' | 'manifest-invalid' | 'manifest-identity-mismatch' };
+  | { status: 'unavailable'; ref: PackageRef; cause: 'source-missing' | 'dependency-missing' | 'dependency-alias-ambiguous' | 'closure-limit' | 'manifest-unreadable' | 'manifest-invalid' | 'manifest-identity-mismatch' };
 
 /** Opaque branches retain their BFS position; later content cannot prove an earlier branch absent. */
 export function dependencyClosureEntries(
   manifests: readonly PackageManifestCandidate[], source: PackageRef,
   packageVersionPins: Readonly<Record<string, string>>, isExcludedDependency: (name: string) => boolean,
+  dependencyAliases?: PackageDependencyAliases,
 ): DependencyClosureEntry[] {
   const releasesByName = new Map<string, Map<string, PackageManifestCandidate>>();
   for (const manifest of manifests) {
@@ -37,7 +39,14 @@ export function dependencyClosureEntries(
   for (let position = 0; position < entries.length; position++) {
     const entry = entries[position];
     if (entry.status !== 'available') continue;
-    for (const dependency of entry.manifest.dependencies) {
+    for (const declared of entry.manifest.dependencies) {
+      const alias = dependencyAliases?.resolve(entry.manifest.ref, declared, packageVersionPins);
+      if (alias && releasesByName.has(declared.name)) {
+        entries.push({ status: 'unavailable', ref: declared, cause: 'dependency-alias-ambiguous' });
+        if (entries.length > MAX_CLOSURE_PACKAGES) return entries;
+        continue;
+      }
+      const dependency = alias ?? declared;
       if (isExcludedDependency(dependency.name)) continue;
       const releases = releasesByName.get(dependency.name);
       const version = Object.hasOwn(packageVersionPins, dependency.name)

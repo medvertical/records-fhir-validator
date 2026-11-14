@@ -30,7 +30,7 @@ jobs:
           cache: npm
       - name: Install declared npm version
         run: npm install --global "$(node -p 'require("./package.json").packageManager')" --ignore-scripts
-      - run: npm install
+      - run: npm ci
       - run: npm run oss:audit-validator:tests
       - run: npm test
       - run: npm run typecheck

@@ -128,6 +128,7 @@ export {
 export {
   parseFhirNdjson,
   parseFhirXml,
+  parseFhirJson,
   type FhirInputDiagnostic,
   type FhirInputLimits,
   type FhirInputLocation,

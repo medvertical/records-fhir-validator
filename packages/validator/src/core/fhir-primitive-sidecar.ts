@@ -91,6 +91,17 @@ export function getChoiceValueType(value: unknown): string | undefined {
   return value && typeof value === 'object' ? CHOICE_VALUE_TYPES.get(value) : undefined;
 }
 
+/** Evaluation projections retain traversal metadata without exposing it in FHIR JSON. */
+export function copyFhirPrimitiveContext(source: object, target: object): void {
+  if (isResolvedPrimitiveSidecarValue(source)) {
+    Object.defineProperty(target, PRIMITIVE_SIDECAR_VALUE, { value: true });
+    const type = getResolvedPrimitiveSidecarType(source);
+    if (type) Object.defineProperty(target, PRIMITIVE_SIDECAR_TYPE, { value: type });
+  }
+  const choiceType = CHOICE_VALUE_TYPES.get(source);
+  if (choiceType) CHOICE_VALUE_TYPES.set(target, choiceType);
+}
+
 function resolveChoiceSegmentValue(container: Record<string, unknown>, baseName: string): unknown {
   const directChoiceKey = findConcreteChoiceProperty(container, baseName);
   if (directChoiceKey) {

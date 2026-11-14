@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { QUALITY_RULE_SEVERITIES } from './quality-rule-schema-foundations.js';
 import { qualityThresholdSchema } from './quality-threshold.js';
+import { qualityAssessmentBasisSchema } from './quality-assessment-basis.js';
 
 const packReferenceSchema = z.string()
   .min(3)
@@ -15,12 +16,18 @@ export const qualityRuleOverrideSchema = z.object({
   enabled: z.boolean().optional(),
   severity: z.enum(QUALITY_RULE_SEVERITIES).optional(),
   threshold: qualityThresholdSchema.optional(),
+  assessment: qualityAssessmentBasisSchema.optional(),
+  severityReason: z.string().trim().min(1).max(1_024).optional(),
   waiver: z.object({
     reason: z.string().min(1).max(1_024),
     expiresAt: z.string().datetime(),
   }).strict().optional(),
 }).strict().refine(value => Object.keys(value).length > 0, {
   message: 'Rule overrides require at least one setting',
+}).refine(value => !(value.assessment && value.threshold), {
+  message: 'V2 assessment and legacy threshold overrides cannot compete',
+}).refine(value => value.severityReason === undefined || value.severity !== undefined, {
+  message: 'A severity rationale requires an explicit severity override',
 });
 
 export const qualityPolicyLayerSchema = z.object({

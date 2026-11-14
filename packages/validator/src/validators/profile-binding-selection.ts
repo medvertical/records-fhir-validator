@@ -7,6 +7,7 @@ import { createValidationIssue } from '../issues/issue-factory.js';
 import { extractSlicingInfo } from './slice-info-extractor.js';
 import { assessElementSliceMembership } from './slicing-match-policy.js';
 import { prepareProfileBindingSlicingBases } from './profile-binding-slicing-bases.js';
+import { choiceBindingSliceMembership } from './profile-binding-choice-membership.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 type FhirVersion = 'R4' | 'R5' | 'R6';
@@ -127,6 +128,8 @@ function prepareProfileBindingSelector(context: BindingSelectionContext) {
     const names = new Set(siblings.map(element => element.sliceName));
     const prepared = info.slices.filter(candidate => names.has(candidate.sliceName));
     if (prepared.length !== siblings.length || new Set(prepared.map(candidate => candidate.sliceName)).size !== prepared.length) return 'unknown';
+    const choice = choiceBindingSliceMembership(info.slicing, slice.path, fullPath, prepared, slice.sliceName);
+    if (choice) return choice;
     const proof = assessElementSliceMembership(node, prepared, info.slicing, null);
     if (proof.state === 'ambiguous') return 'ambiguous';
     if (proof.unknownSlices.length || proof.state === 'unknown') return 'unknown';

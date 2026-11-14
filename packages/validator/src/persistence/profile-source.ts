@@ -82,6 +82,8 @@ export interface ExternalProfileSource {
 
 export interface CanonicalResourceSource {
     assertTerminologySnapshot?(settings: ValidationSettings, context: ProfileSourceContext): Promise<void>;
+    /** Supply an approved, integrity-pinned ISO 4217 fallback inventory when available. */
+    getCurrencyTerminologyInventory?(): unknown;
     findCanonicalResource?(
         url: string,
         resourceType: string,

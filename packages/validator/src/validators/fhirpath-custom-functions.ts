@@ -5,6 +5,7 @@
  */
 
 import { findConcreteChoiceProperty } from '../core/fhir-choice-property.js';
+import { getExtensionProjection } from './fhirpath-extension-projection.js';
 import { unwrapFhirPathNavigable, unwrapFhirPathValue } from './fhirpath-node-unwrap.js';
 import { ISO_3166_1_ALPHA2, ISO_3166_1_ALPHA3 } from './iso3166-country-codes.js';
 import { ValueSetCache } from './valueset-cache.js';
@@ -36,8 +37,9 @@ export const hasValueFunction = {
  * Gets extension by URL
  * Used in constraints like: extension('http://hl7.org/fhir/StructureDefinition/patient-birthPlace')
  */
-export function extensionFunction(input: unknown[], extensionUrl: string): unknown[] {
+export function extensionFunction(this: unknown, input: unknown[], extensionUrl: string): unknown[] {
     const results: unknown[] = [];
+    const project = getExtensionProjection(this);
 
     for (const item of input) {
         const rawItem = unwrapFhirPathNavigable(item);
@@ -46,7 +48,7 @@ export function extensionFunction(input: unknown[], extensionUrl: string): unkno
         const extensions = Array.isArray(rawItem.extension) ? rawItem.extension : [];
         for (const ext of extensions) {
             if (isObjectRecord(ext) && ext.url === extensionUrl) {
-                results.push(withNavigableChoiceValue(ext));
+                results.push(...(project ? project(ext) : [withNavigableChoiceValue(ext)]));
             }
         }
     }
@@ -309,10 +311,8 @@ export function buildUserInvocationTable(
     profileConformance?: ProfileConformanceLookup,
     referenceResolver?: FHIRPathEvaluationContext['referenceResolver'],
 ) {
-    // Only functions fhirpath.js cannot provide itself (they need bundle
-    // context, terminology caches, or raw-object navigation). Natively
-    // implemented functions (hasValue, descendants, aggregate, subsetOf,
-    // supersetOf) must NOT be overridden with weaker approximations.
+    // A raw datatype context is not wrapped by the library's extension().
+    // Keep this adapter, but return model-typed Extension nodes for casts.
     return {
         resolve: resolveFunction({ rootResource, bundle, referenceResolver }),
         extension: extensionInvocationEntry,

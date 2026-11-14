@@ -114,6 +114,17 @@ file. A bare installation without it can still report this upstream advisory.
 The consumer smoke test audits the resulting production dependency graph as
 well as exercising the packaged validator.
 
+## Redirect handler
+
+The validator depends on Axios, whose dependency range allows
+`follow-redirects` 1.16.0 and 1.16.1. Existing consumer locks can retain those
+versions. The Records repository, generated OSS repository, GitHub Action and
+packed consumer smoke test select the patched version 1.16.2. For npm
+installations, add `"follow-redirects": "1.16.2"` to the root `overrides`
+and refresh the lockfile. Verify with `npm ls follow-redirects` and
+`npm audit --omit=dev`.
+[Upstream advisory](https://github.com/advisories/GHSA-mrwp-f3q8-3g9p)
+
 ## Dependency checks for 0.8.0 — 6 October 2026
 
 The published validator depends on FHIRPath, which declares `js-yaml ^4.1.1`

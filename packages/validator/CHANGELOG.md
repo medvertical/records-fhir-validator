@@ -10,6 +10,108 @@ ship together; package-only changes are noted under each release.
 
 ## [Unreleased]
 
+## [0.10.1] — 2026-11-14
+
+Ships with `@records-fhir/validation-types` 0.2.0 and includes the SDK
+changes made since the published 0.9.18 release. The 0.10.0 source tag
+did not publish to npm. This release uses new measurements with the complete
+CI profile inventory, including the original package archives.
+
+### Added
+
+- Export `parseFhirJson` to carry exact decimals from raw JSON into
+  FHIRPath evaluation on all supported Node.js versions.
+- Configure date-aware profile selection using explicit validity intervals
+  and pinned dependencies.
+- Expose versioned DQA assessment schemas through
+  `@records-fhir/validation-types/validation/quality-assessment`. New program
+  versions declare observations, predicates or thresholds separately from
+  severity and execution coverage.
+
+### Changed
+
+- Consumers composing the exported runtime schemas now need Zod 4.
+- Report incomplete terminology evidence when the selected source cannot
+  establish a membership or display verdict. Consumers can inspect
+  `details.validationComplete` on these issues.
+- Validate every distinct declared profile edition on a resource, including
+  resources embedded in Bundles, Parameters and contained collections.
+
+### Fixed
+
+- Include the BSD 3-Clause license text for the bundled FHIRsmith UN-M49 rows.
+- Preserve XML and raw JSON/NDJSON numeric source tokens as transient input context.
+  Both FHIRPath constraint paths retain decimal precision without changing FHIR
+  payload numbers to strings. Source-dependent conversions with missing decimal
+  representation are reported as incomplete, and invariant arithmetic uses the
+  library's precise decimal mode. Original resources are not modified by the
+  decimal evaluation projection.
+- Honor `bundledProfilesPath: null` when disabling bundled profile reads instead of silently restoring the default package store.
+- Restore the containing-resource context for constraints declared on Bundle entry and contained-resource boundary fields. Copied type-profile root constraints use the embedded resource only after matching the referenced profile's root rule; explicit parent declarations retain their parent context.
+- Keep compositional and algorithmic CodeSystems outside complete finite snapshot coverage. A finite unit or language list cannot establish absence for the whole grammar; explicitly enumerated ValueSet subsets remain supported.
+- Resolve ISO 3166 alpha-2, alpha-3 and numeric code-shape filters with bounded literal matchers over the actual selected inventory. Arbitrary regular expressions remain unsupported.
+- Qualify finite ValueSet hierarchy filters against the existing local filter authority, including exclusions. Missing inventories, ambiguous hierarchies and unsupported filters remain incomplete.
+- Evaluate whole-system and primitive currency bindings through their full
+  ValueSet compose, including exclusions. Standalone validation uses the
+  configured terminology sources for ISO 4217. Hosts can supply an
+  integrity-pinned inventory for unversioned positive membership after selected
+  CodeSystem authorities have been checked.
+- Select type-discriminated bindings using present concrete choice properties
+  so extension-only datatypes and equal-looking primitive values do not create
+  false ambiguity. Keep absent occurrences and competing same-type slices
+  explicitly unverified.
+- Verify explicit ValueSet-owned display labels in their exact binding and
+  terminology edition when no CodeSystem display authority is available.
+  Unlisted labels, unresolved membership, other versions, complex compose rules
+  and independent CodeSystem membership remain unverified.
+- Missing discriminator paths no longer count as resolved pattern/fixed evidence
+  or match every slice. Such metadata remains explicitly incomplete instead of
+  producing inferred ambiguous matches and cardinality errors. Primitive `false`
+  and zero pattern/fixed constraints retain their actual values.
+- Preserve FHIR choice types and primitive metadata through `extension(url)` so conditional rules evaluate Boolean, Coding, CodeableConcept, date and Ratio values correctly instead of seeing empty casts.
+- Bind `%resource` to the resource under test when evaluating constraints on embedded resources, including nested Bundle type-profile checks. Preserve `%rootResource`, explicit datatype owners and deliberately unbound resource contexts.
+- Resolve contained references inside nested `Parameters.parameter[].part[].resource` in each embedded resource's own scope. Report missing targets at their full paths without borrowing contained identities from sibling resources.
+- Report missing dates, ambiguous matches and unavailable packages as incomplete
+  when an explicit profile-date policy applies.
+- Support optional, source/version-bound case corrections for profile package
+  dependency declarations without rewriting package manifests. Generic lookup
+  stays exact; ambiguous case variants, changed pins and invalid target metadata
+  remain unavailable.
+- Evaluate the published invoice char-1 expression in the Unicode JavaScript
+  runtime using an equivalent regex spelling. Preserve its anchoring, Unicode
+  behavior, char-2 backslash rejection and errors for other malformed patterns.
+- Propagate root causes through nested profile-conformance diagnostics so an
+  unavailable terminology check remains distinguishable from profile resolution.
+- Add explicit package-bound profile edition aliases without changing published
+  StructureDefinition identities or generic R4 canonical matching. Scoped host
+  resolution and package dependency authority remain enforced. Embedded resource
+  extension scopes honor the loader-verified edition identity.
+- Match inherited slices by their full branch identity so equal leaf slice names
+  do not transfer a sibling's datatype cardinalities.
+- Compare FHIR primitive values independently of their sibling metadata while
+  retaining extension navigation, precise decimal values and complex equality.
+- Establish conformsTo() for typed datatype targets and preserve established
+  verdicts through transient evaluation projections. Unavailable datatype
+  conformance is reported as incomplete rather than a proved violation.
+- Allow short-lived validation runtimes to resolve profile packages on demand and restrict terminology searches to their configured stores.
+- Only reject terminology membership or display text when the selected edition and source metadata establish the relevant authority. Respect case sensitivity, bounded complete inventories, filtered/compositional expansions, exact language bindings, and partial original labels; transport failures and missing editions stay unverified. Validate SNOMED identifier components and PZN check digits independently of membership.
+- Fix finite terminology coverage checks before treating local expansions as authoritative: truncated pages, unresolved exclusions, unsupported filters, missing editions and composition cycles remain partial. Keep code membership separated by system and edition. Add immutable terminology snapshot context isolation and disable remote and mutable filesystem fallbacks for explicit snapshot execution.
+- Undiscriminated slices now explicitly mark validation as incomplete without
+  suppressing or downgrading the profile-definition errors.
+
+### Security
+
+- Select the patched `follow-redirects` 1.16.2 in the GitHub Action and
+  public development install. Document the matching override for npm consumers.
+
+### Documentation
+
+- Pin the GitHub Action and npm validator versions independently in the
+  consumer examples.
+- Report publication-only changes separately when checking measured inputs.
+  The release gate still verifies the complete inventory and replays the
+  selected evidence.
+
 ## [0.9.18] — 2026-10-22
 
 This release includes the unpublished 0.9.1–0.9.18 development changes and
@@ -2559,7 +2661,8 @@ extracted from the Records DataOps Control Plane.
   are explicitly out of scope for this package and are not blended
   into the headline conformance score.
 
-[Unreleased]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.5.0...HEAD
+[Unreleased]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.10.1...HEAD
+[0.10.1]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.9.18...validator-v0.10.1
 [0.5.0]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.4.4...validator-v0.5.0
 [0.4.4]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.4.3...validator-v0.4.4
 [0.4.3]: https://github.com/medvertical/records-fhir-validator/compare/validator-v0.4.2...validator-v0.4.3

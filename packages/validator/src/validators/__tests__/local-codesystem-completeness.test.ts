@@ -6,7 +6,7 @@ import { buildCodeSystemResultIssues } from '../../core/executors/terminology-co
 import type { ValueSetPackageLoader } from '../valueset-package-loader.js';
 
 const system = 'https://records.test/CodeSystem/partial-content';
-const contents: CodeSystem['content'][] = ['complete', 'fragment', 'example', undefined];
+const contents: CodeSystem['content'][] = ['complete', 'fragment', 'example'];
 function deps(content: CodeSystem['content']) {
   const cache = new ValueSetCache();
   cache.setCodeSystem(system, { resourceType: 'CodeSystem', url: system, version: '1.0.0',
@@ -21,12 +21,18 @@ describe('local CodeSystem completeness', () => {
     expect(buildCodeSystemResultIssues({ system, code: 'known' }, result!, 'Observation.code.coding', 0, true)).toEqual([]);
   });
 
-  it.each(['fragment', 'example', undefined] as const)('does not prove an absent concept invalid under %s', async content => {
+  it.each(['fragment', 'example'] as const)('does not prove an absent concept invalid under %s', async content => {
     const result = await validateCodeInLocalCodeSystem(deps(content), 'not-listed', system);
     expect(result).toMatchObject({ valid: false, reason: 'code-unknown', incompleteCodeSystem: true });
     const issues = buildCodeSystemResultIssues({ system, code: 'not-listed' }, result!, 'Observation.code.coding', 0, true);
-    expect(issues).toEqual([expect.objectContaining({ severity: 'warning', details: expect.objectContaining({ validationComplete: false }) })]);
-    expect(issues.some(issue => issue.severity === 'error')).toBe(false);
+    expect(issues).toEqual([expect.objectContaining({ severity: 'information', code: 'terminology-codesystem-unverified',
+      details: expect.objectContaining({ validationComplete: false, checkOutcome: 'unverified', reason: 'codesystem-incomplete' }) })]);
+    expect(issues.some(issue => issue.severity === 'error' || issue.code === 'terminology-code-invalid')).toBe(false);
+    expect(buildCodeSystemResultIssues({ system, code: 'not-listed' }, result!, 'Observation.code.coding', 0, true, false)).toEqual([]);
+  });
+
+  it.each(['known', 'not-listed'])('leaves %s unverified if CodeSystem.content is missing', async code => {
+    await expect(validateCodeInLocalCodeSystem(deps(undefined), code, system)).resolves.toBeNull();
   });
 
   it('retains authoritative rejection from a complete definition', async () => {
@@ -46,8 +52,17 @@ describe('local CodeSystem completeness', () => {
       const result = await validateCodeInLocalCodeSystem(dependencies, 'known+other', url);
       expect(result).toMatchObject({ valid: false, reason: 'code-unknown', incompleteCodeSystem: true });
       const issues = buildCodeSystemResultIssues({ system: url, code: 'known+other' }, result!, 'Observation.code', 0, false);
-      expect(issues).toEqual([expect.objectContaining({ severity: 'warning',
+      expect(issues).toEqual([expect.objectContaining({ severity: 'information', code: 'terminology-codesystem-unverified',
         details: expect.objectContaining({ validationComplete: false }) })]);
     },
   );
+
+  it('retains an independently invalid LOINC check digit beside incomplete membership', () => {
+    const issues = buildCodeSystemResultIssues({ system: 'http://loinc.org', code: '718-8' },
+      { valid: false, reason: 'code-unknown', incompleteCodeSystem: true }, 'Observation.code', 0, false);
+    expect(issues).toContainEqual(expect.objectContaining({ code: 'terminology-code-invalid', severity: 'error',
+      details: expect.objectContaining({ reason: 'loinc-check-digit', expectedCheckDigit: '7' }) }));
+    expect(issues.find(issue => issue.code === 'terminology-code-invalid')?.details).not.toHaveProperty('validationComplete');
+    expect(issues).toContainEqual(expect.objectContaining({ code: 'terminology-codesystem-unverified' }));
+  });
 });

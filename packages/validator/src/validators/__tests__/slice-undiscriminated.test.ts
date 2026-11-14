@@ -109,6 +109,10 @@ describe('slices without a discriminating value', () => {
       ['Consent.category[1]', 'error', 'sct'],
     ]);
     expect(issues[0].message).toContain('Slicing cannot be evaluated');
+    expect(issues).toEqual(expect.arrayContaining([expect.objectContaining({
+      severity: 'error',
+      details: expect.objectContaining({ validationComplete: false, validationStatus: 'incomplete' }),
+    })]));
   });
 
   it.each(['fixedUri', 'patternUri', 'required-binding', 'unresolved-profile', 'missing-child', 'unconstrained-child'])(

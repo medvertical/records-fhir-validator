@@ -11,6 +11,28 @@ captures changes that affect type-package consumers directly.
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-14
+
+Released with `@records-fhir/validator` 0.10.1.
+
+### Changed
+
+- Add optional, bounded `packageDownload.serverBindings` for exact SHA-256-pinned
+  profile package contexts on one server. Workspace defaults and unbound servers
+  retain their existing package selection.
+
+- Add explicit DQA assessment contracts through the dedicated
+  `validation/quality-assessment` entry point. New V2 program manifests require
+  a declared observation, predicate or threshold basis. Metric outcomes now
+  include `observation`; consumers with exhaustive outcome handling must update.
+  Historical manifests and evidence retain their legacy interpretation. New
+  metadata-only records separate assessment coverage and pre-advisory impact.
+
+- Breaking schema-library boundary: runtime schemas now use the patched Zod
+  4.6.7 API. Consumers composing these schemas must use Zod 4. Sparse settings
+  updates, atomic replacement lists and terminology health defaults retain
+  their existing wire semantics.
+
 ## [0.1.14] — 2026-10-11
 
 ### Added

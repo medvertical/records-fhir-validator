@@ -38,6 +38,40 @@ describe('SNOMED expression syntax hygiene evidence', () => {
     });
   });
 
+  it.each([
+    ['100545|Synthetic term|', '100545', 'snomed-partition'],
+    ['===100014|Synthetic term|', '100014', 'snomed-component-kind'],
+    ['100005+100540', '100540', 'snomed-check-digit'],
+    ['100005:100014=100005', '100014', 'snomed-component-kind'],
+    ['100005:{100005=100545}', '100545', 'snomed-partition'],
+    ['100005:100005=(100005:100005=100540)', '100540', 'snomed-check-digit'],
+  ])('checks the actual concept reference in %s', (code, identifier, reason) => {
+    const issues = validateCodingHygiene(observation(code), []);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      code: 'terminology-code-invalid', severity: 'error', path: CODING_CODE_PATH,
+      details: { code, reason, invalidIdentifier: identifier, syntaxOffset: code.indexOf(identifier) },
+    });
+    expect(issues[0].details).not.toHaveProperty('suggestedCode');
+    expectNoTerminologyAuthority(issues[0].details);
+  });
+
+  it.each([
+    '100005|Term containing 100545 and 100014|',
+    '100005:100005="100545"',
+    '100005:100005=#100545',
+    '100005:100005=#100014.100540',
+  ])('does not interpret literal digits as identifiers in %s', code => {
+    expect(validateCodingHygiene(observation(code), [])).toEqual([]);
+  });
+
+  it('keeps incomplete parses distinct from fully parsed identifier defects', () => {
+    const code = '100545:100005=('.repeat(65) + '100005' + ')'.repeat(65);
+    expect(validateCodingHygiene(observation(code), [])).toMatchObject([{
+      code: 'terminology-snomed-syntax-unverified', details: { syntaxLimitReason: 'nesting-depth-limit' },
+    }]);
+  });
+
   it('keeps the established FHIR whitespace diagnostic as the sole invalid issue at its path', () => {
     const issues = validateCodingHygiene(observation(' 276885007x'), []);
     expect(issues).toHaveLength(1);

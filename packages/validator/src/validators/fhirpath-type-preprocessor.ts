@@ -71,7 +71,7 @@ export function resolveTypeLiteralContext(
   const pathSegments = elementPath.split('.');
   let containingResourceType = rootResource.resourceType;
   let containingResourcePathEnd = 1;
-  for (let end = pathSegments.length - 1; end >= 1; end--) {
+  for (let end = Math.max(1, pathSegments.length - 1); end >= 1; end--) {
     const ancestor = readContext(pathSegments.slice(0, end).join('.'));
     if (isFhirResource(ancestor)) {
       containingResourceType = ancestor.resourceType;

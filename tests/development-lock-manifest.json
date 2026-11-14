@@ -6,23 +6,23 @@
     "publishedTarballsChanged": false
   },
   "candidate": {
-    "validator": "0.9.18",
-    "validationTypes": "0.1.14"
+    "validator": "0.10.1",
+    "validationTypes": "0.2.0"
   },
   "files": {
     "rootPackage": {
-      "sha256": "40729d4d1746b96f180ec4ed91af3310dd4dfe607c126212b987dee519b53edb"
+      "sha256": "91c2cc7eac2cd214b3d709cceeb4e66d5f2b64ea9c505808815f78eca18708b5"
     },
     "validatorPackage": {
-      "sha256": "d7a4cf6ac43b56bae1d0f2eab1723acbab72c39d0db954b45fb1267448560460"
+      "sha256": "e0e4959ab9a3b98f482a7babeb39b4f5be8b3f741d35518a0ac10919405ffe4e"
     },
     "validationTypesPackage": {
-      "sha256": "90822d1edcd83ef5a565c0705073de35ee37208d14de7f2dbc70a9f8e659e73f"
+      "sha256": "4cfc0510fe0bdc1e3d59bfbdb3f6a200595cb61109e3b6655ed350a2c6537308"
     },
     "lock": {
       "path": "package-lock.json",
-      "sha256": "2a2eef4470d3d3b40fea7b71dc6603188e34cbca790f6ab70b969ef795d46de3",
-      "sizeBytes": 98118
+      "sha256": "8bedbca963fd962df8790c32b256d0d1e74b0862270c13395d6a0413f25558c2",
+      "sizeBytes": 98134
     }
   }
 }

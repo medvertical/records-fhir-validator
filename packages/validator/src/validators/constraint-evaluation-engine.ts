@@ -17,6 +17,8 @@ import { ValueSetCache } from './valueset-cache.js';
 import { ConstraintExpressionCache } from './constraint-expression-cache.js';
 import { handleConstraintEvaluationFailure } from './constraint-evaluation-failure.js';
 import { SDFHIRPathPrimitiveContext } from './sd-fhirpath-primitive-context.js';
+import { constraintFocusResource } from './sd-fhirpath-focus-resource.js';
+import { isFhirResource } from '../core/fhir-resource.js';
 
 type ConstraintFHIRPathEvaluator = typeof evaluateConstraintFHIRPath;
 
@@ -43,6 +45,9 @@ export class ConstraintEvaluationEngine {
     elementType: string | null,
     state: ConstraintValidationState,
   ): Promise<ValidationIssue[]> {
+    const focusResource = constraintFocusResource(resource, state.rootResource ?? resource, elementPath, state.focusResource,
+      state.inlinedResourceConstraints?.has(constraint));
+    if (isFhirResource(focusResource)) state = { ...state, focusResource };
     const preparation = prepareConstraintEvaluation({
       resource,
       elementPath,
@@ -104,16 +109,18 @@ export class ConstraintEvaluationEngine {
     });
     if (precheck.handled) return precheck.issues;
 
+    const input = this.primitiveContext.prepare(precheck.context, resource, elementPath, state.fhirVersion,
+      state.rootResource ?? resource, state.focusResource, state.decimalInput);
     const result = await this.evaluateFHIRPath(
-      this.primitiveContext.resolve(precheck.context, resource, elementPath, state.fhirVersion),
+      input.context,
       precheck.expression,
-      state.rootResource ?? resource,
+      input.rootResource,
       state.fhirVersion,
       state.userInvocationTable,
       this.terminologyResolver,
       this.expressionCache,
       this.asyncExpressionCache,
-      state.focusResource,
+      input.focusResource,
     );
     return resolveEvaluatedConstraintOutcome(result, {
       constraint,

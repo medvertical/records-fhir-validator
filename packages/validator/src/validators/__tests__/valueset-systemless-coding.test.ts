@@ -14,9 +14,9 @@ describe('systemlessCodingSatisfiesBinding', () => {
   const listed = loader({ compose: { include: [{ system: V2_0203, concept: [{ code: 'PRN' }, { code: 'MR' }] }] } });
 
   it('takes a code listed by a single-include value set at face value inside a CodeableConcept', async () => {
-    await expect(systemlessCodingSatisfiesBinding(listed, { coding: [{ code: 'PRN' }] }, 'PRN', 'vs', 'extensible'))
+    await expect(systemlessCodingSatisfiesBinding(listed, { coding: [{ code: 'PRN' }] }, 'PRN', 'vs', 'R4'))
       .resolves.toBe(true);
-    await expect(systemlessCodingSatisfiesBinding(listed, { coding: [{ code: 'XX' }] }, 'XX', 'vs', 'extensible'))
+    await expect(systemlessCodingSatisfiesBinding(listed, { coding: [{ code: 'XX' }] }, 'XX', 'vs', 'R4'))
       .resolves.toBe(false);
   });
 
@@ -32,13 +32,12 @@ describe('systemlessCodingSatisfiesBinding', () => {
     });
 
     for (const [source, code] of [[several, 'UNK'], [whole, 'PRN'], [expanded, 'PRN']] as const) {
-      await expect(systemlessCodingSatisfiesBinding(source, { coding: [{ code }] }, code, 'vs', 'extensible'))
+      await expect(systemlessCodingSatisfiesBinding(source, { coding: [{ code }] }, code, 'vs', 'R4'))
         .resolves.toBe(false);
     }
   });
 
-  it('leaves a lone Coding to its binding only when the binding is required', async () => {
-    await expect(systemlessCodingSatisfiesBinding(listed, { code: 'EMER' }, 'EMER', 'vs', 'extensible')).resolves.toBe(true);
-    await expect(systemlessCodingSatisfiesBinding(listed, { code: 'EMER' }, 'EMER', 'vs', 'required')).resolves.toBe(false);
+  it('leaves a lone systemless Coding explicitly unverified instead of accepting or rejecting it', async () => {
+    await expect(systemlessCodingSatisfiesBinding(listed, { code: 'EMER' }, 'EMER', 'vs', 'R4')).resolves.toBeUndefined();
   });
 });

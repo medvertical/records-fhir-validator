@@ -1,10 +1,11 @@
 import { rejectedCodeSystemDisplayResult, verifiedCodeSystemResult } from './code-system-validation-evidence.js';
 import { logger } from '../logger.js';
 import type { CodeSystemValidationResult } from './terminology-api-types.js';
-import { extractTerminologyIssues, mapOperationOutcomeIssues } from './terminology-api-outcome.js';
+import { extractTerminologyIssues, mapOperationOutcomeIssues, operationOutcomeHasRejection } from './terminology-api-outcome.js';
 import {
     getOperationOutcomeIssueValues,
     getParametersEntries,
+    getSingleParameterValue,
     isTerminologyResponseRecord,
 } from './terminology-response-utils.js';
 import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
@@ -38,22 +39,25 @@ export function parseCodeSystemValidationParameters(
     parameters: unknown,
     code: string,
     system: string,
-    options: { authoritativeSnomedEdition?: boolean } = {},
+    options: { authoritativeSnomedEdition?: boolean; requestedVersion?: string } = {},
 ): CodeSystemValidationResult {
     const entries = getParametersEntries(parameters);
     if (!entries) {
         return {
             valid: false,
-            reason: 'system-unresolvable',
+            reason: 'server-failure',
             message: `Terminology server returned a malformed $validate-code response for '${code}' in '${system}'`,
         };
     }
 
-    const resultParameters = entries.filter(parameter => parameter.name === 'result');
-    const resultParam = resultParameters[0];
+    const valid = getSingleParameterValue(parameters, 'result', 'valueBoolean');
+    if (typeof valid !== 'boolean') {
+        return { valid: false, reason: 'server-failure',
+            message: `Terminology server returned a malformed or ambiguous $validate-code result for '${code}' in '${system}'` };
+    }
     const messageParam = entries.find(parameter => parameter.name === 'message');
     const issues = extractTerminologyIssues(parameters);
-    if (typeof resultParam?.valueBoolean !== 'boolean' || operationOutcomeCannotResolveBinding(parameters)) {
+    if (operationOutcomeCannotResolveBinding(parameters)) {
         // The server's own account names what it lacked (an unknown SNOMED
         // release comes with the releases it does hold).
         const serverMessage = typeof messageParam?.valueString === 'string' && messageParam.valueString.trim()
@@ -68,8 +72,17 @@ export function parseCodeSystemValidationParameters(
     const inactiveParam = entries.find(parameter => parameter.name === 'inactive');
     const displayParam = entries.find(parameter => parameter.name === 'display');
     const hasDisplayMismatch = issues.some(issue => issue.code === 'invalid-display');
+    const version = getSingleParameterValue(parameters, 'version', 'valueString');
+    if (entries.some(parameter => parameter.name === 'version') && (typeof version !== 'string' || !version.trim())) {
+        return { valid: false, reason: 'server-failure',
+            message: `Terminology server returned a malformed or ambiguous CodeSystem version for '${system}'` };
+    }
+    if (typeof version === 'string' && options.requestedVersion && version !== options.requestedVersion) {
+        return { valid: false, reason: 'server-failure',
+            message: `Terminology server returned CodeSystem '${system}' version '${version}' instead of requested version '${options.requestedVersion}'; validation could not be completed.` };
+    }
 
-    if (resultParam?.valueBoolean === true) {
+    if (valid) {
         logger.debug(
             '[TerminologyApiClient] CodeSystem validation succeeded',
             terminologyTargetMetadata(system, code),
@@ -80,8 +93,9 @@ export function parseCodeSystemValidationParameters(
             issues,
             inactive: inactiveParam?.valueBoolean === true,
             display: typeof displayParam?.valueString === 'string' ? displayParam.valueString : undefined,
+            ...(typeof version === 'string' ? { codeSystemVersion: version } : {}),
         };
-        return resultParameters.length === 1 ? verifiedCodeSystemResult(result) : result;
+        return verifiedCodeSystemResult(result);
     }
 
     const errorMessage = typeof messageParam?.valueString === 'string'
@@ -106,8 +120,9 @@ export function parseCodeSystemValidationParameters(
         issues,
         inactive: inactiveParam?.valueBoolean === true,
         display: typeof displayParam?.valueString === 'string' ? displayParam.valueString : undefined,
+        ...(typeof version === 'string' ? { codeSystemVersion: version } : {}),
     };
-    return resultParameters.length === 1 ? verifiedCodeSystemResult(result) : result;
+    return verifiedCodeSystemResult(result);
 }
 
 export function isSnomedNationalExtensionSystemCode(system: string, code: string): boolean {
@@ -126,7 +141,7 @@ export function operationOutcomeToCodeSystemResult(
             ...(issues.length > 0 ? { issues } : {}) };
     }
     const issueValues = getOperationOutcomeIssueValues(opOutcome);
-    if (issueValues && issueValues.length > 0) {
+    if (issueValues && operationOutcomeHasRejection(opOutcome, ['code-invalid', 'invalid-code', 'invalid-display'])) {
         const issues = mapOperationOutcomeIssues(opOutcome);
         const msg = issues[0]?.message || `Unknown code '${code}' in CodeSystem '${system}'`;
         const result: CodeSystemValidationResult = {
@@ -148,5 +163,7 @@ export function operationOutcomeToCodeSystemResult(
         return rejectsDisplay ? rejectedCodeSystemDisplayResult(result) : result;
     }
 
-    return { valid: false, message: `Unknown code '${code}' in CodeSystem '${system}'` };
+    return { valid: false, reason: 'server-failure',
+        message: resolutionMessage(mapOperationOutcomeIssues(opOutcome)[0]?.message,
+            `Terminology server returned no usable $validate-code result for '${code}' in '${system}'`) };
 }

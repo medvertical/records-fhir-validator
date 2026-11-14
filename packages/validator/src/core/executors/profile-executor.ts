@@ -14,7 +14,7 @@
  */
 
 import type { ValidationIssue } from '@records-fhir/validation-types';
-import type { StructureDefinition } from '../structure-definition-types.js';
+import type { Constraint, StructureDefinition } from '../structure-definition-types.js';
 import type { ExtensionValidator } from '../../validators/extension-validator.js';
 import type { SlicingValidator, ReferenceResolver } from '../../validators/slicing-validator.js';
 import type { ConstraintValidator } from '../../validators/constraint-validator.js';
@@ -32,8 +32,12 @@ import { logger } from '../../logger.js';
 import { createExecutorFailureIssue } from './executor-failure-issue.js';
 import { ProfileSlicingValidation } from './profile-slicing-validation.js';
 import { profileCanonicalAliasIssue } from '../profile-canonical-alias.js';
+import { profileVersionAliasIssue } from '../profile-version-aliases.js';
 import { profileForConcreteResource } from '../profile-resource-type.js';
 import { profileCanonicalMetadata } from '../../utils/sensitive-logging-metadata.js';
+import { findInlinedResourceConstraints } from '../../validators/inlined-resource-constraints.js';
+import type { StructureDefinitionLoader } from '../structure-definition-loader.js';
+import type { ProfileDatePolicyValidator } from '../../validators/profile-date-policy.js';
 
 // ============================================================================
 // Types
@@ -73,7 +77,9 @@ export class ProfileExecutor {
   constructor(
     extensionValidator: ExtensionValidator,
     slicingValidator: SlicingValidator,
-    constraintValidator: ConstraintValidator
+    constraintValidator: ConstraintValidator,
+    private readonly datePolicy?: ProfileDatePolicyValidator,
+    private readonly profileLoader?: Pick<StructureDefinitionLoader, 'loadReferencedProfile'>,
   ) {
     this.extensionValidator = extensionValidator;
     this.profileSlicingValidation = new ProfileSlicingValidation(slicingValidator);
@@ -90,6 +96,7 @@ export class ProfileExecutor {
   ): Promise<ValidationIssue[]> {
     const issues: ValidationIssue[] = [];
     let profileConformance: ProfileConformanceLookup | undefined;
+    let inlinedResourceConstraints: ReadonlySet<Constraint> | undefined;
     let conformanceChecks = 0;
     let conformanceCheckMs = 0;
     const underlyingCheck = context.profileConformance;
@@ -112,8 +119,11 @@ export class ProfileExecutor {
 
     try {
       const { resource, profileUrl, fhirVersion, strictMode, getValueAtPath, referenceResolver, enclosingBundle } = context;
+      issues.push(...this.datePolicy?.validate(resource, profileUrl, fhirVersion, enclosingBundle) ?? []);
       const structureDef = profileForConcreteResource(context.structureDef, context.resourceType, fhirVersion);
       const effectiveContext = structureDef === context.structureDef ? context : { ...context, structureDef };
+      const editionIssue = profileVersionAliasIssue(structureDef, profileUrl, fhirVersion, context.resourceType);
+      if (editionIssue) issues.push(editionIssue);
       this.profileSlicingValidation.setMustSupportSeverity(
         strictMode ? 'warning' : 'information',
       );
@@ -151,14 +161,17 @@ export class ProfileExecutor {
         // 3. Validate FHIRPath constraints
         // Using snapshot elements which contain the constraints
         profileConformance = conformanceCheck
-          ? await precomputeProfileConformance(structureDef.snapshot.element, resource, conformanceCheck)
+          ? await precomputeProfileConformance(structureDef.snapshot.element, resource, conformanceCheck,
+            { strictUnknown: structureDef.kind === 'complex-type' })
           : undefined;
+        inlinedResourceConstraints = await findInlinedResourceConstraints(resource, structureDef, this.profileLoader
+          ? (url, source) => this.profileLoader!.loadReferencedProfile(url, source ?? structureDef, fhirVersion) : undefined);
         finishPhase('constraints');
         const constraintIssues = await this.constraintValidator.validate(
           resource,
           structureDef.snapshot.element,
           profileUrl,
-          { strictMode, fhirVersion, bundle: enclosingBundle, profileConformance, referenceResolver },
+          { strictMode, fhirVersion, bundle: enclosingBundle, profileConformance, referenceResolver, inlinedResourceConstraints },
         );
         issues.push(...constraintIssues);
         finishPhase('identifiers');
@@ -194,7 +207,7 @@ export class ProfileExecutor {
         profileUrl,
       }));
       finishPhase('snapshotFHIRPath');
-      issues.push(...await this.runSnapshotFHIRPathConstraints(effectiveContext, profileConformance));
+      issues.push(...await this.runSnapshotFHIRPathConstraints(effectiveContext, profileConformance, inlinedResourceConstraints));
       finishPhase('completed');
 
       return issues;
@@ -216,6 +229,7 @@ export class ProfileExecutor {
   private runSnapshotFHIRPathConstraints(
     context: ProfileValidationContext,
     profileConformance: ProfileConformanceLookup | undefined,
+    inlinedResourceConstraints?: ReadonlySet<Constraint>,
   ): Promise<ValidationIssue[]> {
     const executor = context.sdFHIRPathExecutor ?? this.ownSDFHIRPathExecutor;
     return executor.execute({
@@ -229,6 +243,7 @@ export class ProfileExecutor {
       fhirVersion: context.fhirVersion,
       terminologyResolver: context.terminologyResolver,
       profileConformance,
+      inlinedResourceConstraints,
       referenceResolver: context.referenceResolver,
     });
   }

@@ -59,9 +59,13 @@ describe('selected genuine concept-filter membership', () => {
   it.each(['part-of', 'grouped-by', undefined])('cannot close %s hierarchy', async hierarchyMeaning => {
     await expect(harness(graph({ hierarchyMeaning })).exact()).resolves.toBe('unverified');
   });
-  it.each(['missing-root', 'missing-code'])('keeps %s unknown', async cause => {
-    const check = harness(graph(), [{ system, filter: [{ ...filter, value: cause === 'missing-root' ? 'absent' : 'O' }] }]);
-    await expect(check.exact(cause === 'missing-code' ? 'absent' : 'N')).resolves.toBe('unverified');
+  it('keeps an unknown filter root unverified', async () => {
+    const check = harness(graph(), [{ system, filter: [{ ...filter, value: 'absent' }] }]);
+    await expect(check.exact('N')).resolves.toBe('unverified');
+  });
+  it.each(['complete', 'fragment'] as const)('separates code absence from hierarchy absence in %s content', async content => {
+    const check = harness(graph({ content }), [{ system, filter: [filter] }]);
+    await expect(check.exact('absent')).resolves.toBe(content === 'complete' ? 'invalid' : 'unverified');
   });
   it.each(['complete', 'fragment'] as const)('observed descendant N survives %s content; missing path only closes complete', async content => {
     const check = harness(graph({ content }));

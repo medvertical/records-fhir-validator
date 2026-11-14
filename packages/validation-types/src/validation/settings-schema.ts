@@ -7,7 +7,7 @@
  * Benefits:
  * - Runtime validation with detailed error messages
  * - Auto-generated TypeScript types
- * - deepPartial() for update schemas (no manual field lists)
+ * - Explicit sparse update contracts, with atomic replacement collections
  * - Consistent validation across client and server
  */
 
@@ -160,10 +160,46 @@ export const ValidationSettingsSchema = ValidationSettingsObjectSchema.superRefi
 // ============================================================================
 
 /**
- * Deep partial of ValidationSettings for partial updates.
- * All fields are optional at every level.
+ * Sparse settings updates retain nested omission semantics. Lists of servers,
+ * advisor rules and imposed policies remain validated replacement objects.
  */
-export const ValidationSettingsUpdateSchema = ValidationSettingsObjectSchema.deepPartial().extend({
+export const ValidationSettingsUpdateSchema = ValidationSettingsObjectSchema.partial().extend({
+    aspects: z.object({
+        structural: ValidationAspectConfigSchema.partial().optional(),
+        profile: ValidationAspectConfigSchema.partial().optional(),
+        terminology: ValidationAspectConfigSchema.partial().optional(),
+        reference: ValidationAspectConfigSchema.partial().optional(),
+        invariant: ValidationAspectConfigSchema.partial().optional(),
+        custom_rule: ValidationAspectConfigSchema.partial().optional(),
+        metadata: ValidationAspectConfigSchema.partial().optional(),
+        anomaly: ValidationAspectConfigSchema.partial().optional(),
+    }).strict().optional(),
+    performance: ValidationSettingsObjectSchema.shape.performance.partial().optional(),
+    resourceTypes: ValidationSettingsObjectSchema.shape.resourceTypes.partial().optional(),
+    mii: MiiValidationSettingsSchema.partial().optional(),
+    terminologyFallback: ValidationSettingsObjectSchema.shape.terminologyFallback.unwrap().partial().optional(),
+    offlineConfig: ValidationSettingsObjectSchema.shape.offlineConfig.unwrap().partial().optional(),
+    terminologyResolution: TerminologyResolutionSchema.partial().extend({
+        snapshot: TerminologyResolutionSchema.shape.snapshot.unwrap().partial().optional(),
+        serverDelegation: TerminologyResolutionSchema.shape.serverDelegation.unwrap().partial().optional(),
+        twoPhaseExpansion: TerminologyResolutionSchema.shape.twoPhaseExpansion.unwrap().partial().optional(),
+    }).optional(),
+    advancedTerminology: AdvancedTerminologyConfigSchema.partial().extend({
+        hierarchyValidation: AdvancedTerminologyConfigSchema.shape.hierarchyValidation.partial().optional(),
+        eclValidation: AdvancedTerminologyConfigSchema.shape.eclValidation.partial().optional(),
+        crossMappingValidation: AdvancedTerminologyConfigSchema.shape.crossMappingValidation.partial().extend({
+            checkPairs: z.array(AdvancedTerminologyConfigSchema.shape.crossMappingValidation.shape.checkPairs
+                .unwrap().element.partial()).optional(),
+        }).optional(),
+    }).optional(),
+    packageDownload: PackageDownloadConfigSchema.partial().extend({
+        workspaceTemplates: z.array(PackageDownloadConfigSchema.shape.workspaceTemplates.unwrap().element.partial())
+            .max(32).optional(),
+    }).optional(),
+    recursiveReferenceValidation: RecursiveReferenceValidationSchema.partial().optional(),
+    cacheConfig: CacheConfigSchema.partial().optional(),
+    caching: ValidationSettingsObjectSchema.shape.caching.unwrap().partial().optional(),
+    hapiConfig: HapiConfigSchema.partial().optional(),
     terminologyServers: z.array(TerminologyServerSchema).optional(),
     circuitBreaker: CircuitBreakerConfigSchema.optional(),
     profileSources: ProfileSourcesConfigSchema.optional(),

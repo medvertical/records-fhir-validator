@@ -177,9 +177,11 @@ async function validateExtractedCodeBindings(
     // A code primitive inherits the CodeSystem from its binding; a Coding does
     // not, and its bare code text occurring in the expansion proves nothing.
     if (codedDatatypeRequiresSystem && !codeInfo.system) {
-      if (await systemlessCodingSatisfiesBinding(
-        deps.packageLoader, rawCode, codeInfo.code, valueSetUrl, binding.strength, options?.fhirVersion,
-      )) validCodeInfos.push(codeInfo);
+      const membership = await systemlessCodingSatisfiesBinding(
+        deps.packageLoader, rawCode, codeInfo.code, valueSetUrl, options?.fhirVersion,
+      );
+      if (membership !== false) validCodeInfos.push(codeInfo);
+      if (membership === undefined) unverifiedCodeInfos.push(codeInfo);
       continue;
     }
     const outcome = await deps.resolveCodeBindingForBinding(

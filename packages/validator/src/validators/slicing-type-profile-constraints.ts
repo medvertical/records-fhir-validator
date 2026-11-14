@@ -1,4 +1,5 @@
-import type { StructureDefinition } from '../core/structure-definition-types.js';
+import { findInlinedResourceConstraints, type ResourceTypeProfileResolver } from './inlined-resource-constraints.js';
+import { copyNumberSources } from '../input/number-source.js';
 import { isFhirResource } from '../core/fhir-resource.js';
 import { getValidationTargets } from '../business-rules/element-validation-targets.js';
 import { focusResourceOf } from './sd-fhirpath-focus-resource.js';
@@ -21,7 +22,7 @@ interface ProfileConstraintTarget {
   typeSpecs: TypeSpec[];
 }
 
-type TypeProfileResolver = (profileUrl: string) => Promise<StructureDefinition | null>;
+type TypeProfileResolver = ResourceTypeProfileResolver;
 
 export async function validateSliceTypeProfileConstraints(
   element: unknown,
@@ -116,19 +117,20 @@ async function validateTargetTypeProfiles(input: {
           .filter(target => target.value === input.target.value)
           .map(target => focusResourceOf(rootResource, target.fullPath)).filter(isFhirResource) : []);
         const focusResource = ownFocus ?? (owners.size === 1 ? [...owners][0] : undefined);
-        // A resource of the profile's type is validated as itself, so what
-        // conformsTo() establishes about it holds for the same instance; a
-        // datatype in resource clothing is no resource to validate.
+        // The typed projection lets the conformance callback admit an actual
+        // datatype profile while preserving an unknown dependency as incomplete.
         const ownResource = isFhirResource(input.target.value) && input.target.value.resourceType === typeRoot;
-        const value = ownResource ? input.target.value : { ...asRecord(input.target.value), resourceType: typeRoot };
-        const profileConformance = ownResource && input.profileConformance
-          ? await precomputeProfileConformance(profileElements, value, input.profileConformance)
+        const value = ownResource ? input.target.value : copyNumberSources(input.target.value,
+          { ...asRecord(input.target.value), resourceType: typeRoot });
+        const profileConformance = input.profileConformance
+          ? await precomputeProfileConformance(profileElements, value, input.profileConformance, { strictUnknown: !ownResource })
           : undefined;
         const profileIssues = await input.constraintValidator.validate(
           value,
           profileElements,
           typeProfile.url,
           {
+            inlinedResourceConstraints: await findInlinedResourceConstraints(value, typeProfile, input.typeProfileResolver),
             fhirVersion: input.fhirVersion,
             ...(rootResource ? { rootResource } : {}),
             ...(input.locateContextInRoot && rootResource

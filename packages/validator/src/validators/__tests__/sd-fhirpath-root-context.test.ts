@@ -6,7 +6,7 @@ import { SDFHIRPathExecutor } from '../sd-fhirpath-executor';
 const executor = new SDFHIRPathExecutor();
 
 describe('SDFHIRPathExecutor resource-root variables', () => {
-  it('binds Bundle entry resource constraints to the entry resource and Bundle roots', async () => {
+  it('binds parent-declared entry constraints to the containing Bundle', async () => {
     const structureDef: StructureDefinition = {
       resourceType: 'StructureDefinition',
       url: 'http://example.org/StructureDefinition/bundle-context',
@@ -202,7 +202,7 @@ describe('SDFHIRPathExecutor resource-root variables', () => {
               key: 'same-type-contained-context',
               severity: 'error',
               human: 'Check same-type contained context variables',
-              expression: "%context.type().name = 'Organization' and %resource.type().name = 'Patient' and %rootResource.type().name = 'Patient'",
+              expression: "%context.type().name = 'Organization' and %resource.type().name = 'Patient' and %resource.id = 'patient-contained' and %rootResource.id = 'patient-root'",
             }],
           },
         ],

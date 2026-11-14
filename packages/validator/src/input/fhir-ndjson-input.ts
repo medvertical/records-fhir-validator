@@ -2,6 +2,7 @@ import type {
   FhirInputLimits,
   ParsedFhirInput,
 } from './fhir-input-types.js';
+import { parseJsonWithNumberSources } from './fhir-json-input.js';
 
 const DEFAULT_MAX_BYTES = 100 * 1024 * 1024;
 const DEFAULT_MAX_LINE_BYTES = 20 * 1024 * 1024;
@@ -39,7 +40,7 @@ export function parseFhirNdjson(
     }
     let parsed: unknown;
     try {
-      parsed = JSON.parse(line);
+      parsed = parseJsonWithNumberSources(line);
     } catch {
       throw new Error(`FHIR NDJSON line ${index + 1} is not valid JSON`);
     }

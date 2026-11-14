@@ -56,8 +56,30 @@ describe('exact local CodeSystem versions in ValueSet bindings', () => {
     check.valueSet.expansion = { contains: [{ system, code: '1' }] };
     await expect(check.resolve()).resolves.toBe('unverified');
   });
-  it('preserves unknown codes as unverified when the exact CodeSystem does not contain them', async () => {
-    await expect(harness().resolve(url, 'missing')).resolves.toBe('unverified');
+  it('rejects a code absent from a qualified complete exact CodeSystem', async () => {
+    for (const include of [[{ system }], [{ system, version: '1.02' }, { system, version: '1.01' }]]) {
+      await expect(harness(include).resolve(url, 'missing')).resolves.toBe('invalid');
+    }
+    const check = harness(), otherLookup = vi.fn(async () => { throw new Error('Unneeded lookup'); });
+    await expect(resolveVersionedLocalBinding(check.loader, 'missing', system, '1.02', url, 'R4', otherLookup))
+      .resolves.toBe('invalid');
+    expect(otherLookup).not.toHaveBeenCalled();
+  });
+  it.each(['fragment', 'grammar', 'count', 'edition', 'modifier'])('keeps a missing code unverified with %s authority', async failure => {
+    const check = harness();
+    if (failure === 'fragment') check.codeSystem.content = 'fragment';
+    if (failure === 'grammar') check.codeSystem.compositional = true;
+    if (failure === 'count') check.codeSystem.count = 3;
+    if (failure === 'edition') check.codeSystem.version = 'other';
+    if (failure === 'modifier') Object.assign(check.codeSystem, { modifierExtension: [{ url: 'https://example.test/unknown' }] });
+    await expect(check.resolve(url, 'missing')).resolves.toBe('unverified');
+  });
+  it('does not claim a binding result when its ValueSet definition is unavailable or modified', async () => {
+    const check = harness(); check.loader.loadValueSetResource.mockResolvedValue(null);
+    await expect(check.resolve(url, 'missing')).resolves.toBe('unverified');
+    check.loader.loadValueSetResource.mockResolvedValue({ ...check.valueSet,
+      modifierExtension: [{ url: 'https://example.test/unknown' }] } as ValueSet);
+    await expect(check.resolve(url, 'missing')).resolves.toBe('unverified');
   });
   it('accepts a listed concept but leaves an unlisted one unverified without the exact CodeSystem release', async () => {
     const listed = harness([{ system, version: '1.00', concept: [{ code: '1' }] }]);

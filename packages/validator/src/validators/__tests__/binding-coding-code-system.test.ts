@@ -8,7 +8,8 @@ function deps(outcome: 'valid' | 'invalid' | 'unverified'): BindingValidationDep
   return {
     resolutionConfig: { reportUnverifiedBindings: false } as never,
     cache: {} as never,
-    packageLoader: {} as never,
+    packageLoader: { loadValueSetResource: async () => ({ resourceType: 'ValueSet', url: VALUE_SET,
+      expansion: { contains: [{ system: 'http://example.test/codes', code: 'M' }] } }) } as never,
     resolveCodeBindingForBinding: async () => outcome as never,
     isValueSetAvailable: async () => true,
   };
@@ -50,7 +51,7 @@ describe('system determination for a bound code primitive', () => {
     },
   );
 
-  it('still rejects required membership without a Coding.system', async () => {
+  it('does not establish required CodeableConcept membership from an unqualified coding in an expansion', async () => {
     const issues = await validateBinding(
       deps('valid'),
       { coding: [{ code: 'final' }] },
@@ -61,6 +62,28 @@ describe('system determination for a bound code primitive', () => {
       code: 'terminology-binding-required-code', severity: 'error',
     }));
     expect(undeterminedSystemIssues(issues)).toEqual([]);
+  });
+
+  it('keeps required membership of a lone systemless Coding unverified rather than rejecting its code', async () => {
+    const collaborators = deps('invalid');
+    collaborators.resolutionConfig = { ...collaborators.resolutionConfig, reportUnverifiedBindings: true };
+    const issues = await validateBinding(collaborators, { code: 'IMP' }, required, 'Encounter.class');
+    expect(issues.some(issue => issue.code === 'terminology-binding-required-code')).toBe(false);
+    expect(issues).toContainEqual(expect.objectContaining({ code: 'terminology-binding-unverified',
+      details: expect.objectContaining({ validationComplete: false }) }));
+    expect(await validateBinding(deps('valid'), { code: 'IMP', system: 'http://example.test/classes' }, required, 'Encounter.class'))
+      .toEqual([]);
+    expect(await validateBinding(deps('invalid'), { code: 'IMPX', system: 'http://example.test/classes' }, required, 'Encounter.class'))
+      .toContainEqual(expect.objectContaining({ code: 'terminology-binding-required', severity: 'error' }));
+  });
+
+  it('does not reject a systemless CodeableConcept when its ValueSet cannot be loaded', async () => {
+    const collaborators = deps('invalid');
+    collaborators.resolutionConfig = { ...collaborators.resolutionConfig, reportUnverifiedBindings: true };
+    collaborators.packageLoader = { loadValueSetResource: async () => null } as never;
+    expect(await validateBinding(collaborators, { coding: [{ code: 'M' }] }, required, 'Observation.code'))
+      .toEqual([expect.objectContaining({ code: 'terminology-binding-unverified',
+        details: expect.objectContaining({ validationComplete: false }) })]);
   });
 
   it('does not escalate a non-required primitive binding to error', async () => {

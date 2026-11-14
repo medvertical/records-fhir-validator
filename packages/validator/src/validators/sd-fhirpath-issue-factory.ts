@@ -2,6 +2,7 @@ import type { ValidationIssue } from '@records-fhir/validation-types';
 import type { Constraint } from '../core/structure-definition-types.js';
 import { createValidationIssue } from '../issues/index.js';
 import { getErrorMessage } from '../utils/error-utils.js';
+import { DecimalSourceUnavailableError } from './fhirpath-decimal-input.js';
 
 export function createConstraintViolation(
   constraint: Constraint,
@@ -52,6 +53,7 @@ export function createConstraintEvaluationError(
       constraintKey: constraint.key,
       ...(constraint.source ? { source: constraint.source } : {}),
       evaluationError: message,
+      ...(error instanceof DecimalSourceUnavailableError ? { reason: 'decimal-source-unavailable' } : {}),
       // The data was not checked, so the result is incomplete rather than
       // conformant; the quality lanes read this to tell the two apart.
       validationStatus: 'incomplete',

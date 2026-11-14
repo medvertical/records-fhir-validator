@@ -6,6 +6,9 @@ The package validates FHIR resources against StructureDefinitions, FHIRPath cons
 
 This package is the open-source validator surface for `medvertical/records-fhir-validator`. The Records product itself is commercial closed source; it is not part of this package.
 
+Configure an ISO 4217 CodeSystem or a terminology server with currency coverage
+to validate currency membership. The npm package ships no currency inventory.
+
 [![npm](https://img.shields.io/npm/v/@records-fhir/validator)](https://www.npmjs.com/package/@records-fhir/validator)
 [![FHIR](https://img.shields.io/badge/FHIR-R4%20%7C%20R4B%20%7C%20R5%20%7C%20R6-blue)](#fhir-version-routing-r4b)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
@@ -19,20 +22,21 @@ Before installing, add this override to your application's root `package.json`:
   "overrides": {
     "@lhncbc/ucum-lhc": {
       "csv-parse": "7.0.2"
-    }
+    },
+    "follow-redirects": "1.16.2"
   }
 }
 ```
 
-It pins the patched CSV parser in the transitive UCUM dependency. npm does not
-inherit library overrides into consuming applications. See [the dependency
-security note](./SECURITY.md#transitive-csv-parser) for the advisory and scope.
+These overrides select patched versions of the CSV parser in UCUM and the
+redirect handler in Axios. npm does not inherit library overrides into
+consuming applications. See [the dependency security notes](./SECURITY.md#transitive-csv-parser).
 Existing consumer locks can also retain an affected transitive `js-yaml` version;
 see [the lock-refresh guidance](./SECURITY.md#dependency-checks-for-080--6-october-2026) for the
 upstream correction permitted by the existing dependency ranges.
 
 ```sh
-npm install @records-fhir/validator@0.8.0 @records-fhir/validation-types@0.1.13
+npm install @records-fhir/validator@0.10.1 @records-fhir/validation-types@0.2.0
 ```
 
 Run the CLI against a JSON, XML, or NDJSON input:
@@ -62,8 +66,9 @@ const issues = await recordsValidator.validateRequest({
 Gate pull requests with the GitHub Action:
 
 ```yaml
-- uses: medvertical/records-fhir-validator@v0.8.0
+- uses: medvertical/records-fhir-validator@v0.10.1
   with:
+    validator-version: '0.10.1'
     paths: resources/**/*.json
     fhir-version: R4
     fail-on: error
@@ -97,7 +102,7 @@ Excluded from the public boundary:
 ## Install
 
 ```sh
-npm install @records-fhir/validator@0.8.0 @records-fhir/validation-types@0.1.13
+npm install @records-fhir/validator@0.10.1 @records-fhir/validation-types@0.2.0
 ```
 
 For local profile validation, supply the exact FHIR Core and implementation-guide
@@ -109,6 +114,18 @@ Installing the validator alone does not provide every profile or complete
 terminology content. Package downloads are enabled by default; configure profile
 sources and terminology independently when you require offline operation.
 
+### Upgrading from 0.9
+
+Consumers that compose the exported runtime schemas need Zod 4. Consumers
+that handle quality metric outcomes exhaustively need to handle
+`observation`. Terminology checks can report incomplete evidence when a
+binding or code system cannot be verified for the selected edition. Use the
+issue completeness metadata when deciding whether a result is conclusive.
+
+Use `parseFhirJson` for raw JSON input to retain the original decimal tokens
+for FHIRPath validation. See the [0.10.1 changelog](./CHANGELOG.md#0101--2026-11-14)
+for the release changes.
+
 ### Pinning
 
 Three valid ways to pin the GitHub Action that wraps this validator,
@@ -117,8 +134,16 @@ depending on your trade-off between freshness and stability:
 | Goal | Pin in `uses:` | Notes |
 |---|---|---|
 | Always-latest within current major | `medvertical/records-fhir-validator@v0` | Force-moved on every stable release; never advances onto a prerelease |
-| Specific minor/patch (recommended for production CI) | `medvertical/records-fhir-validator@v0.8.0` | Immutable once published |
-| Bit-exact reproducibility | `medvertical/records-fhir-validator@<commit-sha>` | For audit / forensic builds |
+| Exact release (recommended for production CI) | `medvertical/records-fhir-validator@v0.10.1` | Immutable by release policy |
+| Fixed Action source | `medvertical/records-fhir-validator@<commit-sha>` | Use the full commit SHA |
+
+These references pin only the Action wrapper. It installs the npm validator
+independently; without `validator-version` it selects `latest`, even when the
+Action uses an exact tag or commit SHA. Pair a fixed Action ref with an exact
+`validator-version` such as `'0.10.1'`, without `^` or `~`, as shown above.
+Update both pins deliberately. Transitive npm dependencies, runner images,
+FHIR packages and terminology sources require separate controls for reproducible
+results.
 
 The `validator-v<semver>` tag you may see on the public repo's release
 page is the **npm tarball mirror** identifier — it titles the GitHub
@@ -526,7 +551,7 @@ unless called out by a dedicated conformance lane.
 
 [`@records-fhir/validator@0.8.0`](https://www.npmjs.com/package/@records-fhir/validator/v/0.8.0) and [`@records-fhir/validation-types@0.1.13`](https://www.npmjs.com/package/@records-fhir/validation-types/v/0.1.13) are published. The [public source release](https://github.com/medvertical/records-fhir-validator/releases/tag/validator-v0.8.0) preserves the immutable npm source revision listed above.
 
-The explicitly selected [release contract](../../conformance-results/validator-current-release.json) binds package versions, built runtime, maintained measurement tools, dependency manifests and original corpora to SHA-256-pinned evidence. Replay preserves its measurement epoch; it is not a fresh validator measurement.
+The [0.8.0 release contract](https://github.com/medvertical/records-fhir-validator/blob/validator-v0.8.0/conformance-results/validator-current-release.json) binds package versions, built runtime, maintained measurement tools, dependency manifests and original corpora to SHA-256-pinned evidence. Replay preserves its measurement epoch; it is not a fresh validator measurement.
 
 | Measured lane | Result | Qualification |
 |---|---|---|
@@ -747,3 +772,5 @@ path gaps, and comparable Java/reference issues missed by both local paths.
 ## License
 
 Apache-2.0 for this package. The surrounding Records application remains proprietary and is licensed separately.
+
+The bundled UN-M49 provider rows come from [FHIRsmith](https://github.com/HealthIntersections/FHIRsmith/blob/0ecadbdeabbf278a45e7e1eb4b1ce15e555de61f/tx/cs/cs-areacode.js) under the [BSD 3-Clause license](./LICENSE.FHIRsmith). The snapshot records the original source revision and row hashes.

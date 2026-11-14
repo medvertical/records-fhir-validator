@@ -1,3 +1,4 @@
+import { copyNumberSources } from '../input/number-source.js';
 import {
     isConcreteChoiceProperty,
     splitConcreteChoiceProperty,
@@ -246,7 +247,7 @@ export function typeChoiceContext(
     const datatype = (model.path2Type as Record<string, string | undefined>)[definitionPathOf(path)];
     const choices = model.choiceTypePaths as Record<string, string[] | undefined>;
     if (!datatype || !typedBases.every(base => choices[`${datatype}.${base}`])) return context;
-    return { resourceType: datatype, ...context };
+    return copyNumberSources(context, { resourceType: datatype, ...context });
 }
 
 /**

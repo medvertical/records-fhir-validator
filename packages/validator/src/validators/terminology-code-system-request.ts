@@ -47,8 +47,13 @@ function handleCodeSystemValidationError(
   const axiosResponse = isAxiosError(error) ? error.response : undefined;
 
   if (axiosResponse?.status === 422 || axiosResponse?.status === 404) {
+    const result = operationOutcomeToCodeSystemResult(axiosResponse.data, code, system);
+    if (result.reason === 'server-failure') {
+      circuitBreaker.recordFailure();
+      return result;
+    }
     circuitBreaker.recordSuccess();
-    if (isSnomedNationalExtensionSystemCode(system, code) && !authoritativeSnomedEdition) {
+    if (result.reason === 'code-unknown' && isSnomedNationalExtensionSystemCode(system, code) && !authoritativeSnomedEdition) {
       logger.debug(
         '[TerminologyApiClient] SNOMED national-extension code could not be verified; failing open',
         {
@@ -58,7 +63,7 @@ function handleCodeSystemValidationError(
       );
       return buildSnomedNationalExtensionUnverifiedResult(code, system);
     }
-    return operationOutcomeToCodeSystemResult(axiosResponse.data, code, system);
+    return result;
   }
 
   circuitBreaker.recordFailure();
@@ -112,20 +117,21 @@ export async function executeCodeSystemValidateCodeRequest({
       ),
     );
 
-    recordTerminologyResponse(
+    const result = parseCodeSystemValidationParameters(
+      response.data,
+      code,
+      system,
+      { authoritativeSnomedEdition: override?.authoritativeSnomedEdition, requestedVersion: codeSystemVersion },
+    );
+    if (result.reason === 'server-failure') circuitBreaker.recordFailure();
+    else recordTerminologyResponse(
       circuitBreaker,
       config,
       'CodeSystem/$validate-code',
       serverUrl,
       startedAt,
     );
-    const result = parseCodeSystemValidationParameters(
-      response.data,
-      code,
-      system,
-      { authoritativeSnomedEdition: override?.authoritativeSnomedEdition },
-    );
-    operationCache.storeCodeSystemValidateCode(cacheKey, result);
+    if (result.reason !== 'server-failure') operationCache.storeCodeSystemValidateCode(cacheKey, result);
     return result;
   } catch (error: unknown) {
     const result = handleCodeSystemValidationError(
@@ -136,7 +142,7 @@ export async function executeCodeSystemValidateCodeRequest({
       override?.authoritativeSnomedEdition === true,
     );
     const axiosResponse = isAxiosError(error) ? error.response : undefined;
-    if (axiosResponse?.status === 422 || axiosResponse?.status === 404) {
+    if ((axiosResponse?.status === 422 || axiosResponse?.status === 404) && result.reason !== 'server-failure') {
       operationCache.storeCodeSystemValidateCode(cacheKey, result);
     }
     return result;

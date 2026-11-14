@@ -8,6 +8,7 @@ import { isRecord } from '../core/fhir-resource.js';
 import type { FhirResource } from '../core/fhir-resource.js';
 import type { ProfileConformanceLookup } from './sd-fhirpath-profile-conformance.js';
 import type { ReferenceResolver } from './slice-types.js';
+import type { FhirPathDecimalInput } from './fhirpath-decimal-input.js';
 
 export { isFhirResource, isRecord } from '../core/fhir-resource.js';
 export type { FhirResource } from '../core/fhir-resource.js';
@@ -18,10 +19,12 @@ export interface ConstraintValidationState {
   userInvocationTable: ReturnType<typeof buildUserInvocationTable>;
   bundle?: BundleResourceInput;
   rootResource?: FhirResource;
+  inlinedResourceConstraints?: ReadonlySet<Constraint>;
   focusResource?: FhirResource | null;
   referenceResolver?: ReferenceResolver | null;
   /** Resolved paths belong to this validation only; inputs may change between calls. */
   getEvaluationContext?: (path: string) => unknown;
+  decimalInput?: FhirPathDecimalInput;
 }
 
 export interface ConstraintValidationOptions {
@@ -36,6 +39,7 @@ export interface ConstraintValidationOptions {
    */
   rootResource?: FhirResource;
   /** Explicit nearest %resource; null leaves it unbound instead of inventing an owner. */
+  inlinedResourceConstraints?: ReadonlySet<Constraint>;
   focusResource?: FhirResource | null;
   /** Conformance to the profiles conformsTo() names, established beforehand. */
   profileConformance?: ProfileConformanceLookup;

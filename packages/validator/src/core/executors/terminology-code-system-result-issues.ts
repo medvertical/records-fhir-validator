@@ -35,6 +35,9 @@ export function buildCodeSystemResultIssues(
   isArrayInput: boolean,
   includeUnverified = true,
 ): ValidationIssue[] {
+  if (result.reason === 'system-unresolvable' || result.reason === 'server-failure') {
+    return buildInvalidCodeIssues(coding, result, path, index, isArrayInput);
+  }
   const serverIssues = result.issues ?? [];
   return [
     ...(includeUnverified ? buildUnverifiedIssues(coding, result, path, index, isArrayInput) : []),
@@ -56,7 +59,8 @@ function buildUnverifiedIssues(
   index: number,
   isArrayInput: boolean,
 ): ValidationIssue[] {
-  if (!['remote-budget-exhausted', 'national-extension-unverified', 'delegation-disabled', 'no-server', 'circuit-open', 'snapshot-unavailable'].includes(result.reason ?? '')) {
+  const incomplete = result.reason === 'code-unknown' && result.incompleteCodeSystem === true;
+  if (!incomplete && !['remote-budget-exhausted', 'national-extension-unverified', 'delegation-disabled', 'no-server', 'circuit-open', 'snapshot-unavailable'].includes(result.reason ?? '')) {
     return [];
   }
   const codingPath = resultPath(path, index, isArrayInput, 'code');
@@ -67,7 +71,9 @@ function buildUnverifiedIssues(
   return [createTerminologyIssue({
     severity: 'information',
     code: 'terminology-codesystem-unverified',
-    message: snapshotUnavailable
+    message: incomplete
+      ? `Code '${coding.code}' could not be verified in CodeSystem '${coding.system}'${coding.version ? ` version '${coding.version}'` : ''}; the local inventory is incomplete.`
+      : snapshotUnavailable
       ? result.message ?? 'CodeSystem membership could not be verified from the selected terminology snapshot.'
       : unavailable
       ? result.message ?? 'CodeSystem membership was not verified because no eligible terminology server could be asked.'
@@ -84,11 +90,14 @@ function buildUnverifiedIssues(
       system: coding.system,
       ...(coding.version ? { codeSystemVersion: coding.version } : {}),
       ...(coding.display ? { display: coding.display } : {}),
-      reason: result.reason,
+      reason: incomplete ? 'codesystem-incomplete' : result.reason,
       validationComplete: false,
       validationStatus: 'incomplete',
+      ...(incomplete ? { checkOutcome: 'unverified' } : {}),
       ...(coding.version ? { codeSystemVersion: coding.version } : {}),
-      fixHint: snapshotUnavailable
+      fixHint: incomplete
+        ? 'Provide the exact complete CodeSystem edition or authoritative code validation; absence from a partial inventory does not prove an invalid code.'
+        : snapshotUnavailable
         ? 'Acquire the required terminology authority and qualify a new snapshot before validating again.'
         : unavailable
         ? 'Provide a complete local CodeSystem, or configure an enabled terminology server for this FHIR release and validate again when it is available.'
@@ -139,6 +148,8 @@ function buildDisplayIssues(
       code: coding.code,
       system: coding.system,
       display: coding.display,
+      ...(coding.version ? { codeSystemVersion: coding.version } : {}),
+      ...(result.codeSystemVersion ? { resolvedCodeSystemVersion: result.codeSystemVersion } : {}),
       ...(expectedDisplay ? { expectedDisplay } : {}),
       ...(acceptedDisplays.length > 0 ? { acceptedDisplays } : {}),
       fixHint: buildDisplayMismatchFixHint(coding.system, coding.code, coding.display),
@@ -172,6 +183,8 @@ function buildInactiveIssues(
       code: coding.code,
       system: coding.system,
       ...(result.display ? { display: result.display } : {}),
+      ...(coding.version ? { codeSystemVersion: coding.version } : {}),
+      ...(result.codeSystemVersion ? { resolvedCodeSystemVersion: result.codeSystemVersion } : {}),
       ...(inactiveIssue?.source === 'local-code-system' ? {
         terminologySource: inactiveIssue.source,
         lifecyclePolicy: 'fhir-validator-6.9.11-properties',
@@ -233,15 +246,17 @@ function buildInvalidCodeIssues(
   index: number,
   isArrayInput: boolean,
 ): ValidationIssue[] {
-  if (result.valid || result.reason === 'display-mismatch') return [];
   const systemUnresolvable = result.reason === 'system-unresolvable';
   const serverFailure = result.reason === 'server-failure';
+  if (result.valid && !systemUnresolvable && !serverFailure || result.reason === 'display-mismatch') return [];
   const loinc = getLoincCheckDigitDiagnostic(coding.system, coding.code);
+  const incompleteAbsence = result.reason === 'code-unknown' && result.incompleteCodeSystem === true;
+  if (incompleteAbsence && !loinc) return [];
   return [createTerminologyIssue({
-    severity: systemUnresolvable || serverFailure || result.incompleteCodeSystem ? 'warning' : 'error',
+    severity: systemUnresolvable || serverFailure || (result.incompleteCodeSystem && !loinc) ? 'warning' : 'error',
     code: serverFailure ? 'terminology-server-failure'
       : systemUnresolvable ? 'terminology-codesystem-unresolvable' : 'terminology-code-invalid',
-    message: buildInvalidCodeMessage(coding, result, loinc),
+    message: incompleteAbsence && loinc ? loinc.fixHint : buildInvalidCodeMessage(coding, result, loinc),
     // An unresolvable system is a remark about `Coding.system`, not about the
     // code: nothing was found to check the code against. The other producer of
     // this issue code already anchors it there, and so does the reference
@@ -253,8 +268,9 @@ function buildInvalidCodeIssues(
       ...(coding.version ? { codeSystemVersion: coding.version } : {}),
       ...(serverFailure ? { checkOutcome: 'execution-failure' } : {}),
       ...(coding.display ? { display: coding.display } : {}),
-      ...(result.reason ? { reason: result.reason } : {}),
-      ...(systemUnresolvable || result.incompleteCodeSystem ? {
+      ...(result.reason ? { reason: incompleteAbsence && loinc ? 'loinc-check-digit' : result.reason } : {}),
+      ...(result.codeSystemVersion ? { resolvedCodeSystemVersion: result.codeSystemVersion } : {}),
+      ...(systemUnresolvable || serverFailure || (result.incompleteCodeSystem && !loinc) ? {
         validationComplete: false,
         validationStatus: 'incomplete',
         ...(coding.version ? { codeSystemVersion: coding.version } : {}),

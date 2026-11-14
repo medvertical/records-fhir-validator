@@ -8,7 +8,7 @@ import type { SDFHIRPathEvaluationScope } from './sd-fhirpath-evaluation-scope.j
 import { createConstraintViolation } from './sd-fhirpath-issue-factory.js';
 import { evaluateSpecialisedRootConstraint } from './sd-fhirpath-specialised-root-constraints.js';
 import { fixKnownInvariantExpression } from './fhirpath-expression-fixer.js';
-import { focusResourceOf } from './sd-fhirpath-focus-resource.js';
+import { constraintFocusResource } from './sd-fhirpath-focus-resource.js';
 
 const EMPTY_PLAN: SDFHIRPathEvaluationPlan = {
   immediateIssues: [],
@@ -68,7 +68,8 @@ export class SDFHIRPathCollectedEvaluationPlanBuilder {
         expression,
         context: target.context,
         rootResource: scope.rootResource,
-        focusResource: scope.focusResource ?? (scope.resource === scope.rootResource ? focusResourceOf(scope.resource, target.path) : undefined),
+        focusResource: constraintFocusResource(scope.resource, scope.rootResource, target.path, scope.focusResource,
+          scope.inlinedResourceConstraints?.has(constraint)),
         resolveRootResource: scope.resource,
         path: target.path,
         resourceType: scope.resourceType,
@@ -79,6 +80,7 @@ export class SDFHIRPathCollectedEvaluationPlanBuilder {
         checkHtml: target.checkHtml,
         terminologyResolver: scope.terminologyResolver,
         referenceResolver: scope.referenceResolver,
+        decimalInput: scope.decimalInput,
       })),
     };
   }

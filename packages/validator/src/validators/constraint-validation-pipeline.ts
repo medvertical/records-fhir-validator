@@ -18,6 +18,7 @@ import {
 import { resolveElementType } from './fhirpath-type-preprocessor.js';
 import type { TerminologyOperationCache } from './terminology-operation-cache.js';
 import type { ValueSetCache } from './valueset-cache.js';
+import { FhirPathDecimalInput } from './fhirpath-decimal-input.js';
 
 /** Owns constraint input state, target planning, and element traversal. */
 export class ConstraintValidationPipeline {
@@ -47,6 +48,7 @@ export class ConstraintValidationPipeline {
       if (!contextsByPath.has(path)) contextsByPath.set(path, getEvaluationContext(resource, path, getTargets));
       return contextsByPath.get(path);
     };
+    const decimalInput = new FhirPathDecimalInput(options?.fhirVersion ?? 'R4', resource.resourceType);
     const state: ConstraintValidationState = {
       strictnessMode: options?.strictMode ? 'strict' : 'standard',
       fhirVersion: options?.fhirVersion || 'R4',
@@ -55,14 +57,16 @@ export class ConstraintValidationPipeline {
         options?.bundle,
         this.valueSetCache,
         this.operationCache,
-        options?.profileConformance,
+        decimalInput.conformance(options?.profileConformance),
         options?.referenceResolver,
       ),
       bundle: options?.bundle,
       referenceResolver: options?.referenceResolver,
       rootResource,
       focusResource: options?.focusResource,
+      inlinedResourceConstraints: options?.inlinedResourceConstraints,
       getEvaluationContext: readContext,
+      decimalInput,
     };
     const issues: ValidationIssue[] = [];
     const matchesSlice = createSliceDefinitionMatcher(elements);

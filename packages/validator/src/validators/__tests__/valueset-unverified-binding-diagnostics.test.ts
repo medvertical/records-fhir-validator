@@ -125,7 +125,7 @@ describe('unverified binding diagnostics', () => {
       reason: 'server-failure',
       terminologyDiagnostic: { kind: 'terminology-server-failure' },
     });
-    expect(details.recommendation).toContain('did not answer');
+    expect(details.recommendation).toContain('did not return a usable validation result');
   });
 
   it('records that the tenant packages were part of the search', async () => {

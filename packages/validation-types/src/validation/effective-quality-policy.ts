@@ -5,6 +5,7 @@ import type {
   QualityRuleOverride,
   QualityRuleSeverity,
 } from './quality-rule-pack.js';
+import type { QualityAssessmentBasis } from './quality-assessment-basis.js';
 
 export interface EffectiveQualityRule {
   packId: string;
@@ -13,6 +14,13 @@ export interface EffectiveQualityRule {
   enabled: boolean;
   effectiveSeverity: QualityRuleSeverity;
   effectiveThreshold?: QualityRuleOverride['threshold'];
+  effectiveAssessment?: QualityAssessmentBasis;
+  assessmentProvenance?: {
+    basisOrigin: 'program' | 'policy';
+    severityOrigin: 'records-default' | 'program' | 'policy';
+    upstreamSeverity: 'not-provided';
+    populationFingerprint: `sha256:${string}`;
+  };
   waiver?: QualityRuleOverride['waiver'];
 }
 

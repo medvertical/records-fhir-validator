@@ -54,7 +54,7 @@ export function unverifiedBindingKey(
 }
 
 /**
- * Every asked server failed rather than answered. That is an execution
+ * Every asked server failed to return a usable answer. That is an execution
  * failure of the check, not an unknown value set, and is reported as such.
  */
 export function isTerminologyServerFailure(diagnostic: UnverifiedBindingDiagnostic): boolean {
@@ -64,7 +64,7 @@ export function isTerminologyServerFailure(diagnostic: UnverifiedBindingDiagnost
 
 export function describeUnverifiedBinding(diagnostic: UnverifiedBindingDiagnostic): string {
     if (isTerminologyServerFailure(diagnostic)) {
-        return 'The configured terminology servers did not answer (timeout, error, or open circuit). '
+        return 'The configured terminology servers did not return a usable validation result (timeout, error, malformed response, or open circuit). '
             + 'Check connectivity and server health, then validate again.';
     }
     switch (diagnostic.cause) {

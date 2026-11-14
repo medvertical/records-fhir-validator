@@ -3,6 +3,7 @@ import type {
   TerminologyResolutionConfig,
   TerminologyServerDescriptor,
 } from './valueset-types.js';
+import { normalizeCodeSystemIdentity } from './code-system-canonical-aliases.js';
 
 function cloneAuth(auth: TerminologyApiAuthConfig | undefined): TerminologyApiAuthConfig | undefined {
   return auth ? { ...auth } : undefined;
@@ -26,7 +27,7 @@ function snapshotCodeSystemDefaults(value: Record<string, string> | undefined): 
   }
   const keys = Reflect.ownKeys(value);
   if (keys.length > 64) throw new TypeError('CodeSystem default versions exceed 64 systems');
-  const entries: Array<[string, string]> = [];
+  const entries = new Map<string, string>();
   for (const key of keys) {
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     if (typeof key !== 'string' || !descriptor || !Object.hasOwn(descriptor, 'value')
@@ -35,10 +36,14 @@ function snapshotCodeSystemDefaults(value: Record<string, string> | undefined): 
       || descriptor.value.includes('|') || descriptor.value.length > 512) {
       throw new TypeError('CodeSystem default versions require exact canonical and business version strings');
     }
-    entries.push([key, descriptor.value]);
+    const canonical = normalizeCodeSystemIdentity(key);
+    if (entries.has(canonical) && entries.get(canonical) !== descriptor.value) {
+      throw new TypeError('Registered CodeSystem identifiers cannot select conflicting default versions');
+    }
+    entries.set(canonical, descriptor.value);
   }
-  if (entries.length === 0) return undefined;
-  return Object.freeze(Object.fromEntries(entries.sort(([left], [right]) => left.localeCompare(right))));
+  if (entries.size === 0) return undefined;
+  return Object.freeze(Object.fromEntries([...entries].sort(([left], [right]) => left.localeCompare(right))));
 }
 
 export function resolveCodeSystemVersion(
@@ -47,8 +52,10 @@ export function resolveCodeSystemVersion(
   requestedVersion?: string,
 ): string | undefined {
   if (requestedVersion !== undefined || !system) return requestedVersion;
+  const [canonical, pipedVersion] = system.split('|');
+  if (pipedVersion !== undefined) return pipedVersion;
   const defaults = config.defaultCodeSystemVersions;
-  const descriptor = defaults && Object.getOwnPropertyDescriptor(defaults, system);
+  const descriptor = defaults && Object.getOwnPropertyDescriptor(defaults, normalizeCodeSystemIdentity(canonical));
   return descriptor && Object.hasOwn(descriptor, 'value') && typeof descriptor.value === 'string'
     ? descriptor.value : undefined;
 }

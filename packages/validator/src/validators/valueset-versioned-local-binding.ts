@@ -4,7 +4,9 @@ import type { FhirVersion } from './valueset-expansion-cache-key.js';
 import type { ValueSetPackageLoader } from './valueset-package-loader.js';
 import type { CodeBindingOutcome, ValueSetComposeInclude } from './valueset-types.js';
 import { normalizeKnownCodeSystemCanonical } from './code-system-canonical-aliases.js';
-import { fhirVersionToPackageMajor, findCodeSystemConcept, isAssertableCodeSystem } from './valueset-code-system-rules.js';
+import { codeSystemCodesEquivalent, fhirVersionToPackageMajor, isAssertableCodeSystem } from './valueset-code-system-rules.js';
+import { assessLocalCodeSystemAuthority } from './local-code-system-authority.js';
+import { qualifiedExpansionMembership } from './qualified-expansion-membership.js';
 
 import { createConceptFilterEvaluator, hasUnknownTerminologyModifiers, type ConceptMembership } from './valueset-concept-filter-membership.js';
 
@@ -20,6 +22,8 @@ export type LocalCodeSystemLookup = (code: string, system: string, fhirVersion?:
  * for the version the coding claims. A code missing from the lists stays
  * unverified: the value set version this lookup found may not be the one the
  * profile was built on (eu base 2.0.0 dropped a laterality its ballot listed).
+ * An absent code in a qualified complete exact CodeSystem is a separate
+ * negative witness; edition alternatives cannot make that code exist.
  * A Coding.version that differs from the include's is reported on its own.
  */
 export async function resolveVersionedLocalBinding(
@@ -33,12 +37,19 @@ export async function resolveVersionedLocalBinding(
   const exact = Boolean(codeSystem && normalizeKnownCodeSystemCanonical(codeSystem.url) === canonical
     && codeSystem.version === version && isAssertableCodeSystem(codeSystem) && !hasUnknownTerminologyModifiers(codeSystem));
   let namedRejected = false;
+  let completeRejected = false;
   if (exact) {
     const imported = findImportedInventoryConcept(codeSystem!, code);
-    if (!(imported === undefined ? findCodeSystemConcept(codeSystem!.concept, code) : imported)) {
-      const result = await validateLocalCodeSystem?.(code, canonical, fhirVersion, version);
-      namedRejected = Boolean(result && isImportedNamedCodeRejection(result, code, canonical, fhirVersion, version));
-      if (!namedRejected) return 'unverified';
+    const assessment = imported === undefined ? assessLocalCodeSystemAuthority(codeSystem!, code) : null;
+    if (assessment?.kind === 'unverified') return 'unverified';
+    if (assessment?.kind === 'present') code = assessment.concept.code;
+    completeRejected = assessment?.kind === 'absent' && assessment.complete;
+    if (!(imported === undefined ? assessment?.kind === 'present' : imported)) {
+      if (!completeRejected) {
+        const result = await validateLocalCodeSystem?.(code, canonical, fhirVersion, version);
+        namedRejected = Boolean(result && isImportedNamedCodeRejection(result, code, canonical, fhirVersion, version));
+      }
+      if (!namedRejected && !completeRejected) return 'unverified';
     }
   }
 
@@ -51,9 +62,9 @@ export async function resolveVersionedLocalBinding(
     const valueSet = await loader.loadValueSetResource(reference, fhirVersion);
     const [url, requestedVersion] = reference.split('|');
     if (!valueSet || valueSet.url !== url || (requestedVersion && valueSet.version !== requestedVersion)
-      || !valueSet.compose?.include?.length
       || hasUnknownTerminologyModifiers(valueSet as unknown as Record<string, unknown>)
       || hasUnknownTerminologyModifiers(valueSet.compose as unknown as Record<string, unknown>)) return null;
+    if (!valueSet.compose?.include?.length) return null;
     // Named-code absence closes simple compose clauses, not unresolved filters or edition alternatives.
     if (namedRejected && [...valueSet.compose.include, ...(valueSet.compose.exclude ?? [])].some(entry => {
       const pinned = entry.version ?? entry.system?.split('|')[1];
@@ -65,7 +76,8 @@ export async function resolveVersionedLocalBinding(
     if (included === false) return false;
     const excluded = union(await Promise.all((valueSet.compose.exclude ?? []).map(entry => matchesEntry(entry, next))));
     if (excluded === true) return false;
-    return included === true && excluded === false ? true : null;
+    if (included === true && excluded === false) return true;
+    return exact && codeSystem ? qualifiedExpansionMembership(valueSet, codeSystem, code, version) : null;
   }
 
   async function matchesEntry(entry: ValueSetComposeInclude, visited: Set<string>): Promise<Membership> {
@@ -76,9 +88,10 @@ export async function resolveVersionedLocalBinding(
     if (entry.system) {
       const [entrySystem, pipedVersion] = entry.system.split('|');
       constraints.push(normalizeKnownCodeSystemCanonical(entrySystem) === canonical);
-      if (namedRejected) constraints.push(false);
+      if (namedRejected || completeRejected) constraints.push(false);
       if (exact && (entry.version || pipedVersion)) constraints.push((entry.version ?? pipedVersion) === '*' || (entry.version ?? pipedVersion) === version);
-      const listed = entry.concept?.length ? entry.concept.some(concept => concept.code === code) : undefined;
+      const listed = entry.concept?.length ? entry.concept.some(concept =>
+        codeSystemCodesEquivalent(concept.code, code, exact && codeSystem ? codeSystem.caseSensitive : true, canonical)) : undefined;
       if (listed !== undefined && (exact || entry.version || pipedVersion)) constraints.push(listed);
       else if (!exact) constraints.push(null);
     } else if (entry.concept?.length || entry.version) {

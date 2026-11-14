@@ -15,6 +15,8 @@ import { validationFailureMetadata } from '../utils/validation-execution-failure
 import { terminologyTargetMetadata } from '../utils/sensitive-logging-metadata.js';
 import { resolveUnversionedLocalFilteredBinding } from './valueset-filtered-local-binding.js';
 import { tryValidateValueSetMembershipViaServer } from './valueset-membership-server-delegation.js';
+import { expansionHasCaseVariant, resolveValueSetCasePolicy } from './valueset-membership-case-policy.js';
+import { resolveCodeSystemVersion } from './terminology-config-snapshot.js';
 
 interface ValueSetMembershipValidationDeps {
   apiClient: TerminologyApiClient;
@@ -45,7 +47,8 @@ export async function validateValueSetMembership(
   } = deps;
 
   try {
-    if (isLanguageBinding(valueSetUrl, system)) {
+    if (await isLanguageBinding(valueSetUrl, system, packageLoader, fhirVersion,
+      resolveCodeSystemVersion(resolutionConfig, system ?? 'urn:ietf:bcp:47'))) {
       return validateBCP47(code);
     }
 
@@ -57,10 +60,7 @@ export async function validateValueSetMembership(
       fhirVersion,
     );
     const enforcedTwoPhaseResult = twoPhaseShadow.getEnforcedResult(twoPhaseLookup);
-    if (enforcedTwoPhaseResult !== undefined) {
-      return twoPhaseShadow.finish(twoPhaseLookup, enforcedTwoPhaseResult, context);
-    }
-
+    if (enforcedTwoPhaseResult === true) return twoPhaseShadow.finish(twoPhaseLookup, true, context);
     const filtered = await resolveUnversionedLocalFilteredBinding(packageLoader, code, system, valueSetUrl, fhirVersion);
     if (filtered.kind === 'evaluated') {
       if (resolutionConfig.strategy !== 'server-first' && filtered.outcome !== 'unverified') {
@@ -74,11 +74,20 @@ export async function validateValueSetMembership(
       return twoPhaseShadow.finish(twoPhaseLookup, filtered.outcome !== 'invalid', context);
     }
 
+    let casePolicy = enforcedTwoPhaseResult === false ? await resolveValueSetCasePolicy(packageLoader, system, valueSetUrl, fhirVersion) : undefined;
+    if (enforcedTwoPhaseResult !== undefined && !(casePolicy === 'insensitive' && enforcedTwoPhaseResult === false)) {
+      return twoPhaseShadow.finish(twoPhaseLookup, enforcedTwoPhaseResult, context);
+    }
+
     const expandedCodes = await getExpandedValueSet(valueSetUrl, fhirVersion);
     const fullCodes = system
       ? codeSystemCanonicalCandidates(system).map(candidate => `${candidate}|${code}`)
       : [code];
     if (fullCodes.some(fullCode => expandedCodes.has(fullCode)) || expandedCodes.has(code)) {
+      return twoPhaseShadow.finish(twoPhaseLookup, true, context);
+    }
+    casePolicy ??= await resolveValueSetCasePolicy(packageLoader, system, valueSetUrl, fhirVersion);
+    if (casePolicy === 'insensitive' && expansionHasCaseVariant(expandedCodes, code, system)) {
       return twoPhaseShadow.finish(twoPhaseLookup, true, context);
     }
 
@@ -102,7 +111,8 @@ export async function validateValueSetMembership(
       valueSetUrl,
       fhirVersion,
     );
-    const unverifiableReason = classifyUnverifiableFilterReason(
+    const unverifiableReason = (casePolicy === 'unknown' && expansionHasCaseVariant(expandedCodes, code, system)
+      ? 'incomplete-expansion' : undefined) ?? classifyUnverifiableFilterReason(
       system,
       code,
       filteredIncludes,

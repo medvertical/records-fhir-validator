@@ -11,6 +11,8 @@ import {
 } from './executors/index.js';
 import { QuestionnaireContextRegistry } from './questionnaire-context-registry.js';
 import type { ValidatorCoreRuntime } from './validator-core-components.js';
+import type { RecordsValidatorConfig } from './validator-engine-config.js';
+import { ProfileDatePolicyValidator } from '../validators/profile-date-policy.js';
 
 export interface ValidatorExecutionComponents {
   structuralExecutor: StructuralExecutor;
@@ -27,6 +29,7 @@ export interface ValidatorExecutionComponents {
 
 export function createValidatorExecutionComponents(
   coreRuntime: ValidatorCoreRuntime,
+  config: RecordsValidatorConfig = {},
 ): ValidatorExecutionComponents {
   const core = coreRuntime.components;
   const structuralExecutor = new StructuralExecutor(core.sdLoader, {
@@ -47,6 +50,8 @@ export function createValidatorExecutionComponents(
       core.extensionValidator,
       core.slicingValidator,
       core.constraintValidator,
+      config.profileDatePolicy ? new ProfileDatePolicyValidator(config.profileDatePolicy, config.packageVersionPins) : undefined,
+      core.sdLoader,
     ),
     terminologyExecutor,
     referenceExecutor: new ReferenceExecutor(),

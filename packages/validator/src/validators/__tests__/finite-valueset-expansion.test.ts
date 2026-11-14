@@ -10,6 +10,29 @@ const resolver = (sets: Record<string, ValueSet> = {}, systems: Record<string, C
 });
 
 describe('finite terminology coverage', () => {
+  it('closes a hierarchy with the published external RIM classification annotation only', async () => {
+    const kind = { url: 'http://terminology.hl7.org/StructureDefinition/ext-mif-relationship-relationshipKind', valueCode: 'Specializes' };
+    const classification = { code: 'rim-ClassifiesClassCode', type: 'Coding',
+      uri: 'http://terminology.hl7.org/CodeSystem/utg-concept-properties#rim-ClassifiesClassCode', extension: [kind] };
+    const cs: CodeSystem = {
+      resourceType: 'CodeSystem', url: system, content: 'complete', hierarchyMeaning: 'is-a', caseSensitive: true,
+      property: [classification],
+      concept: [{ code: 'root', concept: [{ code: 'member' }] }, { code: 'outside', property: [{
+        code: classification.code, valueCoding: { system: 'http://terminology.hl7.org/CodeSystem/v3-ActClass', code: 'root' },
+      }] }],
+    };
+    const filter = { property: 'concept', op: 'is-a', value: 'root' };
+    const vs = valueSet({ compose: { include: [{ system, filter: [filter] }] } });
+    expect(conceptFilterMembership(cs, 'member', filter)).toBe(true);
+    expect(conceptFilterMembership(cs, 'outside', filter)).toBe(false);
+    expect(await expandFiniteValueSet(vs, resolver({}, { [system]: cs }))).toMatchObject({ coverage: 'complete',
+      concepts: [{ system, code: 'root' }, { system, code: 'member' }] });
+    const unqualified = { ...cs, property: [{ ...classification, uri: 'https://example.test/unknown-relation' }] };
+    expect(conceptFilterMembership(unqualified, 'outside', filter)).toBeNull();
+    const modified = { ...cs, property: [{ ...classification, modifierExtension: [kind] }] };
+    expect(conceptFilterMembership(modified, 'outside', filter)).toBeNull();
+  });
+
   it('expands the declared ISO alpha-3 code filter without evaluating arbitrary regular expressions', async () => {
     const iso = 'urn:iso:std:iso:3166';
     const cs: CodeSystem = { resourceType: 'CodeSystem', url: iso, content: 'complete', caseSensitive: true,

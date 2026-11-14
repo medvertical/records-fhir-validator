@@ -147,7 +147,8 @@ describe('conformsTo() by validation against the profile', () => {
     const check = createProfileConformanceCheck({ ...scope(validateOne), onIncomplete })!;
     await expect(check({ resourceType: 'Organization' }, MCSD_ORGANIZATION)).resolves.toBeUndefined();
     expect(onIncomplete).toHaveBeenCalledWith(expect.objectContaining({
-      code: 'validation-error', details: { validationComplete: false, profile: MCSD_ORGANIZATION, causes: ['internal-error'] },
+      code: 'validation-error', details: { validationComplete: false, profile: MCSD_ORGANIZATION,
+        causes: ['internal-error'], rootCauses: ['internal-error'] },
     }));
   });
 
@@ -232,6 +233,7 @@ describe('conformsTo() by validation against the profile', () => {
     expect(onIncomplete).toHaveBeenLastCalledWith(expect.objectContaining({ details: {
       validationComplete: false, profile: MCSD_ORGANIZATION,
       causes: ['profile-reference-unavailable', 'terminology-binding-unverified', 'internal-error'],
+      rootCauses: ['profile-reference-unavailable', 'terminology-binding-unverified', 'internal-error'],
     } }));
   });
 

@@ -41,6 +41,7 @@ export function createBindingUnverified(params: {
         profile: params.profile,
         severityOverride: params.severityOverride ?? (serverFailure ? 'information' : undefined),
         details: {
+            validationComplete: false,
             validationStatus: 'incomplete',
             reason: serverFailure ? 'server-failure' : 'binding-unverified',
             ...(params.diagnostic ? unverifiedBindingDetails(params.diagnostic) : {}),
@@ -75,6 +76,7 @@ export function createValueSetUnavailable(params: {
         profile: params.profile,
         severityOverride: params.severityOverride,
         details: {
+            validationComplete: false,
             validationStatus: 'incomplete',
             reason: 'valueset-unavailable',
             recommendation: 'No installed package defines this value set and no terminology server could resolve it. '

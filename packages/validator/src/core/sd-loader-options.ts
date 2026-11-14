@@ -6,8 +6,12 @@ import type { ProfileSourcesConfig } from '@records-fhir/validation-types';
 import { normalizeProfileSourcesConfig } from '@records-fhir/validation-types';
 import { resolveDefaultBundledProfilesPath } from './sd-loader-bundled-path.js';
 import { parseAllowedPackages } from './sd-loader-package-config.js';
+import type { ProfileVersionAlias } from './profile-version-aliases.js';
+import type { PackageDependencyAlias } from '../package/package-dependency-aliases.js';
 
 export interface StructureDefinitionLoaderOptions {
+  profileDependencyAliases?: readonly PackageDependencyAlias[];
+  profileVersionAliases?: readonly ProfileVersionAlias[];
   autoDownload?: boolean;
   profileSourcesConfig?: ProfileSourcesConfig;
   allowedPackages?: string[];

@@ -3,6 +3,7 @@ import {
     type FHIRPathContext,
 } from './fhirpath-functions.js';
 import type { CompiledSDFHIRPathExpression } from './sd-fhirpath-expression-cache.js';
+import { withDecimalSourceGuards } from './fhirpath-decimal-guards.js';
 
 type FHIRPathAdditionalOptions = NonNullable<Parameters<CompiledSDFHIRPathExpression>[2]>;
 type LibraryInvocationTable = NonNullable<FHIRPathAdditionalOptions['userInvocationTable']>;
@@ -56,8 +57,9 @@ export function evaluateCompiledSDFHIRPath(
     rootResource: unknown,
     userInvocationTable?: unknown,
     focusResource?: unknown,
+    version: 'R4' | 'R5' | 'R6' = 'R4',
 ): unknown {
-    const invocationTable = toFHIRPathInvocationTable(userInvocationTable);
+    const invocationTable = withDecimalSourceGuards(toFHIRPathInvocationTable(userInvocationTable), version);
     return compiled(
         context,
         {

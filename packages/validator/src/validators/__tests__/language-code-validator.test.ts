@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseLanguageTag, validateResourceLanguage } from '../language-code-validator';
 
-describe('parseLanguageTag (HL7 LanguageTag parity, core 6.10.0)', () => {
-  it.each(['en', 'de', 'de-CH', 'en-US', 'en-AU', 'zh-Hans', 'sga', 'sr-Latn-RS'])(
+describe('parseLanguageTag (RFC 5646 with the IANA registry)', () => {
+  it.each(['en', 'de', 'de-CH', 'en-US', 'en-AU', 'zh-Hans', 'sga', 'sr-Latn-RS',
+    'EN', 'de-de', 'i-klingon', 'I-AMI', 'en-GB-oed', 'x-private', 'X-A-12345678',
+    'de-DE-x-goethe', 'en-x-x', 'qaa-Qaaa-QM', 'qtz-Qabx-XZ', 'no-QQ',
+    'sl-rozaj-biske-1994', 'en-u-ca-gregory', 'en-t-de-DE-u-ca-gregory', 'zh-cmn-Hans-CN',
+    'sgn-ase', 'de-1901-1996', 'en-a-foobar', 'en-001', 'und', 'mul', 'zxx'])(
     'accepts the registered tag %s',
     tag => {
       expect(parseLanguageTag(tag)).toBeNull();
@@ -13,24 +17,32 @@ describe('parseLanguageTag (HL7 LanguageTag parity, core 6.10.0)', () => {
     ['zz', 'unregistered primary subtag'],
     ['zz-INVALID', 'unregistered primary subtag with region-ish rest'],
     ['not a lang!', 'free text'],
-    ['EN', 'case-sensitive registry lookup, like the Java HashMap'],
-    ['i-klingon', 'grandfathered tags are rejected by the Java parser'],
-    ['x-private', 'private-use-only tags are rejected by the Java parser'],
   ])('rejects %s on the primary subtag (%s)', tag => {
-    expect(parseLanguageTag(tag)).toMatch(/primary language subtag/);
+    expect(parseLanguageTag(tag)).not.toBeNull();
   });
 
   it.each([
-    ['de-QQ', 'unknown region'],
+    ['de-AB', 'unknown region'],
     ['en-US-INVALID', 'unknown variant'],
-    ['de-DE-x-goethe', 'the Java parser consumes x but not the part after it'],
-    ['de-de', 'lowercase region is not a registry key'],
+    ['en-xyz', 'x is a whole private-use singleton, not a prefix'],
+    ['en-cmn', 'extlang has a different registered prefix'],
+    ['en-123456789', 'subtag too long'],
+    ['en-u', 'extension has no subtags'],
+    ['en-u-a', 'extension subtag is too short'],
+    ['en-u-ca-gregory-U-nu-latn', 'duplicate singleton ignoring case'],
+    ['sl-rozaj-ROZAJ', 'duplicate variant ignoring case'],
+    ['en-x', 'private-use sequence has no subtags'],
+    ['x', 'private-use-only tag has no subtags'],
+    ['en--US', 'empty subtag'],
+    ['en-US-Latn', 'script occurs after region'],
+    ['en_US', 'separator is not a hyphen'],
+    ['en-12345678-', 'trailing separator'],
+    ['en-İS', 'non-ASCII letter'],
+    ['en-x-K', 'Unicode case folding must not turn a non-ASCII letter into a subtag'],
+    ['qzz', 'outside the private-use language range'],
+    ['en-Qaby', 'outside the private-use script range'],
   ])('rejects %s on a later part (%s)', tag => {
-    expect(parseLanguageTag(tag)).toMatch(/unable to recognise part/);
-  });
-
-  it('keeps the Java quirk of consuming any part that starts with x as private use', () => {
-    expect(parseLanguageTag('en-xyz')).toBeNull();
+    expect(parseLanguageTag(tag)).not.toBeNull();
   });
 });
 

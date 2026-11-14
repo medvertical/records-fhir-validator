@@ -1,5 +1,6 @@
 export { parseFhirNdjson } from './fhir-ndjson-input.js';
 export { parseFhirXml } from './fhir-xml-input.js';
+export { parseFhirJson } from './fhir-json-input.js';
 export type {
   FhirInputDiagnostic,
   FhirInputLimits,

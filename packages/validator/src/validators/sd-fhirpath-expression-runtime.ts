@@ -43,11 +43,11 @@ export class SDFHIRPathExpressionRuntime {
       memberOfValueSetLoader: this.memberOfValueSetLoader,
       valueSetCache: this.valueSetCache,
       expressionCache: this.expressionCache,
-      evaluateExpression: (expression, context, ...args) => this.evaluateExpression(
-        expression,
-        this.primitiveContext.resolve(context, target.resolveRootResource, target.path, target.fhirVersion),
-        ...args,
-      ),
+      evaluateExpression: (expression, context, root, table, version, terminology, focus) => {
+        const input = this.primitiveContext.prepare(context, target.resolveRootResource, target.path,
+          target.fhirVersion, root, focus, target.decimalInput);
+        return this.evaluateExpression(expression, input.context, input.rootResource, table, version, terminology, input.focusResource);
+      },
     });
   }
 
@@ -82,6 +82,7 @@ export class SDFHIRPathExpressionRuntime {
       rootResource,
       userInvocationTable,
       focusResource,
+      fhirVersion,
     );
   }
 }

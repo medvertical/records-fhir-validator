@@ -8,15 +8,17 @@
     "packages/validator/src/core/__tests__/contained-resource-validation.test.ts",
     "packages/validator/src/core/__tests__/executor-parity.test.ts",
     "packages/validator/src/core/__tests__/fixture-corpus.test.ts",
+    "packages/validator/src/core/__tests__/iso4217-provider-public.test.ts",
     "packages/validator/src/core/__tests__/mii-patient-complex-type-validation.test.ts",
     "packages/validator/src/core/__tests__/mustsupport-false-positives-specific.test.ts",
     "packages/validator/src/core/__tests__/mustsupport-false-positives.test.ts",
     "packages/validator/src/core/__tests__/profile-validation-matrix.test.ts",
     "packages/validator/src/core/__tests__/r5-validation.test.ts",
     "packages/validator/src/core/__tests__/single-multi-aspect-parity.test.ts",
+    "packages/validator/src/validators/__tests__/iso4217-provider-authority.test.ts",
     "packages/validator/src/validators/__tests__/valueset-validator-required.test.ts"
   ],
-  "reason": "Monorepo profile integration tests require the non-exported licensed profile catalog or private corpus.",
+  "reason": "Monorepo integration tests require profile, terminology or corpus inputs outside the public export.",
   "sourceCatalog": "tests/profile-contracts.json",
   "originalAssertionsRetainedInMonorepo": true
 }

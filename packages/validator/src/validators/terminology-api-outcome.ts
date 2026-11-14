@@ -49,6 +49,26 @@ export function mapOperationOutcomeIssues(outcome: unknown): CodeSystemValidatio
     }));
 }
 
+/** HTTP errors may describe the operation itself; only explicit code diagnostics reject a coding. */
+export function operationOutcomeHasRejection(outcome: unknown, codes: readonly string[]): boolean {
+    const issues = getOperationOutcomeIssueValues(outcome);
+    if (!issues?.length || !isTerminologyResponseRecord(outcome) || outcome.implicitRules !== undefined
+        || outcome.modifierExtension !== undefined || issues.some(issue => !isTerminologyResponseRecord(issue)
+            || !['error', 'fatal', 'warning', 'information'].includes(String(issue.severity))
+            || typeof issue.code !== 'string' || !issue.code.trim() || issue.modifierExtension !== undefined)) return false;
+    return issues.some(issue => {
+        if (!isTerminologyResponseRecord(issue)) return false;
+        const code = extractIssueCode(issue);
+        const details = isTerminologyResponseRecord(issue.details) ? issue.details : undefined;
+        const types = Array.isArray(details?.coding) ? details.coding.filter(coding =>
+            isTerminologyResponseRecord(coding) && coding.system === 'http://hl7.org/fhir/tools/CodeSystem/tx-issue-type') : [];
+        if (types.some(coding => !isTerminologyResponseRecord(coding) || coding.code !== code)
+            || code === 'invalid-display' && types.length === 0) return false;
+        return codes.includes(code) && (issue.severity === 'error' || issue.severity === 'fatal'
+            || code === 'invalid-display' && issue.severity === 'warning');
+    });
+}
+
 export function extractTerminologyIssues(parameters: unknown): CodeSystemValidationIssue[] {
     const entries = getParametersEntries(parameters);
     const issuesResource = entries?.find(parameter => parameter.name === 'issues')?.resource;

@@ -22,6 +22,13 @@ export function isAssertableCodeSystem(codeSystem: CodeSystem): boolean {
   return codeSystem.content !== 'not-present' && codeSystem.content !== 'supplement';
 }
 
+export function codeSystemCodesEquivalent(expected: string, actual: string, caseSensitive?: boolean, system?: string): boolean {
+  // RFC 5646 fixes language-tag equality independently of placeholder CodeSystem metadata.
+  if (system === 'urn:ietf:bcp:47' && (!/^[A-Za-z0-9-]+$/.test(expected) || !/^[A-Za-z0-9-]+$/.test(actual)))
+    return expected === actual;
+  return caseSensitive === true && system !== 'urn:ietf:bcp:47' ? expected === actual : expected.toLowerCase() === actual.toLowerCase();
+}
+
 export function findCodeSystemConcept(
   concepts: CodeSystemConcept[] | undefined,
   code: string,

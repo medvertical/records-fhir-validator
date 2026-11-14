@@ -1,4 +1,4 @@
-import { assessImportedTerminologyDisplay } from './imported-terminology-display.js';
+import { assessImportedTerminologyDisplay, partialSourceLabelCoverage } from './imported-terminology-display.js';
 import { hasUnknownTerminologyModifiers } from './valueset-concept-filter-membership.js';
 import { parseLanguageTag } from './language-code-validator.js';
 import type { ValidationIssue } from '@records-fhir/validation-types';
@@ -44,9 +44,11 @@ export function assessLocalDisplay(
     ...designations.filter(label => !hasUnknownTerminologyModifiers(label)).map(label => ({ value: label.value, language: label.language ?? codeSystem.language })),
   ].filter((label): label is { value: string; language: string | undefined } =>
     typeof label.value === 'string' && Boolean(label.value.trim()));
+  const coverage = partialSourceLabelCoverage(concept, labels.length);
+  if (coverage === 'unverified') return { outcome: 'unverified', displays: [] };
   const assessment = assessTerminologyLabels({ code: concept.code, system: codeSystem.url }, labels, display,
     displayLanguage, concept.display);
-  return assessment.outcome !== 'accepted' && designations.some(hasUnknownTerminologyModifiers)
+  return assessment.outcome !== 'accepted' && (coverage === 'partial' || designations.some(hasUnknownTerminologyModifiers))
     ? { ...assessment, outcome: 'unverified' } : assessment;
 }
 

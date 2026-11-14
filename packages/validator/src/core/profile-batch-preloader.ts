@@ -56,8 +56,9 @@ export async function preloadProfiles(
 
   for (const [url, sd] of sdLoaderResults.entries()) {
     const effectiveUrl = sdLoader.resolveProfileUrl ? sdLoader.resolveProfileUrl(url, fhirVersion) : url;
-    if (effectiveUrl && profileMatchesCanonical(sd, url, fhirVersion)
-      && profileMatchesCanonical(sd, effectiveUrl, fhirVersion)) profilesMap.set(url, sd);
+    if (effectiveUrl && (sdLoader.matchesProfileRequest?.(sd, url, fhirVersion)
+      ?? (profileMatchesCanonical(sd, url, fhirVersion)
+        && profileMatchesCanonical(sd, effectiveUrl, fhirVersion)))) profilesMap.set(url, sd);
   }
 
   const urlsToResolve: string[] = [...tenantUrls];

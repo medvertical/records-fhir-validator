@@ -1,5 +1,5 @@
 /**
- * Corrections the HL7 reference validator applies to invariant expressions
+ * Core corrections the HL7 reference validator applies to invariant expressions
  * that were published wrongly in the core specifications
  * (org.hl7.fhir.validation FHIRPathExpressionFixer, validator 6.10.0).
  *
@@ -9,6 +9,7 @@
  * without enableBehavior. The reference validator's rewrites for dom-6, txt-2
  * and con-3 are left out: specialised Records validators own those keys and
  * they never reach the generic evaluator.
+ * Exact regex adaptations retain published PCRE semantics in the Unicode JavaScript evaluator.
  */
 
 type FixerFhirVersion = 'R4' | 'R4B' | 'R5' | 'R6' | string | undefined;
@@ -17,6 +18,10 @@ const R4_REF_1 = "reference.startsWith('#').not() or (reference.substring(1).tra
 const R5_REF_1 = `${R4_REF_1} or (reference='#' and %rootResource!=%resource)`;
 
 const EXPRESSION_FIXES = new Map<string, string>([
+  [
+    String.raw`toString().matches('^\\S*[\/:?*\\\"<>|]\\S*$').not()`,
+    String.raw`toString().matches('^\\S*[\/:?*"<>|]\\S*$').not()`,
+  ],
   [
     'probability is decimal implies (probability as decimal) <= 100',
     '(probability.exists() and (probability is decimal)) implies ((probability as decimal) <= 100)',

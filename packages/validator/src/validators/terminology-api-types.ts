@@ -43,6 +43,8 @@ export interface CodeSystemValidationResult {
     inactive?: boolean;
     display?: string;
     displayLanguage?: string;
+    /** Exact CodeSystem edition reported by a usable terminology response, not an echoed request or default guess. */
+    codeSystemVersion?: string;
     /** The local CodeSystem does not declare complete content, so absence is not proof. */
     incompleteCodeSystem?: boolean;
 }
